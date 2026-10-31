@@ -142,6 +142,7 @@
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
     "test:integration": "npm run compile && node scripts/integration.js",
+    "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
@@ -149,6 +150,7 @@
   },
   "devDependencies": {
     "@types/node": "22.20.5",
-    "@types/vscode": "1.90.0"
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "4.1.0"
   }
 }
