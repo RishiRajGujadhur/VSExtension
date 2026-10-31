@@ -333,7 +333,7 @@
         },
         {
           "command": "tsStructure.dependencyPath",
-          "when": "resourceExtname =~ /^.[cm]?[jt]sx?$/",
+          "when": "resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@91"
         }
       ],
