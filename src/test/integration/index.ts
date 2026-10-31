@@ -19,6 +19,8 @@ fs.cpSync(path.resolve(__dirname, '../../../sample'), sample, { recursive: true 
 export async function run(): Promise<void> {
   try {
     await testImpact();
+    // Before the refactorings, which edit the sample files.
+    await analysisCommandsFlow();
     await changeSignatureFlow();
     await safeDeleteFlow();
     await intentionFlow();
@@ -190,6 +192,45 @@ async function missingAwaitFlow(): Promise<void> {
   await waitForDiagnostics(file, (d) => d.source === 'TS Structure', 0);
   console.log('missing await diagnostics and fix ok');
   await revert([file]);
+}
+
+/** Every analysis command runs from the editor and renders its report in the Analysis view. */
+async function analysisCommandsFlow(): Promise<void> {
+  const cart = vscode.Uri.file(path.join(sample, 'src/cart.ts'));
+  const document = await vscode.workspace.openTextDocument(cart);
+  const editor = await vscode.window.showTextDocument(document);
+  const at = (needle: string, delta = 1) => {
+    const position = document.positionAt(document.getText().indexOf(needle) + delta);
+    editor.selection = new vscode.Selection(position, position);
+  };
+  const cases: [string, string, unknown[]?][] = [
+    ['tsStructure.dataFlow', 'subtotal = '],
+    ['tsStructure.mutationTracking', 'calculateTotal'],
+    ['tsStructure.sideEffects', 'calculateTotal'],
+    ['tsStructure.nullability', 'coupon);'],
+    ['tsStructure.promiseRejections', 'calculateTotal'],
+    ['tsStructure.exceptionFlow', 'calculateTotal'],
+    ['tsStructure.deadExports', 'calculateTotal'],
+    ['tsStructure.findDuplicates', 'calculateTotal', ['project']],
+    ['tsStructure.semanticUsages', 'calculateSubtotal('],
+    ['tsStructure.reexportChain', 'calculateDiscount,'],
+    ['tsStructure.typeHierarchy', 'LineItem {'],
+    ['tsStructure.overrideImpact', 'price: number'],
+    ['tsStructure.argumentFlow', 'items: LineItem[]): number'],
+    ['tsStructure.dependencyPath', 'calculateTotal', [cart, vscode.Uri.file(path.join(sample, 'src/discount.ts'))]],
+  ];
+  for (const [command, needle, args] of cases) {
+    at(needle);
+    const report = await vscode.commands.executeCommand<{ title: string; roots: unknown[]; description?: string }>(command, ...(args ?? []));
+    assert.ok(report, `${command} returned no report`);
+    console.log(`${command}: ${report.title} — ${report.description ?? ''} (${report.roots.length} rows)`);
+  }
+  await vscode.commands.executeCommand('tsStructure.structuralSearch');
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Structural Search');
+  assert.ok(tab, 'Structural Search panel did not open');
+  await vscode.window.tabGroups.close(tab);
+  console.log('analysis commands ok');
 }
 
 /** Waits until the file has the expected number of matching diagnostics (at least one by default). */
