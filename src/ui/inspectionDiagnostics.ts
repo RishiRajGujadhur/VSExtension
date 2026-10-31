@@ -43,7 +43,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidChangeTextDocument((e) => this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections')) {
           this.refreshAll();
         }
       }),

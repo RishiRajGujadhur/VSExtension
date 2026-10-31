@@ -178,6 +178,11 @@
         "command": "tsStructure.structuralSearch",
         "title": "Structural Search…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.manageCustomInspections",
+        "title": "Manage Custom Inspections…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -543,6 +548,80 @@
           "type": "boolean",
           "default": true,
           "description": "Leave test files out of project-wide duplicate searches."
+        },
+        "tsStructure.customInspections": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "Structural search patterns that run as live inspections. Create them with **Structural Search… → Save as Inspection** and manage them with **Manage Custom Inspections…**.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "pattern",
+              "message"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique id, shown as the diagnostic code custom:<id>."
+              },
+              "pattern": {
+                "type": "string",
+                "description": "Structural search pattern with $name$ placeholders."
+              },
+              "constraints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "description": "Regular expression tested against the matched type."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Regular expression tested against the matched text."
+                    },
+                    "negate": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "message": {
+                "type": "string",
+                "description": "Message for each match; $name$ is filled in from the match."
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info",
+                  "hint"
+                ],
+                "default": "warning"
+              },
+              "replacement": {
+                "type": "string",
+                "description": "Quick fix template using the pattern placeholders."
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "files": {
+                "type": "string",
+                "description": "Regular expression tested against file paths; only matching files are inspected."
+              }
+            }
+          }
         }
       }
     }

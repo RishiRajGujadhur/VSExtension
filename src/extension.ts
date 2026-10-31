@@ -9,7 +9,9 @@ import { registerRefactorings } from './ui/refactorCommands';
 import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
-import { registerStructuralSearch } from './ui/structuralSearchPanel';
+import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
+import { customInspections } from './search/customInspections';
+import { Inspection } from './inspect/inspection';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -35,7 +37,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const structureView = new StructureView();
   registerAnalyses(context, projects, structureView);
   registerStructuralSearch(context, projects, structureView);
-  new InspectionDiagnostics(projects).register(context);
+  new InspectionDiagnostics(projects, configuredInspections).register(context);
 
   context.subscriptions.push(
     view,
@@ -117,6 +119,22 @@ async function pickScope(): Promise<AnalysisScope | undefined> {
     { title: 'Test Impact Analysis', placeHolder: 'Choose what changed' },
   );
   return picked?.scope;
+}
+
+let configured: { key: string; inspections: Inspection[] } | undefined;
+
+/** Custom inspections from settings, rebuilt only when the setting changes. */
+function configuredInspections(): Inspection[] {
+  const configs = customInspectionConfigs();
+  const key = JSON.stringify(configs);
+  if (configured?.key !== key) {
+    const { inspections, errors } = customInspections(configs);
+    configured = { key, inspections };
+    for (const error of errors) {
+      void vscode.window.showWarningMessage(error);
+    }
+  }
+  return configured.inspections;
 }
 
 export function deactivate(): void {}

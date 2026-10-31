@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
-import { Match, PlaceholderConstraint, SearchScope, SearchSpec, bindingSummary, searchReport, structuralReplace, structuralSearch } from '../search/structuralSearch';
+import { Match, PlaceholderConstraint, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
+import { CustomInspectionConfig, inspectionId } from '../search/customInspections';
+import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
 
 export type Scope = 'project' | 'file';
@@ -11,7 +13,8 @@ export type Scope = 'project' | 'file';
 type Message =
   | { type: 'search'; spec: SearchSpec; scope: Scope }
   | { type: 'open'; index: number }
-  | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string };
+  | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
+  | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
 export class StructuralSearchPanel {
@@ -20,7 +23,12 @@ export class StructuralSearchPanel {
   /** The file the search was opened from; scope "file" and project loading use it. */
   private anchor: string;
 
-  static open(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView, initial?: { pattern?: string; anchor?: string }): StructuralSearchPanel {
+  static open(
+    context: vscode.ExtensionContext,
+    projects: ProjectService,
+    view: StructureView,
+    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig },
+  ): StructuralSearchPanel {
     const anchor = initial?.anchor ?? vscode.window.activeTextEditor?.document.uri.fsPath;
     if (!anchor) {
       throw new Error('Open a TypeScript or JavaScript file first, so the search knows which project to use.');
@@ -31,11 +39,17 @@ export class StructuralSearchPanel {
       if (initial?.pattern) {
         void StructuralSearchPanel.current.panel.webview.postMessage({ type: 'prefill', pattern: initial.pattern });
       }
+      if (initial?.inspection) {
+        void StructuralSearchPanel.current.panel.webview.postMessage({ type: 'load', inspection: initial.inspection });
+      }
       return StructuralSearchPanel.current;
     }
     const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Structural Search', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
     panel.webview.html = html(panel.webview, initial?.pattern ?? '');
+    if (initial?.inspection) {
+      void panel.webview.postMessage({ type: 'load', inspection: initial.inspection });
+    }
     return StructuralSearchPanel.current;
   }
 
@@ -68,6 +82,29 @@ export class StructuralSearchPanel {
           viewColumn: vscode.ViewColumn.One,
           selection: new vscode.Range(document.positionAt(match.start), document.positionAt(match.end)),
         });
+      }
+      return;
+    }
+    if (message.type === 'saveInspection') {
+      try {
+        const spec = clean(message.spec);
+        compilePattern(spec);
+        if (!message.message.trim()) {
+          throw new Error('Enter the message to show on each match.');
+        }
+        const configs = customInspectionConfigs();
+        const config: CustomInspectionConfig = {
+          id: inspectionId(message.message, configs.map((c) => c.id)),
+          pattern: spec.pattern,
+          constraints: spec.constraints?.length ? spec.constraints : undefined,
+          message: message.message.trim(),
+          severity: message.severity,
+          replacement: message.template.trim() || undefined,
+        };
+        await saveCustomInspections([...configs, config]);
+        void this.panel.webview.postMessage({ type: 'status', text: `Saved inspection '${config.id}'. It now runs on open files.` });
+      } catch (error) {
+        void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
       }
       return;
     }
@@ -123,8 +160,56 @@ export function clean(spec: SearchSpec): SearchSpec {
   return { pattern: spec.pattern, constraints };
 }
 
+export function customInspectionConfigs(): CustomInspectionConfig[] {
+  return vscode.workspace.getConfiguration('tsStructure').get<CustomInspectionConfig[]>('customInspections', []);
+}
+
+async function saveCustomInspections(configs: CustomInspectionConfig[]): Promise<void> {
+  const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+  await vscode.workspace.getConfiguration('tsStructure').update('customInspections', configs, target);
+}
+
+async function manageCustomInspections(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): Promise<void> {
+  const configs = customInspectionConfigs();
+  if (configs.length === 0) {
+    const choice = await vscode.window.showInformationMessage('No custom inspections yet. Build one from a structural search pattern.', 'Open Structural Search');
+    if (choice) {
+      await vscode.commands.executeCommand('tsStructure.structuralSearch');
+    }
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    configs.map((config) => ({
+      label: `${config.enabled === false ? '$(circle-slash)' : '$(pass)'} ${config.id}`,
+      description: config.pattern.replace(/\s+/g, ' '),
+      detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}`,
+      config,
+    })),
+    { title: 'Custom Inspections', placeHolder: 'Select an inspection to edit, enable, disable or delete' },
+  );
+  if (!picked) {
+    return;
+  }
+  const toggle = picked.config.enabled === false ? 'Enable' : 'Disable';
+  const action = await vscode.window.showQuickPick(['Edit in Structural Search', toggle, 'Delete'], { title: picked.config.id });
+  if (action === 'Edit in Structural Search') {
+    StructuralSearchPanel.open(context, projects, view, { inspection: picked.config });
+  } else if (action === 'Delete') {
+    await saveCustomInspections(configs.filter((c) => c !== picked.config));
+  } else if (action) {
+    await saveCustomInspections(configs.map((c) => (c === picked.config ? { ...c, enabled: c.enabled === false } : c)));
+  }
+}
+
 export function registerStructuralSearch(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   context.subscriptions.push(
+    vscode.commands.registerCommand('tsStructure.manageCustomInspections', async () => {
+      try {
+        await manageCustomInspections(context, projects, view);
+      } catch (error) {
+        reportError(error, 'Custom Inspections');
+      }
+    }),
     vscode.commands.registerCommand('tsStructure.structuralSearch', () => {
       const editor = vscode.window.activeTextEditor;
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
@@ -181,6 +266,13 @@ function html(webview: vscode.Webview, pattern: string): string {
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
   <div class="row"><button id="replace" class="secondary">Replace All…</button></div>
+  <h2>Save as inspection</h2>
+  <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
+  <div class="row">
+    <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()">
+    <select id="severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
+    <button id="saveInspection" class="secondary">Save as Inspection</button>
+  </div>
   <div id="error" class="error"></div>
   <h2 id="summary"></h2>
   <ul id="results"></ul>
@@ -229,6 +321,10 @@ function html(webview: vscode.Webview, pattern: string): string {
   $('pattern').addEventListener('input', () => { save(); renderConstraints(); });
   $('scope').addEventListener('change', save);
   $('template').addEventListener('input', save);
+  $('saveInspection').addEventListener('click', () => {
+    $('error').textContent = '';
+    vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value });
+  });
   $('replace').addEventListener('click', () => {
     $('error').textContent = '';
     $('summary').textContent = 'Computing replacements…';
@@ -242,6 +338,17 @@ function html(webview: vscode.Webview, pattern: string): string {
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
+    if (message.type === 'load') {
+      const i = message.inspection;
+      $('pattern').value = i.pattern;
+      $('template').value = i.replacement || '';
+      $('message').value = i.message || '';
+      $('severity').value = i.severity || 'warning';
+      state.constraints = {};
+      for (const c of i.constraints || []) state.constraints[c.name] = c;
+      save();
+      renderConstraints();
+    }
     if (message.type === 'error') { $('summary').textContent = ''; $('error').textContent = message.message; }
     if (message.type === 'results') {
       $('summary').textContent = message.count + (message.count === 1 ? ' match' : ' matches') + (message.count > message.items.length ? ' (first ' + message.items.length + ' shown)' : '');
