@@ -9,6 +9,8 @@ import { nullabilityReport } from '../inspect/nullability';
 import { rejectionReport } from '../inspect/rejections';
 import { deadExportReport } from '../inspect/deadExports';
 import { exceptionFlowReport } from '../inspect/exceptionFlow';
+import { duplicatesReport } from '../inspect/duplicates';
+import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath } from '../analysis/paths';
@@ -97,6 +99,34 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true) }, root);
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
+    vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project') => {
+      const editor = sourceEditor();
+      if (!editor) {
+        return;
+      }
+      const scope =
+        scopeArg ??
+        (
+          await vscode.window.showQuickPick(
+            [
+              { label: 'Whole Project', description: 'Compare every source file in the compiler project', scope: 'project' as const },
+              { label: 'Active File', description: 'Only look inside the current file', scope: 'file' as const },
+            ],
+            { title: 'Find Structural Duplicates' },
+          )
+        )?.scope;
+      if (!scope) {
+        return;
+      }
+      const target = editorTarget(projects, editor);
+      const config = vscode.workspace.getConfiguration('tsStructure.duplicates');
+      return runAnalysis(view, 'Finding duplicates', () => {
+        const program = target.project().program();
+        const ignoreTests = config.get('ignoreTestFiles', true);
+        const files = scope === 'file' ? [program.getSourceFile(normalizePath(target.fileName))!] : projectSourceFiles(program).filter((sf) => !ignoreTests || !discoverTests(sf).isTestFile);
+        return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40) }, target.folder);
+      });
+    }),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

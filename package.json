@@ -158,6 +158,11 @@
         "command": "tsStructure.exceptionFlow",
         "title": "Exception Flow Visualizer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.findDuplicates",
+        "title": "Find Structural Duplicates…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -250,6 +255,10 @@
         {
           "command": "tsStructure.exceptionFlow",
           "group": "3_analysis@8"
+        },
+        {
+          "command": "tsStructure.findDuplicates",
+          "group": "3_analysis@9"
         }
       ],
       "explorer/context": [
@@ -485,6 +494,23 @@
           "type": "boolean",
           "default": true,
           "description": "Treat test files as entry points, so exports used only by tests are not reported as dead."
+        },
+        "tsStructure.duplicates.minStatements": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "description": "Shortest run of consecutive statements compared by the structural duplicate finder."
+        },
+        "tsStructure.duplicates.minTokens": {
+          "type": "number",
+          "default": 40,
+          "minimum": 5,
+          "description": "Smallest duplicated fragment, in syntax nodes, that is reported."
+        },
+        "tsStructure.duplicates.ignoreTestFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Leave test files out of project-wide duplicate searches."
         }
       }
     }
