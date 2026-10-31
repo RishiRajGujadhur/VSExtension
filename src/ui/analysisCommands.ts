@@ -14,6 +14,7 @@ import { semanticUsagesReport } from '../navigate/usages';
 import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
 import { dependencyPathReport } from '../navigate/dependencyPaths';
+import { argumentFlowReport } from '../navigate/argumentFlow';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -159,6 +160,9 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const target = to;
       return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(projects.createVirtualProject(from, folder).program(), from, target, folder));
     }),
+    editorCommand('tsStructure.argumentFlow', 'Tracing argument propagation', (t) =>
+      argumentFlowReport(t.project(), t.fileName, t.offset, vscode.workspace.getConfiguration('tsStructure').get('argumentFlow.maxDepth', 6)),
+    ),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

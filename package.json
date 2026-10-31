@@ -203,6 +203,11 @@
         "command": "tsStructure.dependencyGraphDiff",
         "title": "Dependency Graph Diff…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.argumentFlow",
+        "title": "Argument Propagation Explorer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -332,6 +337,10 @@
         {
           "command": "tsStructure.dependencyGraphDiff",
           "group": "4_navigate@7"
+        },
+        {
+          "command": "tsStructure.argumentFlow",
+          "group": "4_navigate@8"
         }
       ],
       "explorer/context": [
@@ -663,6 +672,13 @@
               }
             }
           }
+        },
+        "tsStructure.argumentFlow.maxDepth": {
+          "type": "number",
+          "default": 6,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "How many calls the Argument Propagation Explorer follows in each direction."
         }
       }
     }
