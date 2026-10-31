@@ -350,6 +350,43 @@
           "type": "boolean",
           "default": true,
           "description": "Also follow calls made through interfaces and base classes that a selected class member implements or overrides. These matches are reported as possible impacts."
+        },
+        "tsStructure.inspections.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the TypeScript Structure inspections on open files and report findings in the Problems panel."
+        },
+        "tsStructure.inspections.severity": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Severity per inspection, or `off` to disable it. `default` keeps the severity each finding is reported with. Findings can also be suppressed in code with `// ts-structure-ignore-next-line <id>` or `// ts-structure-ignore-file <id>`.",
+          "properties": {
+            "missingAwait": {
+              "type": "string",
+              "enum": [
+                "default",
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ],
+              "default": "default",
+              "description": "Promises that are dropped, including through wrapper functions and helpers."
+            }
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "default",
+              "off",
+              "error",
+              "warning",
+              "info",
+              "hint"
+            ],
+            "default": "default"
+          }
         }
       }
     }

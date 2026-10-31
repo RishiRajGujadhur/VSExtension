@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as ts from 'typescript';
-import { normalizePath, pathKey } from '../analysis/paths';
+import { hashText, normalizePath, pathKey } from '../analysis/paths';
 import { SourceLocation } from '../analysis/types';
 import { FileChange } from './types';
 
@@ -11,7 +11,11 @@ interface VirtualFile {
   fileName: string;
   original: string | undefined;
   text: string | undefined;
-  version: number;
+  /**
+   * A content hash: the document registry is shared between projects, so a per-project counter
+   * could hand one project another project's parse of different text with the same number.
+   */
+  version: string;
 }
 
 export const formatOptions: ts.FormatCodeSettings = {
@@ -47,7 +51,7 @@ export class VirtualProject {
       getCompilationSettings: () => parsed.options,
       getProjectReferences: () => parsed.projectReferences,
       getScriptFileNames: () => this.scriptFileNames(),
-      getScriptVersion: (fileName) => String(this.entry(fileName).version),
+      getScriptVersion: (fileName) => this.entry(fileName).version,
       getScriptSnapshot: (fileName) => {
         const text = this.text(fileName);
         return text === undefined ? undefined : ts.ScriptSnapshot.fromString(text);
@@ -84,7 +88,7 @@ export class VirtualProject {
     const file = this.entry(fileName);
     if (file.text !== text) {
       file.text = text;
-      file.version++;
+      file.version = versionOf(text);
     }
   }
 
@@ -134,9 +138,13 @@ export class VirtualProject {
     if (!file) {
       const normalized = normalizePath(fileName);
       const text = this.overlay(normalized) ?? ts.sys.readFile(normalized);
-      file = { fileName: normalized, original: text, text, version: 0 };
+      file = { fileName: normalized, original: text, text, version: versionOf(text) };
       this.files.set(key, file);
     }
     return file;
   }
+}
+
+function versionOf(text: string | undefined): string {
+  return text === undefined ? 'missing' : hashText(text);
 }

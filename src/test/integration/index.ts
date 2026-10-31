@@ -24,6 +24,7 @@ export async function run(): Promise<void> {
     await intentionFlow();
     await introduceParameterFlow();
     await moveMembersFlow();
+    await missingAwaitFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -170,6 +171,37 @@ async function moveMembersFlow(): Promise<void> {
   assert.match(document.getText(), /export \{ calculateSubtotal \} from '\.\/checkout';/);
   console.log('move members ok');
   await revert([vscode.Uri.file(cart), vscode.Uri.file(checkout)]);
+}
+
+async function missingAwaitFlow(): Promise<void> {
+  const file = vscode.Uri.file(path.join(sample, 'src/notifications.ts'));
+  const document = await vscode.workspace.openTextDocument(file);
+  await vscode.window.showTextDocument(document);
+  const diagnostics = await waitForDiagnostics(file, (d) => d.source === 'TS Structure');
+  assert.equal(diagnostics.length, 1, diagnostics.map((d) => d.message).join('\n'));
+  assert.match(diagnostics[0].message, /notify\(\) \(from send\(\)\) is not awaited/);
+  assert.equal(diagnostics[0].relatedInformation?.length, 1);
+
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, diagnostics[0].range);
+  const titles = actions.map((a) => a.title);
+  assert.ok(titles.includes("Suppress 'missingAwait' for this line"), titles.join(', '));
+  assert.ok(await vscode.workspace.applyEdit(actions.find((a) => a.title === 'Add await')!.edit!));
+  assert.match(document.getText(), /await notify\(message\);/);
+  await waitForDiagnostics(file, (d) => d.source === 'TS Structure', 0);
+  console.log('missing await diagnostics and fix ok');
+  await revert([file]);
+}
+
+/** Waits until the file has the expected number of matching diagnostics (at least one by default). */
+async function waitForDiagnostics(uri: vscode.Uri, filter: (d: vscode.Diagnostic) => boolean, count?: number): Promise<vscode.Diagnostic[]> {
+  for (let i = 0; i < 100; i++) {
+    const found = vscode.languages.getDiagnostics(uri).filter(filter);
+    if (count === undefined ? found.length > 0 : found.length === count) {
+      return found;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return vscode.languages.getDiagnostics(uri).filter(filter);
 }
 
 async function revert(uris: vscode.Uri[]): Promise<void> {
