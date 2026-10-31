@@ -13,6 +13,7 @@ import { duplicatesReport } from '../inspect/duplicates';
 import { semanticUsagesReport } from '../navigate/usages';
 import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
+import { dependencyPathReport } from '../navigate/dependencyPaths';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -134,6 +135,30 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
+    vscode.commands.registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toUri?: vscode.Uri) => {
+      const from = fromUri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
+      if (!from) {
+        return;
+      }
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(from))?.uri.fsPath;
+      let to = toUri?.fsPath;
+      if (!to) {
+        const program = projects.createVirtualProject(from, folder).program();
+        const files = projectSourceFiles(program)
+          .map((sf) => normalizePath(sf.fileName))
+          .filter((f) => f !== normalizePath(from));
+        const picked = await vscode.window.showQuickPick(
+          files.map((file) => ({ label: path.basename(file), description: vscode.workspace.asRelativePath(path.dirname(file)), file })),
+          { title: `Why does ${path.basename(from)} depend on…`, placeHolder: 'Choose the module to explain', matchOnDescription: true },
+        );
+        to = picked?.file;
+      }
+      if (!to) {
+        return;
+      }
+      const target = to;
+      return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(projects.createVirtualProject(from, folder).program(), from, target, folder));
+    }),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

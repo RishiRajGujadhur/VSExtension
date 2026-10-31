@@ -193,6 +193,11 @@
         "command": "tsStructure.overrideImpact",
         "title": "Override Impact Analyzer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.dependencyPath",
+        "title": "Dependency Path Finder…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -314,6 +319,10 @@
         {
           "command": "tsStructure.overrideImpact",
           "group": "4_navigate@5"
+        },
+        {
+          "command": "tsStructure.dependencyPath",
+          "group": "4_navigate@6"
         }
       ],
       "explorer/context": [
@@ -321,6 +330,11 @@
           "command": "tsStructure.safeDeleteFile",
           "when": "resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@90"
+        },
+        {
+          "command": "tsStructure.dependencyPath",
+          "when": "resourceExtname =~ /^.[cm]?[jt]sx?$/",
+          "group": "7_modification@91"
         }
       ],
       "commandPalette": [
