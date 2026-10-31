@@ -130,6 +130,29 @@
         "command": "tsStructure.promiseRejections",
         "title": "Promise Rejection Analyzer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.deadExports",
+        "title": "Dead Export Analyzer",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.safeDelete",
+        "title": "Safe Delete…",
+        "category": "TypeScript Structure",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "tsStructure.report.unexport",
+        "title": "Remove export Keyword",
+        "category": "TypeScript Structure",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "tsStructure.report.safeDeleteFile",
+        "title": "Safe Delete File…",
+        "category": "TypeScript Structure",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -214,6 +237,10 @@
         {
           "command": "tsStructure.promiseRejections",
           "group": "3_analysis@6"
+        },
+        {
+          "command": "tsStructure.deadExports",
+          "group": "3_analysis@7"
         }
       ],
       "explorer/context": [
@@ -235,6 +262,18 @@
         {
           "command": "tsStructure.rerunAnalysis",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.safeDelete",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.unexport",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.safeDeleteFile",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -274,6 +313,21 @@
           "command": "tsImpact.runTest",
           "when": "view == tsImpact.results && viewItem =~ /^(test|file)$/",
           "group": "inline"
+        },
+        {
+          "command": "tsStructure.report.safeDelete",
+          "group": "inline@1",
+          "when": "view == tsStructure.report && viewItem =~ /action:deadExport/"
+        },
+        {
+          "command": "tsStructure.report.unexport",
+          "group": "inline@1",
+          "when": "view == tsStructure.report && viewItem =~ /action:unexport/"
+        },
+        {
+          "command": "tsStructure.report.safeDeleteFile",
+          "group": "inline@1",
+          "when": "view == tsStructure.report && viewItem =~ /action:deadFile/"
         }
       ]
     },
@@ -409,6 +463,19 @@
             ],
             "default": "default"
           }
+        },
+        "tsStructure.deadExports.entryPoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Glob patterns, relative to the workspace folder, for the files whose exports are the public API (for example `src/index.ts` or `src/pages/**`). When empty, entry points are read from package.json (`main`, `module`, `exports`, `bin`) and conventional `index`/`main` files."
+        },
+        "tsStructure.deadExports.testFilesAreEntryPoints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Treat test files as entry points, so exports used only by tests are not reported as dead."
         }
       }
     }

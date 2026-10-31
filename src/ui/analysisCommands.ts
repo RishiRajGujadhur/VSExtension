@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { VirtualProject } from '../refactor/virtualProject';
@@ -6,6 +7,11 @@ import { dataFlowReport } from '../inspect/dataFlow';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { nullabilityReport } from '../inspect/nullability';
 import { rejectionReport } from '../inspect/rejections';
+import { deadExportReport } from '../inspect/deadExports';
+import { defaultEntryPoints } from '../navigate/moduleGraph';
+import { projectSourceFiles } from '../analysis/referenceIndex';
+import { normalizePath } from '../analysis/paths';
+import { registerReportActions } from './reportActions';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
@@ -65,6 +71,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     });
 
+  registerReportActions(context, view);
   context.subscriptions.push(
     view.view,
     vscode.commands.registerCommand('tsStructure.openLocation', (location: ReportLocation) => view.open(location)),
@@ -74,6 +81,20 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName)),
     editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.deadExports', 'Dead Export Analysis', async (t) => {
+      const program = t.project().program();
+      const config = vscode.workspace.getConfiguration('tsStructure.deadExports');
+      const root = t.folder ?? path.dirname(t.fileName);
+      const globs = config.get<string[]>('entryPoints', []);
+      let entryPoints: string[] = [];
+      if (globs.length > 0 && t.folder) {
+        const found = await Promise.all(globs.map((g) => vscode.workspace.findFiles(new vscode.RelativePattern(t.folder!, g), '**/node_modules/**')));
+        entryPoints = found.flat().map((u) => u.fsPath);
+      } else {
+        entryPoints = defaultEntryPoints(root, new Set(projectSourceFiles(program).map((f) => normalizePath(f.fileName))));
+      }
+      return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true) }, root);
+    }),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }
