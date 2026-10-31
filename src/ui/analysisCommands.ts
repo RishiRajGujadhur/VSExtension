@@ -4,6 +4,7 @@ import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportLocation } from '../structure/report';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
+import { nullabilityReport } from '../inspect/nullability';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
@@ -70,6 +71,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     vscode.commands.registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName)),
+    editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

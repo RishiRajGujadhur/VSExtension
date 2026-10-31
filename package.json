@@ -120,6 +120,11 @@
         "command": "tsStructure.sideEffects",
         "title": "Side-Effect Analyzer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.nullability",
+        "title": "Nullability Path Explorer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -196,6 +201,10 @@
         {
           "command": "tsStructure.sideEffects",
           "group": "3_analysis@4"
+        },
+        {
+          "command": "tsStructure.nullability",
+          "group": "3_analysis@5"
         }
       ],
       "explorer/context": [
