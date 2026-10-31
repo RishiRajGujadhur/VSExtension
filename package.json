@@ -173,6 +173,11 @@
         "command": "tsStructure.reexportChain",
         "title": "Re-export Chain Navigator",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.structuralSearch",
+        "title": "Structural Search…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -282,6 +287,10 @@
         {
           "command": "tsStructure.reexportChain",
           "group": "4_navigate@2"
+        },
+        {
+          "command": "tsStructure.structuralSearch",
+          "group": "4_navigate@3"
         }
       ],
       "explorer/context": [

@@ -9,6 +9,7 @@ import { registerRefactorings } from './ui/refactorCommands';
 import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
+import { registerStructuralSearch } from './ui/structuralSearchPanel';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -31,7 +32,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const run = (tests: TestCase[]) => void runTests(tests);
   registerRefactorings(context, projects);
-  registerAnalyses(context, projects, new StructureView());
+  const structureView = new StructureView();
+  registerAnalyses(context, projects, structureView);
+  registerStructuralSearch(context, projects, structureView);
   new InspectionDiagnostics(projects).register(context);
 
   context.subscriptions.push(
