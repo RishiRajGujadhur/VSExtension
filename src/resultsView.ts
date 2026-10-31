@@ -161,7 +161,7 @@ export async function openLocation(location: SourceLocation): Promise<void> {
   await vscode.window.showTextDocument(uri, { selection: new vscode.Range(position, position), preview: true });
 }
 
-function currentHash(uri: vscode.Uri): string | undefined {
+export function currentHash(uri: vscode.Uri): string | undefined {
   const open = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(uri.fsPath));
   if (open) {
     return hashText(open.getText());

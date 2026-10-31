@@ -88,8 +88,39 @@
         "command": "tsStructure.moveMembers",
         "title": "Move Members to Module…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.openLocation",
+        "title": "Open Location",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.rerunAnalysis",
+        "title": "Re-run Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tsStructure.clearReport",
+        "title": "Clear Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "tsStructure.dataFlow",
+        "title": "Data Flow Path Explorer",
+        "category": "TypeScript Structure"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tsStructure",
+          "title": "TypeScript Structure",
+          "icon": "media/structure.svg"
+        }
+      ]
+    },
     "submenus": [
       {
         "id": "tsStructure.editorMenu",
@@ -143,6 +174,10 @@
         {
           "command": "tsImpact.analyze",
           "group": "3_analysis@1"
+        },
+        {
+          "command": "tsStructure.dataFlow",
+          "group": "3_analysis@2"
         }
       ],
       "explorer/context": [
@@ -156,6 +191,14 @@
         {
           "command": "tsImpact.runTest",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.openLocation",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.rerunAnalysis",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -178,6 +221,16 @@
           "command": "tsImpact.clear",
           "when": "view == tsImpact.results",
           "group": "navigation@4"
+        },
+        {
+          "command": "tsStructure.rerunAnalysis",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tsStructure.clearReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@9"
         }
       ],
       "view/item/context": [
@@ -189,6 +242,12 @@
       ]
     },
     "views": {
+      "tsStructure": [
+        {
+          "id": "tsStructure.report",
+          "name": "Analysis"
+        }
+      ],
       "test": [
         {
           "id": "tsImpact.results",
@@ -197,6 +256,10 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "tsStructure.report",
+        "contents": "Inspections and navigation results appear here. Place the cursor on a symbol and run one of the analyses from the editor's context menu under TypeScript Structure.\n[Data Flow Path Explorer](command:tsStructure.dataFlow)"
+      },
       {
         "view": "tsImpact.results",
         "contents": "Place the cursor on a function, class, method or symbol and run the analysis.\n[Test Impact Analysis](command:tsImpact.analyze)"

@@ -6,6 +6,8 @@ import { pathKey } from './analysis/paths';
 import { ResultsProvider, countLabel, openLocation, showResultsPicker, trackResult } from './resultsView';
 import { runTests } from './runner';
 import { registerRefactorings } from './ui/refactorCommands';
+import { registerAnalyses } from './ui/analysisCommands';
+import { StructureView } from './ui/structureView';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -28,6 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const run = (tests: TestCase[]) => void runTests(tests);
   registerRefactorings(context, projects);
+  registerAnalyses(context, projects, new StructureView());
 
   context.subscriptions.push(
     view,
