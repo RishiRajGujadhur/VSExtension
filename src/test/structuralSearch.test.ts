@@ -60,3 +60,16 @@ test('replace rewrites matches and reports type errors it would introduce', () =
   assert.ok(broken.conflicts.length > 0);
   assert.match(broken.conflicts[0].message, /toFixed/);
 });
+
+test('every built-in search template compiles and its replacement uses only its placeholders', async () => {
+  const { searchTemplates } = await import('../search/templates');
+  const { placeholdersIn } = await import('../search/structuralSearch');
+  for (const template of searchTemplates) {
+    assert.doesNotThrow(() => compilePattern(template), template.title);
+    const defined = new Set(placeholdersIn(template.pattern).map((p) => p.name));
+    for (const used of placeholdersIn(template.replacement ?? '')) {
+      assert.ok(defined.has(used.name), `${template.title}: $${used.name}$`);
+    }
+  }
+  assert.deepEqual(find({ pattern: searchTemplates[0].pattern }), []);
+});

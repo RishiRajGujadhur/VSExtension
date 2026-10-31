@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { findNode } from '../analysis/impact';
@@ -5,9 +6,25 @@ import { ReportNode } from '../structure/report';
 import { parse } from './codeActions';
 import { StructureView } from './structureView';
 
-/** Context-menu actions on analysis rows: deleting dead code and removing unneeded `export` keywords. */
+const fragmentScheme = 'ts-structure-fragment';
+const fragments = new Map<string, string>();
+
+/** Context-menu actions on analysis rows: comparing duplicates, deleting dead code and removing unneeded `export` keywords. */
 export function registerReportActions(context: vscode.ExtensionContext, view: StructureView): void {
   context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(fragmentScheme, { provideTextDocumentContent: (uri) => fragments.get(uri.query) ?? '' }),
+    vscode.commands.registerCommand('tsStructure.report.compareDuplicates', async (node: ReportNode) => {
+      const copies = node?.action?.copies as { file: string; label: string; text: string }[] | undefined;
+      if (!copies || copies.length < 2) {
+        return;
+      }
+      const uris = copies.map((copy, i) => {
+        const key = `${Date.now()}-${i}`;
+        fragments.set(key, dedent(copy.text));
+        return vscode.Uri.from({ scheme: fragmentScheme, path: `/${path.basename(copy.file)}`, query: key });
+      });
+      await vscode.commands.executeCommand('vscode.diff', uris[0], uris[1], `${copies[0].label} ↔ ${copies[1].label}`);
+    }),
     vscode.commands.registerCommand('tsStructure.report.safeDelete', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
@@ -57,4 +74,14 @@ export function exportKeywordRange(sourceFile: ts.SourceFile, offset: number): {
     }
   }
   return undefined;
+}
+
+/** Removes the common leading indentation, so copies at different nesting levels line up in the diff. */
+function dedent(text: string): string {
+  const lines = text.split('\n');
+  // The first line starts at the fragment, without its indentation.
+  const indentOf = (line: string) => /^[ \t]*/.exec(line)![0].length;
+  const indents = lines.slice(1).filter((l) => l.trim()).map(indentOf);
+  const common = indents.length ? Math.min(...indents) : 0;
+  return [lines[0], ...lines.slice(1).map((l) => l.slice(Math.min(common, indentOf(l))))].join('\n');
 }

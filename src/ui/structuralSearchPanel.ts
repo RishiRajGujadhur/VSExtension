@@ -8,8 +8,12 @@ import { CustomInspectionConfig, inspectionId } from '../search/customInspection
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
 import { isExcluded } from './exclude';
+import { SearchPreset, searchTemplates } from '../search/templates';
 
 export type Scope = 'project' | 'file';
+
+const historyKey = 'tsStructure.searchHistory';
+const maxHistory = 15;
 
 type Message =
   | { type: 'search'; spec: SearchSpec; scope: Scope }
@@ -48,6 +52,7 @@ export class StructuralSearchPanel {
     const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Structural Search', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
     panel.webview.html = html(panel.webview, initial?.pattern ?? '');
+    void StructuralSearchPanel.current.postHistory();
     if (initial?.inspection) {
       void panel.webview.postMessage({ type: 'load', inspection: initial.inspection });
     }
@@ -64,6 +69,22 @@ export class StructuralSearchPanel {
     this.anchor = anchor;
     panel.onDidDispose(() => (StructuralSearchPanel.current = undefined), undefined, context.subscriptions);
     panel.webview.onDidReceiveMessage((m: Message) => this.receive(m), undefined, context.subscriptions);
+  }
+
+  private history(): SearchPreset[] {
+    return this.context.globalState.get<SearchPreset[]>(historyKey, []);
+  }
+
+  postHistory(): Thenable<boolean> {
+    return this.panel.webview.postMessage({ type: 'history', items: this.history() });
+  }
+
+  /** Remembers a search that ran, most recent first and without duplicates. */
+  private async remember(spec: SearchSpec, replacement?: string): Promise<void> {
+    const entry: SearchPreset = { pattern: spec.pattern, constraints: spec.constraints?.length ? spec.constraints : undefined, replacement: replacement || undefined };
+    const rest = this.history().filter((h) => h.pattern !== entry.pattern);
+    await this.context.globalState.update(historyKey, [entry, ...rest].slice(0, maxHistory));
+    await this.postHistory();
   }
 
   protected scopeOf(scope: Scope): SearchScope {
@@ -113,6 +134,7 @@ export class StructuralSearchPanel {
       try {
         const project = this.projects.createVirtualProject(this.anchor, this.folder());
         const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        void this.remember(clean(message.spec), message.template);
         if (result.matches === 0) {
           void this.panel.webview.postMessage({ type: 'status', text: 'No matches to replace.' });
           return;
@@ -132,6 +154,7 @@ export class StructuralSearchPanel {
       try {
         const program = this.projects.createVirtualProject(this.anchor, this.folder()).program();
         this.matches = structuralSearch(program, clean(message.spec), this.scopeOf(message.scope));
+        void this.remember(clean(message.spec));
         void this.panel.webview.postMessage({
           type: 'results',
           count: this.matches.length,
@@ -253,6 +276,10 @@ function html(webview: vscode.Webview, pattern: string): string {
 </style>
 </head>
 <body>
+  <div class="row">
+    <select id="templates"><option value="">Start from an example…</option></select>
+    <select id="history"><option value="">Recent searches…</option></select>
+  </div>
   <h2>Pattern</h2>
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
@@ -286,6 +313,34 @@ function html(webview: vscode.Webview, pattern: string): string {
   $('template').value = state.template || '';
   $('scope').value = state.scope || 'project';
 
+  const templates = ${JSON.stringify(searchTemplates)};
+  let recent = [];
+  for (const [i, t] of templates.entries()) {
+    const option = document.createElement('option');
+    option.value = String(i);
+    option.textContent = t.title;
+    $('templates').appendChild(option);
+  }
+  function loadPreset(p) {
+    $('pattern').value = p.pattern;
+    $('template').value = p.replacement || '';
+    if (p.message !== undefined) $('message').value = p.message;
+    if (p.severity) $('severity').value = p.severity;
+    state.constraints = {};
+    for (const c of p.constraints || []) state.constraints[c.name] = c;
+    save();
+    renderConstraints();
+  }
+  $('templates').addEventListener('change', () => {
+    const t = templates[Number($('templates').value)];
+    if (t) loadPreset(t);
+    $('templates').value = '';
+  });
+  $('history').addEventListener('change', () => {
+    const h = recent[Number($('history').value)];
+    if (h) loadPreset(h);
+    $('history').value = '';
+  });
   function placeholders(text) {
     const names = [];
     for (const m of text.matchAll(/\\$([A-Za-z_]\\w*)(\\*?)\\$/g)) if (m[1] !== '_' && !names.includes(m[1])) names.push(m[1]);
@@ -339,16 +394,17 @@ function html(webview: vscode.Webview, pattern: string): string {
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
-    if (message.type === 'load') {
-      const i = message.inspection;
-      $('pattern').value = i.pattern;
-      $('template').value = i.replacement || '';
-      $('message').value = i.message || '';
-      $('severity').value = i.severity || 'warning';
-      state.constraints = {};
-      for (const c of i.constraints || []) state.constraints[c.name] = c;
-      save();
-      renderConstraints();
+    if (message.type === 'load') loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
+    if (message.type === 'history') {
+      recent = message.items;
+      const select = $('history');
+      select.innerHTML = '<option value="">Recent searches…</option>';
+      for (const [i, h] of recent.entries()) {
+        const option = document.createElement('option');
+        option.value = String(i);
+        option.textContent = h.pattern.replace(/\s+/g, ' ').slice(0, 80);
+        select.appendChild(option);
+      }
     }
     if (message.type === 'error') { $('summary').textContent = ''; $('error').textContent = message.message; }
     if (message.type === 'results') {

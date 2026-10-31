@@ -278,6 +278,17 @@
         "command": "tsStructure.explainFinding",
         "title": "Explain Finding",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.compareDuplicates",
+        "title": "Compare Copies",
+        "category": "TypeScript Structure",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "tsStructure.actionsAtCursor",
+        "title": "Analyze or Refactor This…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -317,6 +328,12 @@
         "command": "tsStructure.semanticUsages",
         "key": "alt+f7",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "command": "tsStructure.actionsAtCursor",
+        "key": "ctrl+alt+shift+t",
+        "mac": "cmd+alt+shift+t",
+        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -328,6 +345,10 @@
         }
       ],
       "tsStructure.editorMenu": [
+        {
+          "command": "tsStructure.actionsAtCursor",
+          "group": "0_all@1"
+        },
         {
           "command": "tsStructure.changeSignature",
           "group": "1_refactor@1"
@@ -497,6 +518,10 @@
         {
           "command": "tsStructure.explainFinding",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.compareDuplicates",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -600,6 +625,11 @@
         {
           "command": "tsStructure.report.applyFix",
           "when": "view == tsStructure.report && viewItem =~ /action:applyFix/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.compareDuplicates",
+          "when": "view == tsStructure.report && viewItem =~ /action:compareDuplicates/",
           "group": "inline@1"
         }
       ]
@@ -865,6 +895,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show the number of inspection findings in the active file in the status bar."
+        },
+        "tsStructure.codeLens.sideEffects": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a CodeLens above each function summarizing its side effects (\"pure\", \"mutates arguments · I/O\", …). Click it for the full Side-Effect Analyzer report."
         }
       }
     }

@@ -12,6 +12,8 @@ import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
 import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
 import { customInspections } from './search/customInspections';
 import { registerGraphDiff } from './ui/graphDiffCommand';
+import { SideEffectLens } from './ui/sideEffectLens';
+import { showActionsAtCursor } from './ui/actionsAtCursor';
 import { Inspection } from './inspect/inspection';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
@@ -39,6 +41,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerAnalyses(context, projects, structureView);
   registerStructuralSearch(context, projects, structureView);
   registerGraphDiff(context, projects, structureView);
+  new SideEffectLens(projects).register(context);
+  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.actionsAtCursor', showActionsAtCursor));
   new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);
 
   context.subscriptions.push(

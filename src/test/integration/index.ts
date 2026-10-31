@@ -243,6 +243,26 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.equal(vscode.window.activeTextEditor?.document.uri.fsPath.toLowerCase(), cart.fsPath.toLowerCase());
   console.log('report history, export and navigation ok');
 
+  // Side-effect CodeLens, off by default.
+  await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', true, vscode.ConfigurationTarget.Global);
+  const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>('vscode.executeCodeLensProvider', cart);
+  const titles = lenses.map((l) => l.command?.title).filter((t) => t?.includes('pure'));
+  assert.equal(titles.length, 2, lenses.map((l) => l.command?.title).join(', '));
+  await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', undefined, vscode.ConfigurationTarget.Global);
+  console.log('side-effect code lens ok');
+
+  await vscode.commands.executeCommand('tsStructure.report.compareDuplicates', {
+    label: 'Duplicate 1',
+    action: { kind: 'compareDuplicates', copies: [{ file: 'a.ts', label: 'a', text: 'let x = 1;\n    x++;' }, { file: 'b.ts', label: 'b', text: 'let y = 2;\n  y++;' }] },
+  });
+  const diff = vscode.window.tabGroups.activeTabGroup.activeTab;
+  assert.ok(diff?.input instanceof vscode.TabInputTextDiff, `active tab: ${diff?.label}`);
+  // Common indentation is removed so copies at different depths line up.
+  assert.equal((await vscode.workspace.openTextDocument(diff.input.modified)).getText(), 'let y = 2;\ny++;');
+  await vscode.window.tabGroups.close(diff);
+  console.log('compare duplicates ok');
+  await vscode.window.showTextDocument(document);
+
   await vscode.commands.executeCommand('tsStructure.structuralSearch');
   await new Promise((resolve) => setTimeout(resolve, 500));
   const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Structural Search');
