@@ -11,6 +11,7 @@ import { StructureView } from './ui/structureView';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
 import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
 import { customInspections } from './search/customInspections';
+import { registerGraphDiff } from './ui/graphDiffCommand';
 import { Inspection } from './inspect/inspection';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
@@ -37,6 +38,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const structureView = new StructureView();
   registerAnalyses(context, projects, structureView);
   registerStructuralSearch(context, projects, structureView);
+  registerGraphDiff(context, projects, structureView);
   new InspectionDiagnostics(projects, configuredInspections).register(context);
 
   context.subscriptions.push(

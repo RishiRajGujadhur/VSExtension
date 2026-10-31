@@ -198,6 +198,11 @@
         "command": "tsStructure.dependencyPath",
         "title": "Dependency Path Finder…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.dependencyGraphDiff",
+        "title": "Dependency Graph Diff…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -323,6 +328,10 @@
         {
           "command": "tsStructure.dependencyPath",
           "group": "4_navigate@6"
+        },
+        {
+          "command": "tsStructure.dependencyGraphDiff",
+          "group": "4_navigate@7"
         }
       ],
       "explorer/context": [
