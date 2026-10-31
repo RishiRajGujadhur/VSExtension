@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
-  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature and more) plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.2.0",
+  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete and more) plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.3.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -68,6 +68,16 @@
         "command": "tsStructure.changeSignature",
         "title": "Change Signature…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.safeDelete",
+        "title": "Safe Delete…",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.safeDeleteFile",
+        "title": "Safe Delete File…",
+        "category": "TypeScript Structure"
       }
     ],
     "submenus": [
@@ -82,6 +92,11 @@
         "key": "ctrl+f6",
         "mac": "cmd+f6",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "command": "tsStructure.safeDelete",
+        "key": "alt+delete",
+        "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -98,8 +113,19 @@
           "group": "1_refactor@1"
         },
         {
+          "command": "tsStructure.safeDelete",
+          "group": "1_refactor@2"
+        },
+        {
           "command": "tsImpact.analyze",
           "group": "3_analysis@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "tsStructure.safeDeleteFile",
+          "when": "resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "7_modification@90"
         }
       ],
       "commandPalette": [

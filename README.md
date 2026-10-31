@@ -40,6 +40,27 @@ Reported as problems instead of guessed at:
 
 Overloaded functions and class constructors are not supported yet.
 
+### Safe Delete (`Alt+Delete`)
+
+Place the cursor on a declaration or any usage of it and run **Safe Delete…** from the lightbulb, the right-click menu or `Alt+Delete`. For a whole file, right-click it in the Explorer and choose **Safe Delete File…**.
+
+It supports:
+- Functions, classes, interfaces, type aliases, enums and enum members.
+- Variables, including one declarator of `const a = 1, b = 2`.
+- Class and interface members, object-literal properties and namespaces.
+- Parameters.
+
+Before anything is deleted, every usage in the project is found:
+- **Removed together with it:** imports and re-exports that only pass the symbol along, such as `import { x }`, `export { x } from`, renamed re-exports and `export default x`. Import lists are tidied, so `import d, { x }` keeps `d`.
+- **Blocking usages:** calls, type references, JSX and anything else. These are listed with their source line, and you choose a usage to open it or **Delete Anyway**.
+- **Not counted:** recursive and self-references inside the declaration.
+
+The confirmation also shows:
+- How many tests depend on the symbol, from Test Impact Analysis.
+- A warning when the symbol is exported, because code outside the project could still use it.
+
+The declaration is removed together with its JSDoc or line comments, without leaving doubled blank lines. Deleting a parameter goes through Change Signature, so the matching argument is removed from every call; uses of the parameter inside the body are listed as blocking. Deleting a file lists every module that imports or re-exports it; with **Delete Anyway**, those import and export statements are removed too.
+
 ## Test Impact Analysis
 
 ### Usage

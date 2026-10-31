@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { ImpactResult } from '../../analysis/types';
 import { ProjectService } from '../../analysis/project';
 import { changeSignature } from '../../refactor/changeSignature';
+import { planFileDelete } from '../../refactor/safeDelete';
 import { applyRefactor } from '../../ui/applyRefactor';
 
 // Refactorings write to files, so the tests work on a throwaway copy of the sample project.
@@ -17,6 +18,7 @@ export async function run(): Promise<void> {
   try {
     await testImpact();
     await changeSignatureFlow();
+    await safeDeleteFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -90,6 +92,23 @@ async function changeSignatureFlow(): Promise<void> {
   assert.match(document.getText(), /Math\.round\(amount \* coupon\.percent\)/);
   console.log('change signature apply ok');
   await revert([discount, cart]);
+}
+
+async function safeDeleteFlow(): Promise<void> {
+  const source = vscode.Uri.file(path.join(sample, 'src/impactSource.ts'));
+  const document = await vscode.workspace.openTextDocument(source);
+  const at = document.positionAt(document.getText().indexOf('sumTotals'));
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', source, new vscode.Range(at, at));
+  const titles = actions.map((a) => a.title);
+  assert.ok(titles.includes('Safe Delete…') && titles.includes('Change Signature…'), `lightbulb actions: ${titles.join(', ')}`);
+  console.log('safe delete lightbulb ok');
+
+  const testFile = path.join(sample, 'src/impactSource.test.ts');
+  const plan = planFileDelete(new ProjectService().createVirtualProject(testFile), testFile);
+  assert.deepEqual(plan.usages, []);
+  assert.ok(await applyRefactor(plan.result, false));
+  assert.equal(fs.existsSync(testFile), false);
+  console.log('safe delete file ok');
 }
 
 async function revert(uris: vscode.Uri[]): Promise<void> {

@@ -29,6 +29,9 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
     if (isFunctionName(node)) {
       actions.push(command('Change Signature…', 'tsStructure.changeSignature'));
     }
+    if (isDeclarationName(node)) {
+      actions.push(command('Safe Delete…', 'tsStructure.safeDelete'));
+    }
     return actions;
   }
 }
@@ -37,6 +40,28 @@ function command(title: string, id: string): vscode.CodeAction {
   const action = new vscode.CodeAction(title, refactorKind);
   action.command = { command: id, title };
   return action;
+}
+
+/** The name in a declaration that Safe Delete supports. */
+function isDeclarationName(node: ts.Node): boolean {
+  const parent = node.parent;
+  return (
+    !!parent &&
+    (ts.isIdentifier(node) || ts.isPrivateIdentifier(node)) &&
+    (ts.isFunctionDeclaration(parent) ||
+      ts.isClassDeclaration(parent) ||
+      ts.isInterfaceDeclaration(parent) ||
+      ts.isTypeAliasDeclaration(parent) ||
+      ts.isEnumDeclaration(parent) ||
+      ts.isEnumMember(parent) ||
+      ts.isVariableDeclaration(parent) ||
+      ts.isMethodDeclaration(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isGetAccessor(parent) ||
+      ts.isSetAccessor(parent) ||
+      ts.isParameter(parent)) &&
+    (parent as ts.NamedDeclaration).name === node
+  );
 }
 
 /** A function or method name, at its declaration or at a call. */
