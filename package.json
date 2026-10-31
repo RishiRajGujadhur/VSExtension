@@ -153,6 +153,11 @@
         "title": "Safe Delete File…",
         "category": "TypeScript Structure",
         "icon": "$(trash)"
+      },
+      {
+        "command": "tsStructure.exceptionFlow",
+        "title": "Exception Flow Visualizer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -241,6 +246,10 @@
         {
           "command": "tsStructure.deadExports",
           "group": "3_analysis@7"
+        },
+        {
+          "command": "tsStructure.exceptionFlow",
+          "group": "3_analysis@8"
         }
       ],
       "explorer/context": [

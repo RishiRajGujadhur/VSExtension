@@ -8,6 +8,7 @@ import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { nullabilityReport } from '../inspect/nullability';
 import { rejectionReport } from '../inspect/rejections';
 import { deadExportReport } from '../inspect/deadExports';
+import { exceptionFlowReport } from '../inspect/exceptionFlow';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath } from '../analysis/paths';
@@ -95,6 +96,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
       return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true) }, root);
     }),
+    editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }
