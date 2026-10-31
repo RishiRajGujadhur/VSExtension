@@ -382,6 +382,19 @@
               ],
               "default": "default",
               "description": "Promises that are dropped, including through wrapper functions and helpers."
+            },
+            "typeAssertion": {
+              "type": "string",
+              "enum": [
+                "default",
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ],
+              "default": "default",
+              "description": "Type assertions that are unnecessary, widen silently, narrow without a runtime check, or bypass compatibility checks."
             }
           },
           "additionalProperties": {
