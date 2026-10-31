@@ -168,6 +168,11 @@
         "command": "tsStructure.semanticUsages",
         "title": "Semantic Find Usages",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.reexportChain",
+        "title": "Re-export Chain Navigator",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -273,6 +278,10 @@
         {
           "command": "tsStructure.semanticUsages",
           "group": "4_navigate@1"
+        },
+        {
+          "command": "tsStructure.reexportChain",
+          "group": "4_navigate@2"
         }
       ],
       "explorer/context": [

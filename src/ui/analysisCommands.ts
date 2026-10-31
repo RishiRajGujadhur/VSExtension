@@ -11,6 +11,7 @@ import { deadExportReport } from '../inspect/deadExports';
 import { exceptionFlowReport } from '../inspect/exceptionFlow';
 import { duplicatesReport } from '../inspect/duplicates';
 import { semanticUsagesReport } from '../navigate/usages';
+import { reexportChainReport } from '../navigate/reexports';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -129,6 +130,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       });
     }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }
