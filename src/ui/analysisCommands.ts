@@ -12,6 +12,7 @@ import { exceptionFlowReport } from '../inspect/exceptionFlow';
 import { duplicatesReport } from '../inspect/duplicates';
 import { semanticUsagesReport } from '../navigate/usages';
 import { reexportChainReport } from '../navigate/reexports';
+import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -131,6 +132,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

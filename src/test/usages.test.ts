@@ -14,7 +14,7 @@ function groups(file: string, marker: string) {
 }
 
 test('usages are grouped into definitions, calls, imports, writes and reads', () => {
-  assert.deepEqual(groups(utils, 'function format|Area'), ['Definitions 1', 'Calls 2', 'Imports 1']);
+  assert.deepEqual(groups(utils, 'function format|Area'), ['Definitions 1', 'Calls 3 (1 in tests)', 'Imports 2 (1 in tests)']);
   assert.deepEqual(groups(utils, 'let coun|ter'), ['Definitions 1', 'Writes 1', 'Reads 1']);
 });
 

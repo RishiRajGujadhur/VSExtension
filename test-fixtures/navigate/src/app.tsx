@@ -15,3 +15,7 @@ export function App() {
   const label = formatArea(box);
   return <Label text={label} />;
 }
+
+export function squareArea(): number {
+  return new Box(3).area();
+}

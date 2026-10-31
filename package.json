@@ -183,6 +183,16 @@
         "command": "tsStructure.manageCustomInspections",
         "title": "Manage Custom Inspections…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.typeHierarchy",
+        "title": "Inheritance Hierarchy Explorer",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.overrideImpact",
+        "title": "Override Impact Analyzer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -296,6 +306,14 @@
         {
           "command": "tsStructure.structuralSearch",
           "group": "4_navigate@3"
+        },
+        {
+          "command": "tsStructure.typeHierarchy",
+          "group": "4_navigate@4"
+        },
+        {
+          "command": "tsStructure.overrideImpact",
+          "group": "4_navigate@5"
         }
       ],
       "explorer/context": [
