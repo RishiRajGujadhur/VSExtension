@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
-  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete and more) plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.3.0",
+  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, intention actions and more) plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.4.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -192,6 +192,35 @@
     "configuration": {
       "title": "TypeScript Structure",
       "properties": {
+        "tsStructure.intentions.disabled": {
+          "type": "array",
+          "default": [],
+          "description": "Intention actions to hide from the lightbulb menu.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "invertIf",
+              "ifToTernary",
+              "ternaryToIf",
+              "flipTernary",
+              "mergeNestedIfs",
+              "splitAndCondition",
+              "ifChainToSwitch",
+              "deMorgan",
+              "flipComparison",
+              "concatToTemplate",
+              "forIndexToForOf",
+              "forEachToForOf",
+              "arrowToBlockBody",
+              "arrowToExpressionBody",
+              "functionToArrow",
+              "addBraces",
+              "removeBraces",
+              "splitDeclarations",
+              "splitInitializer"
+            ]
+          }
+        },
         "tsStructure.previewRefactorings": {
           "type": "boolean",
           "default": true,

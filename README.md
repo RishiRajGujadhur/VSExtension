@@ -61,6 +61,49 @@ The confirmation also shows:
 
 The declaration is removed together with its JSDoc or line comments, without leaving doubled blank lines. Deleting a parameter goes through Change Signature, so the matching argument is removed from every call; uses of the parameter inside the body are listed as blocking. Deleting a file lists every module that imports or re-exports it; with **Delete Anyway**, those import and export statements are removed too.
 
+### Intention actions (lightbulb, `Ctrl+.`)
+
+Contextual transformations that appear in the lightbulb menu when they apply at the cursor. They work on the syntax tree only, so they are instant and need no project. Each one checks that it preserves behaviour and isn't offered otherwise.
+
+**Conditions**
+
+| Intention | Example |
+| --- | --- |
+| Invert 'if' condition | `if (a === b) x(); else y();` → `if (a !== b) y(); else x();` |
+| Replace 'if else' with '?:' | `if (c) { return a; } else { return b; }` → `return c ? a : b;` (also assignments, and `if (c) return a; return b;`) |
+| Replace '?:' with 'if else' | for `return`, assignments and `const` initializers (`const` becomes `let`) |
+| Flip '?:' | `a ? b : c` → `!a ? c : b` |
+| Merge nested 'if's | `if (a) { if (b) {…} }` → `if (a && b) {…}` |
+| Split '&&' into nested 'if's | the reverse |
+| Replace 'if' chain with 'switch' | `if (k === 'a') … else if (k === 'b' \|\| k === 'c') … else …` |
+| Replace '&&' with '\|\|' (De Morgan) | `!(a && !b)` → `!a \|\| b` |
+| Flip comparison | `a < b` → `b > a` |
+
+Negation is smart throughout: `!x` becomes `x`, comparisons flip (`===` ↔ `!==`, `<` ↔ `>=`), and `&&` and `||` follow De Morgan's laws, with parentheses added only where precedence needs them.
+
+**Loops, functions and expressions**
+
+| Intention | Example |
+| --- | --- |
+| Replace indexed 'for' with 'for...of' | `for (let i = 0; i < items.length; i++) use(items[i])` → `for (const item of items) use(item)` |
+| Replace 'forEach' with 'for...of' | `return;` becomes `continue;`, and `(x, i)` uses `.entries()` |
+| Replace '+' with template literal | `'Hi ' + name + '!'` → `` `Hi ${name}!` ``, keeping `1 + 2 + 'a'` numeric |
+| Convert to arrow function | function expressions |
+| Convert arrow function to block or expression body | both directions, handling object literals |
+| Add / remove braces | `if`, `else`, `for`, `while`, `do` |
+| Split into separate declarations | `const a = 1, b = 2;` |
+| Split into declaration and assignment | `const x = f();` → `let x;` `x = f();` |
+
+**Safety checks.** An intention is not offered when it would change behaviour or lose code:
+- An `if` chain containing an unlabeled `break` is not turned into a `switch`.
+- An index loop that uses the index for anything but reading the element is not converted.
+- A `forEach` callback that is `async` or returns a value is not converted.
+- A function that uses `this` or `arguments` is not made an arrow.
+- Braces are not removed around `let`/`const` declarations, or where a dangling `else` would re-bind.
+- Nothing is rewritten when that would drop comments.
+
+Indentation follows the editor's tab settings. To hide individual intentions, list their ids in `tsStructure.intentions.disabled`.
+
 ## Test Impact Analysis
 
 ### Usage

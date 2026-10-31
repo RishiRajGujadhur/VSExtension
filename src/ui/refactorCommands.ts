@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { openChangeSignature } from './changeSignaturePanel';
 import { RefactorCommandProvider } from './codeActions';
+import { IntentionProvider } from './intentionProvider';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
 
 export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].map((language) => ({
@@ -40,6 +41,9 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
     vscode.commands.registerCommand('tsStructure.safeDeleteFile', (uri?: vscode.Uri) => safeDeleteFile(projects, uri)),
     vscode.languages.registerCodeActionsProvider(languageSelector, new RefactorCommandProvider(), {
       providedCodeActionKinds: RefactorCommandProvider.kinds,
+    }),
+    vscode.languages.registerCodeActionsProvider(languageSelector, new IntentionProvider(), {
+      providedCodeActionKinds: IntentionProvider.kinds,
     }),
   );
 }

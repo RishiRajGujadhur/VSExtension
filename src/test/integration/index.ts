@@ -19,6 +19,7 @@ export async function run(): Promise<void> {
     await testImpact();
     await changeSignatureFlow();
     await safeDeleteFlow();
+    await intentionFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -109,6 +110,21 @@ async function safeDeleteFlow(): Promise<void> {
   assert.ok(await applyRefactor(plan.result, false));
   assert.equal(fs.existsSync(testFile), false);
   console.log('safe delete file ok');
+}
+
+async function intentionFlow(): Promise<void> {
+  const file = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
+  const document = await vscode.workspace.openTextDocument(file);
+  await vscode.window.showTextDocument(document);
+  const at = document.positionAt(document.getText().indexOf('if (!coupon)') + 1);
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, new vscode.Range(at, at));
+  const titles = actions.map((a) => a.title);
+  assert.ok(titles.includes("Remove braces from 'if' statement"), `intentions: ${titles.join(', ')}`);
+  const removeBraces = actions.find((a) => a.title === "Remove braces from 'if' statement")!;
+  assert.ok(await vscode.workspace.applyEdit(removeBraces.edit!));
+  assert.match(document.getText(), /if \(!coupon\) return 0;/);
+  console.log('intentions ok:', titles.filter((t) => !t.endsWith('…')).join(' | '));
+  await revert([file]);
 }
 
 async function revert(uris: vscode.Uri[]): Promise<void> {
