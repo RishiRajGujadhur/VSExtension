@@ -163,6 +163,11 @@
         "command": "tsStructure.findDuplicates",
         "title": "Find Structural Duplicates…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.semanticUsages",
+        "title": "Semantic Find Usages",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -197,6 +202,11 @@
         "command": "tsStructure.safeDelete",
         "key": "alt+delete",
         "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "command": "tsStructure.semanticUsages",
+        "key": "alt+f7",
+        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -259,6 +269,10 @@
         {
           "command": "tsStructure.findDuplicates",
           "group": "3_analysis@9"
+        },
+        {
+          "command": "tsStructure.semanticUsages",
+          "group": "4_navigate@1"
         }
       ],
       "explorer/context": [

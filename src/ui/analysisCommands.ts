@@ -10,6 +10,7 @@ import { rejectionReport } from '../inspect/rejections';
 import { deadExportReport } from '../inspect/deadExports';
 import { exceptionFlowReport } from '../inspect/exceptionFlow';
 import { duplicatesReport } from '../inspect/duplicates';
+import { semanticUsagesReport } from '../navigate/usages';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -127,6 +128,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40) }, target.folder);
       });
     }),
+    editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }
