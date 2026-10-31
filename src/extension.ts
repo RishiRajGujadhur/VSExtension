@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const run = (tests: TestCase[]) => void runTests(tests);
   registerRefactorings(context, projects);
-  const structureView = new StructureView();
+  const structureView = new StructureView(context.workspaceState);
   registerAnalyses(context, projects, structureView);
   registerStructuralSearch(context, projects, structureView);
   registerGraphDiff(context, projects, structureView);

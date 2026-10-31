@@ -38,6 +38,8 @@ export interface Report {
   warnings: string[];
   /** Content hash of every file a row points into, used to reject stale navigation. */
   fileHashes: Record<string, string>;
+  /** How long the analysis took, set by the UI. */
+  durationMs?: number;
 }
 
 /** Collects locations while a report is built, remembering the text each one was computed from. */

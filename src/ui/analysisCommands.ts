@@ -2,7 +2,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { VirtualProject } from '../refactor/virtualProject';
-import { Report, ReportLocation } from '../structure/report';
+import { Report, ReportLocation, ReportNode } from '../structure/report';
+import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { nullabilityReport } from '../inspect/nullability';
@@ -18,7 +19,7 @@ import { argumentFlowReport } from '../navigate/argumentFlow';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
-import { normalizePath } from '../analysis/paths';
+import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
@@ -42,7 +43,12 @@ export async function runAnalysis(view: StructureView, title: string, compute: (
       return await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `${title}…` }, async () => {
         // Let the notification render before the synchronous analysis starts.
         await new Promise((resolve) => setTimeout(resolve, 0));
-        return compute();
+        const started = Date.now();
+        const report = await compute();
+        if (report) {
+          report.durationMs = Date.now() - started;
+        }
+        return report;
       });
     } catch (error) {
       reportError(error, title);
@@ -68,6 +74,17 @@ export function editorTarget(projects: ProjectService, editor: vscode.TextEditor
   };
 }
 
+/** The same target after the file was edited: the cursor follows the symbol it was on. */
+function followEdits(target: AnalysisTarget, before: string | undefined): AnalysisTarget {
+  const document = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(target.fileName));
+  const now = document?.getText();
+  if (before === undefined || now === undefined || now === before) {
+    return target;
+  }
+  const offset = retarget(before, now, target.offset);
+  return { ...target, offset, end: Math.max(offset, retarget(before, now, target.end)) };
+}
+
 export function registerAnalyses(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   /** A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other extensions. */
   const editorCommand = (id: string, title: string, compute: Compute) =>
@@ -75,14 +92,48 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const editor = sourceEditor();
       if (editor) {
         const target = editorTarget(projects, editor);
-        return runAnalysis(view, title, () => compute(target));
+        const text = editor.document.getText();
+        return runAnalysis(view, title, () => compute(followEdits(target, text)));
       }
     });
 
   registerReportActions(context, view);
   context.subscriptions.push(
     view.view,
+    ...view.listeners(),
     vscode.commands.registerCommand('tsStructure.openLocation', (location: ReportLocation) => view.open(location)),
+    vscode.commands.registerCommand('tsStructure.report.back', () => view.go(-1)),
+    vscode.commands.registerCommand('tsStructure.report.forward', () => view.go(1)),
+    vscode.commands.registerCommand('tsStructure.report.filter', () => view.setFilter()),
+    vscode.commands.registerCommand('tsStructure.report.next', () => view.step(1)),
+    vscode.commands.registerCommand('tsStructure.report.previous', () => view.step(-1)),
+    vscode.commands.registerCommand('tsStructure.report.copyMarkdown', async () => {
+      const markdown = view.markdown();
+      if (markdown) {
+        await vscode.env.clipboard.writeText(markdown);
+        void vscode.window.setStatusBarMessage('Analysis copied as Markdown', 3000);
+      }
+    }),
+    vscode.commands.registerCommand('tsStructure.report.export', async () => {
+      const markdown = view.markdown();
+      const report = view.report;
+      if (!markdown || !report) {
+        return;
+      }
+      const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+      const name = `${report.title.replace(/[^\w.-]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'analysis'}.md`;
+      const uri = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { Markdown: ['md'] } });
+      if (uri) {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(markdown, 'utf8'));
+        await vscode.window.showTextDocument(uri);
+      }
+    }),
+    vscode.commands.registerCommand('tsStructure.report.openToSide', (node: ReportNode) => node?.location && view.open(node.location, true)),
+    vscode.commands.registerCommand('tsStructure.report.copyLocation', async (node: ReportNode) => {
+      if (node?.location) {
+        await vscode.env.clipboard.writeText(`${vscode.workspace.asRelativePath(node.location.file)}:${node.location.line + 1}:${node.location.character + 1}`);
+      }
+    }),
     vscode.commands.registerCommand('tsStructure.rerunAnalysis', () => view.rerun()),
     vscode.commands.registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),

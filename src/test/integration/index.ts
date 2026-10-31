@@ -225,6 +225,15 @@ async function analysisCommandsFlow(): Promise<void> {
     assert.ok(report, `${command} returned no report`);
     console.log(`${command}: ${report.title} — ${report.description ?? ''} (${report.roots.length} rows)`);
   }
+  // History, navigation and export of the last reports.
+  await vscode.commands.executeCommand('tsStructure.report.back');
+  await vscode.commands.executeCommand('tsStructure.report.forward');
+  await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+  assert.match(await vscode.env.clipboard.readText(), /^## cart\.ts → discount\.ts/);
+  await vscode.commands.executeCommand('tsStructure.report.next');
+  assert.equal(vscode.window.activeTextEditor?.document.uri.fsPath.toLowerCase(), cart.fsPath.toLowerCase());
+  console.log('report history, export and navigation ok');
+
   await vscode.commands.executeCommand('tsStructure.structuralSearch');
   await new Promise((resolve) => setTimeout(resolve, 500));
   const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Structural Search');

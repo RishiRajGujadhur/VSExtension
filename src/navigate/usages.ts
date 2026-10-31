@@ -113,6 +113,11 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
       })),
     });
   }
-  const counts = order.filter((o) => byKind.get(o.kind)?.length).map((o) => `${byKind.get(o.kind)!.length} ${o.label.toLowerCase().split(' ')[0]}`);
+  const counts = order
+    .filter((o) => byKind.get(o.kind)?.length)
+    .map((o) => {
+      const word = o.label.toLowerCase().split(' ')[0];
+      return plural(byKind.get(o.kind)!.length, word.replace(/s$/, ''), word);
+    });
   return builder.finish(roots, `${plural(references.length, 'usage')}: ${counts.join(', ')}`);
 }

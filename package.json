@@ -208,6 +208,59 @@
         "command": "tsStructure.argumentFlow",
         "title": "Argument Propagation Explorer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.back",
+        "title": "Previous Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "tsStructure.report.forward",
+        "title": "Next Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "tsStructure.report.filter",
+        "title": "Filter Analysis Results…",
+        "category": "TypeScript Structure",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "tsStructure.report.next",
+        "title": "Go to Next Result",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "tsStructure.report.previous",
+        "title": "Go to Previous Result",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "tsStructure.report.copyMarkdown",
+        "title": "Copy Analysis as Markdown",
+        "category": "TypeScript Structure",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "tsStructure.report.export",
+        "title": "Export Analysis to Markdown…",
+        "category": "TypeScript Structure",
+        "icon": "$(save)"
+      },
+      {
+        "command": "tsStructure.report.openToSide",
+        "title": "Open to the Side",
+        "category": "TypeScript Structure",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "tsStructure.report.copyLocation",
+        "title": "Copy Location",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -379,6 +432,42 @@
         {
           "command": "tsStructure.report.safeDeleteFile",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.openToSide",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.copyLocation",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.back",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.forward",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.filter",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.next",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.previous",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.copyMarkdown",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.export",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -411,6 +500,41 @@
           "command": "tsStructure.clearReport",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "navigation@9"
+        },
+        {
+          "command": "tsStructure.report.back",
+          "when": "view == tsStructure.report && tsStructure.canGoBack",
+          "group": "navigation@0"
+        },
+        {
+          "command": "tsStructure.report.forward",
+          "when": "view == tsStructure.report && tsStructure.canGoForward",
+          "group": "navigation@0"
+        },
+        {
+          "command": "tsStructure.report.filter",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.report.previous",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tsStructure.report.next",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@4"
+        },
+        {
+          "command": "tsStructure.report.copyMarkdown",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "1_export@1"
+        },
+        {
+          "command": "tsStructure.report.export",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "1_export@2"
         }
       ],
       "view/item/context": [
@@ -433,6 +557,16 @@
           "command": "tsStructure.report.safeDeleteFile",
           "group": "inline@1",
           "when": "view == tsStructure.report && viewItem =~ /action:deadFile/"
+        },
+        {
+          "command": "tsStructure.report.openToSide",
+          "when": "view == tsStructure.report && viewItem =~ /location/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tsStructure.report.copyLocation",
+          "when": "view == tsStructure.report && viewItem =~ /location/",
+          "group": "navigation@2"
         }
       ]
     },
@@ -679,6 +813,11 @@
           "minimum": 1,
           "maximum": 20,
           "description": "How many calls the Argument Propagation Explorer follows in each direction."
+        },
+        "tsStructure.highlightResults": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight the locations of the current analysis in open editors: definitions outlined, writes and reads shaded."
         }
       }
     }
