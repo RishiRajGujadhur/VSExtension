@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerAnalyses(context, projects, structureView);
   registerStructuralSearch(context, projects, structureView);
   registerGraphDiff(context, projects, structureView);
-  new InspectionDiagnostics(projects, configuredInspections).register(context);
+  new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);
 
   context.subscriptions.push(
     view,

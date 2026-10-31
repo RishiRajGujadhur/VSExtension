@@ -1,10 +1,17 @@
+import * as path from 'path';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
-import { pathKey } from '../analysis/paths';
-import { Finding, Inspection, Severity, runInspections, suppressionEdit } from '../inspect/inspection';
+import { hashText, normalizePath, pathKey } from '../analysis/paths';
+import { projectSourceFiles } from '../analysis/referenceIndex';
+import { TextEdit } from '../intentions/intentions';
+import { Finding, Inspection, Severity, fileSuppressionEdit, fixAllEdits, runInspections, suppressionEdit } from '../inspect/inspection';
+import { InspectedFile, inspectionReport } from '../inspect/inspectionReport';
 import { builtInInspections } from '../inspect/registry';
+import { Report, ReportNode } from '../structure/report';
 import { languageSelector } from './refactorCommands';
+import { StructureView } from './structureView';
+import { isExcluded } from './exclude';
 
 const severities: Record<Severity, vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
@@ -14,6 +21,13 @@ const severities: Record<Severity, vscode.DiagnosticSeverity> = {
 };
 
 const docsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#inspections';
+const fixAllKind = vscode.CodeActionKind.SourceFixAll.append('tsStructure');
+
+/** Analyses that explain a finding in depth, offered from its lightbulb. */
+const explainers: Record<string, { title: string; command: string }> = {
+  missingAwait: { title: 'Trace where this promise’s rejection goes…', command: 'tsStructure.promiseRejections' },
+  typeAssertion: { title: 'Explain where null or undefined come from…', command: 'tsStructure.nullability' },
+};
 
 interface Inspected {
   version: number;
@@ -22,39 +36,54 @@ interface Inspected {
   diagnostics: vscode.Diagnostic[];
 }
 
-/** Runs the live inspections on open TypeScript and JavaScript files and offers their fixes. */
+/** Runs the live inspections on visible TypeScript and JavaScript files and offers their fixes. */
 export class InspectionDiagnostics implements vscode.CodeActionProvider {
-  static readonly kinds = [vscode.CodeActionKind.QuickFix];
+  static readonly kinds = [vscode.CodeActionKind.QuickFix, fixAllKind];
   readonly collection = vscode.languages.createDiagnosticCollection('tsStructure');
   private readonly results = new Map<string, Inspected>();
   private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly changed = new vscode.EventEmitter<vscode.Uri>();
-  readonly onDidInspect = this.changed.event;
+  private readonly status = vscode.window.createStatusBarItem('tsStructure.inspections', vscode.StatusBarAlignment.Right, 100);
 
   constructor(
     private readonly projects: ProjectService,
     private readonly extra: () => readonly Inspection[] = () => [],
-  ) {}
+  ) {
+    this.status.name = 'TypeScript Structure Inspections';
+    this.status.command = { command: 'tsStructure.inspectCode', title: 'Inspect Current File', arguments: ['file'] };
+  }
 
-  register(context: vscode.ExtensionContext): void {
+  register(context: vscode.ExtensionContext, view: StructureView): void {
     context.subscriptions.push(
       this.collection,
-      vscode.workspace.onDidOpenTextDocument((d) => this.schedule(d)),
-      vscode.workspace.onDidChangeTextDocument((e) => this.schedule(e.document)),
+      this.status,
+      // Only files on screen are inspected; others are when they are shown.
+      vscode.window.onDidChangeVisibleTextEditors((editors) => editors.forEach((e) => this.scheduleIfStale(e.document))),
+      vscode.window.onDidChangeActiveTextEditor(() => this.updateStatus()),
+      vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude')) {
+          this.results.clear();
           this.refreshAll();
         }
       }),
       vscode.languages.registerCodeActionsProvider(languageSelector, this, { providedCodeActionKinds: InspectionDiagnostics.kinds }),
+      vscode.commands.registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project') => this.inspectCode(view, scope)),
+      vscode.commands.registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
+      vscode.commands.registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
+        const document = await vscode.workspace.openTextDocument(uri);
+        const editor = await vscode.window.showTextDocument(document);
+        const position = document.positionAt(offset);
+        editor.selection = new vscode.Selection(position, position);
+        await vscode.commands.executeCommand(command);
+      }),
     );
     this.refreshAll();
   }
 
   refreshAll(): void {
-    for (const document of vscode.workspace.textDocuments) {
-      this.schedule(document, 0);
+    for (const editor of vscode.window.visibleTextEditors) {
+      this.schedule(editor.document, 0);
     }
   }
 
@@ -62,6 +91,16 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   findingsFor(document: vscode.TextDocument): Finding[] | undefined {
     const result = this.results.get(pathKey(document.uri.fsPath));
     return result?.version === document.version ? result.findings : undefined;
+  }
+
+  private isVisible(document: vscode.TextDocument): boolean {
+    return vscode.window.visibleTextEditors.some((e) => e.document === document);
+  }
+
+  private scheduleIfStale(document: vscode.TextDocument): void {
+    if (this.results.get(pathKey(document.uri.fsPath))?.version !== document.version) {
+      this.schedule(document, 50);
+    }
   }
 
   private schedule(document: vscode.TextDocument, delay = 500): void {
@@ -84,54 +123,110 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     clearTimeout(this.timers.get(key));
     this.results.delete(key);
     this.collection.delete(uri);
+    this.updateStatus();
+  }
+
+  private inspections(): Inspection[] {
+    return [...builtInInspections, ...this.extra()];
+  }
+
+  private severityOf(): (inspection: Inspection) => Severity | 'off' | 'default' {
+    const overrides = vscode.workspace.getConfiguration('tsStructure').get<Record<string, Severity | 'off' | 'default'>>('inspections.severity', {});
+    return (i) => overrides[i.id] ?? 'default';
   }
 
   inspect(document: vscode.TextDocument): Finding[] {
     const config = vscode.workspace.getConfiguration('tsStructure');
-    if (!config.get('inspections.enabled', true) || document.isClosed) {
+    if (!config.get('inspections.enabled', true) || document.isClosed || isExcluded(document.uri.fsPath)) {
       this.collection.delete(document.uri);
+      this.results.delete(pathKey(document.uri.fsPath));
+      this.updateStatus();
       return [];
     }
-    const overrides = config.get<Record<string, Severity | 'off'>>('inspections.severity', {});
-    const inspections = [...builtInInspections, ...this.extra()];
     let findings: Finding[] = [];
     let inspected: ts.SourceFile | undefined;
     try {
       const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
       const project = this.projects.load(document.uri.fsPath, folder);
-      const sourceFile = project.program.getSourceFile(document.uri.fsPath.replace(/\\/g, '/'));
+      const sourceFile = project.program.getSourceFile(normalizePath(document.uri.fsPath));
       if (sourceFile && sourceFile.text === document.getText()) {
         inspected = sourceFile;
-        findings = runInspections(inspections, { sourceFile, program: project.program, checker: project.checker }, (i) => overrides[i.id] ?? 'default');
+        findings = runInspections(this.inspections(), { sourceFile, program: project.program, checker: project.checker }, this.severityOf());
       }
     } catch {
       // Files outside any compiler project are not inspected.
     }
-    const diagnostics = findings.map((f) => this.toDiagnostic(document, f));
+    const diagnostics = findings.map((f) => toDiagnostic(document, f));
     this.results.set(pathKey(document.uri.fsPath), { version: document.version, sourceFile: inspected, findings, diagnostics });
     this.collection.set(document.uri, diagnostics);
-    this.changed.fire(document.uri);
+    this.updateStatus();
     return findings;
   }
 
-  private toDiagnostic(document: vscode.TextDocument, finding: Finding): vscode.Diagnostic {
-    const range = new vscode.Range(document.positionAt(finding.start), document.positionAt(finding.end));
-    const diagnostic = new vscode.Diagnostic(range, finding.message, severities[finding.severity]);
-    diagnostic.source = 'TS Structure';
-    diagnostic.code = { value: finding.inspection, target: vscode.Uri.parse(`${docsUrl}-${finding.inspection.toLowerCase()}`) };
-    if (finding.unnecessary) {
-      diagnostic.tags = [vscode.DiagnosticTag.Unnecessary];
+  /** Counts for the active file in the status bar; clicking runs Inspect Code on it. */
+  private updateStatus(): void {
+    const document = vscode.window.activeTextEditor?.document;
+    const result = document && this.results.get(pathKey(document.uri.fsPath));
+    if (!document || !result || !vscode.workspace.getConfiguration('tsStructure').get('inspections.statusBar', true)) {
+      this.status.hide();
+      return;
     }
-    diagnostic.relatedInformation = finding.related?.map((r) => {
-      const sourceFile = r.node.getSourceFile();
-      const start = sourceFile.getLineAndCharacterOfPosition(r.node.getStart(sourceFile));
-      const end = sourceFile.getLineAndCharacterOfPosition(r.node.end);
-      return new vscode.DiagnosticRelatedInformation(
-        new vscode.Location(vscode.Uri.file(sourceFile.fileName), new vscode.Range(start.line, start.character, end.line, end.character)),
-        r.message,
-      );
-    });
-    return diagnostic;
+    const count = (severity: Severity) => result.findings.filter((f) => f.severity === severity).length;
+    const problems = result.findings.filter((f) => f.severity !== 'hint').length;
+    this.status.text = problems ? `$(checklist) ${problems}` : '$(pass) TS Structure';
+    this.status.tooltip = `TypeScript Structure inspections in this file: ${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints. Click to list them.`;
+    this.status.show();
+  }
+
+  /** Inspect Code: every inspection over the current file or the whole project, as a report. */
+  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project'): Promise<Report | undefined> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
+      void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file in the project to inspect.');
+      return;
+    }
+    const scope =
+      scopeArg ??
+      (
+        await vscode.window.showQuickPick(
+          [
+            { label: 'Whole Project', description: 'Every source file in the compiler project', scope: 'project' as const },
+            { label: 'Current File', scope: 'file' as const },
+          ],
+          { title: 'Inspect Code' },
+        )
+      )?.scope;
+    if (!scope) {
+      return;
+    }
+    const fileName = editor.document.uri.fsPath;
+    const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath;
+    const run = () =>
+      vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Inspecting code', cancellable: true }, async (progress, token) => {
+        const started = Date.now();
+        const project = this.projects.load(fileName, folder);
+        const files = scope === 'file' ? [project.program.getSourceFile(normalizePath(fileName))!] : projectSourceFiles(project.program).filter((sf) => !isExcluded(sf.fileName));
+        const inspected: InspectedFile[] = [];
+        const inspections = this.inspections();
+        const severityOf = this.severityOf();
+        for (const [i, sourceFile] of files.entries()) {
+          if (token.isCancellationRequested) {
+            return undefined;
+          }
+          progress.report({ message: `${i + 1}/${files.length} ${path.basename(sourceFile.fileName)}`, increment: 100 / files.length });
+          inspected.push({ sourceFile, findings: runInspections(inspections, { sourceFile, program: project.program, checker: project.checker }, severityOf) });
+          // Yield so the progress updates and cancellation can arrive.
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+        const report = inspectionReport(inspected, inspections, folder);
+        report.durationMs = Date.now() - started;
+        return report;
+      });
+    const report = await run();
+    if (report) {
+      await view.show(report, run);
+    }
+    return report;
   }
 
   provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext): vscode.CodeAction[] {
@@ -139,7 +234,25 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     if (!result || result.version !== document.version) {
       return [];
     }
+    const toWorkspaceEdit = (edits: readonly TextEdit[]) => {
+      const edit = new vscode.WorkspaceEdit();
+      for (const e of edits) {
+        edit.replace(document.uri, new vscode.Range(document.positionAt(e.start), document.positionAt(e.end)), e.text);
+      }
+      return edit;
+    };
+    // `editor.codeActionsOnSave: { "source.fixAll.tsStructure": "explicit" }` applies every preferred fix.
+    if (context.only?.contains(fixAllKind) || (context.only && fixAllKind.contains(context.only))) {
+      const edits = fixAllEdits(result.findings);
+      if (edits.length === 0) {
+        return [];
+      }
+      const action = new vscode.CodeAction('Fix all TypeScript Structure problems', fixAllKind);
+      action.edit = toWorkspaceEdit(edits);
+      return [action];
+    }
     const actions: vscode.CodeAction[] = [];
+    const offered = new Set<string>();
     result.findings.forEach((finding, index) => {
       const diagnostic = result.diagnostics[index];
       if (!context.diagnostics.includes(diagnostic) && !diagnostic.range.intersection(range)) {
@@ -149,25 +262,84 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
         action.diagnostics = [diagnostic];
         action.isPreferred = fix.preferred;
-        action.edit = new vscode.WorkspaceEdit();
-        for (const edit of fix.edits) {
-          action.edit.replace(document.uri, new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)), edit.text);
-        }
+        action.edit = toWorkspaceEdit(fix.edits);
         actions.push(action);
       }
-      const suppress = new vscode.CodeAction(`Suppress '${finding.inspection}' for this line`, vscode.CodeActionKind.QuickFix);
-      suppress.diagnostics = [diagnostic];
-      if (result.sourceFile) {
-        const edit = suppressionEdit(result.sourceFile, finding);
-        suppress.edit = new vscode.WorkspaceEdit();
-        suppress.edit.insert(document.uri, document.positionAt(edit.start), edit.text);
-        actions.push(suppress);
+      const sameKind = result.findings.filter((f) => f.inspection === finding.inspection && f.fixes?.length);
+      if (sameKind.length > 1 && !offered.has(`all:${finding.inspection}`)) {
+        offered.add(`all:${finding.inspection}`);
+        const all = new vscode.CodeAction(`Fix all '${finding.inspection}' problems in this file`, vscode.CodeActionKind.QuickFix);
+        all.edit = toWorkspaceEdit(fixAllEdits(sameKind));
+        actions.push(all);
       }
-      const configure = new vscode.CodeAction(`Configure '${finding.inspection}' severity…`, vscode.CodeActionKind.QuickFix);
-      configure.command = { command: 'workbench.action.openSettings', title: 'Configure', arguments: ['tsStructure.inspections'] };
-      configure.diagnostics = [diagnostic];
-      actions.push(configure);
+      const explainer = explainers[finding.inspection];
+      if (explainer) {
+        const explain = new vscode.CodeAction(explainer.title, vscode.CodeActionKind.QuickFix);
+        explain.command = { command: 'tsStructure.explainFinding', title: explainer.title, arguments: [document.uri, finding.start, explainer.command] };
+        actions.push(explain);
+      }
+      if (result.sourceFile) {
+        const line = suppressionEdit(result.sourceFile, finding);
+        const suppress = new vscode.CodeAction(`Suppress '${finding.inspection}' for this line`, vscode.CodeActionKind.QuickFix);
+        suppress.diagnostics = [diagnostic];
+        suppress.edit = toWorkspaceEdit([line]);
+        actions.push(suppress);
+        if (!offered.has(`file:${finding.inspection}`)) {
+          offered.add(`file:${finding.inspection}`);
+          const file = new vscode.CodeAction(`Suppress '${finding.inspection}' for this file`, vscode.CodeActionKind.QuickFix);
+          file.diagnostics = [diagnostic];
+          file.edit = toWorkspaceEdit([fileSuppressionEdit(result.sourceFile, finding.inspection)]);
+          actions.push(file);
+        }
+      }
+      if (!offered.has(`configure:${finding.inspection}`)) {
+        offered.add(`configure:${finding.inspection}`);
+        const configure = new vscode.CodeAction(`Configure '${finding.inspection}' severity…`, vscode.CodeActionKind.QuickFix);
+        configure.command = { command: 'workbench.action.openSettings', title: 'Configure', arguments: ['tsStructure.inspections'] };
+        configure.diagnostics = [diagnostic];
+        actions.push(configure);
+      }
     });
     return actions;
+  }
+}
+
+function toDiagnostic(document: vscode.TextDocument, finding: Finding): vscode.Diagnostic {
+  const range = new vscode.Range(document.positionAt(finding.start), document.positionAt(finding.end));
+  const diagnostic = new vscode.Diagnostic(range, finding.message, severities[finding.severity]);
+  diagnostic.source = 'TS Structure';
+  diagnostic.code = { value: finding.inspection, target: vscode.Uri.parse(`${docsUrl}-${finding.inspection.toLowerCase()}`) };
+  if (finding.unnecessary) {
+    diagnostic.tags = [vscode.DiagnosticTag.Unnecessary];
+  }
+  diagnostic.relatedInformation = finding.related?.map((r) => {
+    const sourceFile = r.node.getSourceFile();
+    const start = sourceFile.getLineAndCharacterOfPosition(r.node.getStart(sourceFile));
+    const end = sourceFile.getLineAndCharacterOfPosition(r.node.end);
+    return new vscode.DiagnosticRelatedInformation(
+      new vscode.Location(vscode.Uri.file(sourceFile.fileName), new vscode.Range(start.line, start.character, end.line, end.character)),
+      r.message,
+    );
+  });
+  return diagnostic;
+}
+
+/** Applies the fix stored on an Inspect Code row, if the file is unchanged since the inspection. */
+async function applyReportFix(node: ReportNode): Promise<void> {
+  const action = node?.action;
+  if (action?.kind !== 'applyFix' || typeof action.file !== 'string') {
+    return;
+  }
+  const document = await vscode.workspace.openTextDocument(action.file);
+  if (hashText(document.getText()) !== action.hash) {
+    void vscode.window.showWarningMessage(`${path.basename(action.file)} changed since the inspection ran. Re-run Inspect Code to refresh the fixes.`);
+    return;
+  }
+  const edit = new vscode.WorkspaceEdit();
+  for (const e of action.edits as TextEdit[]) {
+    edit.replace(document.uri, new vscode.Range(document.positionAt(e.start), document.positionAt(e.end)), e.text);
+  }
+  if (await vscode.workspace.applyEdit(edit)) {
+    void vscode.window.setStatusBarMessage(`Applied: ${String(action.title)}`, 3000);
   }
 }

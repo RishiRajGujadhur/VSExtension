@@ -21,6 +21,7 @@ import { defaultEntryPoints } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
+import { isExcluded } from './exclude';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
@@ -152,7 +153,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       } else {
         entryPoints = defaultEntryPoints(root, new Set(projectSourceFiles(program).map((f) => normalizePath(f.fileName))));
       }
-      return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true) }, root);
+      return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded }, root);
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project') => {
@@ -179,7 +180,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return runAnalysis(view, 'Finding duplicates', () => {
         const program = target.project().program();
         const ignoreTests = config.get('ignoreTestFiles', true);
-        const files = scope === 'file' ? [program.getSourceFile(normalizePath(target.fileName))!] : projectSourceFiles(program).filter((sf) => !ignoreTests || !discoverTests(sf).isTestFile);
+        const files = scope === 'file' ? [program.getSourceFile(normalizePath(target.fileName))!] : projectSourceFiles(program).filter((sf) => (!ignoreTests || !discoverTests(sf).isTestFile) && !isExcluded(sf.fileName));
         return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40) }, target.folder);
       });
     }),

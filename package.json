@@ -261,6 +261,23 @@
         "command": "tsStructure.report.copyLocation",
         "title": "Copy Location",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.inspectCode",
+        "title": "Inspect Code…",
+        "category": "TypeScript Structure",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "tsStructure.report.applyFix",
+        "title": "Apply Fix",
+        "category": "TypeScript Structure",
+        "icon": "$(lightbulb-autofix)"
+      },
+      {
+        "command": "tsStructure.explainFinding",
+        "title": "Explain Finding",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -394,6 +411,10 @@
         {
           "command": "tsStructure.argumentFlow",
           "group": "4_navigate@8"
+        },
+        {
+          "command": "tsStructure.inspectCode",
+          "group": "2_inspect@1"
         }
       ],
       "explorer/context": [
@@ -468,6 +489,14 @@
         {
           "command": "tsStructure.report.export",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.applyFix",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.explainFinding",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -567,6 +596,11 @@
           "command": "tsStructure.report.copyLocation",
           "when": "view == tsStructure.report && viewItem =~ /location/",
           "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.report.applyFix",
+          "when": "view == tsStructure.report && viewItem =~ /action:applyFix/",
+          "group": "inline@1"
         }
       ]
     },
@@ -661,7 +695,7 @@
         "tsStructure.inspections.severity": {
           "type": "object",
           "default": {},
-          "markdownDescription": "Severity per inspection, or `off` to disable it. `default` keeps the severity each finding is reported with. Findings can also be suppressed in code with `// ts-structure-ignore-next-line <id>` or `// ts-structure-ignore-file <id>`.",
+          "markdownDescription": "Severity per inspection, or `off` to disable it. `default` keeps the severity each finding is reported with. Findings can also be suppressed in code with `// ts-structure-ignore-next-line <id>` or `// ts-structure-ignore-file <id>`. Add `\"editor.codeActionsOnSave\": { \"source.fixAll.tsStructure\": \"explicit\" }` to apply preferred fixes on save.",
           "properties": {
             "missingAwait": {
               "type": "string",
@@ -818,6 +852,19 @@
           "type": "boolean",
           "default": true,
           "description": "Highlight the locations of the current analysis in open editors: definitions outlined, writes and reads shaded."
+        },
+        "tsStructure.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection and dead export results (for example `**/generated/**` or `src/legacy/*.ts`)."
+        },
+        "tsStructure.inspections.statusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the number of inspection findings in the active file in the status bar."
         }
       }
     }

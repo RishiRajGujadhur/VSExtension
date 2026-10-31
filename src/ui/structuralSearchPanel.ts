@@ -7,6 +7,7 @@ import { previewEnabled } from './refactorCommands';
 import { CustomInspectionConfig, inspectionId } from '../search/customInspections';
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
+import { isExcluded } from './exclude';
 
 export type Scope = 'project' | 'file';
 
@@ -66,7 +67,7 @@ export class StructuralSearchPanel {
   }
 
   protected scopeOf(scope: Scope): SearchScope {
-    return scope === 'file' ? { files: [this.anchor] } : {};
+    return scope === 'file' ? { files: [this.anchor] } : { isExcluded };
   }
 
   protected folder(): string | undefined {

@@ -43,3 +43,24 @@ test('re-running after edits targets the same symbol', async () => {
   assert.equal(retarget(before, inserted, offset), inserted.indexOf('return total') + 'return to'.length);
   assert.equal(retarget(before, before, offset), offset);
 });
+
+test('exclude globs match relative paths', async () => {
+  const { globToRegExp } = await import('../structure/glob');
+  assert.ok(globToRegExp('**/generated/**', false).test('src/generated/api.ts'));
+  assert.ok(globToRegExp('**/generated/**', false).test('generated/api.ts'));
+  assert.ok(globToRegExp('src/*.ts', false).test('src/a.ts'));
+  assert.ok(!globToRegExp('src/*.ts', false).test('src/nested/a.ts'));
+  assert.ok(globToRegExp('**/*.{spec,test}.ts', false).test('a/b.test.ts'));
+});
+
+test('fix-all takes one fix per finding and skips overlaps; file suppression extends an existing comment', async () => {
+  const ts = await import('typescript');
+  const { fixAllEdits, fileSuppressionEdit } = await import('../inspect/inspection');
+  const finding = (start: number, end: number) => ({ inspection: 'x', message: '', start, end, severity: 'warning' as const, fixes: [{ title: 'a', edits: [{ start, end, text: '' }] }] });
+  assert.equal(fixAllEdits([finding(0, 5), finding(3, 8), finding(10, 12)]).length, 2);
+  const plain = ts.createSourceFile('a.ts', 'const a = 1;\n', ts.ScriptTarget.Latest, true);
+  assert.deepEqual(fileSuppressionEdit(plain, 'missingAwait'), { start: 0, end: 0, text: '// ts-structure-ignore-file missingAwait\n' });
+  const existing = ts.createSourceFile('a.ts', '// ts-structure-ignore-file typeAssertion\nconst a = 1;\n', ts.ScriptTarget.Latest, true);
+  const edit = fileSuppressionEdit(existing, 'missingAwait');
+  assert.equal(existing.text.slice(0, edit.start) + edit.text + existing.text.slice(edit.end), '// ts-structure-ignore-file typeAssertion, missingAwait\nconst a = 1;\n');
+});

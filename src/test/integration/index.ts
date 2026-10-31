@@ -187,6 +187,15 @@ async function missingAwaitFlow(): Promise<void> {
   const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, diagnostics[0].range);
   const titles = actions.map((a) => a.title);
   assert.ok(titles.includes("Suppress 'missingAwait' for this line"), titles.join(', '));
+  assert.ok(titles.includes('Trace where this promise’s rejection goes…'), titles.join(', '));
+  assert.ok(titles.includes("Suppress 'missingAwait' for this file"), titles.join(', '));
+
+  const report = await vscode.commands.executeCommand<{ description?: string }>('tsStructure.inspectCode', 'file');
+  assert.match(report?.description ?? '', /^1 problem in 1 file/);
+  const fixAll = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, new vscode.Range(0, 0, 0, 0), 'source.fixAll.tsStructure');
+  assert.equal(fixAll.length, 1, fixAll.map((a) => a.title).join(', '));
+  console.log('inspect code and fix-all ok');
+
   assert.ok(await vscode.workspace.applyEdit(actions.find((a) => a.title === 'Add await')!.edit!));
   assert.match(document.getText(), /await notify\(message\);/);
   await waitForDiagnostics(file, (d) => d.source === 'TS Structure', 0);

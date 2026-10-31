@@ -84,6 +84,34 @@ function matches(ignored: Set<string> | 'all' | undefined, id: string): boolean 
   return ignored === 'all' || (!!ignored && ignored.has(id));
 }
 
+/** The edit that suppresses an inspection for the whole file, extending an existing file comment. */
+export function fileSuppressionEdit(sourceFile: ts.SourceFile, id: string): TextEdit {
+  const existing = /\/\/\s*ts-structure-ignore-file\b([^\n]*)/.exec(sourceFile.text);
+  if (existing && existing[1].trim()) {
+    const end = existing.index + existing[0].trimEnd().length;
+    return { start: end, end, text: `, ${id}` };
+  }
+  // After a shebang, which must stay on the first line.
+  const start = sourceFile.text.startsWith('#!') ? sourceFile.text.indexOf('\n') + 1 : 0;
+  return { start, end: start, text: `// ts-structure-ignore-file ${id}\n` };
+}
+
+/** One fix per finding (the preferred one), skipping fixes that overlap an earlier one. */
+export function fixAllEdits(findings: readonly Finding[], inspection?: string): TextEdit[] {
+  const edits: TextEdit[] = [];
+  for (const finding of findings) {
+    if (inspection && finding.inspection !== inspection) {
+      continue;
+    }
+    const fix = finding.fixes?.find((f) => f.preferred) ?? finding.fixes?.[0];
+    if (!fix || fix.edits.some((e) => edits.some((o) => e.start < o.end && o.start < e.end))) {
+      continue;
+    }
+    edits.push(...fix.edits);
+  }
+  return edits;
+}
+
 /** The text edit that suppresses one inspection on the finding's line. */
 export function suppressionEdit(sourceFile: ts.SourceFile, finding: Finding): TextEdit {
   const line = sourceFile.getLineAndCharacterOfPosition(finding.start).line;
