@@ -125,6 +125,11 @@
         "command": "tsStructure.nullability",
         "title": "Nullability Path Explorer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.promiseRejections",
+        "title": "Promise Rejection Analyzer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -205,6 +210,10 @@
         {
           "command": "tsStructure.nullability",
           "group": "3_analysis@5"
+        },
+        {
+          "command": "tsStructure.promiseRejections",
+          "group": "3_analysis@6"
         }
       ],
       "explorer/context": [
