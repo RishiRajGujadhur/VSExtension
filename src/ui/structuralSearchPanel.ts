@@ -1,15 +1,17 @@
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
-import { Match, PlaceholderConstraint, SearchScope, SearchSpec, bindingSummary, searchReport, structuralSearch } from '../search/structuralSearch';
-import { reportError } from './applyRefactor';
+import { Match, PlaceholderConstraint, SearchScope, SearchSpec, bindingSummary, searchReport, structuralReplace, structuralSearch } from '../search/structuralSearch';
+import { applyRefactor, reportError } from './applyRefactor';
+import { previewEnabled } from './refactorCommands';
 import { StructureView } from './structureView';
 
 export type Scope = 'project' | 'file';
 
 type Message =
   | { type: 'search'; spec: SearchSpec; scope: Scope }
-  | { type: 'open'; index: number };
+  | { type: 'open'; index: number }
+  | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
 export class StructuralSearchPanel {
@@ -66,6 +68,25 @@ export class StructuralSearchPanel {
           viewColumn: vscode.ViewColumn.One,
           selection: new vscode.Range(document.positionAt(match.start), document.positionAt(match.end)),
         });
+      }
+      return;
+    }
+    if (message.type === 'replace') {
+      try {
+        const project = this.projects.createVirtualProject(this.anchor, this.folder());
+        const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        if (result.matches === 0) {
+          void this.panel.webview.postMessage({ type: 'status', text: 'No matches to replace.' });
+          return;
+        }
+        const files = result.changes.length;
+        void this.panel.webview.postMessage({
+          type: 'status',
+          text: `Replacing ${result.matches} ${result.matches === 1 ? 'match' : 'matches'} in ${files} ${files === 1 ? 'file' : 'files'}${result.conflicts.length ? `; ${result.conflicts.length} new type error(s)` : ', type-checks cleanly'}.`,
+        });
+        await applyRefactor(result, previewEnabled());
+      } catch (error) {
+        void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
       }
       return;
     }
@@ -156,6 +177,10 @@ function html(webview: vscode.Webview, pattern: string): string {
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option></select></label>
     <button id="search">Search</button>
   </div>
+  <h2>Replace with</h2>
+  <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
+  <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
+  <div class="row"><button id="replace" class="secondary">Replace All…</button></div>
   <div id="error" class="error"></div>
   <h2 id="summary"></h2>
   <ul id="results"></ul>
@@ -165,6 +190,7 @@ function html(webview: vscode.Webview, pattern: string): string {
   const state = vscode.getState() || { pattern: ${JSON.stringify(pattern)}, constraints: {}, scope: 'project' };
   if (${JSON.stringify(pattern)}) state.pattern = ${JSON.stringify(pattern)};
   $('pattern').value = state.pattern || '';
+  $('template').value = state.template || '';
   $('scope').value = state.scope || 'project';
 
   function placeholders(text) {
@@ -193,6 +219,7 @@ function html(webview: vscode.Webview, pattern: string): string {
   function save() {
     state.pattern = $('pattern').value;
     state.scope = $('scope').value;
+    state.template = $('template').value;
     vscode.setState(state);
   }
   function spec() {
@@ -201,6 +228,12 @@ function html(webview: vscode.Webview, pattern: string): string {
   }
   $('pattern').addEventListener('input', () => { save(); renderConstraints(); });
   $('scope').addEventListener('change', save);
+  $('template').addEventListener('input', save);
+  $('replace').addEventListener('click', () => {
+    $('error').textContent = '';
+    $('summary').textContent = 'Computing replacements…';
+    vscode.postMessage({ type: 'replace', spec: spec(), scope: $('scope').value, template: $('template').value });
+  });
   $('search').addEventListener('click', () => {
     $('error').textContent = '';
     $('summary').textContent = 'Searching…';
