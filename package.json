@@ -110,6 +110,16 @@
         "command": "tsStructure.dataFlow",
         "title": "Data Flow Path Explorer",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.mutationTracking",
+        "title": "Mutation Tracking (Active File)",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.sideEffects",
+        "title": "Side-Effect Analyzer",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -178,6 +188,14 @@
         {
           "command": "tsStructure.dataFlow",
           "group": "3_analysis@2"
+        },
+        {
+          "command": "tsStructure.mutationTracking",
+          "group": "3_analysis@3"
+        },
+        {
+          "command": "tsStructure.sideEffects",
+          "group": "3_analysis@4"
         }
       ],
       "explorer/context": [
