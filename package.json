@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
-  "displayName": "TypeScript Structure: Test Impact Analysis",
-  "description": "Finds the individual Jest, Vitest, Mocha, Playwright and node:test cases that may be affected by changing a TypeScript or JavaScript symbol. Deterministic, offline static analysis.",
-  "version": "0.1.0",
+  "displayName": "TypeScript Structure: Refactoring & Test Impact",
+  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature and more) plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.2.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -14,9 +14,23 @@
   },
   "categories": [
     "Testing",
-    "Programming Languages"
+    "Programming Languages",
+    "Other"
   ],
-  "activationEvents": [],
+  "keywords": [
+    "refactoring",
+    "change signature",
+    "typescript",
+    "react",
+    "webstorm",
+    "test impact"
+  ],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -49,14 +63,43 @@
         "title": "Clear Impact Results",
         "category": "TypeScript Structure",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "tsStructure.changeSignature",
+        "title": "Change Signature…",
+        "category": "TypeScript Structure"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "tsStructure.editorMenu",
+        "label": "TypeScript Structure"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "tsStructure.changeSignature",
+        "key": "ctrl+f6",
+        "mac": "cmd+f6",
+        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "tsImpact.analyze",
+          "submenu": "tsStructure.editorMenu",
           "when": "editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
-          "group": "navigation@90"
+          "group": "1_modification@90"
+        }
+      ],
+      "tsStructure.editorMenu": [
+        {
+          "command": "tsStructure.changeSignature",
+          "group": "1_refactor@1"
+        },
+        {
+          "command": "tsImpact.analyze",
+          "group": "3_analysis@1"
         }
       ],
       "commandPalette": [
@@ -121,8 +164,13 @@
       }
     ],
     "configuration": {
-      "title": "Test Impact Analysis",
+      "title": "TypeScript Structure",
       "properties": {
+        "tsStructure.previewRefactorings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show VS Code's Refactor Preview before applying refactorings, so individual changes can be reviewed and unticked."
+        },
         "tsImpact.maxDepth": {
           "type": "number",
           "default": 25,

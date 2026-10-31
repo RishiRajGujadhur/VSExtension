@@ -349,7 +349,7 @@ function moduleTarget(sourceFile: ts.SourceFile): ImpactTarget {
   return { name: path.basename(sourceFile.fileName), kind: 'module', location: { file: sourceFile.fileName, line: 0, character: 0 } };
 }
 
-function findIdentifier(sourceFile: ts.SourceFile, offset: number): ts.Identifier | ts.PrivateIdentifier | undefined {
+export function findIdentifier(sourceFile: ts.SourceFile, offset: number): ts.Identifier | ts.PrivateIdentifier | undefined {
   // Accept a cursor placed just after the name, as editors commonly report.
   for (const at of [offset, offset - 1]) {
     const node = findNode(sourceFile, at);
@@ -360,7 +360,8 @@ function findIdentifier(sourceFile: ts.SourceFile, offset: number): ts.Identifie
   return undefined;
 }
 
-function findNode(sourceFile: ts.SourceFile, offset: number): ts.Node {
+/** The innermost node whose span contains the offset. */
+export function findNode(sourceFile: ts.SourceFile, offset: number): ts.Node {
   let found: ts.Node = sourceFile;
   const visit = (node: ts.Node) => {
     if (node.getStart(sourceFile) <= offset && offset < node.end) {

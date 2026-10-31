@@ -4,6 +4,7 @@ import * as ts from 'typescript';
 import { AnalysisError } from './types';
 import { normalizePath, pathKey } from './paths';
 import { ReferenceIndex } from './referenceIndex';
+import { VirtualProject } from '../refactor/virtualProject';
 
 /** Returns the unsaved text of an open editor, or undefined to read from disk. */
 export type OverlayProvider = (fileName: string) => string | undefined;
@@ -39,16 +40,7 @@ export class ProjectService {
 
   load(fileName: string, fallbackRoot?: string): LoadedProject {
     const file = normalizePath(fileName);
-    const located = this.findConfig(file);
-    let parsed: ts.ParsedCommandLine;
-    let configPath: string | undefined;
-    if (located) {
-      parsed = located.parsed;
-      configPath = located.configPath;
-    } else {
-      parsed = this.inferProject(file, fallbackRoot ?? path.dirname(file));
-    }
-
+    const { configPath, parsed } = this.resolve(file, fallbackRoot);
     const cacheKey = configPath ? pathKey(configPath) : `inferred:${pathKey(fallbackRoot ?? path.dirname(file))}`;
     const previous = this.projects.get(cacheKey);
     const host = this.createHost(parsed.options);
@@ -66,6 +58,18 @@ export class ProjectService {
     const project: LoadedProject = { configPath, program, checker: program.getTypeChecker() };
     this.projects.set(cacheKey, project);
     return project;
+  }
+
+  /** The compiler configuration that includes the file, or an inferred one when no config exists. */
+  resolve(fileName: string, fallbackRoot?: string): { configPath?: string; parsed: ts.ParsedCommandLine } {
+    const file = normalizePath(fileName);
+    return this.findConfig(file) ?? { parsed: this.inferProject(file, fallbackRoot ?? path.dirname(file)) };
+  }
+
+  /** An editable in-memory copy of the file's project, for computing refactorings. */
+  createVirtualProject(fileName: string, fallbackRoot?: string): VirtualProject {
+    const { configPath, parsed } = this.resolve(fileName, fallbackRoot);
+    return new VirtualProject(parsed, this.overlay, configPath);
   }
 
   /** Drops cached programs, for example after a configuration file changes. */

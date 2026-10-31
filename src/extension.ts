@@ -5,6 +5,7 @@ import { AnalysisError, AnalysisScope, ImpactResult, SourceLocation, TestCase } 
 import { pathKey } from './analysis/paths';
 import { ResultsProvider, countLabel, openLocation, showResultsPicker, trackResult } from './resultsView';
 import { runTests } from './runner';
+import { registerRefactorings } from './ui/refactorCommands';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -26,6 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
   configWatcher.onDidDelete(invalidate);
 
   const run = (tests: TestCase[]) => void runTests(tests);
+  registerRefactorings(context, projects);
 
   context.subscriptions.push(
     view,
