@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
-  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, Introduce Parameter, intention actions and more) plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.5.0",
+  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, Introduce Parameter, Move Members and intention actions) plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.6.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -83,6 +83,11 @@
         "command": "tsStructure.introduceParameter",
         "title": "Introduce Parameter…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.moveMembers",
+        "title": "Move Members to Module…",
+        "category": "TypeScript Structure"
       }
     ],
     "submenus": [
@@ -130,6 +135,10 @@
         {
           "command": "tsStructure.introduceParameter",
           "group": "1_refactor@3"
+        },
+        {
+          "command": "tsStructure.moveMembers",
+          "group": "1_refactor@4"
         },
         {
           "command": "tsImpact.analyze",

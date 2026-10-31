@@ -35,6 +35,9 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
     if (isDeclarationName(node)) {
       actions.push(command('Safe Delete…', 'tsStructure.safeDelete'));
     }
+    if (isTopLevelDeclarationName(node)) {
+      actions.push(command('Move to Existing Module…', 'tsStructure.moveMembers'));
+    }
     return actions;
   }
 }
@@ -52,6 +55,15 @@ function isInsideFunctionBody(node: ts.Node): boolean {
     }
   }
   return false;
+}
+
+function isTopLevelDeclarationName(node: ts.Node): boolean {
+  if (!isDeclarationName(node)) {
+    return false;
+  }
+  const declaration = node.parent;
+  const statement = ts.isVariableDeclaration(declaration) ? declaration.parent.parent : declaration;
+  return !!statement && ts.isSourceFile(statement.parent);
 }
 
 /** The name in a declaration that Safe Delete supports. */

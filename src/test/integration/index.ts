@@ -8,6 +8,7 @@ import { ProjectService } from '../../analysis/project';
 import { changeSignature } from '../../refactor/changeSignature';
 import { planFileDelete } from '../../refactor/safeDelete';
 import { introduceParameter } from '../../refactor/introduceParameter';
+import { moveMembers } from '../../refactor/moveMembers';
 import { applyRefactor } from '../../ui/applyRefactor';
 
 // Refactorings write to files, so the tests work on a throwaway copy of the sample project.
@@ -22,6 +23,7 @@ export async function run(): Promise<void> {
     await safeDeleteFlow();
     await intentionFlow();
     await introduceParameterFlow();
+    await moveMembersFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -150,6 +152,24 @@ async function introduceParameterFlow(): Promise<void> {
   assert.match(document.getText(), /\/ divisor;/);
   console.log('introduce parameter ok');
   await revert([discount, cart]);
+}
+
+async function moveMembersFlow(): Promise<void> {
+  const cart = path.join(sample, 'src/cart.ts');
+  const checkout = path.join(sample, 'src/checkout.ts');
+  const document = await vscode.workspace.openTextDocument(cart);
+  const at = document.positionAt(document.getText().indexOf('calculateSubtotal'));
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at));
+  assert.ok(actions.some((a) => a.title === 'Move to Existing Module…'), 'Move is not offered on a top-level declaration');
+
+  const result = moveMembers(new ProjectService().createVirtualProject(cart), cart, ['calculateSubtotal'], checkout, { keepReExport: true });
+  assert.deepEqual(result.conflicts, []);
+  assert.ok(await applyRefactor(result, false));
+  const checkoutText = (await vscode.workspace.openTextDocument(checkout)).getText();
+  assert.match(checkoutText, /export function calculateSubtotal/);
+  assert.match(document.getText(), /export \{ calculateSubtotal \} from '\.\/checkout';/);
+  console.log('move members ok');
+  await revert([vscode.Uri.file(cart), vscode.Uri.file(checkout)]);
 }
 
 async function revert(uris: vscode.Uri[]): Promise<void> {

@@ -81,6 +81,29 @@ It refuses expressions that can't be evaluated by callers:
 
 It reports a call site when the expression uses a name that isn't imported there, or when `this` has no plain receiver.
 
+### Move Members to Module
+
+Run **Move Members to Module…** from the right-click menu or the Command Palette, or use **Move to Existing Module…** in the lightbulb on a top-level declaration.
+
+1. Pick any number of top-level declarations: functions, classes, interfaces, types, enums, variables or namespaces. The one at the cursor is preselected.
+2. Pick the target. Project modules are listed nearest folder first, and you can also create a new module or browse for one.
+3. For exported declarations, choose between updating importers and also keeping a re-export in the source module, so its public API stays the same.
+
+What it handles:
+- **Imports.** Moves use the TypeScript compiler's own Move to file engine, so every import of the moved declarations is updated project-wide.
+- **Private dependencies.** Anything the moved code still needs from the source module, even a non-exported constant, is exported and imported automatically.
+- **Re-exports.** Barrel files such as `export { a, b as c } from './source'` are split, so moved names are re-exported from the new module. The compiler doesn't do this on its own. `export *` barrels are reported for review.
+- **Several declarations at once.** Non-adjacent declarations move together.
+- **Style.** Quote style and extension style (`./x` or `./x.js`) follow the project.
+
+It refuses to proceed when:
+- The target already declares one of the names.
+- You select only part of a statement like `const a = 1, b = 2`.
+
+Like the other refactorings, it reports any new type error before applying.
+
+VS Code uses `F6` for accessibility navigation, so no key is bound by default. To use WebStorm's `F6`, add a keybinding for `tsStructure.moveMembers` with `"when": "editorTextFocus"`.
+
 ### Intention actions (lightbulb, `Ctrl+.`)
 
 Contextual transformations that appear in the lightbulb menu when they apply at the cursor. They work on the syntax tree only, so they are instant and need no project. Each one checks that it preserves behaviour and isn't offered otherwise.
