@@ -1,0 +1,65 @@
+import * as vscode from 'vscode';
+import { ProjectService } from '../analysis/project';
+import { isValidIdentifier } from '../refactor/common';
+import { IntroduceParameterOptions, describeIntroduceParameter, introduceParameter } from '../refactor/introduceParameter';
+import { applyRefactor, reportError } from './applyRefactor';
+import { previewEnabled } from './refactorCommands';
+
+export async function runIntroduceParameter(projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
+  const document = editor.document;
+  const start = document.offsetAt(editor.selection.start);
+  const end = document.offsetAt(editor.selection.end);
+  const root = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
+  const version = document.version;
+  try {
+    const info = describeIntroduceParameter(projects.createVirtualProject(document.uri.fsPath, root), document.uri.fsPath, start, end);
+    const short = info.expression.length > 40 ? `${info.expression.slice(0, 37)}…` : info.expression;
+
+    const name = await vscode.window.showInputBox({
+      title: `Introduce Parameter in ${info.functionName}`,
+      prompt: `New parameter for ${short}${info.type ? ` (${info.type})` : ''}`,
+      value: info.suggestedName,
+      valueSelection: [0, info.suggestedName.length],
+      validateInput: (value) => (isValidIdentifier(value.trim()) ? undefined : 'Enter a valid identifier.'),
+    });
+    if (!name) {
+      return;
+    }
+
+    const mode = await vscode.window.showQuickPick(
+      [
+        { label: 'Required', description: `callers pass ${short}`, mode: 'required' as const },
+        { label: 'Optional', description: `default value = ${short}; callers unchanged`, mode: 'optional' as const },
+      ],
+      { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' },
+    );
+    if (!mode) {
+      return;
+    }
+
+    let replaceAll = false;
+    if (info.occurrences > 1) {
+      const choice = await vscode.window.showQuickPick(
+        [
+          { label: `Replace all ${info.occurrences} occurrences`, all: true },
+          { label: 'Replace this occurrence only', all: false },
+        ],
+        { title: `${short} occurs ${info.occurrences} times in ${info.functionName}` },
+      );
+      if (!choice) {
+        return;
+      }
+      replaceAll = choice.all;
+    }
+
+    if (document.version !== version) {
+      void vscode.window.showWarningMessage('The file changed while Introduce Parameter was open. Run it again.');
+      return;
+    }
+    const options: IntroduceParameterOptions = { name: name.trim(), mode: mode.mode, replaceAll };
+    const result = introduceParameter(projects.createVirtualProject(document.uri.fsPath, root), document.uri.fsPath, start, end, options);
+    await applyRefactor(result, previewEnabled());
+  } catch (error) {
+    reportError(error, 'Introduce Parameter');
+  }
+}

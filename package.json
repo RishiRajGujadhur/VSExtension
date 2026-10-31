@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
-  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, intention actions and more) plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.4.0",
+  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, Introduce Parameter, intention actions and more) plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.5.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -78,6 +78,11 @@
         "command": "tsStructure.safeDeleteFile",
         "title": "Safe Delete File…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.introduceParameter",
+        "title": "Introduce Parameter…",
+        "category": "TypeScript Structure"
       }
     ],
     "submenus": [
@@ -92,6 +97,12 @@
         "key": "ctrl+f6",
         "mac": "cmd+f6",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "command": "tsStructure.introduceParameter",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p",
+        "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       },
       {
         "command": "tsStructure.safeDelete",
@@ -115,6 +126,10 @@
         {
           "command": "tsStructure.safeDelete",
           "group": "1_refactor@2"
+        },
+        {
+          "command": "tsStructure.introduceParameter",
+          "group": "1_refactor@3"
         },
         {
           "command": "tsImpact.analyze",

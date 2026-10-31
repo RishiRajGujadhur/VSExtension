@@ -61,6 +61,26 @@ The confirmation also shows:
 
 The declaration is removed together with its JSDoc or line comments, without leaving doubled blank lines. Deleting a parameter goes through Change Signature, so the matching argument is removed from every call; uses of the parameter inside the body are listed as blocking. Deleting a file lists every module that imports or re-exports it; with **Delete Anyway**, those import and export statements are removed too.
 
+### Introduce Parameter (`Ctrl+Alt+P`)
+
+Select an expression inside a function, or place the cursor on one, and run **Introduce Parameter…** from the lightbulb, the right-click menu or `Ctrl+Alt+P` (`Cmd+Alt+P` on macOS). Choose a name (a suggestion is derived from the expression), then how existing callers supply the value:
+
+- **Required.** Every call site passes the expression.
+  - References to the function's own parameters become that call's arguments, so selecting `base * qty` in `price(base, qty)` turns `price(1 + 1, 3)` into `price(1 + 1, 3, (1 + 1) * 3)`.
+  - `this` becomes the call's receiver, so `cart.total(4)` becomes `cart.total(4, cart.items)`.
+- **Optional.** The expression becomes the parameter's default value, and callers are unchanged.
+
+When the expression appears more than once in the function, you can replace every occurrence or only the selected one. The parameter's type is inferred, with literals widened (`0.2` → `number`). The parameter goes before a rest parameter if there is one.
+
+It's built on Change Signature, so everything there applies: rewriting nested and multi-line calls, interface and overriding members, conflict reporting and new-error detection.
+
+It refuses expressions that can't be evaluated by callers:
+- Expressions that use local variables of the function.
+- `arguments`, `await` or `yield`.
+- `this` inside an arrow function.
+
+It reports a call site when the expression uses a name that isn't imported there, or when `this` has no plain receiver.
+
 ### Intention actions (lightbulb, `Ctrl+.`)
 
 Contextual transformations that appear in the lightbulb menu when they apply at the cursor. They work on the syntax tree only, so they are instant and need no project. Each one checks that it preserves behaviour and isn't offered otherwise.

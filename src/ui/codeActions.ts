@@ -26,6 +26,9 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
     const sourceFile = parse(document);
     const node = findNode(sourceFile, document.offsetAt(range.start));
     const actions: vscode.CodeAction[] = [];
+    if (!range.isEmpty && isInsideFunctionBody(node)) {
+      actions.push(command('Introduce Parameter…', 'tsStructure.introduceParameter'));
+    }
     if (isFunctionName(node)) {
       actions.push(command('Change Signature…', 'tsStructure.changeSignature'));
     }
@@ -40,6 +43,15 @@ function command(title: string, id: string): vscode.CodeAction {
   const action = new vscode.CodeAction(title, refactorKind);
   action.command = { command: id, title };
   return action;
+}
+
+function isInsideFunctionBody(node: ts.Node): boolean {
+  for (let current: ts.Node | undefined = node; current; current = current.parent) {
+    if ((ts.isFunctionLike(current) && 'body' in current && current.body) || ts.isSourceFile(current)) {
+      return !ts.isSourceFile(current);
+    }
+  }
+  return false;
 }
 
 /** The name in a declaration that Safe Delete supports. */

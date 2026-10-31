@@ -7,6 +7,7 @@ import { ImpactResult } from '../../analysis/types';
 import { ProjectService } from '../../analysis/project';
 import { changeSignature } from '../../refactor/changeSignature';
 import { planFileDelete } from '../../refactor/safeDelete';
+import { introduceParameter } from '../../refactor/introduceParameter';
 import { applyRefactor } from '../../ui/applyRefactor';
 
 // Refactorings write to files, so the tests work on a throwaway copy of the sample project.
@@ -20,6 +21,7 @@ export async function run(): Promise<void> {
     await changeSignatureFlow();
     await safeDeleteFlow();
     await intentionFlow();
+    await introduceParameterFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -125,6 +127,29 @@ async function intentionFlow(): Promise<void> {
   assert.match(document.getText(), /if \(!coupon\) return 0;/);
   console.log('intentions ok:', titles.filter((t) => !t.endsWith('…')).join(' | '));
   await revert([file]);
+}
+
+async function introduceParameterFlow(): Promise<void> {
+  const discount = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
+  const cart = vscode.Uri.file(path.join(sample, 'src/cart.ts'));
+  const document = await vscode.workspace.openTextDocument(discount);
+  const start = document.getText().indexOf('100');
+  const range = new vscode.Range(document.positionAt(start), document.positionAt(start + 3));
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', discount, range);
+  assert.ok(actions.some((a) => a.title === 'Introduce Parameter…'), 'Introduce Parameter is not offered for a selection');
+
+  const projects = new ProjectService();
+  const result = introduceParameter(projects.createVirtualProject(discount.fsPath), discount.fsPath, start, start + 3, {
+    name: 'divisor',
+    mode: 'optional',
+    replaceAll: true,
+  });
+  assert.deepEqual(result.conflicts, []);
+  assert.ok(await applyRefactor(result, false));
+  assert.match(document.getText(), /coupon\?: Coupon, divisor: number = 100\)/);
+  assert.match(document.getText(), /\/ divisor;/);
+  console.log('introduce parameter ok');
+  await revert([discount, cart]);
 }
 
 async function revert(uris: vscode.Uri[]): Promise<void> {
