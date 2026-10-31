@@ -2,7 +2,16 @@
 
 WebStorm-style refactorings and test impact analysis for TypeScript, JavaScript and React in VS Code. Everything is deterministic, offline static analysis using the TypeScript Compiler API and Language Service. No AI and no network access.
 
-All commands are in the Command Palette under **TypeScript Structure**, and in the editor's right-click menu under **TypeScript Structure**.
+All commands are in the Command Palette under **TypeScript Structure**, and in the editor's right-click menu under **TypeScript Structure**. **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`, `Cmd+Alt+Shift+T` on macOS) lists every refactoring, inspection and navigation for the cursor in one searchable picker.
+
+| Area | Features |
+| --- | --- |
+| [Refactorings](#refactorings) | Change Signature, Safe Delete, Introduce Parameter, Move Members, 19 intention actions |
+| [Inspections](#inspections) | Data Flow, Mutation Tracking, Nullability, Promise Rejections, Missing Await, Type Assertions, Dead Exports, Exception Flow, Structural Duplicates, Side Effects |
+| [Navigation and search](#navigation-and-search) | Semantic Find Usages, Re-export Chains, Structural Search and Replace, Custom Inspections, Inheritance Hierarchy, Override Impact, Dependency Paths, Dependency Graph Diff, Argument Propagation |
+| [Test Impact Analysis](#test-impact-analysis) | Tests affected by a symbol or file |
+
+Analyses show their results in the **TypeScript Structure** view in the Activity Bar; live inspections report to the Problems panel. See [Working with results](#working-with-results) for what the view offers.
 
 ## Refactorings
 
@@ -147,6 +156,98 @@ Negation is smart throughout: `!x` becomes `x`, comparisons flip (`===` ↔ `!==
 
 Indentation follows the editor's tab settings. To hide individual intentions, list their ids in `tsStructure.intentions.disabled`.
 
+## Inspections
+
+Inspections explain *why* code behaves as it does, following values, promises and errors across functions and files instead of repeating single-file lint rules. Two of them run live on visible files; the others are analyses you run at the cursor, with results in the TypeScript Structure view.
+
+### Live inspections
+
+Findings appear in the Problems panel with quick fixes in the lightbulb, plus:
+- **Fix all** problems of one inspection in the file, or every preferred fix with `"editor.codeActionsOnSave": { "source.fixAll.tsStructure": "explicit" }`.
+- **Suppress** for a line (`// ts-structure-ignore-next-line missingAwait`) or a file (`// ts-structure-ignore-file missingAwait`). Without ids, every inspection is suppressed.
+- **Explain**, which opens the matching analysis, for example the Promise Rejection Analyzer for a dropped promise.
+- **Severity** per inspection in `tsStructure.inspections.severity` (`off` disables one); `tsStructure.inspections.enabled` turns them all off.
+
+**Inspect Code…** runs every inspection, including custom ones, over the current file or the whole project, with cancellable progress. Results are grouped by inspection and file, and fixable rows have an **Apply Fix** button. The status bar shows the count for the active file; click it to inspect the file.
+
+#### Inspections: missingAwait
+
+The Interprocedural Missing Await detector flags promises that are created and then lost:
+- A call statement whose promise nobody awaits, returns or `.catch()`es, naming the origin when it comes through wrapper functions: *loadUser() (from fetchUser()) is not awaited*.
+- A promise handed to a helper whose parameter doesn't expect one and which never awaits it, following it through further helpers: *relay(value) → logLater(value) never awaits it*.
+- A promise used as a condition (always truthy) or in a template or string (`[object Promise]`).
+- `forEach(async …)`, and `map(async …)` whose promises are discarded.
+- `return promise` inside `try` in an async function, which bypasses the `catch`.
+
+Fixes add `await`, mark the call as intentionally not awaited with `void`, or wrap in `await Promise.all(…)`.
+
+#### Inspections: typeAssertion
+
+The Type Assertion Inspector classifies `as`, `<T>` and `!` assertions:
+- **Unnecessary:** the value already has that type, or `!` on a value that is never null. Shown faded, with a fix to remove it.
+- **Widening:** the value already fits the type. A fix switches to `satisfies`, which keeps the check.
+- **Unchecked narrowing:** says exactly what it assumes, such as *the value is never number* or *properties radius exist*.
+- **Unsafe:** `as any`, assertions on `any` values such as `JSON.parse(…) as T`, and double assertions through `unknown`.
+- **Non-null `!`** on a nullable value: a hint, with a fix to use `?.` where it's a property access.
+
+### Analyses at the cursor
+
+| Analysis | Place the cursor on | What it shows |
+| --- | --- | --- |
+| **Data Flow Path Explorer** | a variable, parameter or property | Every definition, update, mutation (`push`, `.x = …`), condition, hand-off to a call and read, grouped by function in source order, with the narrowed type at each step. For a parameter, the values its call sites pass. |
+| **Mutation Tracking** | anywhere in a file | Functions that change state they don't own, both by function and by the shared state (module variables, imports, `this`, globals) and who changes it. |
+| **Side-Effect Analyzer** | a function or call | Mutations of arguments, the instance, module or imported state, closures and globals; I/O (console, network, storage, `fs`); timers; nondeterminism (`Math.random`, `Date.now`). Effects of called functions are included with the call chain, and argument mutations map onto what the caller passed. |
+| **Nullability Path Explorer** | a variable, property access or call | Whether it can be null or undefined there, every path that produces it (declarations, `let x;`, assignments, optional parameters, call sites passing `undefined` or omitting the argument, nullable returns, falling off the end of a function, optional chaining), or the guards that rule it out. |
+| **Promise Rejection Analyzer** | an async or promise-returning function | Throws, awaits and `Promise.reject` that can reject, then every path the promise takes through callers, `.then`/`.catch`/`.finally`, `Promise.all`/`allSettled`, variables and callbacks, ending in caught (and what the catch block does), handled, or unhandled. |
+| **Exception Flow Visualizer** | a function | Errors thrown directly or by called functions (including `JSON.parse`, `new URL` and similar), how each `catch`, `finally` and `.catch()` treats them (swallows, logs, rethrows, transforms, recovers), and how callers handle what escapes. |
+| **Dead Export Analyzer** | anywhere in the project | Modules no entry point reaches, exports nothing reachable uses, and exports only used in their own module. `export *` and renamed re-exports are followed. Rows offer **Safe Delete** and **Remove export Keyword**. |
+| **Structural Duplicate Finder** | anywhere (file or project) | Runs of statements with the same structure even when variables are renamed and literal values differ, reported once at their largest extent, with the renamings between copies. **Compare Copies** opens them side by side. |
+
+Entry points for dead exports come from `tsStructure.deadExports.entryPoints` (globs), or else `package.json` (`main`, `module`, `exports`, `bin`, mapped from `dist/` back to `src/`) and conventional `index`/`main` files. Test files count as entry points unless `tsStructure.deadExports.testFilesAreEntryPoints` is off. The duplicate finder's sensitivity is set by `tsStructure.duplicates.minStatements` and `minTokens`; test files are skipped unless `ignoreTestFiles` is off.
+
+Set `tsStructure.codeLens.sideEffects` to show a lens above each function: **pure**, or a summary like *mutates arguments · I/O*. Click it for the full analysis.
+
+## Navigation and search
+
+| Feature | What it does |
+| --- | --- |
+| **Semantic Find Usages** (`Alt+F7`) | References grouped into definitions, calls, JSX usages, writes, reads, inheritance, type references, imports and exports, per file, with test files marked. |
+| **Re-export Chain Navigator** | Follows a name from the cursor through imports, renamed re-exports and `export *` barrels to its declaration, lists every module that exports it and under which name, and which paths importers use. |
+| **Inheritance Hierarchy Explorer** | Supertypes and nested subtypes or implementations of a class or interface, and for each member, which subtypes override it and whether they call `super`. |
+| **Override Impact Analyzer** | For a base member: what it overrides, overrides that call `super` (affected) or replace it, subtypes that inherit it unchanged, call sites split by the static type they dispatch through, `super` calls, and impacted tests. |
+| **Dependency Path Finder** | Why module A depends on module B: every shortest chain of imports with the names each hop brings in, whether it is type-only (erased at runtime, with the longer runtime path if there is one), or the reverse direction when there is none. Also in the Explorer's right-click menu. |
+| **Dependency Graph Diff** | Compares the project's import graph with a Git revision (HEAD, the branch point with `main`, recent commits, branches or any ref): new and removed cycles, added, removed and changed imports, added and removed modules, and the biggest changes in importers. |
+| **Argument Propagation Explorer** | For a parameter, destructured prop or argument: where its values come from (literals, callers' parameters, locals and their assignments, JSX attributes) and where they go (other functions' parameters, component props, derived locals, returns and stores). Depth is set by `tsStructure.argumentFlow.maxDepth`. |
+
+### Structural Search and Replace
+
+**Structural Search…** opens a builder (prefilled with the selection, if any). Patterns are code with placeholders:
+
+- `$name$` matches any expression, identifier or statement; using a name twice requires the same code (`$x$ === $x$`).
+- `$name*$` matches any number of arguments, elements, parameters or statements (`console.log($args*$)`, `if ($c$) { $body*$ }`).
+- `$_$` matches anything without binding.
+- Several statements match consecutive statements.
+- Formatting, parentheses and optional type annotations don't affect matching.
+
+Each placeholder can be constrained by a regular expression on its **type** (`^Promise<`, `string|number`) or its **text**, optionally inverted. Results list in the builder and the TypeScript Structure view.
+
+**Replace** uses the same placeholders in a template. All matches are rewritten in a copy of the project, which is type-checked first: any new error is listed before anything is written, and changes open in the Refactor Preview.
+
+**Save as Inspection** turns the pattern into a live inspection with a message (placeholders are filled in from each match), a severity and, from the replacement, a quick fix and a fix-all. They are stored in `tsStructure.customInspections` and managed with **Manage Custom Inspections…**.
+
+The builder starts from ten examples (async `forEach`, JSON deep clone, `== null`, promise conditions, `useEffect` without dependencies, …) and remembers your last 15 searches.
+
+## Working with results
+
+The TypeScript Structure view keeps every analysis's report:
+- **Back and forward** through the last 20 reports, and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
+- **Filter** rows by text, and **go to the next or previous result**.
+- **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
+- **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
+- A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
+
+`tsStructure.exclude` takes globs, such as `**/generated/**`, for files left out of inspections, Inspect Code, structural search, duplicates and dead-export results.
+
 ## Test Impact Analysis
 
 ### Usage
@@ -189,7 +290,9 @@ Press F5 to open the `sample` project. In `src/impactSource.ts`, place the curso
 
 - Source and tests must be in the same compiler project. Excluded test projects are not scanned. If the application's `tsconfig` excludes tests, open a test file under a config that includes them and select the imported symbol there.
 - Static analysis cannot see dynamic dispatch through untyped values, runtime dependency injection, string-based lookups or module mocks. Mocked modules are still reported as impacts.
-- Analysis runs on the extension host thread. Very large projects may pause the editor for the first analysis while the index is built.
+- Analysis runs on the extension host thread. Very large projects may pause the editor for the first analysis while the index is built. Live inspections only run on files that are on screen.
+- The inspections and navigation features follow calls the compiler can resolve. Callbacks passed to library functions, dynamic property access and values that escape into untyped code are reported as unknown rather than guessed.
+- Dependency Graph Diff needs `git` on the `PATH`. It resolves imports in both revisions with the current compiler options.
 - The extension depends on TypeScript 6.0.3, the latest release with the stable JavaScript Compiler API. TypeScript 7 only exposes an unstable API.
 
 ## Development
@@ -200,6 +303,10 @@ npm test                  # compile and run the analyzer tests
 VSCODE_EXECUTABLE="/path/to/Code.exe" npm run test:integration   # run inside a real VS Code
 ```
 
-- `src/analysis/` holds the engine and has no `vscode` dependency.
-- `src/extension.ts`, `src/resultsView.ts` and `src/runner.ts` are the VS Code layer.
-- `test-fixtures/edge` covers re-exports, interface dispatch, cycles, hooks, `.each`, aliased imports, Jest globals and `node:test`.
+- The engine has no `vscode` dependency and is unit-tested directly:
+  - `src/analysis/` is test impact analysis.
+  - `src/refactor/` and `src/intentions/` are the refactorings.
+  - `src/inspect/` holds the inspections, `src/navigate/` the navigation features, and `src/search/` structural search.
+  - `src/structure/` holds the shared report model and helpers.
+- `src/extension.ts`, `src/resultsView.ts`, `src/runner.ts` and `src/ui/` are the VS Code layer.
+- `test-fixtures/` holds a small project per area. For example, `edge` covers re-exports, interface dispatch, cycles, hooks, `.each`, aliased imports, Jest globals and `node:test`.

@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
-  "description": "WebStorm-style refactorings for TypeScript and JavaScript (Change Signature, Safe Delete, Introduce Parameter, Move Members and intention actions) plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.6.0",
+  "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
+  "version": "0.7.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
@@ -23,7 +23,12 @@
     "typescript",
     "react",
     "webstorm",
-    "test impact"
+    "test impact",
+    "inspections",
+    "structural search",
+    "data flow",
+    "dead code",
+    "dependency graph"
   ],
   "activationEvents": [
     "onLanguage:typescript",
