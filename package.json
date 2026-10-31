@@ -1,0 +1,154 @@
+{
+  "name": "ts-test-impact",
+  "displayName": "TypeScript Structure: Test Impact Analysis",
+  "description": "Finds the individual Jest, Vitest, Mocha, Playwright and node:test cases that may be affected by changing a TypeScript or JavaScript symbol. Deterministic, offline static analysis.",
+  "version": "0.1.0",
+  "publisher": "RishiRajGujadhur",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RishiRajGujadhur/VSExtension.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Testing",
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tsImpact.analyze",
+        "title": "Test Impact Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(search)"
+      },
+      {
+        "command": "tsImpact.showLastResults",
+        "title": "Show Last Impact Results",
+        "category": "TypeScript Structure",
+        "icon": "$(list-filter)"
+      },
+      {
+        "command": "tsImpact.runImpactedTests",
+        "title": "Run Impacted Tests",
+        "category": "TypeScript Structure",
+        "icon": "$(play)"
+      },
+      {
+        "command": "tsImpact.runTest",
+        "title": "Run Test",
+        "category": "TypeScript Structure",
+        "icon": "$(play)"
+      },
+      {
+        "command": "tsImpact.clear",
+        "title": "Clear Impact Results",
+        "category": "TypeScript Structure",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "tsImpact.analyze",
+          "when": "editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@90"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "tsImpact.runTest",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "tsImpact.analyze",
+          "when": "view == tsImpact.results",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tsImpact.runImpactedTests",
+          "when": "view == tsImpact.results",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tsImpact.showLastResults",
+          "when": "view == tsImpact.results",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tsImpact.clear",
+          "when": "view == tsImpact.results",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "tsImpact.runTest",
+          "when": "view == tsImpact.results && viewItem =~ /^(test|file)$/",
+          "group": "inline"
+        }
+      ]
+    },
+    "views": {
+      "test": [
+        {
+          "id": "tsImpact.results",
+          "name": "Impacted Tests"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "tsImpact.results",
+        "contents": "Place the cursor on a function, class, method or symbol and run the analysis.\n[Test Impact Analysis](command:tsImpact.analyze)"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "tsImpact",
+        "properties": {
+          "framework": {
+            "type": "string",
+            "description": "Test framework used to run the impacted tests."
+          }
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Test Impact Analysis",
+      "properties": {
+        "tsImpact.maxDepth": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "description": "Maximum number of caller hops followed from the selected symbol."
+        },
+        "tsImpact.includeInheritedMembers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also follow calls made through interfaces and base classes that a selected class member implements or overrides. These matches are reported as possible impacts."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
+    "test:integration": "npm run compile && node scripts/integration.js",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "typescript": "6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.90.0"
+  }
+}
