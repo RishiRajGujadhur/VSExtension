@@ -481,6 +481,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Members** lists the type's own members. Each one says whether it is abstract, which supertype it comes from, and how many subtypes override it. Expand a member to see each override and whether it *calls super*. Run it with the cursor on a member's name, and that member opens selected. The button on a member (**Override Impact of This Member**) shows what changing it would affect.
 6. **Inherited members** lists what the type gets from its supertypes without redeclaring it, each with the type it comes from. That's the full API of a subclass in one place.
 
+### Override Impact Analyzer
+
+![Impact of changing PaymentMethod.charge: three overrides, StoreCredit calls super, and the call sites that go through PaymentMethod](docs/images/override-impact.png)
+
+1. Put the cursor on a method or property of a class or interface. In the demo, use `charge` in `PaymentMethod` (`src/models.ts`).
+2. Run **Override Impact Analyzer**.
+3. The first row names the member and anything it overrides higher up.
+4. **Overrides in subtypes** says how each override relates to it: *calls super: affected*, *replaces it: not affected by body changes*, or *implements it* for abstract and interface members.
+5. **Subtypes that inherit it unchanged** are affected by any change to its body.
+6. **Call sites** are split by the static type they call through. Calls through the base type may run any implementation, so they are the riskiest. **Impacted tests** lists the tests that reach the member.
+
 ## Test Impact Analysis
 
 ### Usage
