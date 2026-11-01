@@ -238,19 +238,19 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
   });
   const roots: ReportNode[] = [];
   if (diff.newCycles.length) {
-    roots.push({ label: 'New import cycles', description: `${diff.newCycles.length}`, icon: 'sync', tone: 'error', expanded: true, children: diff.newCycles.map((c) => cycleRow(c, 'error')) });
+    roots.push({ label: 'New import cycles', description: plural(diff.newCycles.length, 'cycle'), icon: 'sync', tone: 'error', expanded: true, children: diff.newCycles.map((c) => cycleRow(c, 'error')) });
   }
   if (diff.resolvedCycles.length) {
-    roots.push({ label: 'Cycles removed', description: `${diff.resolvedCycles.length}`, icon: 'pass', tone: 'ok', children: diff.resolvedCycles.map((c) => cycleRow(c, 'ok')) });
+    roots.push({ label: 'Cycles removed', description: plural(diff.resolvedCycles.length, 'cycle'), icon: 'pass', tone: 'ok', children: diff.resolvedCycles.map((c) => cycleRow(c, 'ok')) });
   }
   roots.push(
-    { label: 'Added imports', description: `${diff.addedEdges.length}`, icon: 'diff-added', expanded: true, children: byFrom(diff.addedEdges, 'add', true) },
-    { label: 'Removed imports', description: `${diff.removedEdges.length}`, icon: 'diff-removed', expanded: true, children: byFrom(diff.removedEdges, 'remove', false) },
+    { label: 'Added imports', description: plural(diff.addedEdges.length, 'import'), icon: 'diff-added', expanded: true, children: byFrom(diff.addedEdges, 'add', true) },
+    { label: 'Removed imports', description: plural(diff.removedEdges.length, 'import'), icon: 'diff-removed', expanded: true, children: byFrom(diff.removedEdges, 'remove', false) },
   );
   if (diff.changedEdges.length) {
     roots.push({
       label: 'Changed imports',
-      description: `${diff.changedEdges.length}`,
+      description: plural(diff.changedEdges.length, 'import'),
       icon: 'diff-modified',
       expanded: true,
       children: diff.changedEdges.map((c) => ({

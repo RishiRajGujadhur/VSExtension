@@ -70,7 +70,8 @@ export function registerGraphDiff(context: vscode.ExtensionContext, projects: Pr
           // The graph covers the compiler project's directory, or the workspace folder without one.
           const { configPath, parsed } = path.extname(anchor) ? projects.resolve(anchor, folder) : { configPath: undefined, parsed: { options: {} } };
           const directory = configPath ? path.dirname(configPath) : (folder ?? repo);
-          const overlay = (fileName: string) => vscode.workspace.textDocuments.find((d) => d.uri.fsPath.toLowerCase() === path.resolve(fileName).toLowerCase())?.getText();
+          // Unsaved editor text only: a saved document can lag behind a change made on disk, such as a checkout.
+          const overlay = (fileName: string) => vscode.workspace.textDocuments.find((d) => d.isDirty && d.uri.fsPath.toLowerCase() === path.resolve(fileName).toLowerCase())?.getText();
           const afterFiles = workingTreeFiles(directory, overlay);
           const diff = diffGraphs(graphOf(filesAtRef(repo, choice.ref, directory), parsed.options), graphOf(afterFiles, parsed.options), directory);
           return graphDiffReport(diff, afterFiles, directory, choice.label);
