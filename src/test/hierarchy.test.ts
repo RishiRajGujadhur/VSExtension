@@ -121,3 +121,8 @@ test('impacted tests can be run from their group', () => {
   assert.equal(tests?.action?.kind, 'runTests');
   assert.equal((tests?.action?.tests as unknown[]).length, 1);
 });
+
+test('the summary says what a change reaches', () => {
+  const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'descr|ibe(): string {\n    return `${'));
+  assert.equal(report.description, 'a change reaches 1 override that calls super, 2 inheriting subtypes, 1 call site');
+});

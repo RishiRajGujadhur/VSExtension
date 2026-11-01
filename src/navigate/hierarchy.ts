@@ -369,5 +369,14 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
     action: impact.tests.length ? { kind: 'runTests', tests: impact.tests.map((t) => t.test) } : undefined,
     children: impact.tests.map((t) => ({ label: t.test.titlePath.join(' › '), description: t.confidence, icon: 'beaker', location: { ...t.test.location, endLine: t.test.location.line, endCharacter: t.test.location.character } })),
   });
-  return builder.finish(roots, `${plural(overrides.length, 'override')}, ${plural(inheriting.length, 'inheriting subtype')}, ${plural(impact.tests.length, 'test')}`);
+  // What a change to the body actually reaches: overrides that call super, unchanged inheritors, every call and test.
+  const affectedOverrides = overrides.filter((o) => o.tone === 'warning').length;
+  const callCount = calls.base.length + calls.superCalls.length + [...calls.sub.values()].flat().length;
+  const reach = [
+    affectedOverrides ? plural(affectedOverrides, 'override that calls super', 'overrides that call super') : '',
+    inheriting.length ? plural(inheriting.length, 'inheriting subtype') : '',
+    callCount ? plural(callCount, 'call site') : '',
+    impact.tests.length ? plural(impact.tests.length, 'test') : '',
+  ].filter(Boolean);
+  return builder.finish(roots, reach.length ? `a change reaches ${reach.join(', ')}` : 'a change to its body reaches nothing else in the project');
 }
