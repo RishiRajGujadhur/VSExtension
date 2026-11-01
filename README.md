@@ -399,6 +399,21 @@ Every analysis can be started three ways: from the editor's right-click menu und
    **By call** lists the same inherited effects per call, such as *track() input/output, mutates module state*, to see which call to change or isolate.
 5. To see this at a glance in the editor, turn on `tsStructure.codeLens.sideEffects`. Every function then gets a lens: **pure**, or a summary such as *mutates arguments · mutates module state · I/O*. That includes methods, class fields holding arrow functions (`handle = () => …`) and object properties holding functions (`{ onSave: () => … }`). Click a lens to open the full analysis. To keep lenses only on functions with effects, turn off `tsStructure.codeLens.sideEffectsShowPure`.
 
+### Semantic Find Usages (`Alt+F7`)
+
+![Usages of calculateSubtotal: its definition, calls in cart.ts and main.ts (through the alias subtotal), imports and re-exports](docs/images/semantic-usages.png)
+
+1. Put the cursor on any symbol: a function, variable, class, property or type. In the demo, use `calculateSubtotal` in `src/pricing.ts`.
+2. Press `Alt+F7`, or run **Semantic Find Usages**.
+3. References are grouped by what they do:
+   - **Definitions**, **Calls**, **JSX usages**, **Writes**, **Reads**;
+   - **Extended or implemented**, **Type references**;
+   - **Imports**, **Exports and re-exports**.
+
+   Each group shows its count, including how many are in test files.
+4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon.
+5. Usages through aliases count too. In the demo, `main.ts` calls `calculateSubtotal` as `subtotal`, imported from the `index.ts` barrel.
+
 ## Test Impact Analysis
 
 ### Usage
