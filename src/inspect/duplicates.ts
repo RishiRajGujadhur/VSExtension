@@ -99,33 +99,89 @@ function statementLists(sourceFile: ts.SourceFile): (readonly ts.Statement[])[] 
 
 const maxWindow = 40;
 
+/** A statement's fingerprint tokens: fixed text, or a local name that is numbered per window. */
+type Token = { fixed: number } | { name: string };
+
+const fixedIds = new Map<string, number>();
+const fixedId = (text: string) => {
+  let id = fixedIds.get(text);
+  if (id === undefined) {
+    id = fixedIds.size + 1;
+    fixedIds.set(text, id);
+  }
+  return id;
+};
+
+/** The same token sequence `serialize` produces for one statement, computed once per statement. */
+function tokenize(node: ts.Node): Token[] {
+  const tokens: Token[] = [];
+  const visit = (current: ts.Node) => {
+    if (ts.isIdentifier(current) || ts.isPrivateIdentifier(current)) {
+      tokens.push(isMemberName(current) ? { fixed: fixedId(`.${current.text}`) } : { name: current.text });
+      return;
+    }
+    if (ts.isStringLiteralLike(current) || ts.isNumericLiteral(current) || ts.isBigIntLiteral(current) || ts.isRegularExpressionLiteral(current)) {
+      tokens.push({ fixed: fixedId(`#${current.kind}`) });
+      return;
+    }
+    if (ts.isJSDoc(current)) {
+      return;
+    }
+    tokens.push({ fixed: fixedId(String(current.kind)) });
+    ts.forEachChild(current, visit);
+    tokens.push({ fixed: fixedId(')') });
+  };
+  visit(node);
+  return tokens;
+}
+
 /** Structural Duplicate Finder: runs of statements with the same shape, ignoring names and literal values. */
 export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions): DuplicateGroup[] {
+  // Windows are fingerprinted incrementally: each statement is tokenized once, and extending a window by one
+  // statement updates two running hashes instead of serializing the whole window again.
   const buckets = new Map<string, { tokens: number; fragments: Fragment[] }>();
   for (const sourceFile of sourceFiles) {
     for (const list of statementLists(sourceFile)) {
       const n = list.length;
+      const tokenized = list.map(tokenize);
       for (let i = 0; i < n; i++) {
-        // Windows of at least minStatements; a whole short list counts when it is large enough.
-        const shortest = Math.min(options.minStatements, n - i);
-        for (let length = shortest; length <= Math.min(n - i, maxWindow); length++) {
-          if (length < options.minStatements && !(i === 0 && length === n)) {
+        const names = new Map<string, number>();
+        let h1 = 0x811c9dc5;
+        let h2 = 0x12345678;
+        let count = 0;
+        for (let length = 1; length <= Math.min(n - i, maxWindow); length++) {
+          for (const token of tokenized[i + length - 1]) {
+            let value: number;
+            if ('fixed' in token) {
+              value = token.fixed;
+            } else {
+              let index = names.get(token.name);
+              if (index === undefined) {
+                index = names.size;
+                names.set(token.name, index);
+              }
+              value = -1 - index;
+            }
+            h1 = Math.imul(h1 ^ value, 0x01000193) >>> 0;
+            h2 = (Math.imul(h2, 31) + value + 0x9e3779b9) >>> 0;
+            count++;
+          }
+          // Windows of at least minStatements; a whole short list counts when it is large enough.
+          if ((length < options.minStatements && !(i === 0 && length === n)) || count < options.minTokens) {
             continue;
           }
+          const key = `${h1}:${h2}:${count}`;
           const nodes = list.slice(i, i + length);
-          const serialized = serialize(nodes);
-          if (serialized.tokens < options.minTokens) {
-            continue;
-          }
-          const bucket = buckets.get(serialized.key) ?? { tokens: serialized.tokens, fragments: [] };
-          bucket.fragments.push({ sourceFile, nodes, start: nodes[0].getStart(sourceFile), end: nodes[nodes.length - 1].end, values: serialized.values });
-          buckets.set(serialized.key, bucket);
+          const bucket = buckets.get(key) ?? { tokens: count, fragments: [] };
+          bucket.fragments.push({ sourceFile, nodes, start: nodes[0].getStart(sourceFile), end: nodes[nodes.length - 1].end, values: [] });
+          buckets.set(key, bucket);
         }
       }
     }
   }
 
   const candidates = [...buckets.values()]
+    .filter((b) => b.fragments.length > 1)
     .map((b) => ({ ...b, fragments: withoutOverlaps(b.fragments) }))
     .filter((b) => b.fragments.length > 1)
     .sort((a, b) => b.tokens - a.tokens);
@@ -140,6 +196,7 @@ export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: D
     }
     for (const fragment of candidate.fragments) {
       covered.set(fragment.sourceFile, [...(covered.get(fragment.sourceFile) ?? []), { start: fragment.start, end: fragment.end }]);
+      fragment.values = serialize(fragment.nodes).values;
     }
     const first = candidate.fragments[0];
     groups.push({
