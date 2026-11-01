@@ -27,6 +27,24 @@ export function isExcluded(fileName: string): boolean {
   return scopeMatcher(uri, folder)(relative);
 }
 
+/** The files inside the analysis scope, and a note for the report when some were left out. */
+export function scopedFiles<T extends { fileName: string }>(files: readonly T[]): { files: T[]; note?: string } {
+  const kept = files.filter((f) => !isExcluded(f.fileName));
+  const skipped = files.length - kept.length;
+  return {
+    files: kept,
+    note: skipped ? `${skipped} file${skipped === 1 ? ' is' : 's are'} outside the analysis scope (tsStructure.include and tsStructure.exclude) and ${skipped === 1 ? 'was' : 'were'} skipped.` : undefined,
+  };
+}
+
+/** Adds the scope note to a report's warnings. */
+export function withNote<R extends { warnings: string[] } | undefined>(report: R, note: string | undefined): R {
+  if (report && note) {
+    report.warnings.push(note);
+  }
+  return report;
+}
+
 export function registerScope(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {

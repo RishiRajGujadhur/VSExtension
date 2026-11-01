@@ -23,7 +23,7 @@ import { defaultEntryPoints, programGraph } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
-import { isExcluded } from './exclude';
+import { isExcluded, scopedFiles, withNote } from './exclude';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
@@ -145,7 +145,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', (t) => {
       const program = t.project().program();
-      return mutationReport(program, t.fileName, t.offset, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)));
+      const { files, note } = scopedFiles(projectSourceFiles(program));
+      return withNote(mutationReport(program, t.fileName, t.offset, files), note);
     }),
     editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
@@ -167,7 +168,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', (t) => {
       const program = t.project().program();
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('typeAssertion.ignoreTestFiles', false);
-      return assertionAuditReport(program, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)), { typeAssertionIgnoreTests: ignoreTests }, t.folder);
+      const { files, note } = scopedFiles(projectSourceFiles(program));
+      return withNote(assertionAuditReport(program, files, { typeAssertionIgnoreTests: ignoreTests }, t.folder), note);
     }),
     registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
       const editor = sourceEditor();
@@ -194,16 +196,17 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       if (scope === 'selection') {
         return runAnalysis(view, 'Finding copies', () => {
           const program = target.project().program();
-          const files = projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName));
+          const { files, note } = scopedFiles(projectSourceFiles(program));
           const { start, end } = editor.selection;
-          return copiesReport(files, program.getSourceFile(normalizePath(target.fileName))!, editor.document.offsetAt(start), editor.document.offsetAt(end), target.folder);
+          return withNote(copiesReport(files, program.getSourceFile(normalizePath(target.fileName))!, editor.document.offsetAt(start), editor.document.offsetAt(end), target.folder), note);
         });
       }
       return runAnalysis(view, 'Finding duplicates', () => {
         const program = target.project().program();
         const ignoreTests = config.get('ignoreTestFiles', true);
-        const files = scope === 'file' ? [program.getSourceFile(normalizePath(target.fileName))!] : projectSourceFiles(program).filter((sf) => (!ignoreTests || !discoverTests(sf).isTestFile) && !isExcluded(sf.fileName));
-        return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, target.folder);
+        const scoped = scope === 'file' ? { files: [program.getSourceFile(normalizePath(target.fileName))!] } : scopedFiles(projectSourceFiles(program));
+        const files = scoped.files.filter((sf) => scope === 'file' || !ignoreTests || !discoverTests(sf).isTestFile);
+        return withNote(duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, target.folder), scoped.note);
       });
     }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),

@@ -11,7 +11,7 @@ import { builtInInspections } from '../inspect/registry';
 import { Report, ReportNode } from '../structure/report';
 import { languageSelector } from './refactorCommands';
 import { StructureView } from './structureView';
-import { isExcluded } from './exclude';
+import { isExcluded, scopedFiles, withNote } from './exclude';
 import { registerCommand } from './features';
 import { isFeatureEnabled } from './features';
 
@@ -208,7 +208,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Inspecting code', cancellable: true }, async (progress, token) => {
         const started = Date.now();
         const project = this.projects.load(fileName, folder);
-        const files = scope === 'file' ? [project.program.getSourceFile(normalizePath(fileName))!] : projectSourceFiles(project.program).filter((sf) => !isExcluded(sf.fileName));
+        const scoped = scope === 'file' ? { files: [project.program.getSourceFile(normalizePath(fileName))!], note: undefined } : scopedFiles(projectSourceFiles(project.program));
+        const files = scoped.files;
         const inspected: InspectedFile[] = [];
         const inspections = this.inspections();
         const severityOf = this.severityOf(editor.document.uri);
@@ -222,7 +223,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
           // Yield so the progress updates and cancellation can arrive.
           await new Promise((resolve) => setImmediate(resolve));
         }
-        const report = inspectionReport(inspected, inspections, folder);
+        const report = withNote(inspectionReport(inspected, inspections, folder), scoped.note);
         report.durationMs = Date.now() - started;
         return report;
       });
