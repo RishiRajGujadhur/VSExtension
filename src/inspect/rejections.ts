@@ -164,10 +164,10 @@ export class RejectionTracer {
         return this.row(`passed to ${calleeName(call)}()`, call, 'warning', 'question', callee ? 'handled only if it awaits the argument' : 'outside the project; cannot follow');
       }
       if (ts.isExpressionStatement(parent)) {
-        return this.row('not awaited: the rejection is unhandled', parent, 'error', 'error', nodeSnippet(parent, 40));
+        return { ...this.row('not awaited: the rejection is unhandled', parent, 'error', 'error', nodeSnippet(parent, 40)), action: { kind: 'quickFix' } };
       }
       if (ts.isVoidExpression(parent)) {
-        return this.row('discarded with void: the rejection is unhandled', parent, 'error', 'error');
+        return { ...this.row('discarded with void: the rejection is unhandled', parent, 'error', 'error'), action: { kind: 'quickFix' } };
       }
       if (ts.isVariableDeclaration(parent) && parent.initializer === current && ts.isIdentifier(parent.name)) {
         const uses = referencesAt(this.project.service, parent.getSourceFile().fileName, parent.name.getStart()).filter((r) => r !== parent.name);

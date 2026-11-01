@@ -304,7 +304,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - a red *unhandled* row: a call that is not awaited, a `void`, or a callback whose caller ignores returned promises, such as `setTimeout`;
    - a *caught in …* row that says what the catch block does: rethrows, recovers, logs, or swallows;
    - a green *handled* row.
-5. The summary in the view counts handled, unhandled and unknown paths. Click an unhandled row to go to the call that drops the rejection.
+5. **Unhandled**, at the top, lists every unhandled end with the callers it passes through. Click a row to go to the call that drops the rejection, or click its lightbulb button (**Show Fixes**) to open the fixes there: add `await`, mark it intentionally ignored with `void`, or wrap it.
 
 ## Test Impact Analysis
 
