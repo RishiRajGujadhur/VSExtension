@@ -4,6 +4,7 @@ import * as path from 'path';
 import { test } from 'node:test';
 import { semanticUsagesReport } from '../navigate/usages';
 import { fixtures, offsetIn, virtualProject } from './helpers';
+import { forEachReportNode } from '../structure/report';
 
 const utils = path.join(fixtures, 'navigate/src/utils.ts');
 const app = path.join(fixtures, 'navigate/src/app.tsx');
@@ -32,4 +33,11 @@ test('destructuring a property reads it', () => {
   const labels = report.roots.map((r) => `${r.label}: ${r.children?.flatMap((f) => f.children ?? []).map((c) => c.label).join(' | ')}`);
   assert.ok(labels.some((l) => l.startsWith('Reads:') && l.includes('const { name } = shape;')), labels.join('\n'));
   assert.ok(!labels.some((l) => l.startsWith('Definitions:') && l.includes('const { name }')), labels.join('\n'));
+});
+
+test('the usage at the cursor is selected', () => {
+  const report = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), app, offsetIn(app, 'const label = format|Area(box)'));
+  const focused: string[] = [];
+  forEachReportNode(report.roots, (node) => node.focus && focused.push(`${node.label} (${node.description})`));
+  assert.deepEqual(focused, ['const label = formatArea(box); (App · line 15 · at cursor)']);
 });
