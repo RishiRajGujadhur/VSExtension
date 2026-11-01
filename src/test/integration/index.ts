@@ -318,8 +318,18 @@ async function analysisCommandsFlow(): Promise<void> {
   const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>('vscode.executeCodeLensProvider', cart);
   const titles = lenses.map((l) => l.command?.title).filter((t) => t?.includes('pure'));
   assert.equal(titles.length, 2, lenses.map((l) => l.command?.title).join(', '));
+  // A feature that is off hides its lens and refuses its commands; turning it on again restores both.
+  await vscode.workspace.getConfiguration('tsStructure.features').update('sideEffects', false, vscode.ConfigurationTarget.Global);
+  const hidden = await vscode.commands.executeCommand<vscode.CodeLens[]>('vscode.executeCodeLensProvider', cart);
+  assert.equal(hidden.filter((l) => l.command?.command === 'tsStructure.explainFinding').length, 0);
+  at('calculateSubtotal(');
+  assert.equal(await vscode.commands.executeCommand('tsStructure.sideEffects'), undefined);
+  await vscode.workspace.getConfiguration('tsStructure.features').update('sideEffects', undefined, vscode.ConfigurationTarget.Global);
+  const report = await vscode.commands.executeCommand<{ kind: string }>('tsStructure.sideEffects');
+  assert.equal(report?.kind, 'sideEffects');
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', undefined, vscode.ConfigurationTarget.Global);
   console.log('side-effect code lens ok');
+  console.log('feature switches ok');
 
   await vscode.commands.executeCommand('tsStructure.report.compareDuplicates', {
     label: 'Duplicate 1',

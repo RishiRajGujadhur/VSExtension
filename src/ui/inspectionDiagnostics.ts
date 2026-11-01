@@ -67,7 +67,15 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.features.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.include') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
+          // Files inspected earlier but not on screen are inspected again too, so findings of
+          // a disabled inspection or an excluded file don't linger in the Problems panel.
+          const inspected = new Set(this.results.keys());
           this.results.clear();
+          for (const document of vscode.workspace.textDocuments) {
+            if (inspected.has(pathKey(document.uri.fsPath))) {
+              this.schedule(document, 0);
+            }
+          }
           this.refreshAll();
         }
       }),
