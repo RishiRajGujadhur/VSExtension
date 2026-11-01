@@ -171,6 +171,9 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     const scope = enclosingFunction(step.node) ?? step.node.getSourceFile();
     groups.set(scope, [...(groups.get(scope) ?? []), step]);
   }
+  // Types are shown where they differ from the declared one, so narrowing and widening stand out.
+  const declared = steps.find((s) => s.kind === 'declaration')?.type;
+  const shownType = (s: FlowStep) => (s.kind === 'declaration' || s.type !== declared ? s.type : undefined);
   const roots: ReportNode[] = [];
   for (const [scope, scoped] of groups) {
     roots.push({
@@ -181,7 +184,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       expanded: true,
       children: scoped.map((s) => ({
         label: s.label,
-        description: [`line ${lineOf(s.node)}`, s.type].filter(Boolean).join(' · '),
+        description: [`line ${lineOf(s.node)}`, shownType(s)].filter(Boolean).join(' · '),
         tooltip: `${s.kind} · line ${lineOf(s.node)}${s.type ? `\nType here: ${s.type}` : ''}`,
         icon: icons[s.kind],
         tone: s.kind === 'mutation' ? 'warning' : s.kind === 'write' || s.kind === 'update' ? 'info' : undefined,

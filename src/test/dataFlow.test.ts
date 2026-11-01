@@ -38,6 +38,17 @@ test('data flow steps show their line and type', () => {
   const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
   const checkout = report.roots.find((r) => r.label.startsWith('checkout'));
   assert.equal(checkout?.children?.[0].description, 'line 6 · number');
+  // Later steps have the declared type, so it is not repeated.
+  assert.equal(checkout?.children?.[1].description, 'line 8');
+});
+
+test('data flow shows types where narrowing changes them', () => {
+  const nullable = path.join(fixtures, 'inspect/src/nullable.ts');
+  const project = virtualProject('inspect', 'src/nullable.ts');
+  const report = dataFlowReport(project, nullable, offsetIn(nullable, 'const us|er = findUser'));
+  const descriptions = report.roots.flatMap((r) => r.children ?? []).map((c) => c.description);
+  assert.equal(descriptions[0], 'line 28 · User | undefined');
+  assert.ok(descriptions.some((d) => d?.endsWith(' · User')), descriptions.join(', '));
 });
 
 test('data flow rejects symbols that are not values', () => {
