@@ -122,7 +122,7 @@ export class ArgumentFlow {
       if (local.initializer && !seen.has(local)) {
         const nextSeen = new Set(seen).add(local);
         children.push({ ...this.explain(local.initializer, depth, nextSeen), description: `initializes ${local.name.getText()}` });
-        for (const write of writesOf(local)) {
+        for (const write of writesOf(this.checker, local)) {
           children.push({ ...this.explain(write.right, depth, nextSeen), description: `assigned to ${local.name.getText()}` });
         }
       }
@@ -259,12 +259,13 @@ function isInParameter(node: ts.Node): boolean {
   return false;
 }
 
-function writesOf(declaration: ts.VariableDeclaration): ts.BinaryExpression[] {
+function writesOf(checker: ts.TypeChecker, declaration: ts.VariableDeclaration): ts.BinaryExpression[] {
   const scope = enclosingFunction(declaration) ?? declaration.getSourceFile();
   const name = declaration.name.getText();
   const writes: ts.BinaryExpression[] = [];
   forEachDescendant(scope, (node) => {
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left) && node.left.text === name) {
+    // By symbol, not by name: a same-named variable in a nested function is a different one.
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left) && node.left.text === name && symbolAt(checker, node.left)?.valueDeclaration === declaration) {
       writes.push(node);
     }
   });
@@ -301,7 +302,7 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
   const roots: ReportNode[] = [
     { label: inputLabel(input), icon: 'symbol-parameter', tone: 'ok', location: builder.at(input.name) },
     { label: 'Where values come from', description: plural(origins.length, 'call site'), icon: 'call-incoming', expanded: true, children: origins.length ? origins : [{ label: 'no call sites in the project', icon: 'dash' }] },
-    { label: 'Where the value goes', description: `${destinations.length}`, icon: 'call-outgoing', expanded: true, children: destinations.length ? destinations : [{ label: 'not passed on, returned or stored', icon: 'dash' }] },
+    { label: 'Where the value goes', description: plural(destinations.length, 'destination'), icon: 'call-outgoing', expanded: true, children: destinations.length ? destinations : [{ label: 'not passed on, returned or stored', icon: 'dash' }] },
   ];
   return builder.finish(roots, `${plural(origins.length, 'call site')}, ${plural(destinations.length, 'hand-off')}`);
 }

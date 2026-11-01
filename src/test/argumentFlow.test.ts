@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'fs';
 import * as path from 'path';
 import { test } from 'node:test';
 import { argumentFlowReport } from '../navigate/argumentFlow';
@@ -29,7 +30,7 @@ test('origins are traced back through callers, derived locals and their paramete
 test('values are followed forward through derived locals, calls and returns', () => {
   const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'page(na|me: string)'));
   assert.deepEqual(outline([report.roots[2]]), [
-    'Where the value goes — 1',
+    'Where the value goes — 1 destination',
     '  name.trim() → local label',
     '    label → format() — as value',
     '      value → log() — as message',
@@ -46,5 +47,29 @@ test('JSX props are followed between components in both directions', () => {
     '    "Welcome" — from render',
   ]);
   const forward = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'Header({ ti|tle }'));
-  assert.deepEqual(outline([forward.roots[2]]), ['Where the value goes — 1', '  title → <Title text> — prop of Title']);
+  assert.deepEqual(outline([forward.roots[2]]), ['Where the value goes — 1 destination', '  title → <Title text> — prop of Title']);
+});
+
+test('assignments to a same-named variable in a nested function are not origins', () => {
+  const project = virtualProject('navigate', 'src/flow.tsx');
+  const text = `${fs.readFileSync(file, 'utf8')}
+export function sink(value: string): string {
+  return value;
+}
+
+export function shadow(input: string): string {
+  let text = input;
+  const helper = () => {
+    let text = 'other';
+    text = 'inner';
+    return text;
+  };
+  return sink(text) + helper();
+}
+`;
+  project.setText(file, text);
+  const report = argumentFlowReport(project, file, text.lastIndexOf('value: string') + 1);
+  const lines = outline([report.roots[1]]);
+  assert.ok(lines.some((l) => l.includes('input — initializes text')), lines.join('\n'));
+  assert.ok(!lines.some((l) => l.includes("'inner'")), lines.join('\n'));
 });
