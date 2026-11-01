@@ -347,6 +347,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Change how loud each inspection is with `tsStructure.inspections.severity`, for example `{ "typeAssertion": "info" }`, or `"off"` to disable it.
 6. Tests often need assertions for mocks and fixtures. Turn on `tsStructure.typeAssertion.ignoreTestFiles` to skip test files, such as `*.test.ts` or files that import a test framework.
 
+### Dead Export Analyzer
+
+![Dead exports in the demo: legacy.ts is unreachable, ten exports in six files are unused, and eleven are only used inside their own module](docs/images/dead-exports.png)
+
+1. Open any file in the project and run **Dead Export Analyzer**. The whole project is analyzed.
+2. Check **Entry points** at the bottom. The analyzer starts from the files named in `package.json` (`main`, `module`, `exports`, `bin`, here `src/main.ts`) and from test files. Without those it falls back to `src/index.ts`, `src/main.ts` and similar. Set `tsStructure.deadExports.entryPoints` (globs) if the guess is wrong.
+3. **Unreachable modules** are files no entry point imports, directly or indirectly, such as `legacy.ts`. The trash button (**Safe Delete File…**) checks for remaining references before deleting.
+4. **Unused exports** are exported names nothing reachable imports. Each row's trash button runs **Safe Delete…** on the declaration.
+5. **Exported but only used locally** are names used inside their own module only. The button on the row (**Remove export Keyword**) keeps the code and drops `export`.
+6. Exports reached through `export *` barrels, renamed re-exports, `import * as ns` and dynamic `import()` count as used. Turn off `tsStructure.deadExports.testFilesAreEntryPoints` to also find exports that only tests use.
+
 ## Test Impact Analysis
 
 ### Usage
