@@ -216,6 +216,20 @@ export class NullabilityExplorer {
     }
   }
 
+  /** "null", "undefined" or "null or undefined": which of the two the value's type allows. */
+  nullishWord(node: ts.Node): string {
+    let type: ts.Type;
+    try {
+      type = this.checker.getTypeAtLocation(node);
+    } catch {
+      return 'null or undefined';
+    }
+    const parts = type.isUnion() ? type.types : [type];
+    const hasNull = parts.some((t) => t.flags & ts.TypeFlags.Null);
+    const hasUndefined = parts.some((t) => t.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Void));
+    return hasNull && !hasUndefined ? 'null' : hasUndefined && !hasNull ? 'undefined' : 'null or undefined';
+  }
+
   typeOf(node: ts.Node): string {
     return typeText(this.checker, this.checker.getTypeAtLocation(node), node);
   }
@@ -344,10 +358,11 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
   }
   const type = explorer.typeOf(expression);
   const nullableHere = explorer.nullable(expression);
+  const which = explorer.nullishWord(expression);
   const roots: ReportNode[] = [
     {
       label: `${text}: ${type}`,
-      description: nullableHere ? 'may be null or undefined here' : 'never null or undefined here',
+      description: nullableHere ? `may be ${which} here` : 'never null or undefined here',
       icon: nullableHere ? 'warning' : 'pass',
       tone: nullableHere ? 'warning' : 'ok',
       location: builder.at(expression),
@@ -355,7 +370,7 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
   ];
   const sources = explorer.sources(expression);
   if (sources.length > 0) {
-    roots.push({ label: nullableHere ? 'Paths that produce null or undefined' : 'Possible null sources before narrowing', icon: 'git-merge', expanded: true, children: sources });
+    roots.push({ label: nullableHere ? `Paths that produce ${which}` : 'Possible null sources before narrowing', icon: 'git-merge', expanded: true, children: sources });
   }
   if (!nullableHere) {
     const guards = guardsBefore(expression, ts.isIdentifier(expression) ? expression.text : expression.getText().split(/[.(?[]/)[0]);

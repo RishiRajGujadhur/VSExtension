@@ -16,8 +16,9 @@ function labels(nodes: readonly ReportNode[]): string[] {
 test('a nullable variable is traced through its initializer into the returns of the called function', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${la|bel}'));
   assert.equal(report.roots[0].label, 'label: string | null');
+  assert.equal(report.roots[0].description, 'may be null here');
   assert.deepEqual(labels(report.roots.slice(1)), [
-    'Paths that produce null or undefined',
+    'Paths that produce null',
     '  initialized to lookup()',
     '    lookup is declared to return string | null',
     '    lookup returns null',
@@ -35,7 +36,7 @@ test('a narrowed variable lists the guard that rules out null', () => {
 test('module state lists its declaration and every assignment of undefined', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${cur|rent?.name}'));
   assert.deepEqual(labels(report.roots.slice(1)), [
-    'Paths that produce null or undefined',
+    'Paths that produce undefined',
     '  declared as User | undefined',
     '  current is declared without a value',
     '  assigned undefined in logout',
@@ -48,7 +49,7 @@ test('module state lists its declaration and every assignment of undefined', () 
 test('an optional parameter lists call sites that omit it or pass undefined', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, 'return na|me ??'));
   assert.deepEqual(labels(report.roots.slice(1)), [
-    'Paths that produce null or undefined',
+    'Paths that produce undefined',
     '  name is an optional parameter',
     '  caller omits the argument',
     '  caller passes undefined',
