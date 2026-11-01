@@ -17,7 +17,7 @@ test('a nullable variable is traced through its initializer into the returns of 
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${la|bel}'));
   assert.equal(report.roots[0].label, 'label: string | null');
   assert.equal(report.roots[0].description, 'may be null here');
-  assert.deepEqual(labels(report.roots.slice(1)), [
+  assert.deepEqual(labels(report.roots.slice(1).filter((r) => r.label !== 'Uses')), [
     'Paths that produce null',
     '  initialized to lookup()',
     '    lookup is declared to return string | null',
@@ -33,9 +33,19 @@ test('a narrowed variable lists the guard that rules out null', () => {
   assert.deepEqual(guards?.children?.map((c) => c.label), ['!user']);
 });
 
+test('uses of a variable say where it is still nullable', () => {
+  const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, 'const us|er = findUser'));
+  const uses = report.roots.find((r) => r.label === 'Uses');
+  assert.equal(uses?.description, '2 safe, 1 check, 0 may be undefined');
+  assert.deepEqual(
+    uses?.children?.map((c) => `${c.label} (${c.description})`),
+    ['!user (line 30 · check)', 'user.name (line 33 · safe)', 'user.nickname (line 33 · safe)'],
+  );
+});
+
 test('module state lists its declaration and every assignment of undefined', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${cur|rent?.name}'));
-  assert.deepEqual(labels(report.roots.slice(1)), [
+  assert.deepEqual(labels(report.roots.slice(1).filter((r) => r.label !== 'Uses')), [
     'Paths that produce undefined',
     '  declared as User | undefined',
     '  current is declared without a value',
@@ -48,7 +58,7 @@ test('module state lists its declaration and every assignment of undefined', () 
 
 test('an optional parameter lists call sites that omit it or pass undefined', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, 'return na|me ??'));
-  assert.deepEqual(labels(report.roots.slice(1)), [
+  assert.deepEqual(labels(report.roots.slice(1).filter((r) => r.label !== 'Uses')), [
     'Paths that produce undefined',
     '  name is an optional parameter',
     '  caller omits the argument',

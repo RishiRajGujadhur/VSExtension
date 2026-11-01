@@ -290,6 +290,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 3. The first row gives the verdict: the type, and whether the value *may be null or undefined here* or is *never null or undefined here*.
 4. **Paths that produce null or undefined** traces every source back to its origin. Examples: an optional parameter, a caller that omits an argument, a `return undefined`, a function that can reach its end without returning, or a library call such as `Array.find()`.
 5. If the value is safe at the cursor, **Ruled out by** lists the checks that narrow it, such as `if (!coupon) return amount;`.
+6. **Uses** lists every read of the variable and what it is at that point: *safe* (narrowed), *check* (a test such as `!coupon` or `coupon?.code`), or *may be undefined*. A use that may still be null is one that needs a guard.
 
 ## Test Impact Analysis
 

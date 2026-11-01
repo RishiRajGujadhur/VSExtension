@@ -340,6 +340,58 @@ function exits(statement: ts.Statement): boolean {
   return !!last && (ts.isReturnStatement(last) || ts.isThrowStatement(last) || ts.isContinueStatement(last) || ts.isBreakStatement(last));
 }
 
+const maxUses = 50;
+
+/** Every read of a variable, parameter or property, and whether its type still includes null or undefined there. */
+function usesOf(project: VirtualProject, explorer: NullabilityExplorer, builder: ReportBuilder, expression: ts.Node): ReportNode[] {
+  const name = ts.isPropertyAccessExpression(expression) ? expression.name : expression;
+  if (!ts.isIdentifier(name)) {
+    return [];
+  }
+  const uses: ReportNode[] = [];
+  for (const reference of referencesAt(project.service, name.getSourceFile().fileName, name.getStart())) {
+    const access = accessExpression(reference);
+    const parent = reference.parent;
+    if ((parent as ts.NamedDeclaration).name === reference || writeOf(access) || uses.length >= maxUses) {
+      continue;
+    }
+    const check = isNullCheck(access as ts.Expression);
+    const nullable = !check && explorer.nullable(access);
+    const line = reference.getSourceFile().getLineAndCharacterOfPosition(reference.getStart()).line + 1;
+    // The expression around the use; for `${x}` in a template, the whole template.
+    const context = ts.isTemplateSpan(access.parent) ? access.parent.parent : access.parent;
+    uses.push({
+      label: nodeSnippet(context, 50),
+      description: `line ${line} · ${check ? 'check' : nullable ? `may be ${explorer.nullishWord(access)}` : 'safe'}`,
+      icon: check ? 'filter' : nullable ? 'warning' : 'pass',
+      tone: check ? undefined : nullable ? 'warning' : 'ok',
+      role: 'read',
+      location: builder.at(reference),
+    });
+  }
+  return uses;
+}
+
+/** Whether the use tests for null rather than relying on a value: `!x`, `x ?? d`, `x?.y`, `x === null`, `typeof x`, `if (x)`. */
+function isNullCheck(use: ts.Expression): boolean {
+  const parent = use.parent;
+  if (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken) {
+    return true;
+  }
+  if (ts.isTypeOfExpression(parent) || (ts.isPropertyAccessExpression(parent) && parent.expression === use && parent.questionDotToken)) {
+    return true;
+  }
+  if (ts.isBinaryExpression(parent)) {
+    const kind = parent.operatorToken.kind;
+    const other = parent.left === use ? parent.right : parent.left;
+    const nullish = other.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(other) && other.text === 'undefined');
+    if ((kind === ts.SyntaxKind.QuestionQuestionToken && parent.left === use) || (nullish && [ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(kind))) {
+      return true;
+    }
+  }
+  return ((ts.isIfStatement(parent) || ts.isWhileStatement(parent)) && parent.expression === use) || (ts.isConditionalExpression(parent) && parent.condition === use);
+}
+
 /** Nullability Path Explorer for the expression at the cursor. */
 export function nullabilityReport(project: VirtualProject, fileName: string, offset: number): Report {
   const sourceFile = project.sourceFile(fileName);
@@ -382,6 +434,18 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
         children: guards.map((g) => ({ label: nodeText(g), icon: 'filter', tone: 'ok' as const, location: builder.at(g) })),
       });
     }
+  }
+  const uses = usesOf(project, explorer, builder, expression);
+  if (uses.length > 0) {
+    const count = (tone: ReportNode['tone']) => uses.filter((u) => u.tone === tone).length;
+    const unsafe = count('warning');
+    roots.push({
+      label: 'Uses',
+      description: [`${count('ok')} safe`, plural(uses.length - unsafe - count('ok'), 'check'), `${unsafe} may be ${which}`].join(', '),
+      icon: 'references',
+      children: uses,
+      expanded: unsafe > 0,
+    });
   }
   // Count where the paths end (a literal, an omitted argument, a library call), not the branches leading there.
   let origins = 0;
