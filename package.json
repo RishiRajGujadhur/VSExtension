@@ -1268,6 +1268,28 @@
             "description": "Show the number of inspection findings in the active file in the status bar.",
             "scope": "resource"
           },
+          "tsStructure.inspections.run": {
+            "type": "string",
+            "enum": [
+              "type",
+              "save"
+            ],
+            "default": "type",
+            "scope": "resource",
+            "enumDescriptions": [
+              "Inspect while you type, after a short pause.",
+              "Inspect only when the file is saved. Faster on big projects."
+            ],
+            "markdownDescription": "When live inspections run on an open file. Files are always inspected when they are opened."
+          },
+          "tsStructure.inspections.delay": {
+            "type": "number",
+            "default": 500,
+            "minimum": 0,
+            "maximum": 10000,
+            "scope": "resource",
+            "markdownDescription": "Milliseconds to wait after the last keystroke before inspecting, when `#tsStructure.inspections.run#` is `type`. Raise it if typing feels slow in a big project."
+          },
           "tsStructure.inspections.severity": {
             "type": "object",
             "default": {},

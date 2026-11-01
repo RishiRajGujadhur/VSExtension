@@ -62,7 +62,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       // Only files on screen are inspected; others are when they are shown.
       vscode.window.onDidChangeVisibleTextEditors((editors) => editors.forEach((e) => this.scheduleIfStale(e.document))),
       vscode.window.onDidChangeActiveTextEditor(() => this.updateStatus()),
-      vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
+      vscode.workspace.onDidChangeTextDocument((e) => e.contentChanges.length > 0 && this.isVisible(e.document) && runOn(e.document.uri) === 'type' && this.schedule(e.document)),
+      vscode.workspace.onDidSaveTextDocument((d) => this.isVisible(d) && runOn(d.uri) === 'save' && this.schedule(d, 0)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.features.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.include') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
@@ -106,7 +107,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
   }
 
-  private schedule(document: vscode.TextDocument, delay = 500): void {
+  private schedule(document: vscode.TextDocument, delay = vscode.workspace.getConfiguration('tsStructure', document.uri).get('inspections.delay', 500)): void {
     if (document.uri.scheme !== 'file' || vscode.languages.match(languageSelector, document) === 0) {
       return;
     }
@@ -358,6 +359,11 @@ async function applyReportFix(node: ReportNode): Promise<void> {
   if (await vscode.workspace.applyEdit(edit)) {
     void vscode.window.setStatusBarMessage(`Applied: ${String(action.title)}`, 3000);
   }
+}
+
+/** `type` inspects while editing; `save` only when the file is saved, for big projects. */
+function runOn(uri: vscode.Uri): 'type' | 'save' {
+  return vscode.workspace.getConfiguration('tsStructure', uri).get('inspections.run', 'type');
 }
 
 function inspectionOptions(uri: vscode.Uri): InspectionOptions {
