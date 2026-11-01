@@ -297,12 +297,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option></select></label>
-    <button id="search">Search</button>
+    <button id="search" title="Ctrl+Enter in the pattern">Search</button>
   </div>
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
-  <div class="row"><button id="replace" class="secondary">Replace All…</button></div>
+  <div class="row"><button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button></div>
   <h2>Save as inspection</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
@@ -384,6 +384,15 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     return { pattern: $('pattern').value, constraints: names.map((name) => ({ name, ...(state.constraints[name] || {}) })) };
   }
   $('pattern').addEventListener('input', () => { save(); renderConstraints(); });
+  // Ctrl+Enter (Cmd+Enter on macOS) runs the search from the pattern box, or the replacement from its box.
+  const onSubmit = (id, button) => $(id).addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      $(button).click();
+    }
+  });
+  onSubmit('pattern', 'search');
+  onSubmit('template', 'replace');
   $('scope').addEventListener('change', save);
   $('template').addEventListener('input', save);
   $('saveInspection').addEventListener('click', () => {
