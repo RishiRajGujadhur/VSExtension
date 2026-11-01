@@ -144,6 +144,8 @@ export interface GraphDiff {
   removedEdges: MergedEdge[];
   changedEdges: { after: MergedEdge; addedNames: string[]; removedNames: string[]; typeOnlyChanged: boolean }[];
   newCycles: string[][];
+  /** For each new cycle, the imports between its modules, which are the edges to cut. */
+  newCycleEdges: MergedEdge[][];
   resolvedCycles: string[][];
   fanIn: { module: string; before: number; after: number }[];
 }
@@ -192,6 +194,12 @@ export function diffGraphs(before: ModuleGraph, after: ModuleGraph, root: string
     removedEdges: [...beforeEdges].filter(([key]) => !afterEdges.has(key)).map(([, e]) => e),
     changedEdges,
     newCycles: afterCycleList.filter((c) => !beforeCycles.has(cycleKey(c))).map((c) => c.map(rel)),
+    newCycleEdges: afterCycleList
+      .filter((c) => !beforeCycles.has(cycleKey(c)))
+      .map((c) => {
+        const members = new Set(c.map(rel));
+        return [...afterEdges.values()].filter((e) => members.has(e.from) && members.has(e.to));
+      }),
     resolvedCycles: cycles(before)
       .filter((c) => !afterCycles.has(cycleKey(c)))
       .map((c) => c.map(rel)),
@@ -238,7 +246,19 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
   });
   const roots: ReportNode[] = [];
   if (diff.newCycles.length) {
-    roots.push({ label: 'New import cycles', description: plural(diff.newCycles.length, 'cycle'), icon: 'sync', tone: 'error', expanded: true, children: diff.newCycles.map((c) => cycleRow(c, 'error')) });
+    roots.push({
+      label: 'New import cycles',
+      description: plural(diff.newCycles.length, 'cycle'),
+      icon: 'sync',
+      tone: 'error',
+      expanded: true,
+      // A new cycle lists the imports that close it, each opening its line.
+      children: diff.newCycles.map((c, i) => ({
+        ...cycleRow(c, 'error'),
+        expanded: true,
+        children: (diff.newCycleEdges[i] ?? []).map((e) => ({ label: `${e.from} → ${e.to}`, description: `${e.typeOnly ? 'type ' : ''}${names(e.names)}`, icon: 'arrow-right', location: locate(e) })),
+      })),
+    });
   }
   if (diff.resolvedCycles.length) {
     roots.push({ label: 'Cycles removed', description: plural(diff.resolvedCycles.length, 'cycle'), icon: 'pass', tone: 'ok', children: diff.resolvedCycles.map((c) => cycleRow(c, 'ok')) });

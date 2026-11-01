@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { test } from 'node:test';
-import { cycles, diffGraphs, filesAtRef, gitRoot, graphOf, workingTreeFiles } from '../navigate/graphDiff';
+import { cycles, diffGraphs, graphDiffReport, filesAtRef, gitRoot, graphOf, workingTreeFiles } from '../navigate/graphDiff';
 import { fixtures } from './helpers';
 
 const options = { module: 99, moduleResolution: 100, jsx: 1, allowJs: true };
@@ -37,6 +37,10 @@ test('a Git revision and the working tree are compared module by module', () => 
     assert.deepEqual(diff.addedEdges.map((e) => `${e.from} → ${e.to}`).sort(), ['src/extra.ts → src/utils.ts', 'src/models.ts → src/utils.ts']);
     assert.deepEqual(diff.removedEdges.map((e) => `${e.from} → ${e.to}`), ['src/public.ts → src/index.ts']);
     assert.deepEqual(diff.newCycles, [['src/models.ts', 'src/utils.ts']]);
+    assert.deepEqual(diff.newCycleEdges[0].map((e) => `${e.from} → ${e.to}`).sort(), ['src/models.ts → src/utils.ts', 'src/utils.ts → src/models.ts']);
+    const report = graphDiffReport(diff, afterFiles, root, 'HEAD');
+    const cycle = report.roots[0].children?.[0];
+    assert.ok(cycle?.children?.every((c) => c.location), 'cycle edges open their import');
     assert.ok(diff.fanIn.some((f) => f.module === 'src/utils.ts' && f.after === f.before + 2));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
