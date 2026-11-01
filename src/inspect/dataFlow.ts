@@ -181,8 +181,8 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       expanded: true,
       children: scoped.map((s) => ({
         label: s.label,
-        description: s.type ? `: ${s.type}` : undefined,
-        tooltip: `${s.kind} · line ${s.node.getSourceFile().getLineAndCharacterOfPosition(s.node.getStart()).line + 1}${s.type ? `\nType here: ${s.type}` : ''}`,
+        description: [`line ${lineOf(s.node)}`, s.type].filter(Boolean).join(' · '),
+        tooltip: `${s.kind} · line ${lineOf(s.node)}${s.type ? `\nType here: ${s.type}` : ''}`,
         icon: icons[s.kind],
         tone: s.kind === 'mutation' ? 'warning' : s.kind === 'write' || s.kind === 'update' ? 'info' : undefined,
         role: s.kind === 'declaration' ? 'definition' : s.kind === 'write' || s.kind === 'update' || s.kind === 'mutation' ? 'write' : 'read',
@@ -225,6 +225,10 @@ function incomingValues(project: VirtualProject, parameter: ts.ParameterDeclarat
       location: builder.at(expression ?? call),
     };
   });
+}
+
+function lineOf(node: ts.Node): number {
+  return node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1;
 }
 
 function baseName(fileName: string): string {

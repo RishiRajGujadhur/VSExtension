@@ -33,6 +33,13 @@ test('data flow of a parameter shows the values call sites pass in', () => {
   assert.ok(report.fileHashes[incoming.children![0].location!.file]);
 });
 
+test('data flow steps show their line and type', () => {
+  const project = virtualProject('inspect', 'src/flow.ts');
+  const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
+  const checkout = report.roots.find((r) => r.label.startsWith('checkout'));
+  assert.equal(checkout?.children?.[0].description, 'line 6 · number');
+});
+
 test('data flow rejects symbols that are not values', () => {
   const project = virtualProject('inspect', 'src/flow.ts');
   assert.throws(() => dataFlowSteps(project, flow, offsetIn(flow, 'export function check|out')), /not a variable/);
