@@ -196,6 +196,11 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
   for (const entry of imports) {
     byVia.set(entry.via, [...(byVia.get(entry.via) ?? []), entry]);
   }
+  if (byVia.size > 1) {
+    builder.warnings.push(
+      `${target.name} is imported through ${byVia.size} different paths (${[...byVia.keys()].map((v) => `'${v}'`).join(', ')}). Importing it one way avoids duplicate module instances with bundler aliases and makes circular imports less likely.`,
+    );
+  }
   roots.push({
     label: 'Imported through',
     description: `${plural(imports.length, 'import')} via ${plural(byVia.size, 'path')}`,

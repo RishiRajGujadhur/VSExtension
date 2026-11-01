@@ -46,3 +46,9 @@ test('each module that exports the name points at its export, not the top of the
   assert.equal(line('src/index.ts'), 1);
   assert.ok((line('src/utils.ts') ?? 0) > 0);
 });
+
+test('importing one symbol through several paths is pointed out', () => {
+  const mixed = report('formatAr|ea(box)');
+  assert.match(mixed.warnings[0], /^formatArea is imported through 2 different paths \('\.\/index', '\.\/utils'\)|^formatArea is imported through 2 different paths \('\.\/utils', '\.\/index'\)/);
+  assert.deepEqual(report('new Bo|x(2)').warnings, []);
+});
