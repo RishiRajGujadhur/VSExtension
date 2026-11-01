@@ -237,6 +237,16 @@ Each placeholder can be constrained by a regular expression on its **type** (`^P
 
 The builder starts from ten examples (async `forEach`, JSON deep clone, `== null`, promise conditions, `useEffect` without dependencies, …) and remembers your last 15 searches.
 
+To run a search from a key, pass it to the command in `keybindings.json`:
+
+```json
+{
+  "key": "ctrl+alt+f",
+  "command": "tsStructure.structuralSearch",
+  "args": { "pattern": "$list$.find($callback$)", "constraints": [{ "name": "list", "type": "^LineItem\[\]$" }], "run": true }
+}
+```
+
 ## Working with results
 
 The TypeScript Structure view keeps every analysis's report:

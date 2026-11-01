@@ -32,7 +32,7 @@ export class StructuralSearchPanel {
     context: vscode.ExtensionContext,
     projects: ProjectService,
     view: StructureView,
-    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig },
+    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig; preset?: SearchPreset & { run?: boolean } },
   ): StructuralSearchPanel {
     const anchor = initial?.anchor ?? vscode.window.activeTextEditor?.document.uri.fsPath;
     if (!anchor) {
@@ -47,11 +47,15 @@ export class StructuralSearchPanel {
       if (initial?.inspection) {
         void StructuralSearchPanel.current.panel.webview.postMessage({ type: 'load', inspection: initial.inspection });
       }
+      if (initial?.preset) {
+        void StructuralSearchPanel.current.panel.webview.postMessage({ type: 'preset', preset: initial.preset });
+      }
       return StructuralSearchPanel.current;
     }
     const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Structural Search', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
-    panel.webview.html = html(panel.webview, initial?.pattern ?? '');
+    // A preset is part of the page, since messages posted before its script runs are lost.
+    panel.webview.html = html(panel.webview, initial?.pattern ?? '', initial?.preset);
     void StructuralSearchPanel.current.postHistory();
     if (initial?.inspection) {
       void panel.webview.postMessage({ type: 'load', inspection: initial.inspection });
@@ -234,11 +238,16 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
         reportError(error, 'Custom Inspections');
       }
     }),
-    vscode.commands.registerCommand('tsStructure.structuralSearch', () => {
+    // Takes an optional saved search, so a keybinding can run one: { pattern, constraints, replacement, scope, run }.
+    vscode.commands.registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
       try {
-        StructuralSearchPanel.open(context, projects, view, { pattern: selected, anchor: editor ? normalizePath(editor.document.uri.fsPath) : undefined });
+        StructuralSearchPanel.open(context, projects, view, {
+          pattern: preset?.pattern ? undefined : selected,
+          anchor: editor ? normalizePath(editor.document.uri.fsPath) : undefined,
+          preset: preset?.pattern ? preset : undefined,
+        });
       } catch (error) {
         reportError(error, 'Structural Search');
       }
@@ -246,7 +255,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
   );
 }
 
-function html(webview: vscode.Webview, pattern: string): string {
+function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & { run?: boolean }): string {
   const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
   return `<!DOCTYPE html>
 <html lang="en">
@@ -394,6 +403,7 @@ function html(webview: vscode.Webview, pattern: string): string {
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
+    if (message.type === 'preset') applyPreset(message.preset);
     if (message.type === 'load') loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
     if (message.type === 'history') {
       recent = message.items;
@@ -425,6 +435,13 @@ function html(webview: vscode.Webview, pattern: string): string {
     if (message.type && message.type.startsWith('status')) { $('error').textContent = ''; $('summary').textContent = message.text; }
   });
   renderConstraints();
+  function applyPreset(p) {
+    loadPreset(p);
+    if (p.scope) { $('scope').value = p.scope; save(); }
+    if (p.run) $('search').click();
+  }
+  const initialPreset = ${JSON.stringify(preset ?? null).replace(/</g, '\\u003c')};
+  if (initialPreset) applyPreset(initialPreset);
 </script>
 </body>
 </html>`;

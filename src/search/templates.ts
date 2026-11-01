@@ -7,6 +7,8 @@ export interface SearchPreset {
   constraints?: PlaceholderConstraint[];
   replacement?: string;
   message?: string;
+  /** Where to search; the builder's current choice when absent. */
+  scope?: 'project' | 'file';
 }
 
 /** Starting points offered in the builder. */
