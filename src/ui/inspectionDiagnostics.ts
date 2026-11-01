@@ -21,6 +21,8 @@ const severities: Record<Severity, vscode.DiagnosticSeverity> = {
 };
 
 const docsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#inspections';
+/** Custom inspections are documented together, in the builder's guide. */
+const customDocsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#custom-inspection-builder';
 const fixAllKind = vscode.CodeActionKind.SourceFixAll.append('tsStructure');
 
 /** Analyses that explain a finding in depth, offered from its lightbulb. */
@@ -308,7 +310,8 @@ function toDiagnostic(document: vscode.TextDocument, finding: Finding): vscode.D
   const range = new vscode.Range(document.positionAt(finding.start), document.positionAt(finding.end));
   const diagnostic = new vscode.Diagnostic(range, finding.message, severities[finding.severity]);
   diagnostic.source = 'TS Structure';
-  diagnostic.code = { value: finding.inspection, target: vscode.Uri.parse(`${docsUrl}-${finding.inspection.toLowerCase()}`) };
+  const docs = finding.inspection.startsWith('custom:') ? customDocsUrl : `${docsUrl}-${finding.inspection.toLowerCase()}`;
+  diagnostic.code = { value: finding.inspection, target: vscode.Uri.parse(docs) };
   if (finding.unnecessary) {
     diagnostic.tags = [vscode.DiagnosticTag.Unnecessary];
   }

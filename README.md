@@ -458,6 +458,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. Click **Replace All…**, or press `Ctrl+Enter` in the replacement. The changes open in VS Code's Refactor Preview, where you can untick individual files or changes before applying them. Turn off `tsStructure.previewRefactorings` to apply directly.
 5. A replacement that doesn't parse is refused before anything is written, with the file and line where it breaks. Use **Undo** (`Ctrl+Z`) in the edited files to revert an applied replacement.
 
+### Custom Inspection Builder
+
+![A saved no-console-log inspection underlines console.log in orders.ts with "Use track() instead of console.log", in the hover, the Problems panel and the Inspect Code report](docs/images/custom-inspections.png)
+
+1. In **Structural Search…**, write and test a pattern until it finds exactly what you want to flag. For example, `console.log($args*$)`.
+2. Optionally write a **Replace with** template. It becomes the inspection's quick fix.
+3. Under **Save as inspection**, write the message, for example *Use track() instead of console.log*. Placeholders such as `$args$` are filled in from each match. Choose a severity and click **Save as Inspection**.
+4. The inspection is saved in the workspace's `tsStructure.customInspections` setting, so it is shared through `.vscode/settings.json`. It runs live on visible files like the built-in inspections: an underline, a hover, the Problems panel, the quick fix and a fix-all for the file.
+5. **Inspect Code…** includes custom inspections, so the whole project can be checked at once.
+6. Run **Manage Custom Inspections…** to edit an inspection in the builder, disable or enable it, or delete it.
+
 ## Test Impact Analysis
 
 ### Usage
