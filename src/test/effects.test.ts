@@ -57,6 +57,14 @@ test('mutation report groups writes by shared state', () => {
   assert.equal(state?.children?.find((c) => c.label === 'registry')?.description, 'imported state · 1 write · state.ts');
 });
 
+test('mutation report says what kinds of state each function changes', () => {
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const functions = mutationReport(program, file).roots[0].children!;
+  const description = (name: string) => functions.find((f) => f.label.startsWith(name))?.description;
+  assert.equal(description('track'), '3 mutations: arguments, module state');
+  assert.equal(description('register'), '1 mutation: imported state');
+});
+
 test('mutation report can cover the whole project', () => {
   const program = virtualProject('inspect', 'src/effects.ts').program();
   const files = program.getSourceFiles().filter((sf) => !sf.isDeclarationFile && sf.fileName.includes('test-fixtures'));

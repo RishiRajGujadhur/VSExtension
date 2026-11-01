@@ -441,6 +441,16 @@ const kindIcons: Record<EffectKind, string> = {
   nondeterministic: 'question',
 };
 
+/** What a mutation of each kind changes, for short summaries. */
+const mutatedThing: Partial<Record<EffectKind, string>> = {
+  'mutates-parameter': 'arguments',
+  'mutates-this': 'the instance',
+  'mutates-module': 'module state',
+  'mutates-import': 'imported state',
+  'mutates-captured': 'captured variables',
+  'writes-global': 'globals',
+};
+
 function effectNode(effect: Effect, builder: ReportBuilder): ReportNode {
   const chain = effectChain(effect);
   const origin = chain[chain.length - 1];
@@ -524,7 +534,12 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
     total += mutations.length;
     byFunction.push({
       label: functionLabel(fn),
-      description: [project ? baseName(fn.getSourceFile().fileName) : undefined, plural(mutations.length, 'mutation')].filter(Boolean).join(' · '),
+      description: [
+        project ? baseName(fn.getSourceFile().fileName) : undefined,
+        `${plural(mutations.length, 'mutation')}: ${[...new Set(mutations.map((e) => mutatedThing[e.kind]))].join(', ')}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
       icon: 'symbol-function',
       location: builder.at(functionNameOrSelf(fn)),
       children: mutations.map((e) => effectNode(e, builder)),
