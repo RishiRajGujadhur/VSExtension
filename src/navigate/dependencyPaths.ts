@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { normalizePath } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
-import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, codeContextAt, plural } from '../structure/report';
 import { ImportEdge, ModuleGraph, programGraph, reverseEdges } from './moduleGraph';
 
 /** Distances, in imports, from every file that can reach `to`. */
@@ -104,11 +104,16 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
       expanded: index < 3,
       children: edges.map((edge) => {
         const sourceFile = program.getSourceFile(edge.from)!;
+        // Find Usages on the first imported name shows what in the importing module needs it.
+        const name = edge.kind === 'import' ? edge.names.find((n) => n !== '*' && n !== 'default') : undefined;
+        const at = name ? sourceFile.text.indexOf(name, edge.start) : -1;
         return {
           label: `${relative(edge.from)}: ${describeEdge(edge)}`,
           description: `line ${edge.line + 1}`,
           icon: edge.kind === 're-export' ? 'export' : 'package',
+          tooltip: codeContextAt(sourceFile, edge.start, 0),
           location: builder.span(sourceFile, edge.start, edge.end),
+          action: at >= edge.start && at < edge.end ? { kind: 'findUsages', command: 'tsStructure.semanticUsages', file: sourceFile.fileName, offset: at } : undefined,
         };
       }),
     };

@@ -93,8 +93,13 @@ export function withPlace(node: ts.Node, description?: string): string {
 /** The node's line with one line around it, as a Markdown code block for a row's hover. */
 export function codeContext(node: ts.Node, around = 1): string {
   const sourceFile = node.getSourceFile();
+  return codeContextAt(sourceFile, node.getStart(sourceFile), around);
+}
+
+/** Like codeContext, for an offset in a file. */
+export function codeContextAt(sourceFile: ts.SourceFile, offset: number, around = 1): string {
   const lines = sourceFile.text.split(/\r?\n/);
-  const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const { line } = sourceFile.getLineAndCharacterOfPosition(offset);
   const shown = lines.slice(Math.max(0, line - around), line + around + 1);
   const indent = Math.min(...shown.filter((l) => l.trim()).map((l) => /^\s*/.exec(l)![0].length));
   const language = /\.[jt]sx?$/.exec(sourceFile.fileName)?.[0].slice(1) ?? 'ts';

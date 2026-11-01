@@ -57,3 +57,11 @@ test('modules that depend on each other are reported as a cycle', () => {
   const plain = dependencyPathReport(virtualProject('navigate', 'src/app.tsx').program(), path.join(src, 'app.tsx'), utils);
   assert.deepEqual(plain.warnings, []);
 });
+
+test('each import hop shows its code and finds the usages of what it imports', () => {
+  const report = dependencyPathReport(virtualProject('navigate', 'src/app.tsx').program(), path.join(src, 'app.tsx'), path.join(src, 'models.ts'));
+  const hop = report.roots.find((r) => r.label === 'Longer runtime path')?.children?.[0].children?.[0];
+  assert.equal(hop?.tooltip, "```tsx\nimport { formatArea } from './index';\n```");
+  assert.equal(hop?.action?.command, 'tsStructure.semanticUsages');
+  assert.equal(hop?.action?.offset, fs.readFileSync(path.join(src, 'app.tsx'), 'utf8').indexOf('formatArea'));
+});

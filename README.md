@@ -499,7 +499,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Open the module whose dependency you want to explain, such as `src/main.ts`, and run **Dependency Path Finder…**. In the Explorer, you can also right-click a file.
 2. Choose the module it depends on, here `analytics.ts`. The modules it depends on are listed first, nearest first, with how many imports away each one is.
 3. The first row says whether it depends on it, and how many imports deep.
-4. **Shortest paths** lists every shortest chain of imports. Expand one to see each hop: the exact `import` or `export … from` line, with the names it brings in. A path through a type-only import is marked as erased at runtime. If all shortest paths are type-only, **Longer runtime path** shows the real one.
+4. **Shortest paths** lists every shortest chain of imports. Expand one to see each hop: the exact `import` or `export … from` line, with the names it brings in. The **Find Usages** button on an import shows what in that module uses the imported name, which is the code to change to cut the dependency. A path through a type-only import is marked as erased at runtime. If all shortest paths are type-only, **Longer runtime path** shows the real one.
 5. **Modules on these paths that import it directly** are the last hops, where the dependency could be cut.
 6. If there is no dependency, the report says so, and shows the reverse direction if there is one.
 7. If the two modules depend on each other at runtime, the report warns about the cycle and lists the paths back under **Circular**.
