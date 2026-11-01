@@ -525,6 +525,29 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
       });
     }
   }
+  // The same effects by the call that brings them in, to see which call to change or isolate.
+  const byCall = new Map<ts.Node, Effect[]>();
+  for (const effect of effects.filter((e) => e.via)) {
+    byCall.set(effect.node, [...(byCall.get(effect.node) ?? []), effect]);
+  }
+  if (byCall.size > 0) {
+    roots.push({
+      label: 'By call',
+      description: plural(byCall.size, 'call'),
+      icon: 'call-outgoing',
+      children: [...byCall].map(([call, inherited]) => {
+        const callee = inherited[0].via!.fn;
+        return {
+          label: `${functionLabel(callee)}()`,
+          description: [...new Set(inherited.map((e) => kindLabels[e.kind].toLowerCase()))].join(', '),
+          icon: 'symbol-function',
+          tone: inherited.some((e) => mutationKinds.has(e.kind)) ? ('warning' as const) : ('info' as const),
+          location: builder.at(call),
+          action: { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: callee.getSourceFile().fileName, offset: functionNameOrSelf(callee).getStart() },
+        };
+      }),
+    });
+  }
   if (roots.length === 0) {
     roots.push({ label: `${functionLabel(fn)} has no detected side effects`, description: 'pure', icon: 'pass', tone: 'ok', location: builder.at(fn) });
   }

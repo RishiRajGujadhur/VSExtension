@@ -44,7 +44,7 @@ test('side-effect report says when a function is pure', () => {
   const report = sideEffectReport(program, file, offsetIn(file, 'function pu|re'));
   assert.equal(report.description, 'pure');
   const track = sideEffectReport(program, file, offsetIn(file, 'function tra|ck'));
-  assert.deepEqual(track.roots.map((r) => r.label), ['Mutates arguments', 'Mutates module state', 'Input/output', 'Nondeterministic']);
+  assert.deepEqual(track.roots.map((r) => r.label), ['Mutates arguments', 'Mutates module state', 'Input/output', 'Nondeterministic', 'By call']);
 });
 
 test('mutation report groups writes by shared state', () => {
@@ -114,4 +114,14 @@ test('lenses cover class fields and object properties holding functions', () => 
   for (const name of ['addItem', 'increment', 'handle', 'onSave']) {
     assert.ok(names.includes(name), `${name} missing from ${names.join(', ')}`);
   }
+});
+
+test('effects are also listed by the call that brings them in', () => {
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const report = sideEffectReport(program, file, offsetIn(file, 'function tra|ck'));
+  const byCall = report.roots.find((r) => r.label === 'By call');
+  assert.deepEqual(
+    byCall?.children?.map((c) => `${c.label} ${c.description}`),
+    ['addItem() mutates arguments', 'remember() mutates module state'],
+  );
 });
