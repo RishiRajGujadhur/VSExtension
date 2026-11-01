@@ -92,3 +92,10 @@ test('a value passed to another function can be followed there', () => {
   assert.equal(intoFormat?.label, 'label → format()');
   assert.deepEqual(intoFormat?.action, { kind: 'follow', command: 'tsStructure.argumentFlow', file: intoFormat?.action?.file, offset: offsetIn(file, 'format(|value: string') });
 });
+
+test('paths cut by the depth limit are pointed out', () => {
+  const shallow = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'log(mes|sage: string)'), 1);
+  assert.match(shallow.warnings[0] ?? '', /deeper than 1 call and were cut off; raise tsStructure\.argumentFlow\.maxDepth/);
+  const deep = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'log(mes|sage: string)'));
+  assert.deepEqual(deep.warnings, []);
+});

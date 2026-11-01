@@ -529,7 +529,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 3. **Where values come from** walks back through every caller: what each one passes, through their own parameters, local variables and their assignments, and JSX attributes, until it reaches literals (`'READ10'`), omitted arguments or expressions it can't follow.
    **Values that can arrive** collects the distinct literals and omitted arguments at the ends of those paths, such as `'READ10'` or *omitted (undefined)*.
 4. **Where the value goes** walks forward: the functions and components it is passed to (and as which parameter or prop), locals derived from it, returns and stores. The arrow button (**Follow Into Call**) re-runs the explorer from the receiving parameter, which also shows its other callers.
-5. Use it before changing a parameter's type or meaning, to see every value that can arrive and everything that depends on it. The depth is limited by `tsStructure.argumentFlow.maxDepth` (default 6).
+5. Use it before changing a parameter's type or meaning, to see every value that can arrive and everything that depends on it. The depth is limited by `tsStructure.argumentFlow.maxDepth` (default 6). The view says when a path was cut off by it.
 
 ## Test Impact Analysis
 

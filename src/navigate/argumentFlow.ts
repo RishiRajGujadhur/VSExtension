@@ -325,6 +325,13 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
   if (values.size > 0) {
     roots.splice(2, 0, { label: 'Values that can arrive', description: plural(values.size, 'value'), icon: 'symbol-constant', children: [...values.values()] });
   }
+  let cut = false;
+  forEachReportNode(roots, (node) => {
+    cut ||= node.label === '… (depth limit)';
+  });
+  if (cut) {
+    builder.warnings.push(`Some paths go deeper than ${plural(maxDepth, 'call')} and were cut off; raise tsStructure.argumentFlow.maxDepth to follow them further.`);
+  }
   // Every row shows its line of code on hover; values often come from far away.
   const program = project.program();
   forEachReportNode(roots, (node) => {
