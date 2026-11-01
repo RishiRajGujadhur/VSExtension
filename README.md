@@ -525,7 +525,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 ![Propagation of the code parameter of applyCoupon: it comes from checkoutTotal's couponCode, which comes from placeOrder's coupon (READ10 from main.ts, or omitted), and it goes into findCoupon](docs/images/argument-flow.png)
 
 1. Put the cursor on a parameter, a destructured prop, or an argument in a call (to explore the callee's parameter). In the demo, use `code` in `applyCoupon` (`src/pricing.ts`).
-2. Run **Argument Propagation Explorer**.
+2. Run **Argument Propagation Explorer**. The first row shows the parameter's type, and whether it is optional or has a default.
 3. **Where values come from** walks back through every caller: what each one passes, through their own parameters, local variables and their assignments, and JSX attributes, until it reaches literals (`'READ10'`), omitted arguments or expressions it can't follow.
    **Values that can arrive** collects the distinct literals and omitted arguments at the ends of those paths, such as `'READ10'` or *omitted (undefined)*.
 4. **Where the value goes** walks forward: the functions and components it is passed to (and as which parameter or prop), locals derived from it, returns and stores. The arrow button (**Follow Into Call**) re-runs the explorer from the receiving parameter, which also shows its other callers.

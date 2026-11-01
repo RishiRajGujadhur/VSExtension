@@ -3,23 +3,7 @@ import { AnalysisError } from '../analysis/types';
 import { resolveAlias } from '../analysis/referenceIndex';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, plural, codeContextAt, forEachReportNode } from '../structure/report';
-import {
-  FunctionWithBody,
-  argumentFor,
-  callSitesOf,
-  calledFunction,
-  enclosingFunction,
-  forEachDescendant,
-  functionLabel,
-  functionOfDeclaration,
-  identifierAt,
-  isFunctionWithBody,
-  jsxAttribute,
-  nodeText,
-  skipOuterExpressions,
-  symbolAt,
-  writeOf,
-} from '../structure/util';
+import { FunctionWithBody, argumentFor, callSitesOf, calledFunction, enclosingFunction, forEachDescendant, functionLabel, functionOfDeclaration, identifierAt, isFunctionWithBody, jsxAttribute, nodeText, skipOuterExpressions, symbolAt, writeOf, typeText } from '../structure/util';
 
 /** A parameter, or one property destructured from it such as `title` in `({ title })`. */
 type Input = ts.ParameterDeclaration | ts.BindingElement;
@@ -302,6 +286,14 @@ function inputAt(project: VirtualProject, fileName: string, offset: number): Inp
   throw new AnalysisError(`'${identifier.text}' is not a parameter or an argument passed to a project function.`);
 }
 
+/** "string · optional" or "number · default 0.2": what the input accepts before tracing where values come from. */
+function inputSummary(project: VirtualProject, input: Input): string {
+  const checker = project.program().getTypeChecker();
+  const type = typeText(checker, checker.getTypeAtLocation(input.name), input);
+  const optional = ts.isParameter(input) && !!input.questionToken;
+  return [type, optional ? 'optional' : '', input.initializer ? `default ${nodeText(input.initializer)}` : ''].filter(Boolean).join(' · ');
+}
+
 export function argumentFlowReport(project: VirtualProject, fileName: string, offset: number, maxDepth = 6): Report {
   const input = inputAt(project, fileName, offset);
   const builder = new ReportBuilder('argumentFlow', `Propagation of ${inputLabel(input)}`);
@@ -309,7 +301,7 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
   const origins = flow.origins(input, 0, new Set());
   const destinations = flow.destinations(input, 0, new Set());
   const roots: ReportNode[] = [
-    { label: inputLabel(input), icon: 'symbol-parameter', tone: 'ok', location: builder.at(input.name) },
+    { label: inputLabel(input), description: inputSummary(project, input), icon: 'symbol-parameter', tone: 'ok', location: builder.at(input.name) },
     { label: 'Where values come from', description: plural(origins.length, 'call site'), icon: 'call-incoming', expanded: true, children: origins.length ? origins : [{ label: 'no call sites in the project', icon: 'dash' }] },
     { label: 'Where the value goes', description: plural(destinations.length, 'destination'), icon: 'call-outgoing', expanded: true, children: destinations.length ? destinations : [{ label: 'not passed on, returned or stored', icon: 'dash' }] },
   ];

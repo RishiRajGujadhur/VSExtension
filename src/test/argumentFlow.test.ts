@@ -99,3 +99,8 @@ test('paths cut by the depth limit are pointed out', () => {
   const deep = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'log(mes|sage: string)'));
   assert.deepEqual(deep.warnings, []);
 });
+
+test('the first row says what the parameter accepts', () => {
+  const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'log(mes|sage: string)'));
+  assert.equal(report.roots[0].description, 'string');
+});
