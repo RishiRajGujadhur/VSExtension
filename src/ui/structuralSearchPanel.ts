@@ -19,6 +19,7 @@ type Message =
   | { type: 'search'; spec: SearchSpec; scope: Scope }
   | { type: 'open'; index: number }
   | { type: 'validate'; spec: SearchSpec }
+  | { type: 'copyKeybinding'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
 
@@ -110,6 +111,13 @@ export class StructuralSearchPanel {
           selection: new vscode.Range(document.positionAt(match.start), document.positionAt(match.end)),
         });
       }
+      return;
+    }
+    if (message.type === 'copyKeybinding') {
+      const spec = clean(message.spec);
+      const args: SearchPreset & { run: boolean } = { pattern: spec.pattern, constraints: spec.constraints?.length ? spec.constraints : undefined, replacement: message.template.trim() || undefined, scope: message.scope, run: true };
+      await vscode.env.clipboard.writeText(JSON.stringify({ key: '', command: 'tsStructure.structuralSearch', args }, null, 2));
+      void this.panel.webview.postMessage({ type: 'status', text: 'Copied a keybinding for this search. Paste it into keybindings.json and fill in "key".' });
       return;
     }
     if (message.type === 'validate') {
@@ -314,6 +322,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option></select></label>
     <button id="search" title="Ctrl+Enter in the pattern">Search</button>
     <span id="count" class="hint"></span>
+    <button id="copyKeybinding" class="secondary" title="Copy this search as a keybindings.json entry that runs it">Copy as Keybinding</button>
   </div>
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
@@ -417,6 +426,9 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   onSubmit('template', 'replace');
   $('scope').addEventListener('change', save);
   $('template').addEventListener('input', save);
+  $('copyKeybinding').addEventListener('click', () => {
+    vscode.postMessage({ type: 'copyKeybinding', spec: spec(), scope: $('scope').value, template: $('template').value });
+  });
   $('saveInspection').addEventListener('click', () => {
     $('error').textContent = '';
     vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value });

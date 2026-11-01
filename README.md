@@ -237,7 +237,7 @@ Each placeholder can be constrained by a regular expression on its **type** (`^P
 
 The builder starts from ten examples (async `forEach`, JSON deep clone, `== null`, promise conditions, `useEffect` without dependencies, …) and remembers your last 15 searches.
 
-To run a search from a key, pass it to the command in `keybindings.json`:
+To run a search from a key, click **Copy as Keybinding** in the builder and paste the entry into `keybindings.json`, then fill in the key. The entry looks like this:
 
 ```json
 {
