@@ -202,8 +202,12 @@ export function defaultEntryPoints(root: string, files: ReadonlySet<string>): st
       // A broken manifest has no usable entry points.
     }
   }
-  for (const conventional of ['src/index', 'src/main', 'src/app', 'index', 'main']) {
-    tryPath(conventional);
+  // Conventional names only stand in for a manifest that names no entry: a barrel such as src/index.ts next to
+  // `"main": "src/main.ts"` would otherwise keep everything it re-exports alive.
+  if (found.size === 0) {
+    for (const conventional of ['src/index', 'src/main', 'src/app', 'index', 'main']) {
+      tryPath(conventional);
+    }
   }
   return [...found];
 }

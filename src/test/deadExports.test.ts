@@ -23,6 +23,16 @@ test('package.json entry points map back to source files', () => {
   assert.deepEqual(entries.map((e) => path.basename(e)), ['index.ts']);
 });
 
+test('a conventional index file is not an entry point when package.json names another', () => {
+  const demo = path.join(fixtures, '..', 'docs', 'demo');
+  const program = virtualProject('../docs/demo', 'src/main.ts').program();
+  const entries = defaultEntryPoints(demo, programGraph(program).files);
+  assert.deepEqual(entries.map((e) => path.basename(e)), ['main.ts']);
+  // So exports the barrel re-exports but nothing imports are reported.
+  const dead = findDeadExports(program, { entryPoints: entries, testsAreEntryPoints: true }).unused.flatMap((g) => g.exports.map((e) => e.name));
+  assert.ok(dead.includes('clearCart'), dead.join(', '));
+});
+
 test('exports unused from the entry points are dead; re-exports and export * keep them alive', () => {
   const program = virtualProject('deadexports', 'src/index.ts').program();
   const entryPoints = defaultEntryPoints(root, programGraph(program).files);

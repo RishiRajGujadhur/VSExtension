@@ -203,7 +203,7 @@ The Type Assertion Inspector classifies `as`, `<T>` and `!` assertions:
 | **Dead Export Analyzer** | anywhere in the project | Modules no entry point reaches, exports nothing reachable uses, and exports only used in their own module. `export *` and renamed re-exports are followed. Rows offer **Safe Delete** and **Remove export Keyword**. |
 | **Structural Duplicate Finder** | anywhere (file or project) | Runs of statements with the same structure even when variables are renamed and literal values differ, reported once at their largest extent, with the renamings between copies. **Compare Copies** opens them side by side. |
 
-Entry points for dead exports come from `tsStructure.deadExports.entryPoints` (globs), or else `package.json` (`main`, `module`, `exports`, `bin`, mapped from `dist/` back to `src/`) and conventional `index`/`main` files. Test files count as entry points unless `tsStructure.deadExports.testFilesAreEntryPoints` is off. The duplicate finder's sensitivity is set by `tsStructure.duplicates.minStatements` and `minTokens`; test files are skipped unless `ignoreTestFiles` is off.
+Entry points for dead exports come from `tsStructure.deadExports.entryPoints` (globs), or else `package.json` (`main`, `module`, `exports`, `bin`, mapped from `dist/` back to `src/`), or else conventional `index`/`main` files. Test files count as entry points unless `tsStructure.deadExports.testFilesAreEntryPoints` is off. The duplicate finder's sensitivity is set by `tsStructure.duplicates.minStatements` and `minTokens`; test files are skipped unless `ignoreTestFiles` is off.
 
 Set `tsStructure.codeLens.sideEffects` to show a lens above each function: **pure**, or a summary like *mutates arguments · I/O*. Click it for the full analysis.
 
