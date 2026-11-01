@@ -16,7 +16,23 @@ const throwingCalls: Record<string, string> = {
   BigInt: 'SyntaxError or RangeError on invalid input',
   'new URL': 'TypeError on an invalid URL',
   'new RegExp': 'SyntaxError on an invalid pattern',
+  'JSON.stringify': 'TypeError on circular structures or BigInt values',
+  'new Array': 'RangeError on an invalid length',
+  'new Intl.NumberFormat': 'RangeError on an invalid locale or option',
+  'new Intl.DateTimeFormat': 'RangeError on an invalid locale or option',
+  'String.fromCodePoint': 'RangeError on an invalid code point',
+  execSync: 'Error when the command exits with a failure',
+  execFileSync: 'Error when the command exits with a failure',
 };
+
+/** Node's synchronous file system calls throw when a path is missing or inaccessible. */
+const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
+for (const call of fsSyncCalls) {
+  throwingCalls[call] = throwingCalls[`fs.${call}`] = 'Error when the path is missing or not accessible';
+}
+for (const call of ['execSync', 'execFileSync']) {
+  throwingCalls[`child_process.${call}`] = throwingCalls[call];
+}
 
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {

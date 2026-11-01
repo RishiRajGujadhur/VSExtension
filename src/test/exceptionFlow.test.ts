@@ -44,6 +44,14 @@ test('a caller reached by two routes is followed on both', () => {
   ]);
 });
 
+test('common library calls that throw are recognized', () => {
+  const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function snap|shot'));
+  assert.deepEqual(report.roots[0].children?.map((c) => c.label), [
+    'fs.readFileSync(): Error when the path is missing or not accessible',
+    'JSON.stringify(): TypeError on circular structures or BigInt values',
+  ]);
+});
+
 test('a catch block that throws a new error transforms it; the new throw escapes', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function load|Config'));
   const lines = outline(report.roots);

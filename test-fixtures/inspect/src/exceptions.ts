@@ -51,3 +51,9 @@ export function checkForm(name: string, email: string): void {
   checkName(name);
   checkEmail(email);
 }
+
+declare const fs: { readFileSync(path: string, encoding: string): string };
+
+export function snapshot(path: string, state: object): string {
+  return fs.readFileSync(path, 'utf8') + JSON.stringify(state);
+}
