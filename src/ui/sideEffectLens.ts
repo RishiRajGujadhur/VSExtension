@@ -66,10 +66,12 @@ export class SideEffectLens implements vscode.CodeLensProvider {
         return [];
       }
       const analyzer = new EffectAnalyzer(project.checker);
+      const showPure = vscode.workspace.getConfiguration('tsStructure').get('codeLens.sideEffectsShowPure', true);
       return lensTargets(sourceFile)
         .filter(({ fn }) => isFunctionWithBody(fn))
-        .map(({ fn, anchor }) => {
-          const effects = analyzer.effectsOf(fn as Parameters<EffectAnalyzer['effectsOf']>[0]);
+        .map(({ fn, anchor }) => ({ anchor, effects: analyzer.effectsOf(fn) }))
+        .filter(({ effects }) => showPure || effects.length > 0)
+        .map(({ anchor, effects }) => {
           const kinds = [...new Set(effects.map((e) => e.kind))];
           const mutations = kinds.filter((k) => mutationKinds.has(k));
           const title = kinds.length === 0 ? '$(pass) pure' : `$(${mutations.length ? 'warning' : 'info'}) ${kinds.map((k) => shortLabels[k]).join(' · ')}`;

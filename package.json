@@ -1014,6 +1014,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show a CodeLens above each function summarizing its side effects (\"pure\", \"mutates arguments · I/O\", …). Click it for the full Side-Effect Analyzer report."
+        },
+        "tsStructure.codeLens.sideEffectsShowPure": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the side-effect lens on pure functions too. Turn off to keep lenses only where a function has effects."
         }
       }
     }
