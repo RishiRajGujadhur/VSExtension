@@ -520,6 +520,16 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Modules** lists added and removed files. **Biggest changes in importers** shows modules whose number of importers changed most, which hints at new hubs or modules being phased out. Expand one to see which modules started or stopped importing it.
 6. The working tree includes unsaved editor changes, so you can check an edit before saving.
 
+### Argument Propagation Explorer
+
+![Propagation of the code parameter of applyCoupon: it comes from checkoutTotal's couponCode, which comes from placeOrder's coupon (READ10 from main.ts, or omitted), and it goes into findCoupon](docs/images/argument-flow.png)
+
+1. Put the cursor on a parameter, a destructured prop, or an argument in a call (to explore the callee's parameter). In the demo, use `code` in `applyCoupon` (`src/pricing.ts`).
+2. Run **Argument Propagation Explorer**.
+3. **Where values come from** walks back through every caller: what each one passes, through their own parameters, local variables and their assignments, and JSX attributes, until it reaches literals (`'READ10'`), omitted arguments or expressions it can't follow.
+4. **Where the value goes** walks forward: the functions and components it is passed to (and as which parameter or prop), locals derived from it, returns and stores.
+5. Use it before changing a parameter's type or meaning, to see every value that can arrive and everything that depends on it. The depth is limited by `tsStructure.argumentFlow.maxDepth` (default 6).
+
 ## Test Impact Analysis
 
 ### Usage
