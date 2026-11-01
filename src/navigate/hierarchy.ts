@@ -366,6 +366,7 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
     label: 'Impacted tests',
     description: plural(impact.tests.length, 'test'),
     icon: 'beaker',
+    action: impact.tests.length ? { kind: 'runTests', tests: impact.tests.map((t) => t.test) } : undefined,
     children: impact.tests.map((t) => ({ label: t.test.titlePath.join(' › '), description: t.confidence, icon: 'beaker', location: { ...t.test.location, endLine: t.test.location.line, endCharacter: t.test.location.character } })),
   });
   return builder.finish(roots, `${plural(overrides.length, 'override')}, ${plural(inheriting.length, 'inheriting subtype')}, ${plural(impact.tests.length, 'test')}`);

@@ -114,3 +114,10 @@ test('overrides and inheriting types open their own analyses', () => {
   const square = report.roots.find((r) => r.label === 'Subtypes that inherit it unchanged')?.children?.[0];
   assert.equal(square?.action?.command, 'tsStructure.typeHierarchy');
 });
+
+test('impacted tests can be run from their group', () => {
+  const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'abstract ar|ea'));
+  const tests = report.roots.find((r) => r.label === 'Impacted tests');
+  assert.equal(tests?.action?.kind, 'runTests');
+  assert.equal((tests?.action?.tests as unknown[]).length, 1);
+});

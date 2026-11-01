@@ -5,6 +5,8 @@ import { findNode } from '../analysis/impact';
 import { ReportNode } from '../structure/report';
 import { parse } from './codeActions';
 import { StructureView } from './structureView';
+import { TestCase } from '../analysis/types';
+import { runTests } from '../runner';
 
 const fragmentScheme = 'ts-structure-fragment';
 const fragments = new Map<string, string>();
@@ -31,6 +33,12 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
     vscode.commands.registerCommand('tsStructure.report.findUsages', followRow),
     vscode.commands.registerCommand('tsStructure.report.showHierarchy', followRow),
     vscode.commands.registerCommand('tsStructure.report.overrideImpact', followRow),
+    vscode.commands.registerCommand('tsStructure.report.runTests', (node: ReportNode) => {
+      const tests = node?.action?.tests as TestCase[] | undefined;
+      if (tests?.length) {
+        void runTests(tests);
+      }
+    }),
     // Renames the symbol defined at the row, after reviewing its usages.
     vscode.commands.registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
       if (node?.location) {

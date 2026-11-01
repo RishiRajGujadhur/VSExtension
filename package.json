@@ -335,6 +335,12 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.report.runTests",
+        "title": "Run These Tests",
+        "category": "TypeScript Structure",
+        "icon": "$(run-all)"
+      },
+      {
         "command": "tsStructure.report.overrideImpact",
         "title": "Override Impact of This Member",
         "category": "TypeScript Structure",
@@ -657,6 +663,10 @@
           "when": "false"
         },
         {
+          "command": "tsStructure.report.runTests",
+          "when": "false"
+        },
+        {
           "command": "tsStructure.editCustomInspection",
           "when": "false"
         },
@@ -821,6 +831,11 @@
         {
           "command": "tsStructure.report.overrideImpact",
           "when": "view == tsStructure.report && viewItem =~ /action:overrideImpact/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.runTests",
+          "when": "view == tsStructure.report && viewItem =~ /action:runTests/",
           "group": "inline@1"
         }
       ]
