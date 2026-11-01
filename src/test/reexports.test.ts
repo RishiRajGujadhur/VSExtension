@@ -23,9 +23,9 @@ test('a renamed import is followed through two barrels to its declaration', () =
     ],
   );
   assert.deepEqual(exported.children?.map((c) => `${c.label} | ${c.description}`).sort(), [
-    'Box (renamed from Square) | src/index.ts · re-export',
-    'Box (renamed from Square) | src/public.ts · re-export',
-    'Square | src/models.ts · declaration',
+    'Box (renamed from Square) | src/index.ts · re-export · no importers',
+    'Box (renamed from Square) | src/public.ts · re-export · 1 importer',
+    'Square | src/models.ts · declaration · no importers',
   ]);
   assert.deepEqual(imported.children?.map((c) => c.label), ["'./public'"]);
 });

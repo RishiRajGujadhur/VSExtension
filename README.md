@@ -423,7 +423,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Put the cursor on an imported name, a re-export, or a usage of an imported symbol. In the demo, use `subtotal` in the first import of `src/main.ts`.
 2. Run **Re-export Chain Navigator**.
 3. **Resolution from the cursor** shows each hop the name takes: the import, every `export { … } from` or `export *` barrel on the way, and the declaration at the end. Renames are noted, such as *as subtotal*.
-4. **Exported as** lists every module that exports the symbol and under which name. Use it to decide which path to import from, or to find barrels left over after a move.
+4. **Exported as** lists every module that exports the symbol, under which name, and how many files import it from there. Use it to decide which path to import from, or to find barrels with *no importers* left over after a move.
 5. **Imported through** groups the project's imports of the symbol by the module path they use, here `'./pricing'` and `'./index'`. Mixed paths to the same declaration are a common source of circular-import trouble, so the view warns when there is more than one.
 
 ## Test Impact Analysis

@@ -123,9 +123,9 @@ export function exportedNames(program: ts.Program, target: ts.Symbol): ExportedN
 }
 
 /** Imports of the symbol across the project, with the module each one goes through. */
-export function importsOf(program: ts.Program, target: ts.Symbol): { node: ts.Node; via: string; local: string }[] {
+export function importsOf(program: ts.Program, target: ts.Symbol): { node: ts.Node; via: string; local: string; from?: ts.SourceFile }[] {
   const checker = program.getTypeChecker();
-  const results: { node: ts.Node; via: string; local: string }[] = [];
+  const results: { node: ts.Node; via: string; local: string; from?: ts.SourceFile }[] = [];
   for (const sourceFile of projectSourceFiles(program)) {
     for (const statement of sourceFile.statements) {
       if (!ts.isImportDeclaration(statement) || !statement.importClause || !ts.isStringLiteral(statement.moduleSpecifier)) {
@@ -142,7 +142,8 @@ export function importsOf(program: ts.Program, target: ts.Symbol): { node: ts.No
       for (const name of names) {
         const symbol = checker.getSymbolAtLocation(name);
         if (symbol && resolveAlias(checker, symbol) === target) {
-          results.push({ node: name, via: statement.moduleSpecifier.text, local: name.text });
+          const from = checker.getSymbolAtLocation(statement.moduleSpecifier)?.valueDeclaration;
+          results.push({ node: name, via: statement.moduleSpecifier.text, local: name.text, from: from && ts.isSourceFile(from) ? from : undefined });
         }
       }
     }
@@ -165,6 +166,11 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
   const chain = resolutionChain(checker, identifier);
   const exported = exportedNames(program, target);
   const imports = importsOf(program, target);
+  // How many files import the symbol from each exporting module: a barrel nobody imports through can go.
+  const importerCount = (file: string) => {
+    const count = new Set(imports.filter((i) => i.from?.fileName === file).map((i) => i.node.getSourceFile())).size;
+    return count ? plural(count, 'importer') : 'no importers';
+  };
   const roots: ReportNode[] = [
     {
       label: 'Resolution from the cursor',
@@ -186,7 +192,7 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
       expanded: true,
       children: exported.map((e) => ({
         label: e.name === target.name ? e.name : `${e.name} (renamed from ${target.name})`,
-        description: `${relative(e.file)}${e.reexport ? ' · re-export' : ' · declaration'}`,
+        description: `${relative(e.file)}${e.reexport ? ' · re-export' : ' · declaration'} · ${importerCount(e.file)}`,
         icon: e.reexport ? 'references' : 'symbol-class',
         location: builder.at(e.node),
       })),
