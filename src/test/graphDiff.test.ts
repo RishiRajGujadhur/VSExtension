@@ -40,7 +40,10 @@ test('a Git revision and the working tree are compared module by module', () => 
     assert.deepEqual(diff.newCycleEdges[0].map((e) => `${e.from} → ${e.to}`).sort(), ['src/models.ts → src/utils.ts', 'src/utils.ts → src/models.ts']);
     // utils.ts imports models.ts only as a type, so this cycle disappears at runtime.
     assert.deepEqual(diff.newCycleAtRuntime, [false]);
-    const report = graphDiffReport(diff, afterFiles, root, 'HEAD');
+    const report = graphDiffReport(diff, afterFiles, root, 'HEAD', { repo: root, ref: 'HEAD' });
+    const added = report.roots.find((r) => r.label === 'Added imports')?.children?.[0];
+    assert.equal(added?.action?.kind, 'compareRevision');
+    assert.equal(added?.action?.ref, 'HEAD');
     const cycle = report.roots[0].children?.[0];
     assert.ok(cycle?.children?.every((c) => c.location), 'cycle edges open their import');
     assert.ok(diff.fanIn.some((f) => f.module === 'src/utils.ts' && f.after === f.before + 2));

@@ -335,6 +335,12 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.report.compareRevision",
+        "title": "Compare with Revision",
+        "category": "TypeScript Structure",
+        "icon": "$(git-compare)"
+      },
+      {
         "command": "tsStructure.report.swapDependency",
         "title": "Swap Direction",
         "category": "TypeScript Structure",
@@ -677,6 +683,10 @@
           "when": "false"
         },
         {
+          "command": "tsStructure.report.compareRevision",
+          "when": "false"
+        },
+        {
           "command": "tsStructure.editCustomInspection",
           "when": "false"
         },
@@ -851,6 +861,11 @@
         {
           "command": "tsStructure.report.swapDependency",
           "when": "view == tsStructure.report && viewItem =~ /action:swapDependency/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.compareRevision",
+          "when": "view == tsStructure.report && viewItem =~ /action:compareRevision/",
           "group": "inline@1"
         }
       ]

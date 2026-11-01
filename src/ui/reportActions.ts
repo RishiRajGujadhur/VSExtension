@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import * as path from 'path';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
@@ -59,6 +60,24 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
         await view.open(node.location);
         await vscode.commands.executeCommand('editor.action.quickFix');
       }
+    }),
+    // A file as it was at a Git revision, next to its current version.
+    vscode.commands.registerCommand('tsStructure.report.compareRevision', async (node: ReportNode) => {
+      const { repo, ref, file } = (node?.action ?? {}) as { repo?: string; ref?: string; file?: string };
+      if (!repo || !ref || !file) {
+        return;
+      }
+      const relative = path.relative(repo, file).replace(/\\/g, '/');
+      let before = '';
+      try {
+        before = execFileSync('git', ['show', `${ref}:${relative}`], { cwd: repo, maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+      } catch {
+        // Not in that revision: compare with an empty file.
+      }
+      const key = `${Date.now()}-revision`;
+      fragments.set(key, before);
+      const old = vscode.Uri.from({ scheme: fragmentScheme, path: `/${path.basename(file)}`, query: key });
+      await vscode.commands.executeCommand('vscode.diff', old, vscode.Uri.file(file), `${path.basename(file)} (${ref.length === 40 ? ref.slice(0, 8) : ref} ↔ working tree)`);
     }),
     vscode.commands.registerCommand('tsStructure.report.safeDelete', async (node: ReportNode) => {
       if (node?.location) {

@@ -217,7 +217,7 @@ export function diffGraphs(before: ModuleGraph, after: ModuleGraph, root: string
 }
 
 /** Dependency Graph Diff: how the import architecture changed between a Git revision and the working tree. */
-export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>, root: string, refLabel: string): Report {
+export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>, root: string, refLabel: string, revision?: { repo: string; ref: string }): Report {
   const builder = new ReportBuilder('graphDiff', `Dependency changes since ${refLabel}`);
   const sourceFiles = new Map<string, ts.SourceFile>();
   const locate = (edge: MergedEdge) => {
@@ -242,6 +242,8 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
       label: from,
       description: plural(list.length, 'import'),
       icon: 'file-code',
+      // The whole file against the revision, to see the change around the imports.
+      action: revision && afterFiles.has(normalizePath(path.join(root, from))) ? { kind: 'compareRevision', ...revision, file: normalizePath(path.join(root, from)) } : undefined,
       expanded: groups.size <= 8,
       children: list.map((e) => ({ label: `→ ${e.to}`, description: `${e.typeOnly ? 'type ' : ''}${names(e.names)}`, icon, location: located ? locate(e) : undefined })),
     }));

@@ -514,7 +514,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - the **branch point** with `main`, for everything on your branch;
    - **HEAD~1**, a recent commit, a branch, or any revision you type.
 3. **New import cycles** come first, in red, such as *analytics.ts ⇄ cart.ts*. They are the changes most worth catching in review. Each cycle lists the imports that close it, so you can open the one to cut. A cycle that only exists through `import type` is marked *type-only: erased at runtime*. **Cycles removed** lists the ones your change broke up.
-4. **Added imports** and **Removed imports** are grouped by the importing file, with the names each one brings in. **Changed imports** are existing imports whose names changed, or that switched between type-only and runtime.
+4. **Added imports** and **Removed imports** are grouped by the importing file, with the names each one brings in. The button on a file (**Compare with Revision**) opens a diff of that file against the chosen revision. **Changed imports** are existing imports whose names changed, or that switched between type-only and runtime.
 5. **Modules** lists added and removed files. **Biggest changes in importers** shows modules whose number of importers changed most, which hints at new hubs or modules being phased out.
 6. The working tree includes unsaved editor changes, so you can check an edit before saving.
 

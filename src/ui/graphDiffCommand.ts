@@ -74,7 +74,7 @@ export function registerGraphDiff(context: vscode.ExtensionContext, projects: Pr
           const overlay = (fileName: string) => vscode.workspace.textDocuments.find((d) => d.isDirty && d.uri.fsPath.toLowerCase() === path.resolve(fileName).toLowerCase())?.getText();
           const afterFiles = workingTreeFiles(directory, overlay);
           const diff = diffGraphs(graphOf(filesAtRef(repo, choice.ref, directory), parsed.options), graphOf(afterFiles, parsed.options), directory);
-          return graphDiffReport(diff, afterFiles, directory, choice.label);
+          return graphDiffReport(diff, afterFiles, directory, choice.label, { repo, ref: choice.ref });
         });
       } catch (error) {
         reportError(error, 'Dependency Graph Diff');
