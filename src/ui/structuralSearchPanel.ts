@@ -18,6 +18,7 @@ const maxHistory = 15;
 type Message =
   | { type: 'search'; spec: SearchSpec; scope: Scope }
   | { type: 'open'; index: number }
+  | { type: 'validate'; spec: SearchSpec }
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
 
@@ -109,6 +110,19 @@ export class StructuralSearchPanel {
           selection: new vscode.Range(document.positionAt(match.start), document.positionAt(match.end)),
         });
       }
+      return;
+    }
+    if (message.type === 'validate') {
+      // Checked as the pattern is typed, so mistakes show before searching.
+      let problem: string | undefined;
+      try {
+        if (message.spec.pattern.trim()) {
+          compilePattern(clean(message.spec));
+        }
+      } catch (error) {
+        problem = error instanceof Error ? error.message : String(error);
+      }
+      void this.panel.webview.postMessage({ type: 'validation', problem });
       return;
     }
     if (message.type === 'saveInspection') {
@@ -292,6 +306,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <h2>Pattern</h2>
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
+  <div id="patternProblem" class="error"></div>
   <h2>Placeholder constraints</h2>
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
@@ -369,6 +384,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
         input.addEventListener('input', () => {
           state.constraints[name] = { ...(state.constraints[name] || {}), [key]: input.type === 'checkbox' ? input.checked : input.value };
           save();
+          validate();
         });
       }
       body.appendChild(tr);
@@ -384,7 +400,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     const names = placeholders($('pattern').value);
     return { pattern: $('pattern').value, constraints: names.map((name) => ({ name, ...(state.constraints[name] || {}) })) };
   }
-  $('pattern').addEventListener('input', () => { save(); renderConstraints(); });
+  let validateTimer;
+  const validate = () => {
+    clearTimeout(validateTimer);
+    validateTimer = setTimeout(() => vscode.postMessage({ type: 'validate', spec: spec() }), 300);
+  };
+  $('pattern').addEventListener('input', () => { save(); renderConstraints(); validate(); });
   // Ctrl+Enter (Cmd+Enter on macOS) runs the search from the pattern box, or the replacement from its box.
   const onSubmit = (id, button) => $(id).addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -415,6 +436,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     const message = event.data;
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
     if (message.type === 'preset') applyPreset(message.preset);
+    if (message.type === 'validation') $('patternProblem').textContent = message.problem || '';
     if (message.type === 'load') loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
     if (message.type === 'history') {
       recent = message.items;
