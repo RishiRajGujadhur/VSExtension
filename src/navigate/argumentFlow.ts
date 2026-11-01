@@ -157,7 +157,16 @@ export class ArgumentFlow {
         const label = `${nodeText(flow)} → ${nodeText(parent.expression)}()`;
         rows.push(
           next
-            ? { label, description: `as ${next.name.getText().replace(/\s+/g, ' ')}`, icon: 'arrow-right', location, expanded: true, children: this.destinations(next, depth + 1, nextSeen) }
+            ? {
+                label,
+                description: `as ${next.name.getText().replace(/\s+/g, ' ')}`,
+                icon: 'arrow-right',
+                location,
+                expanded: true,
+                children: this.destinations(next, depth + 1, nextSeen),
+                // Re-run from the receiving parameter, to see its other callers too.
+                action: { kind: 'follow', command: 'tsStructure.argumentFlow', file: next.getSourceFile().fileName, offset: next.name.getStart() },
+              }
             : { label, description: 'outside the project', icon: 'arrow-right', tone: 'info', location },
         );
       } else if (ts.isJsxExpression(parent) && ts.isJsxAttribute(parent.parent)) {

@@ -85,3 +85,10 @@ test('the distinct values that can arrive are summarized', () => {
   const values = report.roots.find((r) => r.label === 'Values that can arrive');
   assert.deepEqual(values?.children?.map((c) => c.label), ["'home'", "{ name: 'ann' }"]);
 });
+
+test('a value passed to another function can be followed there', () => {
+  const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'page(na|me: string)'));
+  const intoFormat = report.roots.find((r) => r.label === 'Where the value goes')?.children?.[0].children?.[0];
+  assert.equal(intoFormat?.label, 'label → format()');
+  assert.deepEqual(intoFormat?.action, { kind: 'follow', command: 'tsStructure.argumentFlow', file: intoFormat?.action?.file, offset: offsetIn(file, 'format(|value: string') });
+});
