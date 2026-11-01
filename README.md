@@ -258,6 +258,30 @@ The TypeScript Structure view keeps every analysis's report:
 
 `tsStructure.exclude` takes globs, such as `**/generated/**`, for files left out of inspections, Inspect Code, structural search, duplicates and dead-export results.
 
+## Configuration
+
+Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens.
+
+### Turning features on and off
+
+Every feature can be switched off on its own, for example when another extension already covers it:
+
+1. Run **TypeScript Structure: Choose Features…** from the Command Palette, or from the **⋯** menu of the TypeScript Structure view.
+2. Untick the features you don't use and press `Enter`.
+
+A feature that is off disappears from the editor's right-click menu, the Command Palette, **Analyze or Refactor This…**, its keybindings, lightbulb entries and CodeLens. Running one of its commands anyway, from a keybinding or another extension, offers to turn it back on.
+
+Each switch is also a setting, `tsStructure.features.<name>`, so a workspace can turn features off for everyone in `.vscode/settings.json`:
+
+```json
+{
+  "tsStructure.features.testImpact": false,
+  "tsStructure.features.intentions": false
+}
+```
+
+The names are `testImpact`, `refactorings`, `intentions`, `inspections`, `dataFlow`, `sideEffects`, `nullability`, `promiseRejections`, `deadExports`, `exceptionFlow`, `duplicates`, `usages`, `reexports`, `structuralSearch`, `hierarchy`, `dependencyPath`, `graphDiff` and `argumentFlow`.
+
 ## Step-by-step guides
 
 Each guide uses the small bookshop project in [`docs/demo`](docs/demo). Open that folder in VS Code to follow along. The screenshots are captured from a real VS Code session with `npm run screenshots`.

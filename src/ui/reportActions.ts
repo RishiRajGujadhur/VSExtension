@@ -8,6 +8,7 @@ import { parse } from './codeActions';
 import { StructureView } from './structureView';
 import { TestCase } from '../analysis/types';
 import { runTests } from '../runner';
+import { registerCommand } from './features';
 
 const fragmentScheme = 'ts-structure-fragment';
 const fragments = new Map<string, string>();
@@ -16,7 +17,7 @@ const fragments = new Map<string, string>();
 export function registerReportActions(context: vscode.ExtensionContext, view: StructureView): void {
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(fragmentScheme, { provideTextDocumentContent: (uri) => fragments.get(uri.query) ?? '' }),
-    vscode.commands.registerCommand('tsStructure.report.compareDuplicates', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.compareDuplicates', async (node: ReportNode) => {
       const copies = node?.action?.copies as { file: string; label: string; text: string }[] | undefined;
       if (!copies || copies.length < 2) {
         return;
@@ -29,40 +30,40 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       await vscode.commands.executeCommand('vscode.diff', uris[0], uris[1], `${copies[0].label} ↔ ${copies[1].label}`);
     }),
     // Run another analysis where the row points, such as the data flow of the parameter a value is passed to.
-    vscode.commands.registerCommand('tsStructure.report.follow', followRow),
-    vscode.commands.registerCommand('tsStructure.report.showSideEffects', followRow),
-    vscode.commands.registerCommand('tsStructure.report.findUsages', followRow),
-    vscode.commands.registerCommand('tsStructure.report.showHierarchy', followRow),
-    vscode.commands.registerCommand('tsStructure.report.overrideImpact', followRow),
-    vscode.commands.registerCommand('tsStructure.report.runTests', (node: ReportNode) => {
+    registerCommand('tsStructure.report.follow', followRow),
+    registerCommand('tsStructure.report.showSideEffects', followRow),
+    registerCommand('tsStructure.report.findUsages', followRow),
+    registerCommand('tsStructure.report.showHierarchy', followRow),
+    registerCommand('tsStructure.report.overrideImpact', followRow),
+    registerCommand('tsStructure.report.runTests', (node: ReportNode) => {
       const tests = node?.action?.tests as TestCase[] | undefined;
       if (tests?.length) {
         void runTests(tests);
       }
     }),
     // Renames the symbol defined at the row, after reviewing its usages.
-    vscode.commands.registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
         await vscode.commands.executeCommand('editor.action.rename');
       }
     }),
     // Selects the row's code and opens the refactor menu, such as Extract to function for a duplicate.
-    vscode.commands.registerCommand('tsStructure.report.refactor', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.refactor', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
         await vscode.commands.executeCommand('editor.action.refactor');
       }
     }),
     // Opens the row's code with the lightbulb menu, for rows that inspections have fixes for.
-    vscode.commands.registerCommand('tsStructure.report.quickFix', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.quickFix', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
         await vscode.commands.executeCommand('editor.action.quickFix');
       }
     }),
     // A file as it was at a Git revision, next to its current version.
-    vscode.commands.registerCommand('tsStructure.report.compareRevision', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.compareRevision', async (node: ReportNode) => {
       const { repo, ref, file } = (node?.action ?? {}) as { repo?: string; ref?: string; file?: string };
       if (!repo || !ref || !file) {
         return;
@@ -79,20 +80,20 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       const old = vscode.Uri.from({ scheme: fragmentScheme, path: `/${path.basename(file)}`, query: key });
       await vscode.commands.executeCommand('vscode.diff', old, vscode.Uri.file(file), `${path.basename(file)} (${ref.length === 40 ? ref.slice(0, 8) : ref} ↔ working tree)`);
     }),
-    vscode.commands.registerCommand('tsStructure.report.safeDelete', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.safeDelete', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
         await vscode.commands.executeCommand('tsStructure.safeDelete');
       }
     }),
-    vscode.commands.registerCommand('tsStructure.report.safeDeleteFile', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.safeDeleteFile', async (node: ReportNode) => {
       const file = node?.action?.file;
       if (typeof file === 'string') {
         await vscode.commands.executeCommand('tsStructure.safeDeleteFile', vscode.Uri.file(file));
       }
     }),
     // Every export in the file that is only used locally, as one edit.
-    vscode.commands.registerCommand('tsStructure.report.unexportAll', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.unexportAll', async (node: ReportNode) => {
       const file = node?.action?.file;
       if (typeof file !== 'string') {
         return;
@@ -112,7 +113,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
         void vscode.window.setStatusBarMessage(`Removed ${removed} export keyword${removed === 1 ? '' : 's'} from ${node.label}`, 3000);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.report.unexport', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.unexport', async (node: ReportNode) => {
       if (!node?.location) {
         return;
       }

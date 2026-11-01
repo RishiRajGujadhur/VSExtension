@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { findNode } from '../analysis/impact';
+import { isFeatureEnabled } from './features';
 
 const parsed = new WeakMap<vscode.TextDocument, { version: number; sourceFile: ts.SourceFile }>();
 
@@ -23,6 +24,9 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
   static readonly kinds = [refactorKind];
 
   provideCodeActions(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction[] {
+    if (!isFeatureEnabled('refactorings')) {
+      return [];
+    }
     const sourceFile = parse(document);
     const node = findNode(sourceFile, document.offsetAt(range.start));
     const actions: vscode.CodeAction[] = [];

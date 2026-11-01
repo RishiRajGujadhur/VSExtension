@@ -392,6 +392,18 @@
         "command": "tsStructure.actionsAtCursor",
         "title": "Analyze or Refactor This…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.configureFeatures",
+        "title": "Choose Features…",
+        "category": "TypeScript Structure",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "tsStructure.openSettings",
+        "title": "Open Settings",
+        "category": "TypeScript Structure",
+        "icon": "$(gear)"
       }
     ],
     "viewsContainers": {
@@ -414,23 +426,23 @@
         "command": "tsStructure.changeSignature",
         "key": "ctrl+f6",
         "mac": "cmd+f6",
-        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.refactorings && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       },
       {
         "command": "tsStructure.introduceParameter",
         "key": "ctrl+alt+p",
         "mac": "cmd+alt+p",
-        "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.refactorings && editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       },
       {
         "command": "tsStructure.safeDelete",
         "key": "alt+delete",
-        "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.refactorings && editorTextFocus && !editorReadonly && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       },
       {
         "command": "tsStructure.semanticUsages",
         "key": "alt+f7",
-        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       },
       {
         "command": "tsStructure.actionsAtCursor",
@@ -454,110 +466,134 @@
         },
         {
           "command": "tsStructure.changeSignature",
-          "group": "1_refactor@1"
+          "group": "1_refactor@1",
+          "when": "config.tsStructure.features.refactorings"
         },
         {
           "command": "tsStructure.safeDelete",
-          "group": "1_refactor@2"
+          "group": "1_refactor@2",
+          "when": "config.tsStructure.features.refactorings"
         },
         {
           "command": "tsStructure.introduceParameter",
-          "group": "1_refactor@3"
+          "group": "1_refactor@3",
+          "when": "config.tsStructure.features.refactorings"
         },
         {
           "command": "tsStructure.moveMembers",
-          "group": "1_refactor@4"
+          "group": "1_refactor@4",
+          "when": "config.tsStructure.features.refactorings"
         },
         {
           "command": "tsImpact.analyze",
-          "group": "3_analysis@1"
+          "group": "3_analysis@1",
+          "when": "config.tsStructure.features.testImpact"
         },
         {
           "command": "tsStructure.dataFlow",
-          "group": "3_analysis@2"
+          "group": "3_analysis@2",
+          "when": "config.tsStructure.features.dataFlow"
         },
         {
           "command": "tsStructure.mutationTracking",
-          "group": "3_analysis@3"
+          "group": "3_analysis@3",
+          "when": "config.tsStructure.features.dataFlow"
         },
         {
           "command": "tsStructure.mutationTrackingProject",
-          "group": "3_analysis@3"
+          "group": "3_analysis@3",
+          "when": "config.tsStructure.features.dataFlow"
         },
         {
           "command": "tsStructure.sideEffects",
-          "group": "3_analysis@4"
+          "group": "3_analysis@4",
+          "when": "config.tsStructure.features.sideEffects"
         },
         {
           "command": "tsStructure.nullability",
-          "group": "3_analysis@5"
+          "group": "3_analysis@5",
+          "when": "config.tsStructure.features.nullability"
         },
         {
           "command": "tsStructure.promiseRejections",
-          "group": "3_analysis@6"
+          "group": "3_analysis@6",
+          "when": "config.tsStructure.features.promiseRejections"
         },
         {
           "command": "tsStructure.deadExports",
-          "group": "3_analysis@7"
+          "group": "3_analysis@7",
+          "when": "config.tsStructure.features.deadExports"
         },
         {
           "command": "tsStructure.exceptionFlow",
-          "group": "3_analysis@8"
+          "group": "3_analysis@8",
+          "when": "config.tsStructure.features.exceptionFlow"
         },
         {
           "command": "tsStructure.findDuplicates",
-          "group": "3_analysis@9"
+          "group": "3_analysis@9",
+          "when": "config.tsStructure.features.duplicates"
         },
         {
           "command": "tsStructure.semanticUsages",
-          "group": "4_navigate@1"
+          "group": "4_navigate@1",
+          "when": "config.tsStructure.features.usages"
         },
         {
           "command": "tsStructure.reexportChain",
-          "group": "4_navigate@2"
+          "group": "4_navigate@2",
+          "when": "config.tsStructure.features.reexports"
         },
         {
           "command": "tsStructure.structuralSearch",
-          "group": "4_navigate@3"
+          "group": "4_navigate@3",
+          "when": "config.tsStructure.features.structuralSearch"
         },
         {
           "command": "tsStructure.typeHierarchy",
-          "group": "4_navigate@4"
+          "group": "4_navigate@4",
+          "when": "config.tsStructure.features.hierarchy"
         },
         {
           "command": "tsStructure.overrideImpact",
-          "group": "4_navigate@5"
+          "group": "4_navigate@5",
+          "when": "config.tsStructure.features.hierarchy"
         },
         {
           "command": "tsStructure.dependencyPath",
-          "group": "4_navigate@6"
+          "group": "4_navigate@6",
+          "when": "config.tsStructure.features.dependencyPath"
         },
         {
           "command": "tsStructure.dependencyGraphDiff",
-          "group": "4_navigate@7"
+          "group": "4_navigate@7",
+          "when": "config.tsStructure.features.graphDiff"
         },
         {
           "command": "tsStructure.argumentFlow",
-          "group": "4_navigate@8"
+          "group": "4_navigate@8",
+          "when": "config.tsStructure.features.argumentFlow"
         },
         {
           "command": "tsStructure.inspectCode",
-          "group": "2_inspect@1"
+          "group": "2_inspect@1",
+          "when": "config.tsStructure.features.inspections"
         },
         {
           "command": "tsStructure.auditTypeAssertions",
-          "group": "2_inspect@2"
+          "group": "2_inspect@2",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "explorer/context": [
         {
           "command": "tsStructure.safeDeleteFile",
-          "when": "resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "when": "config.tsStructure.features.refactorings && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@90"
         },
         {
           "command": "tsStructure.dependencyPath",
-          "when": "resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@91"
         }
       ],
@@ -693,27 +729,143 @@
         {
           "command": "tsStructure.disableCustomInspection",
           "when": "false"
+        },
+        {
+          "command": "tsImpact.analyze",
+          "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsImpact.showLastResults",
+          "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsImpact.runImpactedTests",
+          "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsImpact.clear",
+          "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsStructure.changeSignature",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.safeDelete",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.safeDeleteFile",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.introduceParameter",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.moveMembers",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.inspectCode",
+          "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.auditTypeAssertions",
+          "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.dataFlow",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.mutationTracking",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.mutationTrackingProject",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.sideEffects",
+          "when": "config.tsStructure.features.sideEffects"
+        },
+        {
+          "command": "tsStructure.nullability",
+          "when": "config.tsStructure.features.nullability"
+        },
+        {
+          "command": "tsStructure.promiseRejections",
+          "when": "config.tsStructure.features.promiseRejections"
+        },
+        {
+          "command": "tsStructure.deadExports",
+          "when": "config.tsStructure.features.deadExports"
+        },
+        {
+          "command": "tsStructure.exceptionFlow",
+          "when": "config.tsStructure.features.exceptionFlow"
+        },
+        {
+          "command": "tsStructure.findDuplicates",
+          "when": "config.tsStructure.features.duplicates"
+        },
+        {
+          "command": "tsStructure.semanticUsages",
+          "when": "config.tsStructure.features.usages"
+        },
+        {
+          "command": "tsStructure.reexportChain",
+          "when": "config.tsStructure.features.reexports"
+        },
+        {
+          "command": "tsStructure.structuralSearch",
+          "when": "config.tsStructure.features.structuralSearch"
+        },
+        {
+          "command": "tsStructure.manageCustomInspections",
+          "when": "config.tsStructure.features.structuralSearch"
+        },
+        {
+          "command": "tsStructure.typeHierarchy",
+          "when": "config.tsStructure.features.hierarchy"
+        },
+        {
+          "command": "tsStructure.overrideImpact",
+          "when": "config.tsStructure.features.hierarchy"
+        },
+        {
+          "command": "tsStructure.dependencyPath",
+          "when": "config.tsStructure.features.dependencyPath"
+        },
+        {
+          "command": "tsStructure.dependencyGraphDiff",
+          "when": "config.tsStructure.features.graphDiff"
+        },
+        {
+          "command": "tsStructure.argumentFlow",
+          "when": "config.tsStructure.features.argumentFlow"
         }
       ],
       "view/title": [
         {
           "command": "tsImpact.analyze",
-          "when": "view == tsImpact.results",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@1"
         },
         {
           "command": "tsImpact.runImpactedTests",
-          "when": "view == tsImpact.results",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@2"
         },
         {
           "command": "tsImpact.showLastResults",
-          "when": "view == tsImpact.results",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@3"
         },
         {
           "command": "tsImpact.clear",
-          "when": "view == tsImpact.results",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@4"
         },
         {
@@ -765,28 +917,38 @@
           "command": "tsStructure.report.export",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "1_export@2"
+        },
+        {
+          "command": "tsStructure.configureFeatures",
+          "when": "view == tsStructure.report",
+          "group": "9_settings@1"
+        },
+        {
+          "command": "tsStructure.openSettings",
+          "when": "view == tsStructure.report",
+          "group": "9_settings@2"
         }
       ],
       "view/item/context": [
         {
           "command": "tsImpact.runTest",
-          "when": "view == tsImpact.results && viewItem =~ /^(test|file)$/",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results && viewItem =~ /^(test|file)$/",
           "group": "inline"
         },
         {
           "command": "tsStructure.report.safeDelete",
           "group": "inline@1",
-          "when": "view == tsStructure.report && viewItem =~ /action:deadExport/"
+          "when": "config.tsStructure.features.refactorings && view == tsStructure.report && viewItem =~ /action:deadExport/"
         },
         {
           "command": "tsStructure.report.unexport",
           "group": "inline@1",
-          "when": "view == tsStructure.report && viewItem =~ /action:unexport( |$)/"
+          "when": "config.tsStructure.features.deadExports && view == tsStructure.report && viewItem =~ /action:unexport( |$)/"
         },
         {
           "command": "tsStructure.report.safeDeleteFile",
           "group": "inline@1",
-          "when": "view == tsStructure.report && viewItem =~ /action:deadFile/"
+          "when": "config.tsStructure.features.refactorings && view == tsStructure.report && viewItem =~ /action:deadFile/"
         },
         {
           "command": "tsStructure.report.openToSide",
@@ -800,12 +962,12 @@
         },
         {
           "command": "tsStructure.report.applyFix",
-          "when": "view == tsStructure.report && viewItem =~ /action:applyFix/",
+          "when": "config.tsStructure.features.inspections && view == tsStructure.report && viewItem =~ /action:applyFix/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.compareDuplicates",
-          "when": "view == tsStructure.report && viewItem =~ /action:compareDuplicates/",
+          "when": "config.tsStructure.features.duplicates && view == tsStructure.report && viewItem =~ /action:compareDuplicates/",
           "group": "inline@1"
         },
         {
@@ -815,7 +977,7 @@
         },
         {
           "command": "tsStructure.report.showSideEffects",
-          "when": "view == tsStructure.report && viewItem =~ /action:showSideEffects/",
+          "when": "config.tsStructure.features.sideEffects && view == tsStructure.report && viewItem =~ /action:showSideEffects/",
           "group": "inline@1"
         },
         {
@@ -825,7 +987,7 @@
         },
         {
           "command": "tsStructure.report.unexportAll",
-          "when": "view == tsStructure.report && viewItem =~ /action:unexportAll/",
+          "when": "config.tsStructure.features.deadExports && view == tsStructure.report && viewItem =~ /action:unexportAll/",
           "group": "inline@1"
         },
         {
@@ -840,32 +1002,32 @@
         },
         {
           "command": "tsStructure.report.findUsages",
-          "when": "view == tsStructure.report && viewItem =~ /action:findUsages/",
+          "when": "config.tsStructure.features.usages && view == tsStructure.report && viewItem =~ /action:findUsages/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.showHierarchy",
-          "when": "view == tsStructure.report && viewItem =~ /action:showHierarchy/",
+          "when": "config.tsStructure.features.hierarchy && view == tsStructure.report && viewItem =~ /action:showHierarchy/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.overrideImpact",
-          "when": "view == tsStructure.report && viewItem =~ /action:overrideImpact/",
+          "when": "config.tsStructure.features.hierarchy && view == tsStructure.report && viewItem =~ /action:overrideImpact/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.runTests",
-          "when": "view == tsStructure.report && viewItem =~ /action:runTests/",
+          "when": "config.tsStructure.features.testImpact && view == tsStructure.report && viewItem =~ /action:runTests/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.swapDependency",
-          "when": "view == tsStructure.report && viewItem =~ /action:swapDependency/",
+          "when": "config.tsStructure.features.dependencyPath && view == tsStructure.report && viewItem =~ /action:swapDependency/",
           "group": "inline@1"
         },
         {
           "command": "tsStructure.report.compareRevision",
-          "when": "view == tsStructure.report && viewItem =~ /action:compareRevision/",
+          "when": "config.tsStructure.features.graphDiff && view == tsStructure.report && viewItem =~ /action:compareRevision/",
           "group": "inline@1"
         }
       ]
@@ -880,7 +1042,8 @@
       "test": [
         {
           "id": "tsImpact.results",
-          "name": "Impacted Tests"
+          "name": "Impacted Tests",
+          "when": "config.tsStructure.features.testImpact"
         }
       ]
     },
@@ -905,261 +1068,464 @@
         }
       }
     ],
-    "configuration": {
-      "title": "TypeScript Structure",
-      "properties": {
-        "tsStructure.intentions.disabled": {
-          "type": "array",
-          "default": [],
-          "description": "Intention actions to hide from the lightbulb menu.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "invertIf",
-              "ifToTernary",
-              "ternaryToIf",
-              "flipTernary",
-              "mergeNestedIfs",
-              "splitAndCondition",
-              "ifChainToSwitch",
-              "deMorgan",
-              "flipComparison",
-              "concatToTemplate",
-              "forIndexToForOf",
-              "forEachToForOf",
-              "arrowToBlockBody",
-              "arrowToExpressionBody",
-              "functionToArrow",
-              "addBraces",
-              "removeBraces",
-              "splitDeclarations",
-              "splitInitializer"
-            ]
-          }
-        },
-        "tsStructure.previewRefactorings": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show VS Code's Refactor Preview before applying refactorings, so individual changes can be reviewed and unticked."
-        },
-        "tsImpact.maxDepth": {
-          "type": "number",
-          "default": 25,
-          "minimum": 1,
-          "description": "Maximum number of caller hops followed from the selected symbol."
-        },
-        "tsImpact.includeInheritedMembers": {
-          "type": "boolean",
-          "default": true,
-          "description": "Also follow calls made through interfaces and base classes that a selected class member implements or overrides. These matches are reported as possible impacts."
-        },
-        "tsStructure.inspections.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Run the TypeScript Structure inspections on open files and report findings in the Problems panel."
-        },
-        "tsStructure.inspections.severity": {
-          "type": "object",
-          "default": {},
-          "markdownDescription": "Severity per inspection, or `off` to disable it. `default` keeps the severity each finding is reported with. Findings can also be suppressed in code with `// ts-structure-ignore-next-line <id>` or `// ts-structure-ignore-file <id>`. Add `\"editor.codeActionsOnSave\": { \"source.fixAll.tsStructure\": \"explicit\" }` to apply preferred fixes on save.",
-          "properties": {
-            "missingAwait": {
-              "type": "string",
-              "enum": [
-                "default",
-                "off",
-                "error",
-                "warning",
-                "info",
-                "hint"
-              ],
-              "default": "default",
-              "description": "Promises that are dropped, including through wrapper functions and helpers."
+    "configuration": [
+      {
+        "id": "tsStructure.scope",
+        "title": "Scope",
+        "order": 0,
+        "properties": {
+          "tsStructure.include": {
+            "type": "array",
+            "items": {
+              "type": "string"
             },
-            "typeAssertion": {
-              "type": "string",
-              "enum": [
-                "default",
-                "off",
-                "error",
-                "warning",
-                "info",
-                "hint"
-              ],
-              "default": "default",
-              "description": "Type assertions that are unnecessary, widen silently, narrow without a runtime check, or bypass compatibility checks."
-            }
+            "default": [],
+            "markdownDescription": "Glob patterns, relative to the workspace folder, for the only files that inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results look at (for example `src/**`). A folder such as `src/app` includes everything below it. When empty, every file in the compiler project is included. `#tsStructure.exclude#` is applied after this.",
+            "scope": "resource"
           },
-          "additionalProperties": {
-            "type": "string",
-            "enum": [
-              "default",
-              "off",
-              "error",
-              "warning",
-              "info",
-              "hint"
-            ],
-            "default": "default"
+          "tsStructure.exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection and dead export results (for example `**/generated/**` or `src/legacy/*.ts`).",
+            "scope": "resource"
           }
-        },
-        "tsStructure.deadExports.entryPoints": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        }
+      },
+      {
+        "id": "tsStructure.features",
+        "title": "Features",
+        "order": 1,
+        "properties": {
+          "tsStructure.features.testImpact": {
+            "type": "boolean",
+            "default": true,
+            "order": 0,
+            "markdownDescription": "**Test Impact Analysis**: Find and run the tests that depend on a symbol or file, and the Impacted Tests view. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
           },
-          "default": [],
-          "markdownDescription": "Glob patterns, relative to the workspace folder, for the files whose exports are the public API (for example `src/index.ts` or `src/pages/**`). When empty, entry points are read from package.json (`main`, `module`, `exports`, `bin`) and conventional `index`/`main` files."
-        },
-        "tsStructure.deadExports.testFilesAreEntryPoints": {
-          "type": "boolean",
-          "default": true,
-          "description": "Treat test files as entry points, so exports used only by tests are not reported as dead."
-        },
-        "tsStructure.duplicates.minStatements": {
-          "type": "number",
-          "default": 3,
-          "minimum": 1,
-          "description": "Shortest run of consecutive statements compared by the structural duplicate finder."
-        },
-        "tsStructure.duplicates.minTokens": {
-          "type": "number",
-          "default": 40,
-          "minimum": 5,
-          "description": "Smallest duplicated fragment, in syntax nodes, that is reported."
-        },
-        "tsStructure.duplicates.matchRenamedProperties": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Also report copies that use different property or method names, such as `item.price` in one copy and `parcel.weight` in the other. Finds more near-duplicates, with more noise."
-        },
-        "tsStructure.duplicates.ignoreTestFiles": {
-          "type": "boolean",
-          "default": true,
-          "description": "Leave test files out of project-wide duplicate searches."
-        },
-        "tsStructure.customInspections": {
-          "type": "array",
-          "default": [],
-          "markdownDescription": "Structural search patterns that run as live inspections. Create them with **Structural Search… → Save as Inspection** and manage them with **Manage Custom Inspections…**.",
-          "items": {
+          "tsStructure.features.refactorings": {
+            "type": "boolean",
+            "default": true,
+            "order": 1,
+            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.intentions": {
+            "type": "boolean",
+            "default": true,
+            "order": 2,
+            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.inspections": {
+            "type": "boolean",
+            "default": true,
+            "order": 3,
+            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.dataFlow": {
+            "type": "boolean",
+            "default": true,
+            "order": 4,
+            "markdownDescription": "**Data Flow and Mutation Tracking**: Data Flow Path Explorer and Mutation Tracking. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.sideEffects": {
+            "type": "boolean",
+            "default": true,
+            "order": 5,
+            "markdownDescription": "**Side-Effect Analyzer**: Side-Effect Analyzer and its CodeLens. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.nullability": {
+            "type": "boolean",
+            "default": true,
+            "order": 6,
+            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.promiseRejections": {
+            "type": "boolean",
+            "default": true,
+            "order": 7,
+            "markdownDescription": "**Promise Rejection Analyzer**: Where a function’s promise rejections are handled or lost. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.deadExports": {
+            "type": "boolean",
+            "default": true,
+            "order": 8,
+            "markdownDescription": "**Dead Export Analyzer**: Exports and files nothing reachable from the entry points uses. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.exceptionFlow": {
+            "type": "boolean",
+            "default": true,
+            "order": 9,
+            "markdownDescription": "**Exception Flow Visualizer**: Where errors are thrown, caught, transformed or swallowed. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.duplicates": {
+            "type": "boolean",
+            "default": true,
+            "order": 10,
+            "markdownDescription": "**Structural Duplicates**: Find code copied with renamed variables or changed values. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.usages": {
+            "type": "boolean",
+            "default": true,
+            "order": 11,
+            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.reexports": {
+            "type": "boolean",
+            "default": true,
+            "order": 12,
+            "markdownDescription": "**Re-export Chain Navigator**: Follow a name through aliases and barrel files. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.structuralSearch": {
+            "type": "boolean",
+            "default": true,
+            "order": 13,
+            "markdownDescription": "**Structural Search and Replace**: Search and replace code by shape, and build custom inspections. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.hierarchy": {
+            "type": "boolean",
+            "default": true,
+            "order": 14,
+            "markdownDescription": "**Inheritance Hierarchy and Override Impact**: Supertypes, subtypes and overrides, and what a change to a member reaches. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.dependencyPath": {
+            "type": "boolean",
+            "default": true,
+            "order": 15,
+            "markdownDescription": "**Dependency Path Finder**: Why one module depends on another. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.graphDiff": {
+            "type": "boolean",
+            "default": true,
+            "order": 16,
+            "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          },
+          "tsStructure.features.argumentFlow": {
+            "type": "boolean",
+            "default": true,
+            "order": 17,
+            "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+          }
+        }
+      },
+      {
+        "id": "tsStructure.general",
+        "title": "General",
+        "order": 2,
+        "properties": {
+          "tsStructure.previewRefactorings": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show VS Code's Refactor Preview before applying refactorings, so individual changes can be reviewed and unticked."
+          },
+          "tsStructure.highlightResults": {
+            "type": "boolean",
+            "default": true,
+            "description": "Highlight the locations of the current analysis in open editors: definitions outlined, writes and reads shaded."
+          }
+        }
+      },
+      {
+        "id": "tsStructure.inspections",
+        "title": "Inspections",
+        "order": 3,
+        "properties": {
+          "tsStructure.inspections.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Run the TypeScript Structure inspections on open files and report findings in the Problems panel.",
+            "scope": "resource"
+          },
+          "tsStructure.inspections.statusBar": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show the number of inspection findings in the active file in the status bar.",
+            "scope": "resource"
+          },
+          "tsStructure.inspections.severity": {
             "type": "object",
-            "required": [
-              "id",
-              "pattern",
-              "message"
-            ],
+            "default": {},
+            "markdownDescription": "Severity per inspection, or `off` to disable it. `default` keeps the severity each finding is reported with. Findings can also be suppressed in code with `// ts-structure-ignore-next-line <id>` or `// ts-structure-ignore-file <id>`. Add `\"editor.codeActionsOnSave\": { \"source.fixAll.tsStructure\": \"explicit\" }` to apply preferred fixes on save.",
             "properties": {
-              "id": {
-                "type": "string",
-                "description": "Unique id, shown as the diagnostic code custom:<id>."
-              },
-              "pattern": {
-                "type": "string",
-                "description": "Structural search pattern with $name$ placeholders."
-              },
-              "constraints": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "name"
-                  ],
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "type": {
-                      "type": "string",
-                      "description": "Regular expression tested against the matched type."
-                    },
-                    "text": {
-                      "type": "string",
-                      "description": "Regular expression tested against the matched text."
-                    },
-                    "negate": {
-                      "type": "boolean"
-                    }
-                  }
-                }
-              },
-              "message": {
-                "type": "string",
-                "description": "Message for each match; $name$ is filled in from the match."
-              },
-              "severity": {
+              "missingAwait": {
                 "type": "string",
                 "enum": [
+                  "default",
+                  "off",
                   "error",
                   "warning",
                   "info",
                   "hint"
                 ],
-                "default": "warning"
+                "default": "default",
+                "description": "Promises that are dropped, including through wrapper functions and helpers."
               },
-              "replacement": {
+              "typeAssertion": {
                 "type": "string",
-                "description": "Quick fix template using the pattern placeholders."
-              },
-              "enabled": {
-                "type": "boolean",
-                "default": true
-              },
-              "files": {
-                "type": "string",
-                "description": "Regular expression tested against file paths; only matching files are inspected."
+                "enum": [
+                  "default",
+                  "off",
+                  "error",
+                  "warning",
+                  "info",
+                  "hint"
+                ],
+                "default": "default",
+                "description": "Type assertions that are unnecessary, widen silently, narrow without a runtime check, or bypass compatibility checks."
+              }
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "default",
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ],
+              "default": "default"
+            },
+            "scope": "resource"
+          },
+          "tsStructure.missingAwait.ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Functions whose promises may be dropped on purpose, such as fire-and-forget logging. `track` matches `track()` and `analytics.track()`; `*` is a wildcard, as in `logger.*`. A call is also ignored when its promise comes from an ignored function through wrappers.",
+            "scope": "resource"
+          },
+          "tsStructure.typeAssertion.ignoreTestFiles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Don't report type assertions in test files, where mocks and fixtures often need them.",
+            "scope": "resource"
+          },
+          "tsStructure.customInspections": {
+            "type": "array",
+            "default": [],
+            "markdownDescription": "Structural search patterns that run as live inspections. Create them with **Structural Search… → Save as Inspection** and manage them with **Manage Custom Inspections…**.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "pattern",
+                "message"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique id, shown as the diagnostic code custom:<id>."
+                },
+                "pattern": {
+                  "type": "string",
+                  "description": "Structural search pattern with $name$ placeholders."
+                },
+                "constraints": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "description": "Regular expression tested against the matched type."
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Regular expression tested against the matched text."
+                      },
+                      "negate": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Message for each match; $name$ is filled in from the match."
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ],
+                  "default": "warning"
+                },
+                "replacement": {
+                  "type": "string",
+                  "description": "Quick fix template using the pattern placeholders."
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "files": {
+                  "type": "string",
+                  "description": "Regular expression tested against file paths; only matching files are inspected."
+                }
               }
             }
           }
-        },
-        "tsStructure.argumentFlow.maxDepth": {
-          "type": "number",
-          "default": 6,
-          "minimum": 1,
-          "maximum": 20,
-          "description": "How many calls the Argument Propagation Explorer follows in each direction."
-        },
-        "tsStructure.highlightResults": {
-          "type": "boolean",
-          "default": true,
-          "description": "Highlight the locations of the current analysis in open editors: definitions outlined, writes and reads shaded."
-        },
-        "tsStructure.exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        }
+      },
+      {
+        "id": "tsStructure.intentions",
+        "title": "Intentions",
+        "order": 4,
+        "properties": {
+          "tsStructure.intentions.disabled": {
+            "type": "array",
+            "default": [],
+            "description": "Intention actions to hide from the lightbulb menu.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "invertIf",
+                "ifToTernary",
+                "ternaryToIf",
+                "flipTernary",
+                "mergeNestedIfs",
+                "splitAndCondition",
+                "ifChainToSwitch",
+                "deMorgan",
+                "flipComparison",
+                "concatToTemplate",
+                "forIndexToForOf",
+                "forEachToForOf",
+                "arrowToBlockBody",
+                "arrowToExpressionBody",
+                "functionToArrow",
+                "addBraces",
+                "removeBraces",
+                "splitDeclarations",
+                "splitInitializer"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tsStructure.testImpact",
+        "title": "Test Impact",
+        "order": 5,
+        "properties": {
+          "tsImpact.maxDepth": {
+            "type": "number",
+            "default": 25,
+            "minimum": 1,
+            "description": "Maximum number of caller hops followed from the selected symbol.",
+            "scope": "resource"
           },
-          "default": [],
-          "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection and dead export results (for example `**/generated/**` or `src/legacy/*.ts`)."
-        },
-        "tsStructure.inspections.statusBar": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show the number of inspection findings in the active file in the status bar."
-        },
-        "tsStructure.typeAssertion.ignoreTestFiles": {
-          "type": "boolean",
-          "default": false,
-          "description": "Don't report type assertions in test files, where mocks and fixtures often need them."
-        },
-        "tsStructure.missingAwait.ignore": {
-          "type": "array",
-          "items": { "type": "string" },
-          "default": [],
-          "markdownDescription": "Functions whose promises may be dropped on purpose, such as fire-and-forget logging. `track` matches `track()` and `analytics.track()`; `*` is a wildcard, as in `logger.*`. A call is also ignored when its promise comes from an ignored function through wrappers."
-        },
-        "tsStructure.codeLens.sideEffects": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show a CodeLens above each function summarizing its side effects (\"pure\", \"mutates arguments · I/O\", …). Click it for the full Side-Effect Analyzer report."
-        },
-        "tsStructure.codeLens.sideEffectsShowPure": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Show the side-effect lens on pure functions too. Turn off to keep lenses only where a function has effects."
+          "tsImpact.includeInheritedMembers": {
+            "type": "boolean",
+            "default": true,
+            "description": "Also follow calls made through interfaces and base classes that a selected class member implements or overrides. These matches are reported as possible impacts.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "id": "tsStructure.deadExports",
+        "title": "Dead Exports",
+        "order": 6,
+        "properties": {
+          "tsStructure.deadExports.entryPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Glob patterns, relative to the workspace folder, for the files whose exports are the public API (for example `src/index.ts` or `src/pages/**`). When empty, entry points are read from package.json (`main`, `module`, `exports`, `bin`) and conventional `index`/`main` files.",
+            "scope": "resource"
+          },
+          "tsStructure.deadExports.testFilesAreEntryPoints": {
+            "type": "boolean",
+            "default": true,
+            "description": "Treat test files as entry points, so exports used only by tests are not reported as dead.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "id": "tsStructure.duplicates",
+        "title": "Duplicates",
+        "order": 7,
+        "properties": {
+          "tsStructure.duplicates.minStatements": {
+            "type": "number",
+            "default": 3,
+            "minimum": 1,
+            "description": "Shortest run of consecutive statements compared by the structural duplicate finder.",
+            "scope": "resource"
+          },
+          "tsStructure.duplicates.minTokens": {
+            "type": "number",
+            "default": 40,
+            "minimum": 5,
+            "description": "Smallest duplicated fragment, in syntax nodes, that is reported.",
+            "scope": "resource"
+          },
+          "tsStructure.duplicates.matchRenamedProperties": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Also report copies that use different property or method names, such as `item.price` in one copy and `parcel.weight` in the other. Finds more near-duplicates, with more noise.",
+            "scope": "resource"
+          },
+          "tsStructure.duplicates.ignoreTestFiles": {
+            "type": "boolean",
+            "default": true,
+            "description": "Leave test files out of project-wide duplicate searches.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "id": "tsStructure.argumentPropagation",
+        "title": "Argument Propagation",
+        "order": 8,
+        "properties": {
+          "tsStructure.argumentFlow.maxDepth": {
+            "type": "number",
+            "default": 6,
+            "minimum": 1,
+            "maximum": 20,
+            "description": "How many calls the Argument Propagation Explorer follows in each direction.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "id": "tsStructure.codeLens",
+        "title": "Code Lens",
+        "order": 9,
+        "properties": {
+          "tsStructure.codeLens.sideEffects": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show a CodeLens above each function summarizing its side effects (\"pure\", \"mutates arguments · I/O\", …). Click it for the full Side-Effect Analyzer report.",
+            "scope": "resource"
+          },
+          "tsStructure.codeLens.sideEffectsShowPure": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show the side-effect lens on pure functions too. Turn off to keep lenses only where a function has effects.",
+            "scope": "resource"
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",

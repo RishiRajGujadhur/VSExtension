@@ -10,6 +10,7 @@ import { StructureView } from './structureView';
 import { isExcluded } from './exclude';
 import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
+import { registerCommand } from './features';
 
 export type Scope = 'project' | 'file' | 'selection';
 
@@ -332,17 +333,17 @@ async function manageCustomInspections(context: vscode.ExtensionContext, project
 
 export function registerStructuralSearch(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('tsStructure.editCustomInspection', (id: string) => {
+    registerCommand('tsStructure.editCustomInspection', (id: string) => {
       const config = customInspectionConfigs().find((c) => c.id === id);
       if (config) {
         StructuralSearchPanel.open(context, projects, view, { inspection: config, anchor: vscode.window.activeTextEditor?.document.uri.fsPath });
       }
     }),
-    vscode.commands.registerCommand('tsStructure.disableCustomInspection', async (id: string) => {
+    registerCommand('tsStructure.disableCustomInspection', async (id: string) => {
       await saveCustomInspections(customInspectionConfigs().map((c) => (c.id === id ? { ...c, enabled: false } : c)));
       void vscode.window.setStatusBarMessage(`Disabled custom inspection '${id}'. Enable it again with Manage Custom Inspections…`, 5000);
     }),
-    vscode.commands.registerCommand('tsStructure.manageCustomInspections', async () => {
+    registerCommand('tsStructure.manageCustomInspections', async () => {
       try {
         await manageCustomInspections(context, projects, view);
       } catch (error) {
@@ -350,7 +351,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
       }
     }),
     // Takes an optional saved search, so a keybinding can run one: { pattern, constraints, replacement, scope, run }.
-    vscode.commands.registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
+    registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
       try {

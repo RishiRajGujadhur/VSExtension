@@ -27,6 +27,7 @@ import { isExcluded } from './exclude';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
+import { registerCommand } from './features';
 
 /** The file, cursor and project an analysis runs against, captured so it can be re-run later. */
 export interface AnalysisTarget {
@@ -91,7 +92,7 @@ function followEdits(target: AnalysisTarget, before: string | undefined): Analys
 export function registerAnalyses(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   /** A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other extensions. */
   const editorCommand = (id: string, title: string, compute: Compute) =>
-    vscode.commands.registerCommand(id, () => {
+    registerCommand(id, () => {
       const editor = sourceEditor();
       if (editor) {
         const target = editorTarget(projects, editor);
@@ -104,21 +105,21 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
   context.subscriptions.push(
     view.view,
     ...view.listeners(),
-    vscode.commands.registerCommand('tsStructure.openLocation', (location: ReportLocation) => view.open(location)),
-    vscode.commands.registerCommand('tsStructure.report.back', () => view.go(-1)),
-    vscode.commands.registerCommand('tsStructure.report.forward', () => view.go(1)),
-    vscode.commands.registerCommand('tsStructure.report.filter', () => view.setFilter()),
-    vscode.commands.registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
-    vscode.commands.registerCommand('tsStructure.report.next', () => view.step(1)),
-    vscode.commands.registerCommand('tsStructure.report.previous', () => view.step(-1)),
-    vscode.commands.registerCommand('tsStructure.report.copyMarkdown', async () => {
+    registerCommand('tsStructure.openLocation', (location: ReportLocation) => view.open(location)),
+    registerCommand('tsStructure.report.back', () => view.go(-1)),
+    registerCommand('tsStructure.report.forward', () => view.go(1)),
+    registerCommand('tsStructure.report.filter', () => view.setFilter()),
+    registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
+    registerCommand('tsStructure.report.next', () => view.step(1)),
+    registerCommand('tsStructure.report.previous', () => view.step(-1)),
+    registerCommand('tsStructure.report.copyMarkdown', async () => {
       const markdown = view.markdown();
       if (markdown) {
         await vscode.env.clipboard.writeText(markdown);
         void vscode.window.setStatusBarMessage('Analysis copied as Markdown', 3000);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.report.export', async () => {
+    registerCommand('tsStructure.report.export', async () => {
       const markdown = view.markdown();
       const report = view.report;
       if (!markdown || !report) {
@@ -132,14 +133,14 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         await vscode.window.showTextDocument(uri);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.report.openToSide', (node: ReportNode) => node?.location && view.open(node.location, true)),
-    vscode.commands.registerCommand('tsStructure.report.copyLocation', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.openToSide', (node: ReportNode) => node?.location && view.open(node.location, true)),
+    registerCommand('tsStructure.report.copyLocation', async (node: ReportNode) => {
       if (node?.location) {
         await vscode.env.clipboard.writeText(`${vscode.workspace.asRelativePath(node.location.file)}:${node.location.line + 1}:${node.location.character + 1}`);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.rerunAnalysis', () => view.rerun()),
-    vscode.commands.registerCommand('tsStructure.clearReport', () => view.clear()),
+    registerCommand('tsStructure.rerunAnalysis', () => view.rerun()),
+    registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', (t) => {
@@ -168,7 +169,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure').get('typeAssertion.ignoreTestFiles', false);
       return assertionAuditReport(program, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)), { typeAssertionIgnoreTests: ignoreTests }, t.folder);
     }),
-    vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
+    registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
       const editor = sourceEditor();
       if (!editor) {
         return;
@@ -209,14 +210,14 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
-    vscode.commands.registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
+    registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
       const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
       if (from && to) {
         return vscode.commands.executeCommand('tsStructure.dependencyPath', vscode.Uri.file(from), vscode.Uri.file(to));
       }
     }),
     // From the Explorer the second argument is every selected file: with two selected, the path between them.
-    vscode.commands.registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toArg?: vscode.Uri | vscode.Uri[]) => {
+    registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toArg?: vscode.Uri | vscode.Uri[]) => {
       let toUri = Array.isArray(toArg) ? undefined : toArg;
       if (Array.isArray(toArg) && toArg.length === 2 && fromUri) {
         toUri = toArg.find((u) => u.fsPath !== fromUri.fsPath);

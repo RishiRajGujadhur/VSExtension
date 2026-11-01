@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { intentionsAt } from '../intentions/intentions';
 import { parse } from './codeActions';
+import { isFeatureEnabled } from './features';
 
 export const intentionKind = vscode.CodeActionKind.RefactorRewrite.append('tsStructure');
 
@@ -9,7 +10,7 @@ export class IntentionProvider implements vscode.CodeActionProvider {
   static readonly kinds = [intentionKind];
 
   provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
-    if (context.only && !intentionKind.intersects(context.only)) {
+    if ((context.only && !intentionKind.intersects(context.only)) || !isFeatureEnabled('intentions')) {
       return [];
     }
     const disabled = new Set(vscode.workspace.getConfiguration('tsStructure').get<string[]>('intentions.disabled', []));

@@ -16,6 +16,7 @@ import { SideEffectLens } from './ui/sideEffectLens';
 import { showActionsAtCursor } from './ui/actionsAtCursor';
 import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
+import { configureFeatures, registerCommand } from './ui/features';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -45,14 +46,16 @@ export function activate(context: vscode.ExtensionContext): void {
   registerGraphDiff(context, projects, structureView);
   new SideEffectLens(projects).register(context);
   new CompilerErrorActions().register(context);
-  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.actionsAtCursor', showActionsAtCursor));
+  context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', showActionsAtCursor), registerCommand('tsStructure.configureFeatures', configureFeatures),
+    registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
+  );
   new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);
 
   context.subscriptions.push(
     view,
     configWatcher,
     // Returns the result so other extensions and integration tests can use it.
-    vscode.commands.registerCommand('tsImpact.analyze', async (scopeArg?: AnalysisScope): Promise<ImpactResult | undefined> => {
+    registerCommand('tsImpact.analyze', async (scopeArg?: AnalysisScope): Promise<ImpactResult | undefined> => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !supportedLanguages.has(editor.document.languageId) || editor.document.uri.scheme !== 'file') {
         void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file and place the cursor on a symbol.');
@@ -95,14 +98,14 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showErrorMessage(message);
       }
     }),
-    vscode.commands.registerCommand('tsImpact.showLastResults', async () => {
+    registerCommand('tsImpact.showLastResults', async () => {
       if (results.result) {
         await showResultsPicker(results.result, run);
       } else {
         void vscode.window.showInformationMessage('No impact analysis has run yet.');
       }
     }),
-    vscode.commands.registerCommand('tsImpact.runImpactedTests', async () => {
+    registerCommand('tsImpact.runImpactedTests', async () => {
       const tests = results.result?.tests.map((t) => t.test) ?? [];
       if (tests.length === 0) {
         void vscode.window.showInformationMessage('There are no impacted tests to run. Run the analysis first.');
@@ -113,9 +116,9 @@ export function activate(context: vscode.ExtensionContext): void {
         run(tests);
       }
     }),
-    vscode.commands.registerCommand('tsImpact.runTest', (item) => run(results.testsOf(item))),
-    vscode.commands.registerCommand('tsImpact.open', (location: SourceLocation) => openLocation(location)),
-    vscode.commands.registerCommand('tsImpact.clear', () => results.set(undefined)),
+    registerCommand('tsImpact.runTest', (item) => run(results.testsOf(item))),
+    registerCommand('tsImpact.open', (location: SourceLocation) => openLocation(location)),
+    registerCommand('tsImpact.clear', () => results.set(undefined)),
   );
 }
 

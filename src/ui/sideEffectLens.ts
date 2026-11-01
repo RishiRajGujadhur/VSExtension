@@ -5,6 +5,7 @@ import { normalizePath } from '../analysis/paths';
 import { EffectAnalyzer, EffectKind, lensTargets, mutationKinds } from '../inspect/effects';
 import { isFunctionWithBody } from '../structure/util';
 import { languageSelector } from './refactorCommands';
+import { isFeatureEnabled } from './features';
 
 const shortLabels: Record<EffectKind, string> = {
   'mutates-parameter': 'mutates arguments',
@@ -33,7 +34,7 @@ export class SideEffectLens implements vscode.CodeLensProvider {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(languageSelector, this),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.codeLens')) {
+        if (e.affectsConfiguration('tsStructure.codeLens') || e.affectsConfiguration('tsStructure.features.sideEffects')) {
           this.cache.clear();
           this.changed.fire();
         }
@@ -45,7 +46,7 @@ export class SideEffectLens implements vscode.CodeLensProvider {
   }
 
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!vscode.workspace.getConfiguration('tsStructure').get('codeLens.sideEffects', false) || document.uri.scheme !== 'file') {
+    if (!vscode.workspace.getConfiguration('tsStructure').get('codeLens.sideEffects', false) || !isFeatureEnabled('sideEffects') || document.uri.scheme !== 'file') {
       return [];
     }
     const cached = this.cache.get(document.uri.toString());

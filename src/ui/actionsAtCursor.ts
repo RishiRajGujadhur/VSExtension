@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { sourceEditor } from './refactorCommands';
+import { featureOf } from '../structure/features';
+import { isFeatureEnabled } from './features';
 
 interface Action {
   command: string;
@@ -63,7 +65,8 @@ export async function showActionsAtCursor(): Promise<void> {
   for (const group of groups) {
     items.push({ label: group.title, kind: vscode.QuickPickItemKind.Separator });
     for (const action of group.actions) {
-      if (action.needsSelection && editor.selection.isEmpty) {
+      const feature = featureOf(action.command);
+      if ((action.needsSelection && editor.selection.isEmpty) || (feature && !isFeatureEnabled(feature.id))) {
         continue;
       }
       items.push({ label: `$(${action.icon}) ${action.label}`, detail: action.detail, command: action.command });

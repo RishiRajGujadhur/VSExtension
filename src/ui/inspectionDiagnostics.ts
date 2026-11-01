@@ -12,6 +12,8 @@ import { Report, ReportNode } from '../structure/report';
 import { languageSelector } from './refactorCommands';
 import { StructureView } from './structureView';
 import { isExcluded } from './exclude';
+import { registerCommand } from './features';
+import { isFeatureEnabled } from './features';
 
 const severities: Record<Severity, vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
@@ -63,15 +65,15 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.features.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
           this.results.clear();
           this.refreshAll();
         }
       }),
       vscode.languages.registerCodeActionsProvider(languageSelector, this, { providedCodeActionKinds: InspectionDiagnostics.kinds }),
-      vscode.commands.registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project') => this.inspectCode(view, scope)),
-      vscode.commands.registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
-      vscode.commands.registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
+      registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project') => this.inspectCode(view, scope)),
+      registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
+      registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
         const position = document.positionAt(offset);
@@ -138,7 +140,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
 
   inspect(document: vscode.TextDocument): Finding[] {
     const config = vscode.workspace.getConfiguration('tsStructure');
-    if (!config.get('inspections.enabled', true) || document.isClosed || isExcluded(document.uri.fsPath)) {
+    if (!config.get('inspections.enabled', true) || !isFeatureEnabled('inspections') || document.isClosed || isExcluded(document.uri.fsPath)) {
       this.collection.delete(document.uri);
       this.results.delete(pathKey(document.uri.fsPath));
       this.updateStatus();

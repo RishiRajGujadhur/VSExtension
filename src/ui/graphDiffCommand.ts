@@ -6,6 +6,7 @@ import { diffGraphs, filesAtRef, gitRoot, graphDiffReport, graphOf, workingTreeF
 import { runAnalysis } from './analysisCommands';
 import { reportError } from './applyRefactor';
 import { StructureView } from './structureView';
+import { registerCommand } from './features';
 
 function gitLines(cwd: string, args: string[]): string[] {
   try {
@@ -59,7 +60,7 @@ const lastRefKey = 'tsStructure.graphDiff.lastRevision';
 
 export function registerGraphDiff(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('tsStructure.dependencyGraphDiff', async (refArg?: string) => {
+    registerCommand('tsStructure.dependencyGraphDiff', async (refArg?: string) => {
       const editor = vscode.window.activeTextEditor;
       const anchor = editor?.document.uri.scheme === 'file' ? editor.document.uri.fsPath : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!anchor) {

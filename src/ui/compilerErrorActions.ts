@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { languageSelector } from './refactorCommands';
+import { isFeatureEnabled } from './features';
 
 /** TypeScript errors about values that may be null or undefined ("Object is possibly 'undefined'", "'x' is possibly 'null'"). */
 const nullabilityErrors = new Set([2531, 2532, 2533, 18047, 18048, 18049]);
@@ -12,6 +13,9 @@ export class CompilerErrorActions implements vscode.CodeActionProvider {
 
   provideCodeActions(document: vscode.TextDocument, _range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
+    if (!isFeatureEnabled('nullability')) {
+      return actions;
+    }
     for (const diagnostic of context.diagnostics) {
       const code = typeof diagnostic.code === 'object' ? diagnostic.code.value : diagnostic.code;
       if (diagnostic.source !== 'ts' || !nullabilityErrors.has(Number(code))) {

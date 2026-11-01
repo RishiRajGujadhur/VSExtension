@@ -6,6 +6,7 @@ import { IntentionProvider } from './intentionProvider';
 import { runIntroduceParameter } from './introduceParameterUi';
 import { runMoveMembers } from './moveMembersUi';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
+import { registerCommand } from './features';
 
 export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].map((language) => ({
   language,
@@ -28,26 +29,26 @@ export function previewEnabled(): boolean {
 
 export function registerRefactorings(context: vscode.ExtensionContext, projects: ProjectService): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('tsStructure.changeSignature', () => {
+    registerCommand('tsStructure.changeSignature', () => {
       const editor = sourceEditor();
       if (editor) {
         return openChangeSignature(context, projects, editor);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.safeDelete', () => {
+    registerCommand('tsStructure.safeDelete', () => {
       const editor = sourceEditor();
       if (editor) {
         return safeDeleteSymbol(projects, editor);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.safeDeleteFile', (uri?: vscode.Uri) => safeDeleteFile(projects, uri)),
-    vscode.commands.registerCommand('tsStructure.moveMembers', () => {
+    registerCommand('tsStructure.safeDeleteFile', (uri?: vscode.Uri) => safeDeleteFile(projects, uri)),
+    registerCommand('tsStructure.moveMembers', () => {
       const editor = sourceEditor();
       if (editor) {
         return runMoveMembers(projects, editor);
       }
     }),
-    vscode.commands.registerCommand('tsStructure.introduceParameter', () => {
+    registerCommand('tsStructure.introduceParameter', () => {
       const editor = sourceEditor();
       if (editor) {
         return runIntroduceParameter(projects, editor);
