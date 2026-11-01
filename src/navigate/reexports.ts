@@ -5,6 +5,8 @@ import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, codeContext, lineSnippet, plural } from '../structure/report';
 import { identifierAt } from '../structure/util';
+import { TextEdit } from '../intentions/intentions';
+import { hashText, normalizePath } from '../analysis/paths';
 
 export interface ChainStep {
   /** What happens at this hop, such as `export { Square as Box } from './models'`. */
@@ -151,6 +153,41 @@ export function importsOf(program: ts.Program, target: ts.Symbol): { node: ts.No
   return results;
 }
 
+/**
+ * Edits that import the symbol straight from the module declaring it instead of through a barrel: the specifier is
+ * moved to its own import, or the whole import is repointed when it is the only name.
+ */
+export function directImportEdits(name: ts.Identifier, target: ts.Symbol): TextEdit[] | undefined {
+  const specifier = name.parent;
+  const declaration = target.declarations?.[0]?.getSourceFile();
+  const statement = ts.findAncestor(specifier, ts.isImportDeclaration);
+  if (!ts.isImportSpecifier(specifier) || !declaration || !statement || !ts.isStringLiteral(statement.moduleSpecifier)) {
+    return undefined;
+  }
+  const sourceFile = specifier.getSourceFile();
+  const elements = (specifier.parent as ts.NamedImports).elements;
+  let module = path.relative(path.dirname(sourceFile.fileName), declaration.fileName).replace(/\\/g, '/').replace(/\.(d\.)?[cm]?[jt]sx?$/, '');
+  module = module.startsWith('.') ? module : `./${module}`;
+  if (/\.[cm]?js$/.test(statement.moduleSpecifier.text)) {
+    // ESM-style specifiers keep their .js extension.
+    module += '.js';
+  }
+  const quote = statement.moduleSpecifier.getText(sourceFile)[0];
+  const typeOnly = statement.importClause?.isTypeOnly || specifier.isTypeOnly;
+  const imported = name.text === target.name ? name.text : `${target.name} as ${name.text}`;
+  const line = `import ${typeOnly ? 'type ' : ''}{ ${imported} } from ${quote}${module}${quote};`;
+  if (elements.length === 1 && !statement.importClause?.name) {
+    return [{ start: statement.getStart(sourceFile), end: statement.end, text: line }];
+  }
+  // Remove the specifier with the comma after it (or before it, for the last one) and add the new import below.
+  const index = elements.indexOf(specifier);
+  const remove = index < elements.length - 1 ? { start: specifier.getStart(sourceFile), end: elements[index + 1].getStart(sourceFile) } : { start: elements[index - 1].end, end: specifier.end };
+  return [
+    { ...remove, text: '' },
+    { start: statement.end, end: statement.end, text: `\n${line}` },
+  ];
+}
+
 /** Re-export Chain Navigator: how a name travels through aliases and barrel files. */
 export function reexportChainReport(project: VirtualProject, fileName: string, offset: number, root?: string): Report {
   const program = project.program();
@@ -217,13 +254,19 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
       label: `'${via}'`,
       description: plural(list.length, 'importer'),
       icon: 'symbol-namespace',
-      children: list.map((entry) => ({
+      children: list.map((entry) => {
+        const throughBarrel = entry.from && !target.declarations?.some((d) => d.getSourceFile() === entry.from);
+        const edits = throughBarrel && ts.isIdentifier(entry.node) ? directImportEdits(entry.node, target) : undefined;
+        const importer = entry.node.getSourceFile();
+        return {
         label: relative(entry.node.getSourceFile().fileName),
         description: [`line ${entry.node.getSourceFile().getLineAndCharacterOfPosition(entry.node.getStart()).line + 1}`, entry.local !== target.name ? `as ${entry.local}` : undefined].filter(Boolean).join(' · '),
         tooltip: codeContext(entry.node),
         icon: 'file-code',
         location: builder.at(entry.node),
-      })),
+        action: edits ? { kind: 'applyFix', file: normalizePath(importer.fileName), hash: hashText(importer.text), edits, title: `Import ${target.name} directly from ${path.basename(target.declarations![0].getSourceFile().fileName)}` } : undefined,
+        };
+      }),
     })),
   });
   return builder.finish(roots, `${plural(chain.length - 1, 'hop')} from the cursor, exported by ${plural(exported.length, 'module')}`);
