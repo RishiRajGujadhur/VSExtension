@@ -33,6 +33,9 @@ test('rows show the kind of declaration and mark type-only exports', () => {
   assert.equal(rows.get('localOnly')?.icon, 'symbol-constant');
   assert.equal(rows.get('Unused')?.icon, 'symbol-type-parameter');
   assert.equal(rows.get('Unused')?.description, 'unused · type');
+  // With only a few results, file rows open by themselves.
+  const unused = report.roots.find((r) => r.label === 'Unused exports');
+  assert.ok(unused?.children?.every((file) => file.expanded));
 });
 
 test('a conventional index file is not an entry point when package.json names another', () => {

@@ -196,14 +196,17 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
   });
   const unusedOnly = result.unused.map((u) => ({ ...u, exports: u.exports.filter((e) => !e.usedLocally) })).filter((u) => u.exports.length);
   const localOnly = result.unused.map((u) => ({ ...u, exports: u.exports.filter((e) => e.usedLocally) })).filter((u) => u.exports.length);
-  const fileGroup = (group: { sourceFile: ts.SourceFile; exports: DeadExport[] }, note?: string): ReportNode => ({
+  const count = (groups: { exports: DeadExport[] }[]) => groups.reduce((n, g) => n + g.exports.length, 0);
+  // Small results open fully, so the names are visible without expanding each file.
+  const fewEnough = (groups: { exports: DeadExport[] }[]) => count(groups) <= 15;
+  const fileGroup = (group: { sourceFile: ts.SourceFile; exports: DeadExport[] }, expanded: boolean, note?: string): ReportNode => ({
     label: path.basename(group.sourceFile.fileName),
     description: `${note ? `${note} · ` : ''}${relative(group.sourceFile)}`,
     icon: 'file-code',
     location: builder.at(group.sourceFile),
+    expanded,
     children: group.exports.map((e) => exportRow(group.sourceFile, e)),
   });
-  const count = (groups: { exports: DeadExport[] }[]) => groups.reduce((n, g) => n + g.exports.length, 0);
   const roots: ReportNode[] = [];
   if (result.unreachable.length) {
     roots.push({
@@ -212,11 +215,11 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
       icon: 'debug-disconnect',
       tone: 'warning',
       expanded: true,
-      children: result.unreachable.map((g) => ({ ...fileGroup(g, plural(g.exports.length, 'export')), action: { kind: 'deadFile', file: normalizePath(g.sourceFile.fileName) } })),
+      children: result.unreachable.map((g) => ({ ...fileGroup(g, result.unreachable.length <= 3 && fewEnough(result.unreachable), plural(g.exports.length, 'export')), action: { kind: 'deadFile', file: normalizePath(g.sourceFile.fileName) } })),
     });
   }
   if (unusedOnly.length) {
-    roots.push({ label: 'Unused exports', description: plural(count(unusedOnly), 'export'), icon: 'symbol-misc', tone: 'warning', expanded: true, children: unusedOnly.map((g) => fileGroup(g)) });
+    roots.push({ label: 'Unused exports', description: plural(count(unusedOnly), 'export'), icon: 'symbol-misc', tone: 'warning', expanded: true, children: unusedOnly.map((g) => fileGroup(g, fewEnough(unusedOnly))) });
   }
   if (localOnly.length) {
     roots.push({
@@ -224,7 +227,7 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
       description: plural(count(localOnly), 'export'),
       icon: 'eye-closed',
       tone: 'info',
-      children: localOnly.map((g) => ({ ...fileGroup(g), action: { kind: 'unexportAll', file: normalizePath(g.sourceFile.fileName) } })),
+      children: localOnly.map((g) => ({ ...fileGroup(g, fewEnough(localOnly)), action: { kind: 'unexportAll', file: normalizePath(g.sourceFile.fileName) } })),
     });
   }
   roots.push({
