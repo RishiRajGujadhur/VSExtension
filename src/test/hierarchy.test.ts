@@ -77,3 +77,9 @@ test('inherited members name the supertype they come from', () => {
   const inherited = report.roots.find((r) => r.label === 'Inherited members');
   assert.deepEqual(inherited?.children?.map((c) => `${c.label} ${c.description}`), ['name from Base', 'describe() from Base']);
 });
+
+test('other types in the hierarchy can become the root', () => {
+  const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'class Ba|se'));
+  const square = report.roots.find((r) => r.label === 'Subtypes and implementations')?.children?.[0];
+  assert.deepEqual(square?.action, { kind: 'showHierarchy', command: 'tsStructure.typeHierarchy', file: square?.action?.file, offset: offsetIn(models, 'class |Square') });
+});

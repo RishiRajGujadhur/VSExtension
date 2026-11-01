@@ -149,6 +149,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       description: `${edge.kind} · ${where(edge.sup)}`,
       icon: ts.isInterfaceDeclaration(edge.sup) ? 'symbol-interface' : 'symbol-class',
       location: builder.at(edge.sup.name ?? edge.sup),
+      action: reroot(edge.sup),
       expanded: true,
       children: seen.has(edge.sup) ? undefined : up(edge.sup, new Set([...seen, edge.sup])),
     }));
@@ -160,6 +161,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
         description: `${edge.kind}${overrides.length ? ` · overrides ${overrides.join(', ')}` : ''} · ${where(edge.sub)}`,
         icon: ts.isInterfaceDeclaration(edge.sub) ? 'symbol-interface' : 'symbol-class',
         location: builder.at(edge.sub.name ?? edge.sub),
+        action: reroot(edge.sub),
         expanded: true,
         children: seen.has(edge.sub) ? undefined : down(edge.sub, new Set([...seen, edge.sub])),
       };
@@ -218,6 +220,12 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
     });
   }
   return builder.finish(roots, `${plural(allSupers.length, 'supertype')}, ${plural(allSubs.length, 'subtype')}`);
+}
+
+/** Shows the hierarchy again from another type in it, unless that type comes from a library. */
+function reroot(declaration: TypeDeclaration): ReportNode['action'] {
+  const sourceFile = declaration.getSourceFile();
+  return sourceFile.isDeclarationFile ? undefined : { kind: 'showHierarchy', command: 'tsStructure.typeHierarchy', file: sourceFile.fileName, offset: (declaration.name ?? declaration).getStart() };
 }
 
 function callsSuper(member: Member, name: string): boolean {

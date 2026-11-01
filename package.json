@@ -335,6 +335,12 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.report.showHierarchy",
+        "title": "Show Hierarchy of This Type",
+        "category": "TypeScript Structure",
+        "icon": "$(type-hierarchy)"
+      },
+      {
         "command": "tsStructure.report.findUsages",
         "title": "Find Usages",
         "category": "TypeScript Structure",
@@ -637,6 +643,10 @@
           "when": "false"
         },
         {
+          "command": "tsStructure.report.showHierarchy",
+          "when": "false"
+        },
+        {
           "command": "tsStructure.editCustomInspection",
           "when": "false"
         },
@@ -791,6 +801,11 @@
         {
           "command": "tsStructure.report.findUsages",
           "when": "view == tsStructure.report && viewItem =~ /action:findUsages/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.showHierarchy",
+          "when": "view == tsStructure.report && viewItem =~ /action:showHierarchy/",
           "group": "inline@1"
         }
       ]

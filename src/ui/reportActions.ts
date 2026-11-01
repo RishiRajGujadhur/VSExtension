@@ -29,6 +29,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
     vscode.commands.registerCommand('tsStructure.report.follow', followRow),
     vscode.commands.registerCommand('tsStructure.report.showSideEffects', followRow),
     vscode.commands.registerCommand('tsStructure.report.findUsages', followRow),
+    vscode.commands.registerCommand('tsStructure.report.showHierarchy', followRow),
     // Renames the symbol defined at the row, after reviewing its usages.
     vscode.commands.registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
       if (node?.location) {
