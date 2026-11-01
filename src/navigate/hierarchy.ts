@@ -367,7 +367,14 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
     description: plural(impact.tests.length, 'test'),
     icon: 'beaker',
     action: impact.tests.length ? { kind: 'runTests', tests: impact.tests.map((t) => t.test) } : undefined,
-    children: impact.tests.map((t) => ({ label: t.test.titlePath.join(' › '), description: t.confidence, icon: 'beaker', location: { ...t.test.location, endLine: t.test.location.line, endCharacter: t.test.location.character } })),
+    children: impact.tests.map((t) => ({
+      label: t.test.titlePath.join(' › '),
+      description: `${t.confidence} · ${path.basename(t.test.file)}`,
+      // A possible match depends on an assumption, such as a call through an interface.
+      icon: t.confidence === 'confirmed' ? 'beaker' : 'question',
+      tooltip: `${t.test.titlePath.join(' › ')}\n\nReached through: ${t.path.map((step) => step.name).join(' → ')}`,
+      location: { ...t.test.location, endLine: t.test.location.line, endCharacter: t.test.location.character },
+    })),
   });
   // What a change to the body actually reaches: overrides that call super, unchanged inheritors, every call and test.
   const affectedOverrides = overrides.filter((o) => o.tone === 'warning').length;

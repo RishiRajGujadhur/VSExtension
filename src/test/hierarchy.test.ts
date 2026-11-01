@@ -126,3 +126,10 @@ test('the summary says what a change reaches', () => {
   const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'descr|ibe(): string {\n    return `${'));
   assert.equal(report.description, 'a change reaches 1 override that calls super, 2 inheriting subtypes, 1 call site');
 });
+
+test('impacted tests name their file and how they are reached', () => {
+  const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'abstract ar|ea'));
+  const test = report.roots.find((r) => r.label === 'Impacted tests')?.children?.[0];
+  assert.match(test?.description ?? '', / · shapes\.test\.ts$/);
+  assert.match(test?.tooltip ?? '', /Reached through: /);
+});
