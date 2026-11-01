@@ -23,6 +23,18 @@ const maxHistory = 20;
 const stateKey = 'tsStructure.lastReport';
 
 /** Shows analysis reports as a tree with history, filtering, result navigation and editor highlights. */
+/** Settings each kind of report depends on: changing one marks the shown report as out of date. */
+const scope = ['tsStructure.include', 'tsStructure.exclude'];
+const settingsOf: Record<string, string[]> = {
+  argumentFlow: ['tsStructure.argumentFlow'],
+  assertionAudit: [...scope, 'tsStructure.typeAssertion'],
+  deadExports: [...scope, 'tsStructure.deadExports'],
+  duplicates: [...scope, 'tsStructure.duplicates'],
+  inspectCode: [...scope, 'tsStructure.inspections.severity', 'tsStructure.customInspections', 'tsStructure.missingAwait', 'tsStructure.typeAssertion'],
+  mutations: scope,
+  structuralSearch: scope,
+};
+
 export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private readonly changed = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.changed.event;
@@ -37,6 +49,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private located: ReportNode[] = [];
   private cursor = -1;
   private stale = false;
+  private settingsChanged = false;
   private readonly decorations = {
     read: vscode.window.createTextEditorDecorationType({ backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'), overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.wordHighlightForeground'), overviewRulerLane: vscode.OverviewRulerLane.Center }),
     write: vscode.window.createTextEditorDecorationType({ backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'), overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.wordHighlightStrongForeground'), overviewRulerLane: vscode.OverviewRulerLane.Center }),
@@ -62,7 +75,16 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     return [
       vscode.window.onDidChangeVisibleTextEditors(() => this.highlight()),
       vscode.workspace.onDidChangeTextDocument((e) => this.checkStale(e.document)),
-      vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.highlightResults') && this.highlight()),
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('tsStructure.highlightResults')) {
+          this.highlight();
+        }
+        const kind = this.report?.kind;
+        if (kind && !this.settingsChanged && (settingsOf[kind] ?? []).some((key) => e.affectsConfiguration(key))) {
+          this.settingsChanged = true;
+          this.updateMessage();
+        }
+      }),
       ...Object.values(this.decorations),
     ];
   }
@@ -121,7 +143,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const value = await vscode.window.showInputBox({ title: 'Filter Analysis Results', value: this.filter, placeHolder: 'Text in a row label or description; empty to clear' });
     if (value !== undefined) {
       this.filter = value;
-      this.render();
+      this.render(true);
     }
   }
 
@@ -141,11 +163,12 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       )?.map((item) => item.label);
     if (chosen) {
       this.hidden = new Set(groups.filter((g) => !chosen.includes(g)));
-      this.render();
+      this.render(true);
     }
   }
 
-  private render(): void {
+  /** Shows the current report; `kept` is for a new filter or set of groups on the same report, which keeps its banners. */
+  private render(kept = false): void {
     const report = this.report;
     this.roots = report ? filterReport(report.roots, this.filter).filter((r) => !this.hidden.has(r.label)) : [];
     this.parents.clear();
@@ -161,7 +184,14 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       }
     };
     index(this.roots);
-    this.stale = false;
+    if (!kept) {
+      this.stale = false;
+      this.settingsChanged = false;
+      // A report from the history, or restored after a reload, may already be out of date.
+      for (const document of vscode.workspace.textDocuments) {
+        this.checkStale(document);
+      }
+    }
     // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the message.
     this.view.title = titleParts(report).heading;
     this.view.description = [this.filter ? `filtered: “${this.filter}”` : '', this.hidden.size ? `${this.hidden.size} hidden` : ''].filter(Boolean).join(' · ') || undefined;
@@ -186,6 +216,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const messages = [
       ...(report ? [summaryLine(report)] : []),
       ...(this.stale ? ['Files changed since this analysis ran; re-run it to refresh the results.'] : []),
+      ...(this.settingsChanged && !this.stale ? ['Settings changed since this analysis ran; re-run it to apply them.'] : []),
       ...(report?.warnings ?? []),
       ...(report && this.roots.length === 0 ? [this.filter ? `No rows match “${this.filter}”.` : 'Nothing found.'] : []),
     ];
