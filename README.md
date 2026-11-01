@@ -270,6 +270,16 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. To keep tracing into a called function, click the arrow button (**Follow Into Call**) on a hand-off row. It runs Data Flow on the parameter there.
 6. On a parameter, an extra **Incoming values from call sites** group lists what every caller passes, including omitted arguments and defaults.
 
+### Mutation Tracking
+
+![Mutations in cart.ts: four functions that change shared state, and the module variables they change](docs/images/mutation-tracking.png)
+
+1. Open the file you want to audit, for example `src/cart.ts`. The cursor position doesn't matter.
+2. Run **Mutation Tracking (Active File)**.
+3. **Functions that mutate state** lists each function that changes something it doesn't own. Expand one to see each change. A change made inside a called function shows the call chain, such as *changes module state events (.push()) via track()*.
+4. **Shared state and who changes it** turns the same data around: one row per module variable, import, global or `this` field, with every function that writes it. Use it to find the unexpected writer of a piece of state.
+5. Click any row to open the line. The editor shades every write while the report is open.
+
 ## Test Impact Analysis
 
 ### Usage
