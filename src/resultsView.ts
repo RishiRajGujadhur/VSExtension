@@ -162,7 +162,7 @@ export async function openLocation(location: SourceLocation): Promise<void> {
 }
 
 export function currentHash(uri: vscode.Uri): string | undefined {
-  const open = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(uri.fsPath));
+  const open = vscode.workspace.textDocuments.find((d) => d.isDirty && d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(uri.fsPath));
   if (open) {
     return hashText(open.getText());
   }

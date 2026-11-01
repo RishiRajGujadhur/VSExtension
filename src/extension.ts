@@ -22,7 +22,8 @@ export function activate(context: vscode.ExtensionContext): void {
   // Analyze unsaved editor text, not only what is on disk.
   const projects = new ProjectService((fileName) => {
     const key = pathKey(fileName);
-    return vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === key)?.getText();
+    // Only unsaved text: a saved document can lag behind a change made on disk (Git, a formatter, another tool).
+    return vscode.workspace.textDocuments.find((d) => d.isDirty && d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === key)?.getText();
   });
   const results = new ResultsProvider();
   const view = vscode.window.createTreeView('tsImpact.results', { treeDataProvider: results, showCollapseAll: true });
