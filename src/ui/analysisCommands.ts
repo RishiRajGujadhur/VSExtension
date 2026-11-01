@@ -151,7 +151,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.deadExports', 'Dead Export Analysis', async (t) => {
       const program = t.project().program();
-      const config = vscode.workspace.getConfiguration('tsStructure.deadExports');
+      const config = vscode.workspace.getConfiguration('tsStructure.deadExports', vscode.Uri.file(t.fileName));
       const root = t.folder ?? path.dirname(t.fileName);
       const globs = config.get<string[]>('entryPoints', []);
       let entryPoints: string[] = [];
@@ -166,7 +166,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', (t) => {
       const program = t.project().program();
-      const ignoreTests = vscode.workspace.getConfiguration('tsStructure').get('typeAssertion.ignoreTestFiles', false);
+      const ignoreTests = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('typeAssertion.ignoreTestFiles', false);
       return assertionAuditReport(program, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)), { typeAssertionIgnoreTests: ignoreTests }, t.folder);
     }),
     registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
@@ -190,7 +190,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return;
       }
       const target = editorTarget(projects, editor);
-      const config = vscode.workspace.getConfiguration('tsStructure.duplicates');
+      const config = vscode.workspace.getConfiguration('tsStructure.duplicates', editor.document.uri);
       if (scope === 'selection') {
         return runAnalysis(view, 'Finding copies', () => {
           const program = target.project().program();
@@ -263,7 +263,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.createVirtualProject(from, folder).program(), from, target, folder));
     }),
     editorCommand('tsStructure.argumentFlow', 'Tracing argument propagation', (t) =>
-      argumentFlowReport(t.project(), t.fileName, t.offset, vscode.workspace.getConfiguration('tsStructure').get('argumentFlow.maxDepth', 6)),
+      argumentFlowReport(t.project(), t.fileName, t.offset, vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('argumentFlow.maxDepth', 6)),
     ),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );

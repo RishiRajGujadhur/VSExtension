@@ -65,7 +65,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.features.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.features.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.include') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
           this.results.clear();
           this.refreshAll();
         }
@@ -133,13 +133,13 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     return [...builtInInspections, ...this.extra()];
   }
 
-  private severityOf(): (inspection: Inspection) => Severity | 'off' | 'default' {
-    const overrides = vscode.workspace.getConfiguration('tsStructure').get<Record<string, Severity | 'off' | 'default'>>('inspections.severity', {});
+  private severityOf(uri: vscode.Uri): (inspection: Inspection) => Severity | 'off' | 'default' {
+    const overrides = vscode.workspace.getConfiguration('tsStructure', uri).get<Record<string, Severity | 'off' | 'default'>>('inspections.severity', {});
     return (i) => overrides[i.id] ?? 'default';
   }
 
   inspect(document: vscode.TextDocument): Finding[] {
-    const config = vscode.workspace.getConfiguration('tsStructure');
+    const config = vscode.workspace.getConfiguration('tsStructure', document.uri);
     if (!config.get('inspections.enabled', true) || !isFeatureEnabled('inspections') || document.isClosed || isExcluded(document.uri.fsPath)) {
       this.collection.delete(document.uri);
       this.results.delete(pathKey(document.uri.fsPath));
@@ -154,7 +154,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       const sourceFile = project.program.getSourceFile(normalizePath(document.uri.fsPath));
       if (sourceFile && sourceFile.text === document.getText()) {
         inspected = sourceFile;
-        findings = runInspections(this.inspections(), { sourceFile, program: project.program, checker: project.checker, options: inspectionOptions() }, this.severityOf());
+        findings = runInspections(this.inspections(), { sourceFile, program: project.program, checker: project.checker, options: inspectionOptions(document.uri) }, this.severityOf(document.uri));
       }
     } catch {
       // Files outside any compiler project are not inspected.
@@ -170,7 +170,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   private updateStatus(): void {
     const document = vscode.window.activeTextEditor?.document;
     const result = document && this.results.get(pathKey(document.uri.fsPath));
-    if (!document || !result || !vscode.workspace.getConfiguration('tsStructure').get('inspections.statusBar', true)) {
+    if (!document || !result || !vscode.workspace.getConfiguration('tsStructure', document.uri).get('inspections.statusBar', true)) {
       this.status.hide();
       return;
     }
@@ -211,8 +211,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const files = scope === 'file' ? [project.program.getSourceFile(normalizePath(fileName))!] : projectSourceFiles(project.program).filter((sf) => !isExcluded(sf.fileName));
         const inspected: InspectedFile[] = [];
         const inspections = this.inspections();
-        const severityOf = this.severityOf();
-        const options = inspectionOptions();
+        const severityOf = this.severityOf(editor.document.uri);
+        const options = inspectionOptions(editor.document.uri);
         for (const [i, sourceFile] of files.entries()) {
           if (token.isCancellationRequested) {
             return undefined;
@@ -359,7 +359,7 @@ async function applyReportFix(node: ReportNode): Promise<void> {
   }
 }
 
-function inspectionOptions(): InspectionOptions {
-  const config = vscode.workspace.getConfiguration('tsStructure');
+function inspectionOptions(uri: vscode.Uri): InspectionOptions {
+  const config = vscode.workspace.getConfiguration('tsStructure', uri);
   return { missingAwaitIgnore: config.get<string[]>('missingAwait.ignore', []), typeAssertionIgnoreTests: config.get('typeAssertion.ignoreTestFiles', false) };
 }

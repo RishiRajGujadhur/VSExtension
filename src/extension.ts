@@ -17,6 +17,8 @@ import { showActionsAtCursor } from './ui/actionsAtCursor';
 import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
+import { registerScope } from './ui/exclude';
+import { registerScopeCommands } from './ui/scopeCommands';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -38,6 +40,9 @@ export function activate(context: vscode.ExtensionContext): void {
   configWatcher.onDidCreate(invalidate);
   configWatcher.onDidDelete(invalidate);
 
+  // Before anything that reads the scope, so its cache is cleared first when the settings change.
+  registerScope(context);
+  registerScopeCommands(context);
   const run = (tests: TestCase[]) => void runTests(tests);
   registerRefactorings(context, projects);
   const structureView = new StructureView(context.workspaceState);
@@ -68,7 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const document = editor.document;
       const offset = document.offsetAt(editor.selection.active);
       const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-      const config = vscode.workspace.getConfiguration('tsImpact');
+      const config = vscode.workspace.getConfiguration('tsImpact', document.uri);
 
       try {
         const result = await vscode.window.withProgress(

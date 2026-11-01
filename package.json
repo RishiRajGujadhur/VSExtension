@@ -404,6 +404,17 @@
         "title": "Open Settings",
         "category": "TypeScript Structure",
         "icon": "$(gear)"
+      },
+      {
+        "command": "tsStructure.excludeFromAnalysis",
+        "title": "Exclude from TypeScript Structure Analysis",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.editAnalysisScope",
+        "title": "Edit Analysis Scope…",
+        "category": "TypeScript Structure",
+        "icon": "$(filter)"
       }
     ],
     "viewsContainers": {
@@ -595,6 +606,11 @@
           "command": "tsStructure.dependencyPath",
           "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@91"
+        },
+        {
+          "command": "tsStructure.excludeFromAnalysis",
+          "when": "explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "7_modification@92"
         }
       ],
       "commandPalette": [
@@ -845,6 +861,10 @@
         {
           "command": "tsStructure.argumentFlow",
           "when": "config.tsStructure.features.argumentFlow"
+        },
+        {
+          "command": "tsStructure.excludeFromAnalysis",
+          "when": "workspaceFolderCount > 0 && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
         }
       ],
       "view/title": [
@@ -927,6 +947,11 @@
           "command": "tsStructure.openSettings",
           "when": "view == tsStructure.report",
           "group": "9_settings@2"
+        },
+        {
+          "command": "tsStructure.editAnalysisScope",
+          "when": "view == tsStructure.report",
+          "group": "9_settings@0"
         }
       ],
       "view/item/context": [

@@ -53,6 +53,27 @@ test('exclude globs match relative paths', async () => {
   assert.ok(globToRegExp('**/*.{spec,test}.ts', false).test('a/b.test.ts'));
 });
 
+test('braces hold globs of their own, and an unclosed brace is literal', async () => {
+  const { globToRegExp } = await import('../structure/glob');
+  assert.ok(globToRegExp('{src/*,lib/**}.ts', false).test('lib/a/b.ts'));
+  assert.ok(globToRegExp('{src/*,lib/**}.ts', false).test('src/a.ts'));
+  assert.ok(!globToRegExp('{src/*,lib/**}.ts', false).test('src/a/b.ts'));
+  assert.ok(globToRegExp('src/{a,{b,c}}.ts', false).test('src/c.ts'));
+  assert.ok(globToRegExp('src/{a.ts', false).test('src/{a.ts'));
+});
+
+test('a scope pattern naming a folder covers everything below it', async () => {
+  const { pathMatcher } = await import('../structure/glob');
+  const matches = pathMatcher(['src/legacy', 'gen/', './tools/**', '  '], false);
+  assert.ok(matches('src/legacy/old.ts'));
+  assert.ok(matches('src/legacy'));
+  assert.ok(!matches('src/legacy2/a.ts'));
+  assert.ok(matches('gen/api.ts'));
+  assert.ok(matches('tools/build.ts'));
+  assert.ok(!matches('src/app.ts'));
+  assert.ok(!pathMatcher([], false)('src/app.ts'));
+});
+
 test('fix-all takes one fix per finding and skips overlaps; file suppression extends an existing comment', async () => {
   const ts = await import('typescript');
   const { fixAllEdits, fileSuppressionEdit } = await import('../inspect/inspection');

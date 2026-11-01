@@ -256,11 +256,27 @@ The TypeScript Structure view keeps every analysis's report:
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
 
-`tsStructure.exclude` takes globs, such as `**/generated/**`, for files left out of inspections, Inspect Code, structural search, duplicates and dead-export results.
-
 ## Configuration
 
-Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens.
+Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens. Settings about files, such as the scope, inspection severities and dead-export entry points, can differ per folder of a multi-root workspace.
+
+### Choosing which files are analyzed
+
+By default every file in the compiler project is analyzed. To leave generated code, vendored code or old code out:
+
+1. In the Explorer, right-click a file or folder (or several) and choose **Exclude from TypeScript Structure Analysis**. The message that follows has **Undo**.
+2. To see or change the whole scope, run **TypeScript Structure: Edit Analysis Scope…** (also in the **⋯** menu of the TypeScript Structure view). Choose **Exclude Files…** or **Only Analyze…** to add a pattern, or select a pattern to remove it.
+
+The scope is stored in two settings, with globs relative to the workspace folder. A plain folder path such as `src/legacy` covers everything below it.
+
+```json
+{
+  "tsStructure.include": ["src"],
+  "tsStructure.exclude": ["**/generated/**", "src/legacy"]
+}
+```
+
+`tsStructure.include` limits analysis to the matching files when it is not empty, and `tsStructure.exclude` is applied after it. The scope applies to live inspections, Inspect Code, the type assertion audit, structural search and replace, duplicate detection, project-wide mutation tracking and dead-export results. Analyses that follow one symbol, such as Find Usages or Test Impact Analysis, still look at the whole project, so they never miss a use.
 
 ### Turning features on and off
 

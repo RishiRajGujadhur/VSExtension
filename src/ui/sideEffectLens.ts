@@ -46,7 +46,7 @@ export class SideEffectLens implements vscode.CodeLensProvider {
   }
 
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!vscode.workspace.getConfiguration('tsStructure').get('codeLens.sideEffects', false) || !isFeatureEnabled('sideEffects') || document.uri.scheme !== 'file') {
+    if (!vscode.workspace.getConfiguration('tsStructure', document.uri).get('codeLens.sideEffects', false) || !isFeatureEnabled('sideEffects') || document.uri.scheme !== 'file') {
       return [];
     }
     const cached = this.cache.get(document.uri.toString());
@@ -67,7 +67,7 @@ export class SideEffectLens implements vscode.CodeLensProvider {
         return [];
       }
       const analyzer = new EffectAnalyzer(project.checker);
-      const showPure = vscode.workspace.getConfiguration('tsStructure').get('codeLens.sideEffectsShowPure', true);
+      const showPure = vscode.workspace.getConfiguration('tsStructure', document.uri).get('codeLens.sideEffectsShowPure', true);
       return lensTargets(sourceFile)
         .filter(({ fn }) => isFunctionWithBody(fn))
         .map(({ fn, anchor }) => ({ anchor, effects: analyzer.effectsOf(fn) }))
