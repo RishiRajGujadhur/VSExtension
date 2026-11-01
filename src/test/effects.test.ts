@@ -99,3 +99,11 @@ test('calls to callbacks are reported as not followed rather than pure', () => {
   assert.deepEqual(report.roots.map((r) => r.label), ['Calls it could not follow']);
   assert.equal(report.roots[0].children?.[0].label, 'calls visit(), a parameter holding any function');
 });
+
+test('an effect that comes from a called function opens that function', () => {
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const report = sideEffectReport(program, file, offsetIn(file, 'function tra|ck'));
+  const inherited = report.roots.find((r) => r.label === 'Mutates module state')?.children?.[0];
+  assert.match(inherited?.description ?? '', /^via remember\(\)/);
+  assert.deepEqual(inherited?.action, { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: inherited?.action?.file, offset: offsetIn(file, 'function |remember') });
+});

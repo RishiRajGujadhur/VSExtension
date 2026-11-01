@@ -395,7 +395,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Schedules work**: timers;
    - **Nondeterministic**: `Math.random()`, `Date.now()`, `new Date()`.
    - **Calls it could not follow**: calls to a callback parameter or a function-typed property, which could do anything. A function like that is never labeled *pure*.
-4. An effect inherited from a called function says so (*changes module state events (.push()) via track()*). Expand it to see the call chain. A mutation of a parameter in a callee is mapped to what this function passed.
+4. An effect inherited from a called function says so (*changes module state events (.push()) via track()*). Expand it to see the call chain, or click its lightning button (**Show All Side Effects**) to analyze the function it comes from. A mutation of a parameter in a callee is mapped to what this function passed.
 5. To see this at a glance in the editor, turn on `tsStructure.codeLens.sideEffects`. Every function then gets a lens: **pure**, or a summary such as *mutates arguments · mutates module state · I/O*. Click a lens to open the full analysis.
 
 ## Test Impact Analysis

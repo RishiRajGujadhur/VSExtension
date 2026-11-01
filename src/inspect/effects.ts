@@ -500,6 +500,8 @@ function effectNode(effect: Effect, builder: ReportBuilder): ReportNode {
     location: builder.at(effect.node),
     role: mutationKinds.has(effect.kind) ? 'write' : 'read',
     children: steps.length ? steps : undefined,
+    // An inherited effect opens the side effects of the function it comes from.
+    action: effect.via ? { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: effect.via.fn.getSourceFile().fileName, offset: functionNameOrSelf(effect.via.fn).getStart() } : undefined,
   };
 }
 
