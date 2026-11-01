@@ -248,6 +248,27 @@ The TypeScript Structure view keeps every analysis's report:
 
 `tsStructure.exclude` takes globs, such as `**/generated/**`, for files left out of inspections, Inspect Code, structural search, duplicates and dead-export results.
 
+## Step-by-step guides
+
+Each guide uses the small bookshop project in [`docs/demo`](docs/demo). Open that folder in VS Code to follow along. The screenshots are captured from a real VS Code session with `npm run screenshots`.
+
+Every analysis can be started three ways: from the editor's right-click menu under **TypeScript Structure**, from the Command Palette (`Ctrl+Shift+P`, then type its name), or from **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`). Results open in the **TypeScript Structure** view in the Activity Bar.
+
+### Data Flow Path Explorer
+
+![Data flow of total in checkoutTotal: its definition, the discount update, the coupon, and the hand-off to applyTax](docs/images/data-flow.png)
+
+1. Put the cursor on a variable, parameter or property. In the demo, use `total` in `checkoutTotal` (`src/cart.ts`).
+2. Run **Data Flow Path Explorer**.
+3. Read the steps in the view, grouped by function in source order:
+   - a pencil for each assignment;
+   - an eye for each read;
+   - an arrow where the value is passed to another function, with the parameter it becomes.
+
+   The type after each step is shown on the right.
+4. Click a step to jump to it, or use the up and down arrows in the view's title bar to walk through them. The editor shades writes and reads of the value while the report is open.
+5. On a parameter, an extra **Incoming values from call sites** group lists what every caller passes, including omitted arguments and defaults.
+
 ## Test Impact Analysis
 
 ### Usage

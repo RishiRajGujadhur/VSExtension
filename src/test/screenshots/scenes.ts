@@ -49,6 +49,7 @@ function inspection(name: string, file: string, needle: string): Scene {
     async run({ open, delay }) {
       await open(file, needle);
       await diagnostics(file, delay);
+      await vscode.commands.executeCommand('tsStructure.inspectCode', 'file');
       await vscode.commands.executeCommand('workbench.actions.view.problems');
       await open(file, needle);
       await delay(300);
@@ -64,7 +65,7 @@ export const scenes: Scene[] = [
   analysis('mutation-tracking', 'src/cart.ts', 'addToCart(', 'tsStructure.mutationTracking'),
   analysis('nullability', 'src/pricing.ts', 'coupon = findCoupon', 'tsStructure.nullability'),
   analysis('promise-rejections', 'src/orders.ts', 'saveOrder(id: string', 'tsStructure.promiseRejections'),
-  inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);'),
+  inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'),
   inspection('type-assertions', 'src/api.ts', 'as Book;\n}\n\nexport function firstItem'),
   analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports'),
   analysis('exception-flow', 'src/config.ts', 'parseConfig(text: string)', 'tsStructure.exceptionFlow'),
@@ -117,6 +118,7 @@ export const scenes: Scene[] = [
       );
       await open('src/orders.ts', 'console.log');
       await diagnostics('src/orders.ts', delay);
+      await vscode.commands.executeCommand('tsStructure.inspectCode', 'file');
       await vscode.commands.executeCommand('workbench.actions.view.problems');
       await open('src/orders.ts', 'console.log');
       await delay(300);

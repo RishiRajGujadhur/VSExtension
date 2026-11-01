@@ -1,0 +1,5 @@
+{
+  "name": "bookshop-demo",
+  "private": true,
+  "main": "src/main.ts"
+}

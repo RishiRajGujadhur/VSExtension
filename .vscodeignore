@@ -1,6 +1,7 @@
 .vscode/**
 src/**
 sample/**
+docs/**
 test-fixtures/**
 scripts/**
 out/test/**

@@ -914,6 +914,7 @@
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
     "test:integration": "npm run compile && node scripts/integration.js",
+    "screenshots": "npm run compile && node scripts/screenshots.js",
     "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
