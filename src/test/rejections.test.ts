@@ -40,6 +40,18 @@ test('rejection sources and every path a rejection takes through callers', () =>
   assert.equal(report.roots[0].children?.[0].action?.kind, 'quickFix');
 });
 
+test('only branches that need attention start expanded', () => {
+  const report = rejectionReport(virtualProject('inspect', 'src/rejections.ts'), file, offsetIn(file, 'function sa|ve('));
+  const where = report.roots.find((r) => r.label === 'Where rejections go')!;
+  forEachReportNode(where.children ?? [], (node) => {
+    if (node.children?.length && node.expanded) {
+      assert.ok(node.tone === 'error' || node.tone === 'warning', `${node.label} is expanded`);
+    }
+  });
+  const relay = where.children?.find((c) => c.label === 'awaited in relaySave');
+  assert.equal(relay?.expanded, true);
+});
+
 test('on a call, the path of that call comes first', () => {
   const report = rejectionReport(virtualProject('inspect', 'src/rejections.ts'), file, offsetIn(file, '  sa|ve(data);\n}'));
   assert.deepEqual(outline(report.roots.slice(0, 1)), ['This call: save(data) [error]', '  not awaited: the rejection is unhandled [error]']);

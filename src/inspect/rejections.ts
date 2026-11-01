@@ -249,7 +249,9 @@ export class RejectionTracer {
   }
 
   private group(label: string, node: ts.Node, children: ReportNode[], icon: string): ReportNode {
-    return { label, icon, tone: worst(children), location: this.builder.at(node), children, expanded: true };
+    const tone = worst(children);
+    // Branches that end handled stay collapsed, so the paths that need attention stand out.
+    return { label, icon, tone, location: this.builder.at(node), children, expanded: tone === 'error' || tone === 'warning' };
   }
 }
 
