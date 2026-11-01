@@ -52,4 +52,7 @@ test('mutation report groups writes by shared state', () => {
   const report = mutationReport(program, file);
   const state = report.roots.find((r) => r.label === 'Shared state and who changes it');
   assert.deepEqual(state?.children?.map((c) => `${c.label} ${c.children?.length}`).sort(), ['cache 2', 'counter 2', 'registry 1', 'this 3'].sort());
+  // Most-written first, and imported state names the file it lives in.
+  assert.equal(state?.children?.[0].label, 'this');
+  assert.equal(state?.children?.find((c) => c.label === 'registry')?.description, 'imported state · 1 write · state.ts');
 });

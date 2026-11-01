@@ -528,14 +528,22 @@ export function mutationReport(program: ts.Program, fileName: string): Report {
       label: 'Shared state and who changes it',
       icon: 'database',
       expanded: true,
-      children: [...byState.values()].map((s) => ({
-        label: s.label,
-        description: `${kindLabels[s.kind].replace(/^Mutates /, '')} · ${plural(s.entries.length, 'write')}`,
-        icon: kindIcons[s.kind],
-        tone: 'warning' as const,
-        location: s.declaration ? builder.at(s.declaration) : undefined,
-        children: s.entries,
-      })),
+      // Most-written state first; state declared in another file names it.
+      children: [...byState.values()]
+        .sort((a, b) => b.entries.length - a.entries.length)
+        .map((s) => {
+          const home = s.declaration?.getSourceFile();
+          return {
+            label: s.label,
+            description: [kindLabels[s.kind].replace(/^Mutates /, ''), plural(s.entries.length, 'write'), home && home !== sourceFile ? home.fileName.replace(/^.*[\\/]/, '') : undefined]
+              .filter(Boolean)
+              .join(' · '),
+            icon: kindIcons[s.kind],
+            tone: 'warning' as const,
+            location: s.declaration ? builder.at(s.declaration) : undefined,
+            children: s.entries,
+          };
+        }),
     });
   }
   return builder.finish(roots, total ? plural(total, 'mutation') : 'no mutations of shared state');
