@@ -28,6 +28,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
     // Run another analysis where the row points, such as the data flow of the parameter a value is passed to.
     vscode.commands.registerCommand('tsStructure.report.follow', followRow),
     vscode.commands.registerCommand('tsStructure.report.showSideEffects', followRow),
+    vscode.commands.registerCommand('tsStructure.report.findUsages', followRow),
     // Renames the symbol defined at the row, after reviewing its usages.
     vscode.commands.registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
       if (node?.location) {

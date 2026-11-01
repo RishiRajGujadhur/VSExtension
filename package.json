@@ -325,6 +325,12 @@
         "icon": "$(lightbulb)"
       },
       {
+        "command": "tsStructure.report.findUsages",
+        "title": "Find Usages",
+        "category": "TypeScript Structure",
+        "icon": "$(references)"
+      },
+      {
         "command": "tsStructure.report.rename",
         "title": "Rename Symbol",
         "category": "TypeScript Structure",
@@ -615,6 +621,10 @@
         {
           "command": "tsStructure.report.rename",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.findUsages",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -759,6 +769,11 @@
           "command": "tsStructure.report.rename",
           "when": "view == tsStructure.report && viewItem =~ /action:(.* )?rename/",
           "group": "inline@2"
+        },
+        {
+          "command": "tsStructure.report.findUsages",
+          "when": "view == tsStructure.report && viewItem =~ /action:findUsages/",
+          "group": "inline@1"
         }
       ]
     },

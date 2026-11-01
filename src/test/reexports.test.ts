@@ -30,6 +30,8 @@ test('a renamed import is followed through two barrels to its declaration', () =
     'Square | src/models.ts · declaration · no importers',
   ]);
   assert.deepEqual(imported.children?.map((c) => c.label), ["'./public'"]);
+  // The declaration at the end of the chain opens Find Usages.
+  assert.equal(chain.children?.at(-1)?.action?.command, 'tsStructure.semanticUsages');
   const importer = imported.children?.[0].children?.[0];
   assert.equal(importer?.description, 'line 1 · as Box');
   assert.match(importer?.tooltip ?? '', /^```tsx\nimport \{ Box \} from '\.\/public';/);

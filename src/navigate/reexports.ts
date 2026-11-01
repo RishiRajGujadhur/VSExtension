@@ -221,6 +221,8 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
         tone: i === chain.length - 1 ? ('ok' as const) : undefined,
         tooltip: codeContext(step.node),
         location: builder.at(step.node),
+        // From the declaration, every usage under any of its names.
+        action: i === chain.length - 1 ? { kind: 'findUsages', command: 'tsStructure.semanticUsages', file: step.file, offset: step.node.getStart() } : undefined,
       })),
     },
     {
