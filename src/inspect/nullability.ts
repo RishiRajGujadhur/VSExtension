@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, nodeSnippet } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, forEachReportNode, nodeSnippet, plural } from '../structure/report';
 import {
   FunctionWithBody,
   accessExpression,
@@ -368,5 +368,12 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
       });
     }
   }
-  return builder.finish(roots, nullableHere ? `${sources.length} source path(s)` : 'safe here');
+  // Count where the paths end (a literal, an omitted argument, a library call), not the branches leading there.
+  let origins = 0;
+  forEachReportNode(sources, (node) => {
+    if (!node.children?.length && node.tone !== 'info') {
+      origins++;
+    }
+  });
+  return builder.finish(roots, nullableHere ? plural(origins, 'source') : 'safe here');
 }

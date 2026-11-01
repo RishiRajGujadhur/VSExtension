@@ -41,6 +41,8 @@ test('module state lists its declaration and every assignment of undefined', () 
     '  assigned undefined in logout',
     '    undefined literal',
   ]);
+  // The declared type only explains; the sources are the missing initializer and the assignment.
+  assert.equal(report.description, '2 sources');
 });
 
 test('an optional parameter lists call sites that omit it or pass undefined', () => {
