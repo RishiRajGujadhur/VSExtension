@@ -293,6 +293,19 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. **Uses** lists every read of the variable and what it is at that point: *safe* (narrowed), *check* (a test such as `!coupon` or `coupon?.code`), or *may be undefined*. A use that may still be null is one that needs a guard.
 7. You can also start from a TypeScript error. On *Object is possibly 'undefined'* or *'user' is possibly 'null'*, open the lightbulb (`Ctrl+.`) and choose **Explain why 'user' may be null or undefined**.
 
+### Promise Rejection Analyzer
+
+![Rejections of saveOrder: it throws OrderError, and the rejection is caught in submitSafely, unhandled in quickReorder and fails main.ts at the top level](docs/images/promise-rejections.png)
+
+1. Put the cursor on an async function, or a function that returns a promise. In the demo, use `saveOrder` in `src/orders.ts`.
+2. Run **Promise Rejection Analyzer**.
+3. **Rejection sources** lists what can make the promise reject: `throw` statements, awaited calls that can reject themselves, and `Promise.reject`.
+4. **Where rejections go** follows the promise through every caller, `.then()`/`.catch()`, `Promise.all`, variables and callbacks. Each path ends in one of these:
+   - a red *unhandled* row: a call that is not awaited, a `void`, or a callback whose caller ignores returned promises, such as `setTimeout`;
+   - a *caught in …* row that says what the catch block does: rethrows, recovers, logs, or swallows;
+   - a green *handled* row.
+5. The summary in the view counts handled, unhandled and unknown paths. Click an unhandled row to go to the call that drops the rejection.
+
 ## Test Impact Analysis
 
 ### Usage
