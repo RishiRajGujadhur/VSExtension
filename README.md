@@ -448,6 +448,16 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Matches appear in the builder and in the TypeScript Structure view, grouped by file. Each shows what every placeholder matched, such as *$list$ = items*. Click one to open it.
 6. **Recent searches…** brings back any of your last 15 searches with their constraints.
 
+### Type-Safe Structural Replace
+
+![Replacing Math.round($value$ * 100) / 100 with Number($value$.toFixed(2)): the preview shows both rewrites, in pricing.ts and reports.ts, and that the result type-checks cleanly](docs/images/structural-replace.png)
+
+1. In **Structural Search…**, write the pattern to find. In the demo, use `Math.round($value$ * 100) / 100`.
+2. Under **Replace with**, write the new code using the same placeholders: `Number($value$.toFixed(2))`. `$name*$` placeholders insert the whole matched list.
+3. Click **Preview Replacements**. Every match is listed with its old code (−) and new code (+). The summary says whether the result *type-checks cleanly* or lists each new type error, such as calling a method the value doesn't have.
+4. Click **Replace All…**, or press `Ctrl+Enter` in the replacement. The changes open in VS Code's Refactor Preview, where you can untick individual files or changes before applying them. Turn off `tsStructure.previewRefactorings` to apply directly.
+5. Nothing is written when the replacement doesn't parse. Use **Undo** (`Ctrl+Z`) in the edited files to revert an applied replacement.
+
 ## Test Impact Analysis
 
 ### Usage
