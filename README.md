@@ -313,7 +313,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Nothing to run: the inspection checks every TypeScript and JavaScript file that is visible in an editor. Open `src/orders.ts` in the demo.
 2. A dropped promise is underlined, here `placeOrder(id, items, payment);` in `quickReorder`. Hover it to read why. The message names the original function when the promise comes through wrappers.
 3. Press `Ctrl+.` on the underline for fixes:
-   - **Add await**, in an async function;
+   - **Add await**, in an async function, or **Make … async and await the call** elsewhere. That also wraps a declared return type in `Promise<…>`;
    - **Mark as intentionally not awaited (void)**;
    - **Handle the rejection with .catch()**, which works outside async functions too;
    - **Trace where this promise's rejection goes…**, which opens the Promise Rejection Analyzer;

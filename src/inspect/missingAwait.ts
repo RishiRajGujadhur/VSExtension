@@ -64,6 +64,10 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
   if (isAsync(fn)) {
     fixes.push(...awaitFix(context, node.expression)!);
   }
+  const makeAsync = fn && !isAsync(fn) ? asyncFix(context, fn, node.expression) : undefined;
+  if (makeAsync) {
+    fixes.push(makeAsync);
+  }
   fixes.push({ title: 'Mark as intentionally not awaited (void)', edits: [{ start: node.expression.getStart(context.sourceFile), end: node.expression.getStart(context.sourceFile), text: 'void ' }] });
   // `.catch` binds to the whole expression only when it is a call or a name, not `a ? p() : q()`.
   if (ts.isCallExpression(expression) || ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression)) {
@@ -80,6 +84,28 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
     fixes,
     related: origin.map((o) => ({ message: `the promise comes from ${calleeName(o)}()`, node: o })),
   });
+}
+
+/** Makes the enclosing function async and awaits the expression, wrapping a declared return type in Promise<…>. */
+function asyncFix(context: InspectionContext, fn: FunctionWithBody, expression: ts.Expression): NonNullable<Finding['fixes']>[number] | undefined {
+  if (ts.isConstructorDeclaration(fn) || ts.isAccessor(fn) || (fn as ts.FunctionDeclaration).asteriskToken) {
+    return undefined;
+  }
+  const sourceFile = context.sourceFile;
+  // `async` goes before `function`, a method's name, or an arrow's parameters, after any other modifiers.
+  const keyword = fn.getChildren(sourceFile).find((c) => c.kind === ts.SyntaxKind.FunctionKeyword);
+  const at = keyword ? keyword.getStart(sourceFile) : ts.isMethodDeclaration(fn) ? fn.name.getStart(sourceFile) : ts.isArrowFunction(fn) ? fn.getStart(sourceFile) : undefined;
+  if (at === undefined) {
+    return undefined;
+  }
+  const edits = [
+    { start: at, end: at, text: 'async ' },
+    { start: expression.getStart(sourceFile), end: expression.getStart(sourceFile), text: 'await ' },
+  ];
+  if (fn.type && !isThenable(context.checker, context.checker.getTypeFromTypeNode(fn.type))) {
+    edits.push({ start: fn.type.getStart(sourceFile), end: fn.type.end, text: `Promise<${fn.type.getText(sourceFile)}>` });
+  }
+  return { title: `Make ${functionLabel(fn)} async and await the call`, edits };
 }
 
 /** `.catch(…)` or `.then(onFulfilled, onRejected)` handle the rejection of the chain. */
