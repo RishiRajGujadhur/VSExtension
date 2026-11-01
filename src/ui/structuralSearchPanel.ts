@@ -24,7 +24,7 @@ type Message =
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replaceOne'; index: number }
-  | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity; include: string };
+  | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity; include: string; editing?: string };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
 export class StructuralSearchPanel {
@@ -154,8 +154,11 @@ export class StructuralSearchPanel {
           throw new Error('Enter the message to show on each match.');
         }
         const configs = customInspectionConfigs();
+        // Opened from an existing inspection: save over it instead of adding a copy.
+        const existing = message.editing ? configs.find((c) => c.id === message.editing) : undefined;
         const config: CustomInspectionConfig = {
-          id: inspectionId(message.message, configs.map((c) => c.id)),
+          ...existing,
+          id: existing?.id ?? inspectionId(message.message, configs.map((c) => c.id)),
           pattern: spec.pattern,
           constraints: spec.constraints?.length ? spec.constraints : undefined,
           message: message.message.trim(),
@@ -163,14 +166,14 @@ export class StructuralSearchPanel {
           replacement: message.template.trim() || undefined,
           include: message.include.trim() || undefined,
         };
-        await saveCustomInspections([...configs, config]);
+        await saveCustomInspections(existing ? configs.map((c) => (c === existing ? config : c)) : [...configs, config]);
         // How much it will flag right away, so an overly broad pattern is noticed before it fills the Problems panel.
         const include = config.include ? includePattern(config.include) : undefined;
         const program = this.projects.createVirtualProject(this.anchor, this.folder()).program();
         const count = structuralSearch(program, spec, { isExcluded: (f) => isExcluded(f) || (!!include && !include.test(f.replace(/\\/g, '/'))) }).length;
         void this.panel.webview.postMessage({
           type: 'status',
-          text: `Saved inspection '${config.id}'. It matches ${plural(count, 'place')} in the project now and runs on open files; Inspect Code… lists them all.`,
+          text: `${existing ? 'Updated' : 'Saved'} inspection '${config.id}'. It matches ${plural(count, 'place')} in the project now and runs on open files; Inspect Code… lists them all.`,
         });
       } catch (error) {
         void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -444,14 +447,19 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     save();
     renderConstraints();
   }
+  // Starting from an example or a past search makes a new inspection, not an edit of the open one.
+  function startNew() {
+    state.editing = undefined;
+    $('saveInspection').textContent = 'Save as Inspection';
+  }
   $('templates').addEventListener('change', () => {
     const t = templates[Number($('templates').value)];
-    if (t) loadPreset(t);
+    if (t) { startNew(); loadPreset(t); }
     $('templates').value = '';
   });
   $('history').addEventListener('change', () => {
     const h = recent[Number($('history').value)];
-    if (h) loadPreset(h);
+    if (h) { startNew(); loadPreset(h); }
     $('history').value = '';
   });
   function placeholders(text) {
@@ -517,7 +525,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   $('saveInspection').addEventListener('click', () => {
     $('error').textContent = '';
-    vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value, include: $('include').value });
+    vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value, include: $('include').value, editing: state.editing });
   });
   $('previewReplace').addEventListener('click', () => {
     $('error').textContent = '';
@@ -565,7 +573,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
       }
       $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    if (message.type === 'load') loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
+    if (message.type === 'load') {
+      loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
+      state.editing = message.inspection.id;
+      $('saveInspection').textContent = 'Update Inspection';
+      save();
+    }
     if (message.type === 'history') {
       recent = message.items;
       const select = $('history');
