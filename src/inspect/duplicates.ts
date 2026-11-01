@@ -291,7 +291,9 @@ export function copiesReport(sourceFiles: readonly ts.SourceFile[], sourceFile: 
 }
 
 export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions, root?: string, found?: DuplicateGroup[]): Report {
-  const groups = found ?? findDuplicates(sourceFiles, options);
+  // Biggest payoff first: the lines that consolidating the copies would remove.
+  const repeated = (g: DuplicateGroup) => g.lines * (g.fragments.length - 1);
+  const groups = found ?? findDuplicates(sourceFiles, options).sort((a, b) => repeated(b) - repeated(a));
   const builder = new ReportBuilder('duplicates', 'Structural duplicates');
   if (groups.length === 0) {
     builder.warnings.push(
@@ -305,7 +307,7 @@ export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options:
     return `${fn ? `${functionLabel(fn)} · ` : ''}${file}:${f.sourceFile.getLineAndCharacterOfPosition(f.start).line + 1}`;
   };
   const roots: ReportNode[] = groups.map((group, i) => ({
-    label: `Duplicate ${i + 1}: ${plural(group.lines, 'line')} × ${group.fragments.length}`,
+    label: `Duplicate ${i + 1}: ${plural(group.lines, 'line')} × ${group.fragments.length}, ${repeated(group)} repeated`,
     description: shorten(group.fragments[0].nodes[0].getText().split('\n')[0], 50),
     tooltip: group.differences.length ? `Differs in: ${group.differences.join(', ')}` : 'Identical copies',
     icon: 'files',

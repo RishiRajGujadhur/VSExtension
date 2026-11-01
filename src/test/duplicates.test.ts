@@ -47,3 +47,12 @@ test('copies of selected statements are found, with the selection first', () => 
   assert.deepEqual(report.roots[0].children?.map((c) => c.label).slice(0, 2), ['totalWeight · duplicates.ts:11', 'totalPrice · duplicates.ts:3']);
   assert.throws(() => copiesReport([sourceFile], sourceFile, text.indexOf('let total') + 2, text.indexOf('let total') + 5), /Select one or more whole statements/);
 });
+
+test('groups are ordered by how many repeated lines they would remove', () => {
+  const sourceFile = virtualProject('inspect', 'src/duplicates.ts').program().getSourceFile(file)!;
+  const report = duplicatesReport([sourceFile], { minStatements: 2, minTokens: 10 });
+  const repeated = report.roots.map((r) => Number(/(\d+) repeated$/.exec(r.label)?.[1]));
+  assert.ok(repeated.length > 0);
+  assert.deepEqual(repeated, [...repeated].sort((a, b) => b - a));
+  assert.match(report.roots[0].label, /^Duplicate 1: \d+ lines × \d+, \d+ repeated$/);
+});
