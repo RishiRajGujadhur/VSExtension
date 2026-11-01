@@ -106,3 +106,11 @@ test('override impact rows show code on hover and drive editor highlights', () =
   const calls = report.roots.find((r) => r.label === 'Call sites')?.children?.flatMap((g) => g.children ?? []) ?? [];
   assert.ok(calls.length > 0 && calls.every((c) => c.role === 'read' && c.tooltip?.startsWith('```')));
 });
+
+test('overrides and inheriting types open their own analyses', () => {
+  const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'descr|ibe(): string {\n    return `${'));
+  const circle = report.roots.find((r) => r.label === 'Overrides in subtypes')?.children?.[0];
+  assert.equal(circle?.action?.command, 'tsStructure.overrideImpact');
+  const square = report.roots.find((r) => r.label === 'Subtypes that inherit it unchanged')?.children?.[0];
+  assert.equal(square?.action?.command, 'tsStructure.typeHierarchy');
+});

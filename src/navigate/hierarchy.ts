@@ -290,11 +290,13 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
         location: builder.at(own.name ?? own),
         tooltip: codeContext(own.name ?? own, 2),
         role: 'definition',
+        // The override's own impact: its callers and the subtypes below it.
+        action: { kind: 'overrideImpact', command: 'tsStructure.overrideImpact', file: own.getSourceFile().fileName, offset: (own.name ?? own).getStart() },
       });
     } else if (!ts.isInterfaceDeclaration(sub) && !ts.isInterfaceDeclaration(owner)) {
       const between = index.allSupertypes(sub).filter((s) => subtypes.includes(s) && findMember(s, name));
       if (between.length === 0) {
-        inheriting.push({ label: typeName(sub), description: `inherits ${name} unchanged: affected · ${where(sub)}`, icon: 'symbol-class', tone: 'warning', location: builder.at(sub.name ?? sub) });
+        inheriting.push({ label: typeName(sub), description: `inherits ${name} unchanged: affected · ${where(sub)}`, icon: 'symbol-class', tone: 'warning', location: builder.at(sub.name ?? sub), action: reroot(sub) });
       }
     }
   }

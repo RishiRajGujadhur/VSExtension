@@ -489,7 +489,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 2. Run **Override Impact Analyzer**.
 3. The first row names the member and anything it overrides higher up.
 4. **Overrides in subtypes** says how each override relates to it: *calls super: affected*, *replaces it: not affected by body changes*, or *implements it* for abstract and interface members.
-5. **Subtypes that inherit it unchanged** are affected by any change to its body.
+5. **Subtypes that inherit it unchanged** are affected by any change to its body. The buttons on rows re-run the analysis on an override, or show the hierarchy of an inheriting type.
 6. **Call sites** are split by the static type they call through. Calls through the base type may run any implementation, so they are the riskiest. **Impacted tests** lists the tests that reach the member.
 
 ## Test Impact Analysis
