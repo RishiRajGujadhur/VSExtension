@@ -17,6 +17,8 @@ const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'bookshop-demo-'));
 fs.cpSync(path.join(root, 'docs', 'demo'), workspace, { recursive: true });
 const git = (...args) => execFileSync('git', args, { cwd: workspace, stdio: 'ignore' });
 git('init', '-q');
+// Keep the demo's line endings on checkout, so restoring files after a scene doesn't change them.
+git('config', 'core.autocrlf', 'false');
 git('add', '.');
 git('-c', 'user.name=demo', '-c', 'user.email=demo@example.com', 'commit', '-q', '-m', 'Demo project');
 

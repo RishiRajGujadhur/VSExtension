@@ -359,7 +359,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Dead Export Analyzer
 
-![Dead exports in the demo: legacy.ts is unreachable, ten exports in six files are unused, and eleven are only used inside their own module](docs/images/dead-exports.png)
+![Dead exports in the demo: legacy.ts and reports.ts are unreachable, and unused exports are listed per file with their kind and the barrel that still re-exports them](docs/images/dead-exports.png)
 
 1. Open any file in the project and run **Dead Export Analyzer**. The whole project is analyzed.
 2. Check **Entry points** at the bottom. The analyzer starts from the files named in `package.json` (`main`, `module`, `exports`, `bin`, here `src/main.ts`) and from test files. Without those it falls back to `src/index.ts`, `src/main.ts` and similar. Set `tsStructure.deadExports.entryPoints` (globs) if the guess is wrong.
@@ -584,6 +584,7 @@ Press F5 to open the `sample` project. In `src/impactSource.ts`, place the curso
 npm install
 npm test                  # compile and run the analyzer tests
 VSCODE_EXECUTABLE="/path/to/Code.exe" npm run test:integration   # run inside a real VS Code
+VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots        # recapture docs/images from docs/demo
 ```
 
 - The engine has no `vscode` dependency and is unit-tested directly:
