@@ -79,7 +79,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const focused = this.located.find((node) => node.focus);
     if (focused) {
       this.cursor = this.located.indexOf(focused);
-      await this.view.reveal(focused, { select: true, focus: false, expand: true });
+      // Best effort: the tree may already show a newer report (or other groups) by the time this runs.
+      await Promise.resolve(this.view.reveal(focused, { select: true, focus: false, expand: true })).catch(() => undefined);
     }
   }
 
