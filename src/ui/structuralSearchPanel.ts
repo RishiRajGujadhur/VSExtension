@@ -382,6 +382,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
+  <div id="templateProblem" class="error"></div>
   <div class="row">
     <button id="previewReplace" class="secondary" title="Show each match with its replacement, without changing any file">Preview Replacements</button>
     <button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button>
@@ -483,7 +484,14 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   onSubmit('pattern', 'search');
   onSubmit('template', 'replace');
   $('scope').addEventListener('change', save);
-  $('template').addEventListener('input', save);
+  // Placeholders in the replacement must come from the pattern; a typo would otherwise be inserted literally.
+  function checkTemplate() {
+    const known = placeholders($('pattern').value);
+    const unknown = placeholders($('template').value).filter((name) => !known.includes(name));
+    $('templateProblem').textContent = unknown.length ? 'Not in the pattern: ' + unknown.map((n) => '$' + n + '$').join(', ') : '';
+  }
+  $('template').addEventListener('input', () => { save(); checkTemplate(); });
+  $('pattern').addEventListener('input', checkTemplate);
   $('copyKeybinding').addEventListener('click', () => {
     vscode.postMessage({ type: 'copyKeybinding', spec: spec(), scope: $('scope').value, template: $('template').value });
   });
