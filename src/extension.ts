@@ -39,6 +39,10 @@ export function activate(context: vscode.ExtensionContext): void {
   configWatcher.onDidChange(invalidate);
   configWatcher.onDidCreate(invalidate);
   configWatcher.onDidDelete(invalidate);
+  // Project file lists are cached: a new, deleted or renamed source file means listing them again.
+  const sourceWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', false, true, false);
+  sourceWatcher.onDidCreate(() => projects.invalidateFileList());
+  sourceWatcher.onDidDelete(() => projects.invalidateFileList());
 
   // Before anything that reads the scope, so its cache is cleared first when the settings change.
   registerScope(context);
@@ -59,6 +63,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     view,
     configWatcher,
+    sourceWatcher,
     // Returns the result so other extensions and integration tests can use it.
     registerCommand('tsImpact.analyze', async (scopeArg?: AnalysisScope): Promise<ImpactResult | undefined> => {
       const editor = vscode.window.activeTextEditor;
