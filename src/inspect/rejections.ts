@@ -15,6 +15,7 @@ import {
   skipOuterExpressions,
 } from '../structure/util';
 import { calleeName, isAsync } from './missingAwait';
+import { findIdentifier } from '../analysis/impact';
 
 export type CatchBehavior = 'swallows' | 'logs' | 'rethrows' | 'transforms' | 'recovers' | 'handles';
 
@@ -309,7 +310,24 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
   if (unhandled.length > 0) {
     roots.unshift({ label: 'Unhandled', description: plural(unhandled.length, 'path'), icon: 'error', tone: 'error', expanded: true, children: unhandled });
   }
+  // On a call, where that call's promise goes comes first.
+  const call = callAt(project.sourceFile(fileName), offset);
+  if (call && calledFunction(program.getTypeChecker(), call) === fn) {
+    const here = tracer.follow(call, 0);
+    roots.unshift({ label: `This call: ${nodeSnippet(call, 40)}`, icon: 'debug-step-into', tone: worst([here]), location: builder.at(call), focus: true, expanded: true, children: [here] });
+  }
   return builder.finish(roots, plural(count('error'), 'unhandled path'));
+}
+
+/** The call whose callee name is at the offset, such as `save(…)` or `this.store.save(…)`. */
+function callAt(sourceFile: ts.SourceFile, offset: number): ts.CallExpression | undefined {
+  const identifier = findIdentifier(sourceFile, offset);
+  let callee: ts.Node | undefined = identifier;
+  if (callee && ts.isPropertyAccessExpression(callee.parent) && callee.parent.name === callee) {
+    callee = callee.parent;
+  }
+  const parent = callee?.parent;
+  return parent && ts.isCallExpression(parent) && parent.expression === callee ? parent : undefined;
 }
 
 function returnsThenable(checker: ts.TypeChecker, fn: FunctionWithBody): boolean {

@@ -39,3 +39,9 @@ test('rejection sources and every path a rejection takes through callers', () =>
   // A dropped call offers the missing-await fixes.
   assert.equal(report.roots[0].children?.[0].action?.kind, 'quickFix');
 });
+
+test('on a call, the path of that call comes first', () => {
+  const report = rejectionReport(virtualProject('inspect', 'src/rejections.ts'), file, offsetIn(file, '  sa|ve(data);\n}'));
+  assert.deepEqual(outline(report.roots.slice(0, 1)), ['This call: save(data) [error]', '  not awaited: the rejection is unhandled [error]']);
+  assert.ok(report.roots[0].focus);
+});

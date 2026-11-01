@@ -297,7 +297,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Rejections of saveOrder: it throws OrderError, and the rejection is caught in submitSafely, unhandled in quickReorder and fails main.ts at the top level](docs/images/promise-rejections.png)
 
-1. Put the cursor on an async function, or a function that returns a promise. In the demo, use `saveOrder` in `src/orders.ts`.
+1. Put the cursor on an async function, or a function that returns a promise. In the demo, use `saveOrder` in `src/orders.ts`. On a call, such as `placeOrder(…)` in `quickReorder`, the report starts with **This call**, where that call's promise goes.
 2. Run **Promise Rejection Analyzer**.
 3. **Rejection sources** lists what can make the promise reject: `throw` statements, awaited calls that can reject themselves, and `Promise.reject`.
 4. **Where rejections go** follows the promise through every caller, `.then()`/`.catch()`, `Promise.all`, variables and callbacks. Each path ends in one of these:
