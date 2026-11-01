@@ -304,6 +304,18 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
     { label: 'Where values come from', description: plural(origins.length, 'call site'), icon: 'call-incoming', expanded: true, children: origins.length ? origins : [{ label: 'no call sites in the project', icon: 'dash' }] },
     { label: 'Where the value goes', description: plural(destinations.length, 'destination'), icon: 'call-outgoing', expanded: true, children: destinations.length ? destinations : [{ label: 'not passed on, returned or stored', icon: 'dash' }] },
   ];
+  // The concrete values at the ends of the origin paths: literals and omitted or defaulted arguments.
+  const values = new Map<string, ReportNode>();
+  forEachReportNode(origins, (node) => {
+    // Rows are labeled by where they come from, so literals are recognized by icon or by their object or array syntax.
+    const literal = node.icon === 'symbol-constant' || /^[[{]/.test(node.label);
+    if (!node.children?.length && (literal || node.icon === 'circle-outline') && !values.has(node.label)) {
+      values.set(node.label, { label: node.label, description: node.icon === 'circle-outline' ? 'no argument passed' : 'literal', icon: node.icon, location: node.location });
+    }
+  });
+  if (values.size > 0) {
+    roots.splice(2, 0, { label: 'Values that can arrive', description: plural(values.size, 'value'), icon: 'symbol-constant', children: [...values.values()] });
+  }
   // Every row shows its line of code on hover; values often come from far away.
   const program = project.program();
   forEachReportNode(roots, (node) => {

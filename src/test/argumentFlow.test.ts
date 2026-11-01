@@ -29,7 +29,7 @@ test('origins are traced back through callers, derived locals and their paramete
 
 test('values are followed forward through derived locals, calls and returns', () => {
   const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'page(na|me: string)'));
-  assert.deepEqual(outline([report.roots[2]]), [
+  assert.deepEqual(outline([report.roots.find((r) => r.label === 'Where the value goes')!]), [
     'Where the value goes — 1 destination',
     '  name.trim() → local label',
     '    label → format() — as value',
@@ -47,7 +47,7 @@ test('JSX props are followed between components in both directions', () => {
     '    "Welcome" — from render',
   ]);
   const forward = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'Header({ ti|tle }'));
-  assert.deepEqual(outline([forward.roots[2]]), ['Where the value goes — 1 destination', '  title → <Title text> — prop of Title']);
+  assert.deepEqual(outline([forward.roots.find((r) => r.label === 'Where the value goes')!]), ['Where the value goes — 1 destination', '  title → <Title text> — prop of Title']);
 });
 
 test('assignments to a same-named variable in a nested function are not origins', () => {
@@ -76,6 +76,12 @@ export function shadow(input: string): string {
 
 test('rows show their code on hover', () => {
   const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'page(na|me: string)'));
-  const local = report.roots[2].children?.[0];
+  const local = report.roots.find((r) => r.label === 'Where the value goes')?.children?.[0];
   assert.equal(local?.tooltip, '```tsx\nconst label = name.trim();\n```');
+});
+
+test('the distinct values that can arrive are summarized', () => {
+  const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'log(mes|sage: string)'));
+  const values = report.roots.find((r) => r.label === 'Values that can arrive');
+  assert.deepEqual(values?.children?.map((c) => c.label), ["'home'", "{ name: 'ann' }"]);
 });

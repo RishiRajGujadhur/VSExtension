@@ -527,6 +527,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Put the cursor on a parameter, a destructured prop, or an argument in a call (to explore the callee's parameter). In the demo, use `code` in `applyCoupon` (`src/pricing.ts`).
 2. Run **Argument Propagation Explorer**.
 3. **Where values come from** walks back through every caller: what each one passes, through their own parameters, local variables and their assignments, and JSX attributes, until it reaches literals (`'READ10'`), omitted arguments or expressions it can't follow.
+   **Values that can arrive** collects the distinct literals and omitted arguments at the ends of those paths, such as `'READ10'` or *omitted (undefined)*.
 4. **Where the value goes** walks forward: the functions and components it is passed to (and as which parameter or prop), locals derived from it, returns and stores.
 5. Use it before changing a parameter's type or meaning, to see every value that can arrive and everything that depends on it. The depth is limited by `tsStructure.argumentFlow.maxDepth` (default 6).
 
