@@ -74,6 +74,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.languages.registerCodeActionsProvider(languageSelector, this, { providedCodeActionKinds: InspectionDiagnostics.kinds }),
       registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project') => this.inspectCode(view, scope)),
       registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
+      registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
@@ -308,6 +309,13 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         disable.command = { command: 'tsStructure.disableCustomInspection', title: disable.title, arguments: [id] };
         actions.push(edit, disable);
       }
+      if (!finding.inspection.startsWith('custom:') && !offered.has(`off:${finding.inspection}`)) {
+        offered.add(`off:${finding.inspection}`);
+        const off = new vscode.CodeAction(`Turn off '${finding.inspection}' inspection`, vscode.CodeActionKind.QuickFix);
+        off.command = { command: 'tsStructure.turnOffInspection', title: off.title, arguments: [finding.inspection, document.uri] };
+        off.diagnostics = [diagnostic];
+        actions.push(off);
+      }
       if (!offered.has(`configure:${finding.inspection}`)) {
         offered.add(`configure:${finding.inspection}`);
         const configure = new vscode.CodeAction(`Configure '${finding.inspection}' severity…`, vscode.CodeActionKind.QuickFix);
@@ -339,6 +347,22 @@ function toDiagnostic(document: vscode.TextDocument, finding: Finding): vscode.D
     );
   });
   return diagnostic;
+}
+
+/** Sets the inspection's severity to `off` in the workspace settings (user settings without a folder), with Undo. */
+async function turnOffInspection(id: string, uri?: vscode.Uri): Promise<void> {
+  const config = vscode.workspace.getConfiguration('tsStructure', uri);
+  const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+  const inspected = config.inspect<Record<string, string>>('inspections.severity');
+  const before = (target === vscode.ConfigurationTarget.Workspace ? inspected?.workspaceValue : inspected?.globalValue) ?? {};
+  await config.update('inspections.severity', { ...before, [id]: 'off' }, target);
+  const where = target === vscode.ConfigurationTarget.Workspace ? 'this workspace' : 'your user settings';
+  const choice = await vscode.window.showInformationMessage(`Turned off the '${id}' inspection in ${where}.`, 'Undo', 'Open Settings');
+  if (choice === 'Undo') {
+    await config.update('inspections.severity', Object.keys(before).length ? before : undefined, target);
+  } else if (choice) {
+    await vscode.commands.executeCommand('workbench.action.openSettings', 'tsStructure.inspections.severity');
+  }
 }
 
 /** Applies the fix stored on an Inspect Code row, if the file is unchanged since the inspection. */

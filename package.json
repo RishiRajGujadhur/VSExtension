@@ -415,6 +415,11 @@
         "title": "Edit Analysis Scope…",
         "category": "TypeScript Structure",
         "icon": "$(filter)"
+      },
+      {
+        "command": "tsStructure.turnOffInspection",
+        "title": "Turn Off Inspection",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -865,6 +870,10 @@
         {
           "command": "tsStructure.excludeFromAnalysis",
           "when": "workspaceFolderCount > 0 && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.turnOffInspection",
+          "when": "false"
         }
       ],
       "view/title": [
