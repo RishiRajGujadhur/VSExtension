@@ -90,3 +90,10 @@ test('members open the override impact analysis', () => {
   assert.equal(area?.action?.command, 'tsStructure.overrideImpact');
   assert.equal(area?.action?.offset, offsetIn(models, 'abstract |area'));
 });
+
+test('overrides show their code on hover', () => {
+  const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'class Ba|se'));
+  const area = report.roots.find((r) => r.label === 'Members')?.children?.find((m) => m.label === 'area()');
+  const tiny = area?.children?.find((c) => c.label === 'Tiny.area');
+  assert.match(tiny?.tooltip ?? '', /area\(\): number \{\n\s+return super\.area\(\) \/ 10;/);
+});

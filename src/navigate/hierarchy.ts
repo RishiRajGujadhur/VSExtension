@@ -4,7 +4,7 @@ import { analyzeImpact } from '../analysis/impact';
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';
 import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, codeContext, plural } from '../structure/report';
 import { accessExpression, enclosingFunction, functionLabel, identifierAt, referencesAt } from '../structure/util';
 
 export type TypeDeclaration = ts.ClassLikeDeclaration | ts.InterfaceDeclaration;
@@ -149,6 +149,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       description: `${edge.kind} · ${where(edge.sup)}`,
       icon: ts.isInterfaceDeclaration(edge.sup) ? 'symbol-interface' : 'symbol-class',
       location: builder.at(edge.sup.name ?? edge.sup),
+      tooltip: codeContext(edge.sup.name ?? edge.sup, 0),
       action: reroot(edge.sup),
       expanded: true,
       children: seen.has(edge.sup) ? undefined : up(edge.sup, new Set([...seen, edge.sup])),
@@ -161,6 +162,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
         description: `${edge.kind}${overrides.length ? ` · overrides ${overrides.join(', ')}` : ''} · ${where(edge.sub)}`,
         icon: ts.isInterfaceDeclaration(edge.sub) ? 'symbol-interface' : 'symbol-class',
         location: builder.at(edge.sub.name ?? edge.sub),
+        tooltip: codeContext(edge.sub.name ?? edge.sub, 0),
         action: reroot(edge.sub),
         expanded: true,
         children: seen.has(edge.sub) ? undefined : down(edge.sub, new Set([...seen, edge.sub])),
@@ -182,11 +184,18 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       description: [isAbstract(member) ? 'abstract' : '', overridden.length ? `from ${overridden.map((m) => typeName(m.parent as TypeDeclaration)).join(', ')}` : '', overriding.length ? `${plural(overriding.length, 'override')}` : ''].filter(Boolean).join(' · '),
       icon: ts.isMethodDeclaration(member) || ts.isMethodSignature(member) ? 'symbol-method' : 'symbol-property',
       location: builder.at(member.name ?? member),
+      tooltip: codeContext(member.name ?? member, 0),
       focus: member === atCursor || undefined,
       expanded: member === atCursor || undefined,
       action: { kind: 'overrideImpact', command: 'tsStructure.overrideImpact', file: member.getSourceFile().fileName, offset: (member.name ?? member).getStart() },
       children: overriding.length
-        ? overriding.map((m) => ({ label: `${typeName(m.parent as TypeDeclaration)}.${name}`, icon: 'arrow-small-down', location: builder.at(m.name ?? m), description: callsSuper(m, name) ? 'calls super' : undefined }))
+        ? overriding.map((m) => ({
+            label: `${typeName(m.parent as TypeDeclaration)}.${name}`,
+            icon: 'arrow-small-down',
+            location: builder.at(m.name ?? m),
+            tooltip: codeContext(m.name ?? m, 2),
+            description: callsSuper(m, name) ? 'calls super' : undefined,
+          }))
         : undefined,
     };
   });
