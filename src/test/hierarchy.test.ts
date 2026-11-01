@@ -65,3 +65,9 @@ test('an abstract member lists implementations and splits calls by the type they
   assert.ok(lines.includes('  super calls from overrides — 1'), lines.join('\n'));
   assert.ok(lines.includes('Impacted tests — 1'), lines.join('\n'));
 });
+
+test('with the cursor on a member, that member is selected', () => {
+  const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'describe|(): string {\n    return `${this.name}'));
+  const members = report.roots.find((r) => r.label === 'Members')!;
+  assert.deepEqual(members.children?.filter((m) => m.focus).map((m) => m.label), ['describe()']);
+});

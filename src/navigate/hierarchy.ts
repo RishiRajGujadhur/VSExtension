@@ -169,6 +169,8 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
   const subs = down(target, new Set([target]));
   const allSubs = index.allSubtypes(target);
   const allSupers = index.allSupertypes(target);
+  // With the cursor on a member's name, that member is selected and opened.
+  const atCursor = membersOf(target).find((m) => m.name && m.name.getStart() <= offset && offset <= m.name.end && m.getSourceFile() === project.sourceFile(fileName));
   const members: ReportNode[] = membersOf(target).map((member) => {
     const name = memberName(member)!;
     const overriding = allSubs.map((s) => findMember(s, name)).filter((m): m is Member => !!m);
@@ -178,6 +180,8 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       description: [isAbstract(member) ? 'abstract' : '', overridden.length ? `from ${overridden.map((m) => typeName(m.parent as TypeDeclaration)).join(', ')}` : '', overriding.length ? `${plural(overriding.length, 'override')}` : ''].filter(Boolean).join(' · '),
       icon: ts.isMethodDeclaration(member) || ts.isMethodSignature(member) ? 'symbol-method' : 'symbol-property',
       location: builder.at(member.name ?? member),
+      focus: member === atCursor || undefined,
+      expanded: member === atCursor || undefined,
       children: overriding.length
         ? overriding.map((m) => ({ label: `${typeName(m.parent as TypeDeclaration)}.${name}`, icon: 'arrow-small-down', location: builder.at(m.name ?? m), description: callsSuper(m, name) ? 'calls super' : undefined }))
         : undefined,

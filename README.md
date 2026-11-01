@@ -477,7 +477,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 2. Run **Inheritance Hierarchy Explorer**.
 3. **Supertypes** lists what the type extends and implements, nested up to the top.
 4. **Subtypes and implementations** lists every class or interface that extends or implements it, nested down through the project. Each one says which of this type's members it overrides, such as *overrides name, charge, describe*.
-5. **Members** lists the type's own members. Each one says whether it is abstract, which supertype it comes from, and how many subtypes override it. Expand a member to see each override and whether it *calls super*.
+5. **Members** lists the type's own members. Each one says whether it is abstract, which supertype it comes from, and how many subtypes override it. Expand a member to see each override and whether it *calls super*. Run it with the cursor on a member's name, and that member opens selected.
 
 ## Test Impact Analysis
 
