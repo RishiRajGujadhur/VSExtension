@@ -376,7 +376,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 ![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
 
 1. Open a file in the project and run **Find Structural Duplicates…**.
-2. Choose **Whole Project** or **Active File**.
+2. Choose **Whole Project** or **Active File**. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
 3. Each **Duplicate** group is a run of statements with the same structure, with the number of lines and copies. Copies count even when variables are renamed or literal values differ. In the demo, `revenue` in `reports.ts` is a copy of `calculateSubtotal` in `pricing.ts`.
 4. Expand a group to see each copy and the function it's in. The last row says what differs between them, such as *total ↔ sum, item ↔ line*. Those are the parameters a shared function would need.
 5. Click the diff button on a group (**Compare Copies**) to open the first two copies side by side. Common indentation is removed so they line up.

@@ -11,7 +11,7 @@ import { nullabilityReport } from '../inspect/nullability';
 import { rejectionReport } from '../inspect/rejections';
 import { deadExportReport } from '../inspect/deadExports';
 import { exceptionFlowReport } from '../inspect/exceptionFlow';
-import { duplicatesReport } from '../inspect/duplicates';
+import { copiesReport, duplicatesReport } from '../inspect/duplicates';
 import { semanticUsagesReport } from '../navigate/usages';
 import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
@@ -166,7 +166,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure').get('typeAssertion.ignoreTestFiles', false);
       return assertionAuditReport(program, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)), { typeAssertionIgnoreTests: ignoreTests }, t.folder);
     }),
-    vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project') => {
+    vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
       const editor = sourceEditor();
       if (!editor) {
         return;
@@ -176,6 +176,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         (
           await vscode.window.showQuickPick(
             [
+              ...(editor.selection.isEmpty ? [] : [{ label: 'Copies of the Selection', description: 'Every place with the same structure as the selected statements', scope: 'selection' as const }]),
               { label: 'Whole Project', description: 'Compare every source file in the compiler project', scope: 'project' as const },
               { label: 'Active File', description: 'Only look inside the current file', scope: 'file' as const },
             ],
@@ -187,6 +188,14 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
       const target = editorTarget(projects, editor);
       const config = vscode.workspace.getConfiguration('tsStructure.duplicates');
+      if (scope === 'selection') {
+        return runAnalysis(view, 'Finding copies', () => {
+          const program = target.project().program();
+          const files = projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName));
+          const { start, end } = editor.selection;
+          return copiesReport(files, program.getSourceFile(normalizePath(target.fileName))!, editor.document.offsetAt(start), editor.document.offsetAt(end), target.folder);
+        });
+      }
       return runAnalysis(view, 'Finding duplicates', () => {
         const program = target.project().program();
         const ignoreTests = config.get('ignoreTestFiles', true);

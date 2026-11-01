@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { ReportBuilder, ReportNode, Report, plural, shorten } from '../structure/report';
 import { enclosingFunction, functionLabel } from '../structure/util';
+import { AnalysisError } from '../analysis/types';
 
 export interface DuplicateOptions {
   /** Shortest run of statements compared. */
@@ -238,8 +239,59 @@ function differences(a: Fragment, b: Fragment): string[] {
   return result;
 }
 
-export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions, root?: string): Report {
-  const groups = findDuplicates(sourceFiles, options);
+/** The statements of one list that lie inside the range, such as a selection in the editor. */
+function statementsIn(sourceFile: ts.SourceFile, start: number, end: number): readonly ts.Statement[] {
+  let best: readonly ts.Statement[] = [];
+  for (const list of statementLists(sourceFile)) {
+    const inside = list.filter((statement) => statement.getStart(sourceFile) >= start && statement.end <= end);
+    if (inside.length > best.length) {
+      best = inside;
+    }
+  }
+  return best;
+}
+
+/** Every run of statements with the same structure as the selected ones, including the selection itself. */
+export function findCopies(sourceFiles: readonly ts.SourceFile[], sourceFile: ts.SourceFile, start: number, end: number): DuplicateGroup | undefined {
+  const selected = statementsIn(sourceFile, start, end);
+  if (selected.length === 0) {
+    return undefined;
+  }
+  const target = serialize(selected);
+  const fragments: Fragment[] = [];
+  for (const file of sourceFiles) {
+    for (const list of statementLists(file)) {
+      for (let i = 0; i + selected.length <= list.length; i++) {
+        const nodes = list.slice(i, i + selected.length);
+        const serialized = serialize(nodes);
+        if (serialized.key === target.key) {
+          fragments.push({ sourceFile: file, nodes, start: nodes[0].getStart(file), end: nodes[nodes.length - 1].end, values: serialized.values });
+        }
+      }
+    }
+  }
+  // The selection first, so differences read from it to each copy.
+  fragments.sort((a, b) => Number(b.nodes[0] === selected[0]) - Number(a.nodes[0] === selected[0]));
+  return { fragments, tokens: target.tokens, lines: lineSpan(fragments[0]), differences: fragments.length > 1 ? differences(fragments[0], fragments[1]) : [] };
+}
+
+/** Find Copies of the Selection: the selected statements and every structural copy of them. */
+export function copiesReport(sourceFiles: readonly ts.SourceFile[], sourceFile: ts.SourceFile, start: number, end: number, root?: string): Report {
+  const group = findCopies(sourceFiles, sourceFile, start, end);
+  if (!group) {
+    throw new AnalysisError('Select one or more whole statements to look for copies of them.');
+  }
+  const report = duplicatesReport(sourceFiles, { minStatements: 1, minTokens: 0 }, root, [group]);
+  report.title = 'Copies of the selection';
+  report.roots[0].label = `Selection and ${plural(group.fragments.length - 1, 'copy', 'copies')}: ${plural(group.lines, 'line')}`;
+  if (group.fragments.length < 2) {
+    report.warnings.push(`No other run of ${plural(group.fragments[0].nodes.length, 'statement')} has this structure in ${plural(sourceFiles.length, 'file')}.`);
+  }
+  return report;
+}
+
+export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions, root?: string, found?: DuplicateGroup[]): Report {
+  const groups = found ?? findDuplicates(sourceFiles, options);
   const builder = new ReportBuilder('duplicates', 'Structural duplicates');
   if (groups.length === 0) {
     builder.warnings.push(
