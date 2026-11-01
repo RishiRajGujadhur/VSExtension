@@ -95,9 +95,18 @@ function inspectAssertion(context: InspectionContext, node: Assertion): Finding 
     return at(
       `Widening assertion: ${typeText(checker, source, node)} already fits ${targetText}. A type annotation or 'satisfies ${targetText}' keeps the check without discarding type information.`,
       'info',
-      ts.isAsExpression(node)
-        ? { category: 'Widening', fixes: [{ title: `Use 'satisfies ${targetText}'`, edits: [{ start: node.expression.end, end: node.type.getStart(sourceFile), text: ' satisfies ' }] }] }
-        : { category: 'Widening' },
+      {
+        category: 'Widening',
+        fixes: [
+          {
+            title: `Use 'satisfies ${targetText}'`,
+            // `<T>value` becomes `(value satisfies T)`; the parentheses keep the old precedence unless some are already there.
+            edits: ts.isAsExpression(node)
+              ? [{ start: node.expression.end, end: node.type.getStart(sourceFile), text: ' satisfies ' }]
+              : [{ start: node.getStart(sourceFile), end: node.end, text: wrap(`${node.expression.getText(sourceFile)} satisfies ${targetText}`, !ts.isParenthesizedExpression(node.parent)) }],
+          },
+        ],
+      },
     );
   }
   if (narrows) {
@@ -175,6 +184,10 @@ function assertionStart(node: Assertion, sourceFile: ts.SourceFile): number {
 function valueName(expression: ts.Expression): ts.Identifier | undefined {
   const inner = skipParens(expression);
   return ts.isIdentifier(inner) ? inner : ts.isPropertyAccessExpression(inner) && ts.isIdentifier(inner.name) ? inner.name : undefined;
+}
+
+function wrap(text: string, parenthesize: boolean): string {
+  return parenthesize ? `(${text})` : text;
 }
 
 function skipParens(node: ts.Expression): ts.Expression {

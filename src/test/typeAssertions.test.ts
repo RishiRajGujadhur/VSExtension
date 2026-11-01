@@ -63,3 +63,15 @@ test('the audit groups assertions from riskiest to harmless', () => {
   assert.equal(report.description, '9 assertions, 5 unchecked or unsafe, in 1 file');
   assert.equal(report.roots[0].children?.[0].label, 'const d = raw as unknown as Circle;');
 });
+
+test('angle-bracket widening is rewritten to a parenthesized satisfies', () => {
+  const project = virtualProject('inspect', 'src/assertions.ts');
+  const original = project.program().getSourceFile(file)!.text;
+  const text = `${original}export const s = (<Shape>{ kind: 'square' }).kind;\nexport const t = <Shape>{ kind: 'round' };\n`;
+  project.setText(file, text);
+  const program = project.program();
+  const added = runInspections([typeAssertions], { sourceFile: program.getSourceFile(file)!, program, checker: program.getTypeChecker() }).filter((f) => f.start >= original.length);
+  assert.deepEqual(added.map((f) => f.category), ['Widening', 'Widening']);
+  const fixed = applyTextEdits(applyTextEdits(text, added[1].fixes![0].edits), added[0].fixes![0].edits);
+  assert.equal(fixed.slice(original.length), "export const s = ({ kind: 'square' } satisfies Shape).kind;\nexport const t = ({ kind: 'round' } satisfies Shape);\n");
+});
