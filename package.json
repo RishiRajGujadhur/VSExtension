@@ -335,6 +335,12 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.report.swapDependency",
+        "title": "Swap Direction",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-swap)"
+      },
+      {
         "command": "tsStructure.report.runTests",
         "title": "Run These Tests",
         "category": "TypeScript Structure",
@@ -667,6 +673,10 @@
           "when": "false"
         },
         {
+          "command": "tsStructure.report.swapDependency",
+          "when": "false"
+        },
+        {
           "command": "tsStructure.editCustomInspection",
           "when": "false"
         },
@@ -836,6 +846,11 @@
         {
           "command": "tsStructure.report.runTests",
           "when": "view == tsStructure.report && viewItem =~ /action:runTests/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.swapDependency",
+          "when": "view == tsStructure.report && viewItem =~ /action:swapDependency/",
           "group": "inline@1"
         }
       ]

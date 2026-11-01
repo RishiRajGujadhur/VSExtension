@@ -209,6 +209,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
+    vscode.commands.registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
+      const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
+      if (from && to) {
+        return vscode.commands.executeCommand('tsStructure.dependencyPath', vscode.Uri.file(from), vscode.Uri.file(to));
+      }
+    }),
     vscode.commands.registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toUri?: vscode.Uri) => {
       const from = fromUri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
       if (!from) {

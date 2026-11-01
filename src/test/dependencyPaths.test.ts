@@ -65,3 +65,8 @@ test('each import hop shows its code and finds the usages of what it imports', (
   assert.equal(hop?.action?.command, 'tsStructure.semanticUsages');
   assert.equal(hop?.action?.offset, fs.readFileSync(path.join(src, 'app.tsx'), 'utf8').indexOf('formatArea'));
 });
+
+test('the summary row can ask the question the other way round', () => {
+  const report = dependencyPathReport(virtualProject('navigate', 'src/app.tsx').program(), path.join(src, 'app.tsx'), path.join(src, 'models.ts'));
+  assert.deepEqual(report.roots[0].action, { kind: 'swapDependency', from: normalizePath(path.join(src, 'models.ts')), to: normalizePath(path.join(src, 'app.tsx')) });
+});

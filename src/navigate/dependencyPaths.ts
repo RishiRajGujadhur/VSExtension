@@ -93,6 +93,8 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
   const relative = (file: string) => (root ? path.relative(root, file).replace(/\\/g, '/') : path.basename(file));
   const builder = new ReportBuilder('dependencyPath', `${path.basename(source)} → ${path.basename(target)}`);
   const paths = shortestPaths(graph, source, target);
+  // The same question the other way round: why does the target depend on the source?
+  const swap = { kind: 'swapDependency', from: target, to: source };
   const runtime = shortestPaths(graph, source, target, { runtimeOnly: true, limit: 1 });
   const pathRow = (edges: ImportEdge[], index: number): ReportNode => {
     const typeOnly = edges.some((e) => e.typeOnly);
@@ -121,7 +123,7 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
   const roots: ReportNode[] = [];
   if (paths.length === 0) {
     const reverse = shortestPaths(graph, target, source, { limit: 3 });
-    roots.push({ label: `${relative(source)} does not depend on ${relative(target)}`, icon: 'pass', tone: 'ok' });
+    roots.push({ label: `${relative(source)} does not depend on ${relative(target)}`, icon: 'pass', tone: 'ok', action: swap });
     if (reverse.length) {
       roots.push({ label: `But ${relative(target)} depends on ${relative(source)}`, icon: 'arrow-left', expanded: true, children: reverse.map(pathRow) });
     }
@@ -133,6 +135,7 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
     description: `${plural(length, 'import')} deep${runtime.length ? '' : ', type-only'}`,
     icon: 'references',
     tone: runtime.length ? 'warning' : 'info',
+    action: swap,
   });
   if (runtime.length === 0) {
     builder.warnings.push('Every path contains a type-only import, so the dependency disappears at runtime.');
