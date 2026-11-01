@@ -319,6 +319,12 @@
         "icon": "$(lightbulb)"
       },
       {
+        "command": "tsStructure.report.refactor",
+        "title": "Refactor…",
+        "category": "TypeScript Structure",
+        "icon": "$(wrench)"
+      },
+      {
         "command": "tsStructure.report.unexportAll",
         "title": "Remove All Unneeded export Keywords in File",
         "category": "TypeScript Structure",
@@ -585,6 +591,10 @@
         {
           "command": "tsStructure.report.unexportAll",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.refactor",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -713,6 +723,11 @@
         {
           "command": "tsStructure.report.unexportAll",
           "when": "view == tsStructure.report && viewItem =~ /action:unexportAll/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.refactor",
+          "when": "view == tsStructure.report && viewItem =~ /action:refactor/",
           "group": "inline@1"
         }
       ]

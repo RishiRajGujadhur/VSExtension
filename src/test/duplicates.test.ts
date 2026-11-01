@@ -42,6 +42,8 @@ test('copies of selected statements are found, with the selection first', () => 
   const report = copiesReport([sourceFile], sourceFile, start, end);
   assert.equal(report.title, 'Copies of the selection');
   assert.equal(report.roots[0].label, 'Selection and 1 copy: 4 lines');
+  // Each copy can be selected for Extract to function.
+  assert.ok(report.roots[0].children?.slice(0, 2).every((c) => c.action?.kind === 'refactor'));
   assert.deepEqual(report.roots[0].children?.map((c) => c.label).slice(0, 2), ['totalWeight · duplicates.ts:11', 'totalPrice · duplicates.ts:3']);
   assert.throws(() => copiesReport([sourceFile], sourceFile, text.indexOf('let total') + 2, text.indexOf('let total') + 5), /Select one or more whole statements/);
 });

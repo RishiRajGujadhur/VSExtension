@@ -379,6 +379,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 2. Choose **Whole Project** or **Active File**. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
 3. Each **Duplicate** group is a run of statements with the same structure, with the number of lines and copies. Copies count even when variables are renamed or literal values differ. In the demo, `revenue` in `reports.ts` is a copy of `calculateSubtotal` in `pricing.ts`.
 4. Expand a group to see each copy and the function it's in. The last row says what differs between them, such as *total ↔ sum, item ↔ line*. Those are the parameters a shared function would need.
+   The wrench button on a copy (**Refactor…**) selects that code and opens the refactor menu, where VS Code's **Extract to function** turns it into a shared function.
 5. Click the diff button on a group (**Compare Copies**) to open the first two copies side by side. Common indentation is removed so they line up.
 6. Tune sensitivity with `tsStructure.duplicates.minStatements` (default 3) and `minTokens` (default 40). Test files are skipped unless `tsStructure.duplicates.ignoreTestFiles` is off.
 
