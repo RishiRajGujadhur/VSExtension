@@ -54,6 +54,8 @@ test('on a function name, the returns that give null are listed', () => {
     '    null literal',
   ]);
   assert.equal(report.description, '1 nullable return');
+  // Rows say where they are, since sources are often in other files.
+  assert.equal(report.roots[1].children?.[1].description, 'nullable.ts:12');
 });
 
 test('module state lists its declaration and every assignment of undefined', () => {

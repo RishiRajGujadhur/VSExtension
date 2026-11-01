@@ -240,12 +240,19 @@ export class NullabilityExplorer {
   }
 
   private leaf(label: string, node: ts.Node, tone: ReportNode['tone'], description?: string): ReportNode {
-    return { label, description, icon: tone === 'error' ? 'circle-slash' : tone === 'info' ? 'symbol-key' : 'warning', tone, location: this.builder.at(node) };
+    return { label, description: withPlace(node, description), icon: tone === 'error' ? 'circle-slash' : tone === 'info' ? 'symbol-key' : 'warning', tone, location: this.builder.at(node) };
   }
 
   private group(label: string, node: ts.Node, children: ReportNode[], description?: string): ReportNode {
-    return { label, description, icon: 'arrow-small-left', tone: 'warning', location: this.builder.at(node), children: children.length ? children : undefined, expanded: true };
+    return { label, description: withPlace(node, description), icon: 'arrow-small-left', tone: 'warning', location: this.builder.at(node), children: children.length ? children : undefined, expanded: true };
   }
+}
+
+/** "callers may omit it · nullable.ts:12": a row's note followed by where it is. */
+function withPlace(node: ts.Node, description: string | undefined): string {
+  const sourceFile = node.getSourceFile();
+  const place = `${sourceFile.fileName.replace(/^.*[\\/]/, '')}:${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+  return description ? `${description} · ${place}` : place;
 }
 
 function hasOptionalChainAbove(node: ts.Node): boolean {
