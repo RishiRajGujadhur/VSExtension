@@ -58,6 +58,11 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
   }
   const fn = enclosingFunction(node);
   const origin = promiseOrigin(context, expression);
+  const ignored = (context.options?.missingAwaitIgnore ?? []).map(namePattern);
+  const calls = ts.isCallExpression(expression) ? [expression, ...origin] : origin;
+  if (ignored.length && calls.some((call) => ignored.some((pattern) => pattern.test(calleeName(call))))) {
+    return;
+  }
   const via = origin.length > 0 ? ` (from ${origin.map((o) => `${calleeName(o)}()`).join(' → ')})` : '';
   const what = ts.isCallExpression(expression) ? `${calleeName(expression)}()` : nodeText(expression);
   const fixes: Finding['fixes'] = [];
@@ -84,6 +89,12 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
     fixes,
     related: origin.map((o) => ({ message: `the promise comes from ${calleeName(o)}()`, node: o })),
   });
+}
+
+/** `logger.*` matches `logger.info`; `track` matches `track` and `analytics.track`. */
+function namePattern(name: string): RegExp {
+  const body = name.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[\\w$.]*');
+  return new RegExp(`(^|\\.)${body}$`);
 }
 
 /** Makes the enclosing function async and awaits the expression, wrapping a declared return type in Promise<…>. */

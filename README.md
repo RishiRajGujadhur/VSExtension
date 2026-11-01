@@ -319,7 +319,8 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Trace where this promise's rejection goes…**, which opens the Promise Rejection Analyzer;
    - suppress the warning for the line or the file.
 4. The Problems panel (`Ctrl+Shift+M`) lists the findings, and the status bar shows the count for the active file.
-5. To check the whole project, run **Inspect Code…** and choose the project. Results open in the TypeScript Structure view, and fixable rows have an **Apply Fix** button.
+5. For helpers that are meant to run in the background, such as analytics or logging, list them in `tsStructure.missingAwait.ignore` instead of suppressing every call. For example, `["track", "logger.*"]`.
+6. To check the whole project, run **Inspect Code…** and choose the project. Results open in the TypeScript Structure view, and fixable rows have an **Apply Fix** button.
 
 ## Test Impact Analysis
 

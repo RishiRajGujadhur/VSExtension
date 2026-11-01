@@ -5,7 +5,7 @@ import { ProjectService } from '../analysis/project';
 import { hashText, normalizePath, pathKey } from '../analysis/paths';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { TextEdit } from '../intentions/intentions';
-import { Finding, Inspection, Severity, fileSuppressionEdit, fixAllEdits, runInspections, suppressionEdit } from '../inspect/inspection';
+import { Finding, Inspection, InspectionOptions, Severity, fileSuppressionEdit, fixAllEdits, runInspections, suppressionEdit } from '../inspect/inspection';
 import { InspectedFile, inspectionReport } from '../inspect/inspectionReport';
 import { builtInInspections } from '../inspect/registry';
 import { Report, ReportNode } from '../structure/report';
@@ -62,7 +62,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait')) {
           this.results.clear();
           this.refreshAll();
         }
@@ -151,7 +151,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       const sourceFile = project.program.getSourceFile(normalizePath(document.uri.fsPath));
       if (sourceFile && sourceFile.text === document.getText()) {
         inspected = sourceFile;
-        findings = runInspections(this.inspections(), { sourceFile, program: project.program, checker: project.checker }, this.severityOf());
+        findings = runInspections(this.inspections(), { sourceFile, program: project.program, checker: project.checker, options: inspectionOptions() }, this.severityOf());
       }
     } catch {
       // Files outside any compiler project are not inspected.
@@ -209,12 +209,13 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const inspected: InspectedFile[] = [];
         const inspections = this.inspections();
         const severityOf = this.severityOf();
+        const options = inspectionOptions();
         for (const [i, sourceFile] of files.entries()) {
           if (token.isCancellationRequested) {
             return undefined;
           }
           progress.report({ message: `${i + 1}/${files.length} ${path.basename(sourceFile.fileName)}`, increment: 100 / files.length });
-          inspected.push({ sourceFile, findings: runInspections(inspections, { sourceFile, program: project.program, checker: project.checker }, severityOf) });
+          inspected.push({ sourceFile, findings: runInspections(inspections, { sourceFile, program: project.program, checker: project.checker, options }, severityOf) });
           // Yield so the progress updates and cancellation can arrive.
           await new Promise((resolve) => setImmediate(resolve));
         }
@@ -342,4 +343,8 @@ async function applyReportFix(node: ReportNode): Promise<void> {
   if (await vscode.workspace.applyEdit(edit)) {
     void vscode.window.setStatusBarMessage(`Applied: ${String(action.title)}`, 3000);
   }
+}
+
+function inspectionOptions(): InspectionOptions {
+  return { missingAwaitIgnore: vscode.workspace.getConfiguration('tsStructure').get<string[]>('missingAwait.ignore', []) };
 }

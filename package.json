@@ -955,6 +955,12 @@
           "default": true,
           "description": "Show the number of inspection findings in the active file in the status bar."
         },
+        "tsStructure.missingAwait.ignore": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Functions whose promises may be dropped on purpose, such as fire-and-forget logging. `track` matches `track()` and `analytics.track()`; `*` is a wildcard, as in `logger.*`. A call is also ignored when its promise comes from an ignored function through wrappers."
+        },
         "tsStructure.codeLens.sideEffects": {
           "type": "boolean",
           "default": false,

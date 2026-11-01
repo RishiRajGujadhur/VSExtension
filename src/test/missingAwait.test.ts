@@ -46,6 +46,15 @@ test('the add-await fix produces an awaited call, and suppression comments hide 
   assert.match(applyTextEdits(sourceFile.text, sync.fixes![0].edits), /export async function sync\(\): Promise<void> \{\n {2}await fetchUser\('j'\);/);
   assert.match(applyTextEdits(sourceFile.text, sync.fixes![2].edits), /fetchUser\('j'\)\.catch\(\(error\) => console\.error\(error\)\);/);
 
+  // Fire-and-forget calls can be ignored by name, including through wrappers (loadUser comes from fetchUser).
+  const ignoring = (names: string[]) => {
+    const project = virtualProject('inspect', 'src/async.ts');
+    const program = project.program();
+    return runInspections([missingAwait], { sourceFile: program.getSourceFile(file)!, program, checker: program.getTypeChecker(), options: { missingAwaitIgnore: names } });
+  };
+  assert.equal(ignoring(['fetch*']).filter((f) => f.message.startsWith('The promise returned')).length, 0);
+  assert.equal(ignoring(['load*']).filter((f) => f.message.startsWith('The promise returned')).length, 1);
+
   const suppressed = sourceFile.text.replace("  loadUser('a');", "  // ts-structure-ignore-next-line missingAwait\n  loadUser('a');");
   assert.equal(inspect(suppressed).findings.length, findings.length - 1);
   assert.equal(inspect(`// ts-structure-ignore-file\n${sourceFile.text}`).findings.length, 0);

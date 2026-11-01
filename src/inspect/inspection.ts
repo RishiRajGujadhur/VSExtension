@@ -28,6 +28,13 @@ export interface InspectionContext {
   sourceFile: ts.SourceFile;
   program: ts.Program;
   checker: ts.TypeChecker;
+  options?: InspectionOptions;
+}
+
+/** User settings that tune individual inspections. */
+export interface InspectionOptions {
+  /** Calls whose promises may be dropped on purpose, such as `track` or `logger.*`. */
+  missingAwaitIgnore?: string[];
 }
 
 export interface Inspection {
