@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, forEachReportNode, nodeSnippet, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, forEachReportNode, nodeSnippet, plural, withPlace } from '../structure/report';
 import {
   FunctionWithBody,
   accessExpression,
@@ -246,13 +246,6 @@ export class NullabilityExplorer {
   private group(label: string, node: ts.Node, children: ReportNode[], description?: string): ReportNode {
     return { label, description: withPlace(node, description), icon: 'arrow-small-left', tone: 'warning', location: this.builder.at(node), children: children.length ? children : undefined, expanded: true };
   }
-}
-
-/** "callers may omit it · nullable.ts:12": a row's note followed by where it is. */
-function withPlace(node: ts.Node, description: string | undefined): string {
-  const sourceFile = node.getSourceFile();
-  const place = `${sourceFile.fileName.replace(/^.*[\\/]/, '')}:${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
-  return description ? `${description} · ${place}` : place;
 }
 
 function hasOptionalChainAbove(node: ts.Node): boolean {

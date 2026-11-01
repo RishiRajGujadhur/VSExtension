@@ -35,7 +35,7 @@ test('rejection sources and every path a rejection takes through callers', () =>
   ]);
   assert.equal(report.roots[2].description, '3 handled, 2 unhandled, 1 swallowed or unknown');
   // The flat list says how each unhandled end is reached.
-  assert.deepEqual(report.roots[0].children?.map((c) => c.description), ['save(data);', 'via relaySave']);
+  assert.deepEqual(report.roots[0].children?.map((c) => c.description), ['save(data); · rejections.ts:29', 'via relaySave']);
   // A dropped call offers the missing-await fixes.
   assert.equal(report.roots[0].children?.[0].action?.kind, 'quickFix');
 });

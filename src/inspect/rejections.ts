@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural, withPlace } from '../structure/report';
 import {
   FunctionWithBody,
   callSitesOf,
@@ -245,7 +245,7 @@ export class RejectionTracer {
   }
 
   row(label: string, node: ts.Node, tone: Tone, icon: string, description?: string): ReportNode {
-    return { label, description, tone, icon, location: this.builder.at(node) };
+    return { label, description: withPlace(node, description), tone, icon, location: this.builder.at(node) };
   }
 
   private group(label: string, node: ts.Node, children: ReportNode[], icon: string): ReportNode {

@@ -83,6 +83,13 @@ export function lineSnippet(node: ts.Node, max = 90): string {
   return shorten(sourceFile.text.slice(lineStart, lineEnd).trim(), max);
 }
 
+/** "callers may omit it · nullable.ts:12": a row's note followed by the file and line of the node. */
+export function withPlace(node: ts.Node, description?: string): string {
+  const sourceFile = node.getSourceFile();
+  const place = `${sourceFile.fileName.replace(/^.*[\\/]/, '')}:${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+  return description ? `${description} · ${place}` : place;
+}
+
 /** Node text on one line, shortened for display. */
 export function nodeSnippet(node: ts.Node, max = 60): string {
   return shorten(node.getText().replace(/\s+/g, ' '), max);
