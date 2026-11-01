@@ -285,7 +285,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Nullability of coupon: findCoupon can return undefined from an explicit return and from coupons.find()](docs/images/nullability.png)
 
-1. Put the cursor on a variable, property access or call that might be `null` or `undefined`. In the demo, use `coupon` in `applyCoupon` (`src/pricing.ts`).
+1. Put the cursor on a variable, property access or call that might be `null` or `undefined`. In the demo, use `coupon` in `applyCoupon` (`src/pricing.ts`). On a function's name, such as `findCoupon`, it explains which of its returns give `null` or `undefined`.
 2. Run **Nullability Path Explorer**.
 3. The first row gives the verdict: the type, and whether the value *may be null or undefined here* or is *never null or undefined here*.
 4. **Paths that produce null or undefined** traces every source back to its origin. Examples: an optional parameter, a caller that omits an argument, a `return undefined`, a function that can reach its end without returning, or a library call such as `Array.find()`.

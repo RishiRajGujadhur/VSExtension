@@ -191,6 +191,11 @@ export class NullabilityExplorer {
       const returns = signature ? typeText(this.checker, signature.getReturnType(), call) : this.typeOf(call);
       return [this.leaf(`${nodeText(call.expression)}() returns ${returns}`, call, 'warning', 'declared outside the project')];
     }
+    return this.returnSources(fn, depth);
+  }
+
+  /** The returns of a function that give null or undefined, including falling off its end. */
+  returnSources(fn: FunctionWithBody, depth = 0): ReportNode[] {
     const results: ReportNode[] = [];
     if (fn.type && containsNullish(this.checker.getTypeFromTypeNode(fn.type))) {
       results.push(this.leaf(`${functionLabel(fn)} is declared to return ${fn.type.getText()}`, fn.type, 'info'));
@@ -392,10 +397,41 @@ function isNullCheck(use: ts.Expression): boolean {
   return ((ts.isIfStatement(parent) || ts.isWhileStatement(parent)) && parent.expression === use) || (ts.isConditionalExpression(parent) && parent.condition === use);
 }
 
+/** Nullability of what a function returns, for the cursor on its name. */
+function returnsReport(project: VirtualProject, fn: FunctionWithBody): Report {
+  const name = functionLabel(fn);
+  const builder = new ReportBuilder('nullability', `Nullability of ${name}()`);
+  const explorer = new NullabilityExplorer(project, builder);
+  const checker = project.program().getTypeChecker();
+  const signature = checker.getSignatureFromDeclaration(fn);
+  const returnType = signature ? checker.getReturnTypeOfSignature(signature) : undefined;
+  // The awaited type for async functions: `Promise<T | undefined>` resolves to a nullable value.
+  const resolved = returnType && (checker.getAwaitedType(returnType) ?? returnType);
+  const nullable = !!resolved && containsNullish(resolved);
+  const sources = explorer.returnSources(fn);
+  const roots: ReportNode[] = [
+    {
+      label: `${name}() returns ${resolved ? typeText(checker, resolved, fn) : 'unknown'}`,
+      description: nullable ? 'may return null or undefined' : 'never returns null or undefined',
+      icon: nullable ? 'warning' : 'pass',
+      tone: nullable ? 'warning' : 'ok',
+      location: builder.at((fn as ts.FunctionDeclaration).name ?? fn),
+    },
+  ];
+  if (sources.length > 0) {
+    roots.push({ label: 'Returns that produce null or undefined', icon: 'git-merge', expanded: true, children: sources });
+  }
+  return builder.finish(roots, nullable ? plural(sources.filter((s) => s.tone !== 'info').length, 'nullable return') : 'safe');
+}
+
 /** Nullability Path Explorer for the expression at the cursor. */
 export function nullabilityReport(project: VirtualProject, fileName: string, offset: number): Report {
   const sourceFile = project.sourceFile(fileName);
   const identifier = identifierAt(sourceFile, offset, 'Place the cursor on a variable, property access or call.');
+  const declared = identifier.parent;
+  if (isFunctionWithBody(declared) && (declared as ts.FunctionDeclaration).name === identifier) {
+    return returnsReport(project, declared);
+  }
   let expression: ts.Node = accessExpression(identifier);
   const parent = expression.parent;
   if ((ts.isCallExpression(parent) || ts.isNewExpression(parent)) && parent.expression === expression) {

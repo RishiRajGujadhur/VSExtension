@@ -43,6 +43,19 @@ test('uses of a variable say where it is still nullable', () => {
   );
 });
 
+test('on a function name, the returns that give null are listed', () => {
+  const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, 'function look|up'));
+  assert.equal(report.title, 'Nullability of lookup()');
+  assert.equal(report.roots[0].label, 'lookup() returns string | null');
+  assert.deepEqual(labels(report.roots.slice(1)), [
+    'Returns that produce null or undefined',
+    '  lookup is declared to return string | null',
+    '  lookup returns null',
+    '    null literal',
+  ]);
+  assert.equal(report.description, '1 nullable return');
+});
+
 test('module state lists its declaration and every assignment of undefined', () => {
   const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${cur|rent?.name}'));
   assert.deepEqual(labels(report.roots.slice(1).filter((r) => r.label !== 'Uses')), [
