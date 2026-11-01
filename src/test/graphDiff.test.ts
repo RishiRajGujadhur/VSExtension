@@ -46,7 +46,9 @@ test('a Git revision and the working tree are compared module by module', () => 
     assert.equal(added?.action?.ref, 'HEAD');
     const cycle = report.roots[0].children?.[0];
     assert.ok(cycle?.children?.every((c) => c.location), 'cycle edges open their import');
-    assert.ok(diff.fanIn.some((f) => f.module === 'src/utils.ts' && f.after === f.before + 2));
+    const utilsFanIn = diff.fanIn.find((f) => f.module === 'src/utils.ts');
+    assert.equal(utilsFanIn?.after, (utilsFanIn?.before ?? 0) + 2);
+    assert.deepEqual(utilsFanIn?.added.sort(), ['src/extra.ts', 'src/models.ts']);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -149,7 +149,7 @@ export interface GraphDiff {
   /** For each new cycle, whether it also exists without type-only imports, that is, at runtime. */
   newCycleAtRuntime: boolean[];
   resolvedCycles: string[][];
-  fanIn: { module: string; before: number; after: number }[];
+  fanIn: { module: string; before: number; after: number; added: string[]; removed: string[] }[];
 }
 
 /** Compares two import graphs by paths relative to `root`, so both revisions line up. */
@@ -186,7 +186,12 @@ export function diffGraphs(before: ModuleGraph, after: ModuleGraph, root: string
   const fanBefore = fanInOf(beforeEdges);
   const fanAfter = fanInOf(afterEdges);
   const fanIn = [...new Set([...fanBefore.keys(), ...fanAfter.keys()])]
-    .map((module) => ({ module, before: fanBefore.get(module) ?? 0, after: fanAfter.get(module) ?? 0 }))
+    .map((module) => {
+      const importers = (edges: Map<string, MergedEdge>) => new Set([...edges.values()].filter((e) => e.to === module).map((e) => e.from));
+      const was = importers(beforeEdges);
+      const now = importers(afterEdges);
+      return { module, before: fanBefore.get(module) ?? 0, after: fanAfter.get(module) ?? 0, added: [...now].filter((m) => !was.has(m)), removed: [...was].filter((m) => !now.has(m)) };
+    })
     .filter((f) => f.before !== f.after)
     .sort((a, b) => Math.abs(b.after - b.before) - Math.abs(a.after - a.before))
     .slice(0, 10);
@@ -309,7 +314,20 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
     roots.push({
       label: 'Biggest changes in importers',
       icon: 'graph',
-      children: diff.fanIn.map((f) => ({ label: f.module, description: `${f.before} → ${f.after} importers`, icon: f.after > f.before ? 'arrow-up' : 'arrow-down' })),
+      children: diff.fanIn.map((f) => {
+        const file = normalizePath(path.join(root, f.module));
+        return {
+          label: f.module,
+          description: `${f.before} → ${f.after} importers`,
+          icon: f.after > f.before ? 'arrow-up' : 'arrow-down',
+          location: afterFiles.has(file) ? { file, line: 0, character: 0, endLine: 0, endCharacter: 0 } : undefined,
+          // Which modules started or stopped importing it.
+          children: [
+            ...f.added.map((m) => ({ label: m, description: 'now imports it', icon: 'add' })),
+            ...f.removed.map((m) => ({ label: m, description: 'no longer imports it', icon: 'remove' })),
+          ],
+        };
+      }),
     });
   }
   return builder.finish(roots, `+${diff.addedEdges.length} −${diff.removedEdges.length} imports, ${plural(diff.newCycles.length, 'new cycle')}`);
