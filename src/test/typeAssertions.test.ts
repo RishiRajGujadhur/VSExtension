@@ -31,6 +31,8 @@ test('assertions are classified as unsafe, unnecessary, widening or unchecked na
   assert.match(removed, /const c = json;/);
   const satisfies = applyTextEdits(sourceFile.text, findings[6].fixes![0].edits);
   assert.match(satisfies, /\{ kind: 'circle', radius: 1 \} satisfies Shape;/);
+  const unknown = applyTextEdits(sourceFile.text, findings[4].fixes![0].edits);
+  assert.match(unknown, /const e = shape as unknown;/);
   const optional = applyTextEdits(sourceFile.text, findings[7].fixes![0].edits);
   assert.match(optional, /const h = maybe\?\.length;/);
 });

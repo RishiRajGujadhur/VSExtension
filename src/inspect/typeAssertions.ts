@@ -65,7 +65,10 @@ function inspectAssertion(context: InspectionContext, node: Assertion): Finding 
     );
   }
   if (target.flags & ts.TypeFlags.Any) {
-    return at(`'as any' turns off type checking for ${nodeText(inner)} and for everything it flows into.`, 'warning');
+    // `unknown` keeps the escape hatch but makes every use narrow the value first.
+    return at(`'as any' turns off type checking for ${nodeText(inner)} and for everything it flows into.`, 'warning', {
+      fixes: [{ title: "Use 'as unknown' and narrow where it is used", edits: [{ start: node.type.getStart(sourceFile), end: node.type.end, text: 'unknown' }] }],
+    });
   }
   // Widening drops object-literal freshness, which would otherwise fail on excess properties.
   const source = ts.isObjectLiteralExpression(inner) ? checker.getWidenedType(checker.getTypeAtLocation(node.expression)) : checker.getTypeAtLocation(node.expression);
