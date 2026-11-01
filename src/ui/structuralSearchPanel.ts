@@ -8,6 +8,7 @@ import { CustomInspectionConfig, inspectionId } from '../search/customInspection
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
 import { isExcluded } from './exclude';
+import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
 
 export type Scope = 'project' | 'file';
@@ -168,7 +169,7 @@ export class StructuralSearchPanel {
         const files = result.changes.length;
         void this.panel.webview.postMessage({
           type: 'status',
-          text: `Replacing ${result.matches} ${result.matches === 1 ? 'match' : 'matches'} in ${files} ${files === 1 ? 'file' : 'files'}${result.conflicts.length ? `; ${result.conflicts.length} new type error(s)` : ', type-checks cleanly'}.`,
+          text: `Replacing ${plural(result.matches, 'match', 'matches')} in ${plural(files, 'file')}${result.conflicts.length ? `; ${plural(result.conflicts.length, 'new type error')}` : ', type-checks cleanly'}.`,
         });
         await applyRefactor(result, previewEnabled());
       } catch (error) {

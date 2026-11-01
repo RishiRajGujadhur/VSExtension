@@ -17,7 +17,7 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
     return false;
   }
   if (result.conflicts.length > 0) {
-    output.appendLine(`${result.label}: ${result.conflicts.length} problem(s)`);
+    output.appendLine(`${result.label}: ${result.conflicts.length} ${result.conflicts.length === 1 ? 'problem' : 'problems'}`);
     for (const conflict of result.conflicts) {
       const where = conflict.location ? ` (${vscode.workspace.asRelativePath(conflict.location.file)}:${conflict.location.line + 1})` : '';
       output.appendLine(`  - ${conflict.message}${where}`);
