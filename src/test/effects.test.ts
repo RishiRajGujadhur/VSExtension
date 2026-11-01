@@ -63,6 +63,9 @@ test('mutation report says what kinds of state each function changes', () => {
   const description = (name: string) => functions.find((f) => f.label.startsWith(name))?.description;
   assert.equal(description('track'), '3 mutations: arguments, module state');
   assert.equal(description('register'), '1 mutation: imported state');
+  // Each function row opens its full side-effect analysis.
+  const action = functions.find((f) => f.label.startsWith('track'))?.action;
+  assert.deepEqual(action, { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: action?.file, offset: offsetIn(file, 'function |track') });
 });
 
 test('mutation report can cover the whole project', () => {

@@ -542,6 +542,7 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
         .join(' · '),
       icon: 'symbol-function',
       location: builder.at(functionNameOrSelf(fn)),
+      action: { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: fn.getSourceFile().fileName, offset: functionNameOrSelf(fn).getStart() },
       children: mutations.map((e) => effectNode(e, builder)),
     });
     for (const effect of mutations) {

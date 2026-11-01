@@ -25,17 +25,9 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       });
       await vscode.commands.executeCommand('vscode.diff', uris[0], uris[1], `${copies[0].label} ↔ ${copies[1].label}`);
     }),
-    // Runs another analysis where the row points, such as the data flow of the parameter a value is passed to.
-    vscode.commands.registerCommand('tsStructure.report.follow', async (node: ReportNode) => {
-      const { command, file, offset } = (node?.action ?? {}) as { command?: string; file?: string; offset?: number };
-      if (!command || !file || offset === undefined) {
-        return;
-      }
-      const document = await vscode.workspace.openTextDocument(file);
-      const position = document.positionAt(offset);
-      await vscode.window.showTextDocument(document, { selection: new vscode.Range(position, position), preview: true });
-      await vscode.commands.executeCommand(command);
-    }),
+    // Run another analysis where the row points, such as the data flow of the parameter a value is passed to.
+    vscode.commands.registerCommand('tsStructure.report.follow', followRow),
+    vscode.commands.registerCommand('tsStructure.report.showSideEffects', followRow),
     vscode.commands.registerCommand('tsStructure.report.safeDelete', async (node: ReportNode) => {
       if (node?.location) {
         await view.open(node.location);
@@ -64,6 +56,18 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       await vscode.workspace.applyEdit(edit);
     }),
   );
+}
+
+/** Opens the row's target ({ command, file, offset } in its action) and runs the command there. */
+async function followRow(node: ReportNode): Promise<void> {
+  const { command, file, offset } = (node?.action ?? {}) as { command?: string; file?: string; offset?: number };
+  if (!command || !file || offset === undefined) {
+    return;
+  }
+  const document = await vscode.workspace.openTextDocument(file);
+  const position = document.positionAt(offset);
+  await vscode.window.showTextDocument(document, { selection: new vscode.Range(position, position), preview: true });
+  await vscode.commands.executeCommand(command);
 }
 
 /** The `export ` modifier (with its trailing space) of the declaration at the offset. */

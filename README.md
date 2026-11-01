@@ -279,6 +279,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 3. **Functions that mutate state** lists each function that changes something it doesn't own. Expand one to see each change. A change made inside a called function shows the call chain, such as *changes module state events (.push()) via track()*.
 4. **Shared state and who changes it** turns the same data around: one row per module variable, import, global or `this` field, with every function that writes it. Use it to find the unexpected writer of a piece of state.
 5. Click any row to open the line. The editor shades every write while the report is open.
+6. Click the lightning button (**Show All Side Effects**) on a function row to run the Side-Effect Analyzer on it. That also shows I/O, timers and other effects besides mutations.
 
 ## Test Impact Analysis
 
