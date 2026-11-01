@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
   "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "RishiRajGujadhur",
   "license": "MIT",
   "repository": {
