@@ -193,6 +193,30 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
     { label: 'Subtypes and implementations', description: plural(allSubs.length, 'type'), icon: 'type-hierarchy-sub', expanded: true, children: subs.length ? subs : [{ label: 'none in this project', icon: 'dash' }] },
     { label: 'Members', description: plural(members.length, 'member'), icon: 'symbol-field', expanded: true, children: members },
   ];
+  // What the type gets from its supertypes without redeclaring, nearest supertype first.
+  const inherited = new Map<string, Member>();
+  for (const supertype of allSupers) {
+    for (const member of membersOf(supertype)) {
+      const name = memberName(member)!;
+      if (!targetMembers.has(name) && !inherited.has(name)) {
+        inherited.set(name, member);
+      }
+    }
+  }
+  if (inherited.size > 0) {
+    roots.push({
+      label: 'Inherited members',
+      description: plural(inherited.size, 'member'),
+      icon: 'symbol-field',
+      expanded: members.length === 0,
+      children: [...inherited].map(([name, member]) => ({
+        label: `${name}${ts.isMethodDeclaration(member) || ts.isMethodSignature(member) ? '()' : ''}`,
+        description: [isAbstract(member) ? 'abstract' : '', `from ${typeName(member.parent as TypeDeclaration)}`].filter(Boolean).join(' · '),
+        icon: ts.isMethodDeclaration(member) || ts.isMethodSignature(member) ? 'symbol-method' : 'symbol-property',
+        location: builder.at(member.name ?? member),
+      })),
+    });
+  }
   return builder.finish(roots, `${plural(allSupers.length, 'supertype')}, ${plural(allSubs.length, 'subtype')}`);
 }
 

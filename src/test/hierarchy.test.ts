@@ -71,3 +71,9 @@ test('with the cursor on a member, that member is selected', () => {
   const members = report.roots.find((r) => r.label === 'Members')!;
   assert.deepEqual(members.children?.filter((m) => m.focus).map((m) => m.label), ['describe()']);
 });
+
+test('inherited members name the supertype they come from', () => {
+  const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'class Ti|ny'));
+  const inherited = report.roots.find((r) => r.label === 'Inherited members');
+  assert.deepEqual(inherited?.children?.map((c) => `${c.label} ${c.description}`), ['name from Base', 'describe() from Base']);
+});
