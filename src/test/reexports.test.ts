@@ -38,3 +38,11 @@ test('names forwarded by export * show the star re-export as a hop', () => {
     'declared: export function formatArea(shape: Shape, digits = 2): string {',
   ]);
 });
+
+test('each module that exports the name points at its export, not the top of the file', () => {
+  const [, exported] = report('formatAr|ea(box)').roots;
+  const line = (file: string) => exported.children?.find((c) => c.description?.startsWith(file))?.location?.line;
+  // index.ts forwards it with `export * from './utils'` on its second line; utils.ts declares it further down.
+  assert.equal(line('src/index.ts'), 1);
+  assert.ok((line('src/utils.ts') ?? 0) > 0);
+});

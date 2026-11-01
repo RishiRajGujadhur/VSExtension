@@ -98,6 +98,8 @@ export interface ExportedName {
   name: string;
   /** Re-exported from another module rather than declared here. */
   reexport: boolean;
+  /** Where the module exports it: the declaration, the export specifier, or the `export *` that forwards it. */
+  node: ts.Node;
 }
 
 /** Every module that exports the symbol, and under which name. */
@@ -111,7 +113,9 @@ export function exportedNames(program: ts.Program, target: ts.Symbol): ExportedN
     }
     for (const exported of checker.getExportsOfModule(moduleSymbol)) {
       if (resolveAlias(checker, exported) === target) {
-        results.push({ file: sourceFile.fileName, name: exported.name, reexport: !target.declarations?.some((d) => d.getSourceFile() === sourceFile) });
+        const local = exported.declarations?.find((d) => d.getSourceFile() === sourceFile);
+        const node = local ? ((local as ts.NamedDeclaration).name ?? local) : (starPath(checker, moduleSymbol, exported)?.[0] ?? sourceFile);
+        results.push({ file: sourceFile.fileName, name: exported.name, reexport: !target.declarations?.some((d) => d.getSourceFile() === sourceFile), node });
       }
     }
   }
@@ -184,7 +188,7 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
         label: e.name === target.name ? e.name : `${e.name} (renamed from ${target.name})`,
         description: `${relative(e.file)}${e.reexport ? ' · re-export' : ' · declaration'}`,
         icon: e.reexport ? 'references' : 'symbol-class',
-        location: { file: e.file.replace(/\\/g, '/'), line: 0, character: 0, endLine: 0, endCharacter: 0 },
+        location: builder.at(e.node),
       })),
     },
   ];
