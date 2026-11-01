@@ -492,6 +492,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Subtypes that inherit it unchanged** are affected by any change to its body. The buttons on rows re-run the analysis on an override, or show the hierarchy of an inheriting type.
 6. **Call sites** are split by the static type they call through. Calls through the base type may run any implementation, so they are the riskiest. **Impacted tests** lists the tests that reach the member. Its play button (**Run These Tests**) runs them.
 
+### Dependency Path Finder
+
+![main.ts depends on analytics.ts three imports deep, through index.ts and cart.ts, orders.ts and cart.ts, or orders.ts and notifications.ts](docs/images/dependency-path.png)
+
+1. Open the module whose dependency you want to explain, such as `src/main.ts`, and run **Dependency Path Finder…**. In the Explorer, you can also right-click a file.
+2. Choose the module it depends on, here `analytics.ts`.
+3. The first row says whether it depends on it, and how many imports deep.
+4. **Shortest paths** lists every shortest chain of imports. Expand one to see each hop: the exact `import` or `export … from` line, with the names it brings in. A path through a type-only import is marked as erased at runtime. If all shortest paths are type-only, **Longer runtime path** shows the real one.
+5. **Modules on these paths that import it directly** are the last hops, where the dependency could be cut.
+6. If there is no dependency, the report says so, and shows the reverse direction if there is one.
+
 ## Test Impact Analysis
 
 ### Usage
