@@ -26,7 +26,6 @@ const fixAllKind = vscode.CodeActionKind.SourceFixAll.append('tsStructure');
 /** Analyses that explain a finding in depth, offered from its lightbulb. */
 const explainers: Record<string, { title: string; command: string }> = {
   missingAwait: { title: 'Trace where this promise’s rejection goes…', command: 'tsStructure.promiseRejections' },
-  typeAssertion: { title: 'Explain where null or undefined come from…', command: 'tsStructure.nullability' },
 };
 
 interface Inspected {
@@ -273,10 +272,10 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         all.edit = toWorkspaceEdit(fixAllEdits(sameKind));
         actions.push(all);
       }
-      const explainer = explainers[finding.inspection];
+      const explainer = finding.explain ?? (explainers[finding.inspection] && { ...explainers[finding.inspection], offset: finding.start });
       if (explainer) {
         const explain = new vscode.CodeAction(explainer.title, vscode.CodeActionKind.QuickFix);
-        explain.command = { command: 'tsStructure.explainFinding', title: explainer.title, arguments: [document.uri, finding.start, explainer.command] };
+        explain.command = { command: 'tsStructure.explainFinding', title: explainer.title, arguments: [document.uri, explainer.offset, explainer.command] };
         actions.push(explain);
       }
       if (result.sourceFile) {

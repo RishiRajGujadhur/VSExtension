@@ -31,6 +31,11 @@ test('assertions are classified as unsafe, unnecessary, widening or unchecked na
   assert.match(removed, /const c = json;/);
   const satisfies = applyTextEdits(sourceFile.text, findings[6].fixes![0].edits);
   assert.match(satisfies, /\{ kind: 'circle', radius: 1 \} satisfies Shape;/);
+  // Explanations start from the asserted value, not the `as` keyword.
+  assert.deepEqual(findings[0].explain, { title: 'Show where shape comes from…', command: 'tsStructure.dataFlow', offset: sourceFile.text.indexOf('shape as Circle') });
+  assert.equal(findings[5].explain, undefined);
+  assert.equal(findings[7].explain?.command, 'tsStructure.nullability');
+  assert.equal(findings[7].explain?.offset, sourceFile.text.indexOf('maybe!'));
   const unknown = applyTextEdits(sourceFile.text, findings[4].fixes![0].edits);
   assert.match(unknown, /const e = shape as unknown;/);
   // Test files can be skipped; this file is not one, so the option changes nothing here.

@@ -22,6 +22,8 @@ export interface Finding {
   fixes?: Fix[];
   /** Other places that explain the finding, such as the helper that drops a promise. */
   related?: { message: string; node: ts.Node }[];
+  /** An analysis that explains the finding, run with the cursor at `offset`. */
+  explain?: { title: string; command: string; offset: number };
 }
 
 export interface InspectionContext {

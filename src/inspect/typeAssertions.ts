@@ -52,6 +52,7 @@ function inspectAssertion(context: InspectionContext, node: Assertion): Finding 
     severity,
     start: assertionStart(node, sourceFile),
     end: node.end,
+    explain: valueName(inner) && { title: `Show where ${nodeText(inner)} comes from…`, command: 'tsStructure.dataFlow', offset: valueName(inner)!.getStart(sourceFile) },
     ...extra,
   });
   const targetText = node.type.getText(sourceFile);
@@ -132,6 +133,7 @@ function inspectNonNull(context: InspectionContext, node: ts.NonNullExpression):
     return undefined;
   }
   const bang = { start: node.end - 1, end: node.end };
+  const name = valueName(node.expression);
   if (!containsNullish(source)) {
     return {
       inspection: 'typeAssertion',
@@ -147,6 +149,7 @@ function inspectNonNull(context: InspectionContext, node: ts.NonNullExpression):
     message: `Non-null assertion on ${nodeText(node.expression)}, which is ${typeText(checker, source, node)}: if it is null or undefined here, the next access throws at runtime.`,
     severity: 'hint',
     ...bang,
+    explain: name && { title: `Explain why ${nodeText(node.expression)} may be null or undefined…`, command: 'tsStructure.nullability', offset: name.getStart(sourceFile) },
     fixes: ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node ? [{ title: "Use optional chaining '?.'", edits: [{ start: node.end - 1, end: node.parent.name.getStart(sourceFile), text: '?.' }] }] : undefined,
   };
 }
@@ -161,6 +164,12 @@ function removeAssertion(node: Assertion, sourceFile: ts.SourceFile): TextEdit[]
 /** Where the assertion syntax starts: the `as` keyword, or `<` of the angle-bracket form. */
 function assertionStart(node: Assertion, sourceFile: ts.SourceFile): number {
   return ts.isAsExpression(node) ? node.expression.end + /^\s*/.exec(sourceFile.text.slice(node.expression.end))![0].length : node.getStart(sourceFile);
+}
+
+/** The name an analysis can start from: `x` in `x as T`, `name` in `user.name!`. Calls and literals have none. */
+function valueName(expression: ts.Expression): ts.Identifier | undefined {
+  const inner = skipParens(expression);
+  return ts.isIdentifier(inner) ? inner : ts.isPropertyAccessExpression(inner) && ts.isIdentifier(inner.name) ? inner.name : undefined;
 }
 
 function skipParens(node: ts.Expression): ts.Expression {
