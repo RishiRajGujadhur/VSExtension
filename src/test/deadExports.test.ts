@@ -41,8 +41,12 @@ test('a conventional index file is not an entry point when package.json names an
   const entries = defaultEntryPoints(demo, programGraph(program).files);
   assert.deepEqual(entries.map((e) => path.basename(e)), ['main.ts']);
   // So exports the barrel re-exports but nothing imports are reported.
-  const dead = findDeadExports(program, { entryPoints: entries, testsAreEntryPoints: true }).unused.flatMap((g) => g.exports.map((e) => e.name));
-  assert.ok(dead.includes('clearCart'), dead.join(', '));
+  const dead = findDeadExports(program, { entryPoints: entries, testsAreEntryPoints: true }).unused.flatMap((g) => g.exports);
+  const clearCart = dead.find((e) => e.name === 'clearCart');
+  assert.ok(clearCart, dead.map((e) => e.name).join(', '));
+  // index.ts forwards it with `export * from './cart'`.
+  assert.deepEqual(clearCart.reexportedBy?.map((f) => path.basename(f)), ['index.ts']);
+  assert.equal(dead.find((e) => e.name === 'track'), undefined);
 });
 
 test('exports unused from the entry points are dead; re-exports and export * keep them alive', () => {

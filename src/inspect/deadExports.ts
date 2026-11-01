@@ -20,6 +20,8 @@ export interface DeadExport {
   declaration: ts.Node;
   /** Used inside its own module, so only the `export` keyword is unnecessary. */
   usedLocally: boolean;
+  /** Barrels that still forward the name, which would need updating if it is removed. */
+  reexportedBy?: string[];
 }
 
 export interface DeadExportResult {
@@ -102,6 +104,25 @@ export function findDeadExports(program: ts.Program, options: DeadExportOptions)
     visit(sourceFile);
   }
 
+  // Which modules forward which names of each module: `export { a } from './x'` and `export * from './x'`.
+  const forwards = new Map<ts.SourceFile, { by: string; names: Set<string> | '*' }[]>();
+  for (const sourceFile of files) {
+    for (const statement of sourceFile.statements) {
+      if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier) {
+        continue;
+      }
+      const target = checker.getSymbolAtLocation(statement.moduleSpecifier)?.valueDeclaration;
+      if (target && ts.isSourceFile(target)) {
+        const names = statement.exportClause && ts.isNamedExports(statement.exportClause) ? new Set(statement.exportClause.elements.map((e) => (e.propertyName ?? e.name).text)) : '*';
+        forwards.set(target, [...(forwards.get(target) ?? []), { by: normalizePath(sourceFile.fileName), names }]);
+      }
+    }
+  }
+  const forwardersOf = (sourceFile: ts.SourceFile, name: string) => {
+    const by = (forwards.get(sourceFile) ?? []).filter((f) => f.names === '*' || f.names.has(name)).map((f) => f.by);
+    return by.length ? by : undefined;
+  };
+
   const result: DeadExportResult = { entries: [...entrySet], unreachable: [], unused: [], inferredEntries };
   for (const sourceFile of files) {
     const file = normalizePath(sourceFile.fileName);
@@ -126,7 +147,7 @@ export function findDeadExports(program: ts.Program, options: DeadExportOptions)
       }
       const external = [...users].filter((u) => u !== file);
       if (external.length === 0 || !reachable.has(file)) {
-        dead.push({ name: exported.name, declaration, usedLocally: users.has(file) });
+        dead.push({ name: exported.name, declaration, usedLocally: users.has(file), reexportedBy: forwardersOf(sourceFile, exported.name) });
       }
     }
     if (!reachable.has(file)) {
@@ -161,7 +182,13 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
   }
   const exportRow = (sf: ts.SourceFile, e: DeadExport): ReportNode => ({
     label: e.name,
-    description: [e.usedLocally ? 'used only inside this module' : 'unused', isTypeOnly(e.declaration) ? 'type' : undefined].filter(Boolean).join(' · '),
+    description: [
+      e.usedLocally ? 'used only inside this module' : 'unused',
+      isTypeOnly(e.declaration) ? 'type' : undefined,
+      e.reexportedBy ? `re-exported by ${e.reexportedBy.map((f) => path.basename(f)).join(', ')}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' · '),
     icon: declarationIcon(e.declaration),
     tone: e.usedLocally ? 'info' : 'warning',
     location: builder.at(nameOf(e.declaration), sf),
