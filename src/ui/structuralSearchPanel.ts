@@ -402,7 +402,8 @@ function html(webview: vscode.Webview, pattern: string): string {
       for (const [i, h] of recent.entries()) {
         const option = document.createElement('option');
         option.value = String(i);
-        option.textContent = h.pattern.replace(/\s+/g, ' ').slice(0, 80);
+        // Inside this template literal a regex escape needs a double backslash to reach the page.
+        option.textContent = h.pattern.replace(/\\s+/g, ' ').slice(0, 80);
         select.appendChild(option);
       }
     }
