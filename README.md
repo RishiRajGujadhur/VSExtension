@@ -371,6 +371,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. **Escaping errors reach callers** follows what escapes up through every caller, until it is caught, or reaches code with no callers (*errors are uncaught*). When it enters an async function it becomes a rejection, and the report keeps following that promise through awaits, `.catch()` and dropped calls. In the demo, `currencyOrDefault` swallows `parseConfig`'s errors through `readSetting`, which is worth a look.
 7. When some path ends uncaught, an **Uncaught** group at the top lists each one with the callers it passes through.
 
+### Structural Duplicate Finder
+
+![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
+
+1. Open a file in the project and run **Find Structural Duplicates…**.
+2. Choose **Whole Project** or **Active File**.
+3. Each **Duplicate** group is a run of statements with the same structure, with the number of lines and copies. Copies count even when variables are renamed or literal values differ. In the demo, `revenue` in `reports.ts` is a copy of `calculateSubtotal` in `pricing.ts`.
+4. Expand a group to see each copy and the function it's in. The last row says what differs between them, such as *total ↔ sum, item ↔ line*. Those are the parameters a shared function would need.
+5. Click the diff button on a group (**Compare Copies**) to open the first two copies side by side. Common indentation is removed so they line up.
+6. Tune sensitivity with `tsStructure.duplicates.minStatements` (default 3) and `minTokens` (default 40). Test files are skipped unless `tsStructure.duplicates.ignoreTestFiles` is off.
+
 ## Test Impact Analysis
 
 ### Usage
