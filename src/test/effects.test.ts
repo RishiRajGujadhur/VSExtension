@@ -56,3 +56,15 @@ test('mutation report groups writes by shared state', () => {
   assert.equal(state?.children?.[0].label, 'this');
   assert.equal(state?.children?.find((c) => c.label === 'registry')?.description, 'imported state · 1 write · state.ts');
 });
+
+test('mutation report selects the state at the cursor', () => {
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const focusedAt = (marker: string) =>
+    mutationReport(program, file, offsetIn(file, marker))
+      .roots.flatMap((r) => r.children ?? [])
+      .filter((c) => c.focus)
+      .map((c) => c.label);
+  assert.deepEqual(focusedAt('const cac|he'), ['cache']);
+  assert.deepEqual(focusedAt('registry.na|mes.push'), ['registry']);
+  assert.deepEqual(focusedAt('function pu|re'), []);
+});

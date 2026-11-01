@@ -10,9 +10,11 @@ import {
   isFunctionWithBody,
   skipOuterExpressions,
   sourceFileOf,
+  symbolAt,
   writeOf,
 } from '../structure/util';
 import { resolveAlias } from '../analysis/referenceIndex';
+import { findIdentifier } from '../analysis/impact';
 
 export type EffectKind =
   | 'mutates-parameter'
@@ -485,10 +487,27 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
   return builder.finish(roots, effects.length ? plural(effects.length, 'side effect') : 'pure');
 }
 
-/** Mutation Tracking: which functions in a file change state they do not own, grouped both ways. */
-export function mutationReport(program: ts.Program, fileName: string): Report {
+/** The declaration of the state named at the offset (for `cart.items`, of `cart`), if the cursor is on a name. */
+function stateAt(checker: ts.TypeChecker, sourceFile: ts.SourceFile, offset: number | undefined): ts.Node | undefined {
+  if (offset === undefined) {
+    return undefined;
+  }
+  let node: ts.Node | undefined = findIdentifier(sourceFile, offset);
+  while (node && ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) {
+    node = skipOuterExpressions(node.parent.expression);
+  }
+  if (!node || !ts.isIdentifier(node)) {
+    return undefined;
+  }
+  const symbol = symbolAt(checker, node);
+  return symbol?.valueDeclaration ?? symbol?.declarations?.[0];
+}
+
+/** Mutation Tracking: which functions in a file change state they do not own, grouped both ways. With an offset on a state's name, that state is selected. */
+export function mutationReport(program: ts.Program, fileName: string, offset?: number): Report {
   const checker = program.getTypeChecker();
   const sourceFile = sourceFileOf(program, fileName);
+  const atCursor = stateAt(checker, sourceFile, offset);
   const analyzer = new EffectAnalyzer(checker);
   const builder = new ReportBuilder('mutations', `Mutations in ${sourceFile.fileName.replace(/^.*[\\/]/, '')}`);
   const byFunction: ReportNode[] = [];
@@ -542,6 +561,8 @@ export function mutationReport(program: ts.Program, fileName: string): Report {
             tone: 'warning' as const,
             location: s.declaration ? builder.at(s.declaration) : undefined,
             children: s.entries,
+            expanded: (atCursor && s.declaration === atCursor) || undefined,
+            focus: (atCursor && s.declaration === atCursor) || undefined,
           };
         }),
     });
