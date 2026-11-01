@@ -306,6 +306,20 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - a green *handled* row.
 5. **Unhandled**, at the top, lists every unhandled end with the callers it passes through. Click a row to go to the call that drops the rejection, or click its lightbulb button (**Show Fixes**) to open the fixes there: add `await`, mark it intentionally ignored with `void`, or wrap it.
 
+### Missing Await (live inspection)
+
+![quickReorder calls placeOrder without awaiting it: a warning squiggle, its hover, the Problems panel and the Inspect Code report](docs/images/missing-await.png)
+
+1. Nothing to run: the inspection checks every TypeScript and JavaScript file that is visible in an editor. Open `src/orders.ts` in the demo.
+2. A dropped promise is underlined, here `placeOrder(id, items, payment);` in `quickReorder`. Hover it to read why. The message names the original function when the promise comes through wrappers.
+3. Press `Ctrl+.` on the underline for fixes:
+   - **Add await**, in an async function;
+   - **Mark as intentionally not awaited (void)**;
+   - **Trace where this promise's rejection goes…**, which opens the Promise Rejection Analyzer;
+   - suppress the warning for the line or the file.
+4. The Problems panel (`Ctrl+Shift+M`) lists the findings, and the status bar shows the count for the active file.
+5. To check the whole project, run **Inspect Code…** and choose the project. Results open in the TypeScript Structure view, and fixable rows have an **Apply Fix** button.
+
 ## Test Impact Analysis
 
 ### Usage
