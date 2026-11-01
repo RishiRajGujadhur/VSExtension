@@ -28,6 +28,7 @@ export async function run(): Promise<void> {
     await moveMembersFlow();
     await missingAwaitFlow();
     await compilerErrorFlow();
+    await unexportAllFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -174,6 +175,22 @@ async function moveMembersFlow(): Promise<void> {
   assert.match(document.getText(), /export \{ calculateSubtotal \} from '\.\/checkout';/);
   console.log('move members ok');
   await revert([vscode.Uri.file(cart), vscode.Uri.file(checkout)]);
+}
+
+/** The Dead Export report's file button removes every unneeded export keyword in the file at once. */
+async function unexportAllFlow(): Promise<void> {
+  const file = path.join(sample, 'src/localOnly.ts');
+  fs.writeFileSync(file, 'export const rate = 2;\n\nexport function double(n: number): number {\n  return n * rate;\n}\n');
+  const at = (line: number, character: number) => ({ file, line, character, endLine: line, endCharacter: character + 4 });
+  await vscode.commands.executeCommand('tsStructure.report.unexportAll', {
+    label: 'localOnly.ts',
+    action: { kind: 'unexportAll', file },
+    children: [{ label: 'rate', location: at(0, 13) }, { label: 'double', location: at(2, 16) }],
+  });
+  const text = (await vscode.workspace.openTextDocument(file)).getText();
+  assert.equal(text, 'const rate = 2;\n\nfunction double(n: number): number {\n  return n * rate;\n}\n');
+  await vscode.commands.executeCommand('workbench.action.files.saveAll');
+  console.log('remove all export keywords ok');
 }
 
 /** TypeScript's "possibly undefined" errors offer to explain themselves with the Nullability Path Explorer. */

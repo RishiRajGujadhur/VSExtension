@@ -47,6 +47,27 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
         await vscode.commands.executeCommand('tsStructure.safeDeleteFile', vscode.Uri.file(file));
       }
     }),
+    // Every export in the file that is only used locally, as one edit.
+    vscode.commands.registerCommand('tsStructure.report.unexportAll', async (node: ReportNode) => {
+      const file = node?.action?.file;
+      if (typeof file !== 'string') {
+        return;
+      }
+      const document = await vscode.workspace.openTextDocument(file);
+      const sourceFile = parse(document);
+      const edit = new vscode.WorkspaceEdit();
+      let removed = 0;
+      for (const child of node.children ?? []) {
+        const range = child.location && exportKeywordRange(sourceFile, document.offsetAt(new vscode.Position(child.location.line, child.location.character)));
+        if (range) {
+          edit.delete(document.uri, new vscode.Range(document.positionAt(range.start), document.positionAt(range.end)));
+          removed++;
+        }
+      }
+      if (removed > 0 && (await vscode.workspace.applyEdit(edit))) {
+        void vscode.window.setStatusBarMessage(`Removed ${removed} export keyword${removed === 1 ? '' : 's'} from ${node.label}`, 3000);
+      }
+    }),
     vscode.commands.registerCommand('tsStructure.report.unexport', async (node: ReportNode) => {
       if (!node?.location) {
         return;

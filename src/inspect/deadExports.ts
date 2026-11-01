@@ -219,7 +219,13 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
     roots.push({ label: 'Unused exports', description: plural(count(unusedOnly), 'export'), icon: 'symbol-misc', tone: 'warning', expanded: true, children: unusedOnly.map((g) => fileGroup(g)) });
   }
   if (localOnly.length) {
-    roots.push({ label: 'Exported but only used locally', description: plural(count(localOnly), 'export'), icon: 'eye-closed', tone: 'info', children: localOnly.map((g) => fileGroup(g)) });
+    roots.push({
+      label: 'Exported but only used locally',
+      description: plural(count(localOnly), 'export'),
+      icon: 'eye-closed',
+      tone: 'info',
+      children: localOnly.map((g) => ({ ...fileGroup(g), action: { kind: 'unexportAll', file: normalizePath(g.sourceFile.fileName) } })),
+    });
   }
   roots.push({
     label: 'Entry points',
