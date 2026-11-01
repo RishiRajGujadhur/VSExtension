@@ -414,6 +414,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon. Hover a row to see the lines around it. The usage you started from is selected and marked *at cursor*, and Next and Previous Result continue from it.
 5. Usages through aliases count too. In the demo, `main.ts` calls `calculateSubtotal` as `subtotal`, imported from the `index.ts` barrel.
 6. If nothing actually uses the symbol, because it is only declared, imported or re-exported, the view says so. Its definition then gets a trash button (**Safe Delete…**).
+7. To rename the symbol after reviewing its usages, click the pencil button (**Rename Symbol**) on its definition.
 
 ## Test Impact Analysis
 

@@ -325,6 +325,12 @@
         "icon": "$(lightbulb)"
       },
       {
+        "command": "tsStructure.report.rename",
+        "title": "Rename Symbol",
+        "category": "TypeScript Structure",
+        "icon": "$(edit)"
+      },
+      {
         "command": "tsStructure.report.refactor",
         "title": "Refactor…",
         "category": "TypeScript Structure",
@@ -605,6 +611,10 @@
         {
           "command": "tsStructure.report.refactor",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.rename",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -744,6 +754,11 @@
           "command": "tsStructure.report.refactor",
           "when": "view == tsStructure.report && viewItem =~ /action:refactor/",
           "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.rename",
+          "when": "view == tsStructure.report && viewItem =~ /action:(.* )?rename/",
+          "group": "inline@2"
         }
       ]
     },

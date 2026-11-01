@@ -28,6 +28,13 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
     // Run another analysis where the row points, such as the data flow of the parameter a value is passed to.
     vscode.commands.registerCommand('tsStructure.report.follow', followRow),
     vscode.commands.registerCommand('tsStructure.report.showSideEffects', followRow),
+    // Renames the symbol defined at the row, after reviewing its usages.
+    vscode.commands.registerCommand('tsStructure.report.rename', async (node: ReportNode) => {
+      if (node?.location) {
+        await view.open(node.location);
+        await vscode.commands.executeCommand('editor.action.rename');
+      }
+    }),
     // Selects the row's code and opens the refactor menu, such as Extract to function for a duplicate.
     vscode.commands.registerCommand('tsStructure.report.refactor', async (node: ReportNode) => {
       if (node?.location) {

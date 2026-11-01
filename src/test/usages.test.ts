@@ -45,10 +45,11 @@ test('the usage at the cursor is selected', () => {
 test('a symbol nothing uses says so and offers Safe Delete', () => {
   const report = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), utils, offsetIn(utils, 'function bu|mp'));
   assert.match(report.warnings[0], /^bump is never used: it is only declared/);
-  assert.equal(report.roots[0].children?.[0].children?.[0].action?.kind, 'deadExport');
+  assert.equal(report.roots[0].children?.[0].children?.[0].action?.kind, 'deadExport rename');
   // Used symbols have neither.
   const used = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), utils, offsetIn(utils, 'function format|Area'));
   assert.deepEqual(used.warnings, []);
+  assert.equal(used.roots[0].children?.[0].children?.[0].action?.kind, 'rename');
 });
 
 test('usage rows show the surrounding code on hover', () => {
