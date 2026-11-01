@@ -42,7 +42,7 @@ export const features: Feature[] = [
     id: 'sideEffects',
     title: 'Side-Effect Analyzer',
     description: 'Side-Effect Analyzer and its CodeLens.',
-    commands: ['tsStructure.sideEffects', 'tsStructure.report.showSideEffects'],
+    commands: ['tsStructure.sideEffects', 'tsStructure.report.showSideEffects', 'tsStructure.toggleSideEffectLens'],
   },
   {
     id: 'nullability',

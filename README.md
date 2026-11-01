@@ -206,7 +206,7 @@ The Type Assertion Inspector classifies `as`, `<T>` and `!` assertions:
 
 Entry points for dead exports come from `tsStructure.deadExports.entryPoints` (globs), or else `package.json` (`main`, `module`, `exports`, `bin`, mapped from `dist/` back to `src/`), or else conventional `index`/`main` files. Test files count as entry points unless `tsStructure.deadExports.testFilesAreEntryPoints` is off. The duplicate finder's sensitivity is set by `tsStructure.duplicates.minStatements` and `minTokens`; test files are skipped unless `ignoreTestFiles` is off.
 
-Set `tsStructure.codeLens.sideEffects` to show a lens above each function: **pure**, or a summary like *mutates arguments · I/O*. Click it for the full analysis.
+Set `tsStructure.codeLens.sideEffects`, or run **Toggle Side-Effect CodeLens**, to show a lens above each function: **pure**, or a summary like *mutates arguments · I/O*. Click it for the full analysis.
 
 ## Navigation and search
 
@@ -251,10 +251,11 @@ To run a search from a key, click **Copy as Keybinding** in the builder and past
 ## Working with results
 
 The TypeScript Structure view keeps every analysis's report:
-- **Back and forward** through the last 20 reports, and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
+- **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
 - **Filter** rows by text, **Show Groups…** to hide whole groups, and **go to the next or previous result**.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
+- The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
 
 ## Configuration

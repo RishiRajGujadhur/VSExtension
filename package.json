@@ -420,6 +420,11 @@
         "command": "tsStructure.turnOffInspection",
         "title": "Turn Off Inspection",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.toggleSideEffectLens",
+        "title": "Toggle Side-Effect CodeLens",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -874,6 +879,10 @@
         {
           "command": "tsStructure.turnOffInspection",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.toggleSideEffectLens",
+          "when": "config.tsStructure.features.sideEffects"
         }
       ],
       "view/title": [
@@ -1257,6 +1266,18 @@
             "type": "boolean",
             "default": true,
             "description": "Highlight the locations of the current analysis in open editors: definitions outlined, writes and reads shaded."
+          },
+          "tsStructure.results.focusView": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Reveal the TypeScript Structure view when an analysis finishes. Turn off to stay where you are; a status bar message says when a report is ready."
+          },
+          "tsStructure.results.historySize": {
+            "type": "number",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 200,
+            "markdownDescription": "How many reports **Previous Analysis** and **Next Analysis** keep."
           }
         }
       },

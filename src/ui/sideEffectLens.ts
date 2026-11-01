@@ -5,7 +5,7 @@ import { normalizePath } from '../analysis/paths';
 import { EffectAnalyzer, EffectKind, lensTargets, mutationKinds } from '../inspect/effects';
 import { isFunctionWithBody } from '../structure/util';
 import { languageSelector } from './refactorCommands';
-import { isFeatureEnabled } from './features';
+import { isFeatureEnabled, registerCommand } from './features';
 
 const shortLabels: Record<EffectKind, string> = {
   'mutates-parameter': 'mutates arguments',
@@ -42,6 +42,12 @@ export class SideEffectLens implements vscode.CodeLensProvider {
       // An edit elsewhere can change what a function's callees do.
       vscode.workspace.onDidSaveTextDocument(() => this.cache.clear()),
       vscode.workspace.onDidCloseTextDocument((d) => this.cache.delete(d.uri.toString())),
+      registerCommand('tsStructure.toggleSideEffectLens', async () => {
+        const config = vscode.workspace.getConfiguration('tsStructure');
+        const on = !config.get('codeLens.sideEffects', false);
+        await config.update('codeLens.sideEffects', on, vscode.ConfigurationTarget.Global);
+        void vscode.window.setStatusBarMessage(`Side-effect CodeLens ${on ? 'on' : 'off'}`, 3000);
+      }),
     );
   }
 

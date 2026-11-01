@@ -19,7 +19,6 @@ interface Entry {
   rerun?: Rerun;
 }
 
-const maxHistory = 20;
 const stateKey = 'tsStructure.lastReport';
 
 /** Shows analysis reports as a tree with history, filtering, result navigation and editor highlights. */
@@ -91,13 +90,19 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
 
   async show(report: Report, rerun?: Rerun): Promise<void> {
     // A new report drops any history ahead of the current one, like browser navigation.
-    this.history = [...this.history.slice(0, this.position + 1), { report, rerun }].slice(-maxHistory);
+    const config = vscode.workspace.getConfiguration('tsStructure.results');
+    const historySize = Math.max(1, config.get('historySize', 20));
+    this.history = [...this.history.slice(0, this.position + 1), { report, rerun }].slice(-historySize);
     this.position = this.history.length - 1;
     this.filter = '';
     this.hidden.clear();
     this.render();
     void this.memento?.update(stateKey, report);
-    await vscode.commands.executeCommand('tsStructure.report.focus');
+    if (config.get('focusView', true)) {
+      await vscode.commands.executeCommand('tsStructure.report.focus');
+    } else if (!this.view.visible) {
+      void vscode.window.setStatusBarMessage(`$(list-tree) ${titleParts(report).heading} is ready in the TypeScript Structure view`, 5000);
+    }
     const focused = this.located.find((node) => node.focus);
     if (focused) {
       this.cursor = this.located.indexOf(focused);
