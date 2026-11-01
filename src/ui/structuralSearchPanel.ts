@@ -283,36 +283,51 @@ async function saveCustomInspections(configs: CustomInspectionConfig[]): Promise
   await vscode.workspace.getConfiguration('tsStructure').update('customInspections', configs, target);
 }
 
+/** Custom inspections in one list, with buttons to edit, enable or disable and delete each, and a way to add one. */
 async function manageCustomInspections(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): Promise<void> {
-  const configs = customInspectionConfigs();
-  if (configs.length === 0) {
-    const choice = await vscode.window.showInformationMessage('No custom inspections yet. Build one from a structural search pattern.', 'Open Structural Search');
-    if (choice) {
-      await vscode.commands.executeCommand('tsStructure.structuralSearch');
-    }
-    return;
-  }
-  const picked = await vscode.window.showQuickPick(
-    configs.map((config) => ({
+  type Item = vscode.QuickPickItem & { config?: CustomInspectionConfig };
+  const editButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Edit in Structural Search' };
+  const deleteButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Delete' };
+  const toggleButton = (config: CustomInspectionConfig) =>
+    config.enabled === false ? { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Enable' } : { iconPath: new vscode.ThemeIcon('circle-slash'), tooltip: 'Disable' };
+  const items = (): Item[] => [
+    ...customInspectionConfigs().map((config) => ({
       label: `${config.enabled === false ? '$(circle-slash)' : '$(pass)'} ${config.id}`,
       description: config.pattern.replace(/\s+/g, ' '),
-      detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}`,
+      detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}${config.include ? ` · ${config.include}` : ''}`,
+      buttons: [editButton, toggleButton(config), deleteButton],
       config,
     })),
-    { title: 'Custom Inspections', placeHolder: 'Select an inspection to edit, enable, disable or delete' },
-  );
-  if (!picked) {
-    return;
-  }
-  const toggle = picked.config.enabled === false ? 'Enable' : 'Disable';
-  const action = await vscode.window.showQuickPick(['Edit in Structural Search', toggle, 'Delete'], { title: picked.config.id });
-  if (action === 'Edit in Structural Search') {
-    StructuralSearchPanel.open(context, projects, view, { inspection: picked.config });
-  } else if (action === 'Delete') {
-    await saveCustomInspections(configs.filter((c) => c !== picked.config));
-  } else if (action) {
-    await saveCustomInspections(configs.map((c) => (c === picked.config ? { ...c, enabled: c.enabled === false } : c)));
-  }
+    { label: '$(add) New inspection from a structural search…' },
+  ];
+  const pick = vscode.window.createQuickPick<Item>();
+  pick.title = 'Custom Inspections';
+  pick.placeholder = 'Enter edits the selected inspection; the buttons enable, disable or delete it';
+  pick.items = items();
+  pick.onDidTriggerItemButton(async ({ item, button }) => {
+    const config = item.config!;
+    if (button === editButton) {
+      pick.hide();
+      StructuralSearchPanel.open(context, projects, view, { inspection: config });
+      return;
+    }
+    const configs = customInspectionConfigs();
+    await saveCustomInspections(
+      button === deleteButton ? configs.filter((c) => c.id !== config.id) : configs.map((c) => (c.id === config.id ? { ...c, enabled: c.enabled === false } : c)),
+    );
+    pick.items = items();
+  });
+  pick.onDidAccept(() => {
+    const config = pick.selectedItems[0]?.config;
+    pick.hide();
+    if (config) {
+      StructuralSearchPanel.open(context, projects, view, { inspection: config });
+    } else {
+      void vscode.commands.executeCommand('tsStructure.structuralSearch');
+    }
+  });
+  pick.onDidHide(() => pick.dispose());
+  pick.show();
 }
 
 export function registerStructuralSearch(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
