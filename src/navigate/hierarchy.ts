@@ -335,25 +335,25 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
       location: builder.at(member.name ?? member),
       children: overridden.map((m) => ({ label: `${typeName(m.parent as TypeDeclaration)}.${name}`, description: 'base declaration: callers through it reach this one', icon: 'arrow-small-up', location: builder.at(m.name ?? m) })),
     },
-    { label: 'Overrides in subtypes', description: `${overrides.length}`, icon: 'type-hierarchy-sub', expanded: true, children: overrides.length ? overrides : [{ label: 'none', icon: 'dash' }] },
+    { label: 'Overrides in subtypes', description: plural(overrides.length, 'override'), icon: 'type-hierarchy-sub', expanded: true, children: overrides.length ? overrides : [{ label: 'none', icon: 'dash' }] },
   ];
   if (inheriting.length) {
-    roots.push({ label: 'Subtypes that inherit it unchanged', description: `${inheriting.length}`, icon: 'symbol-class', tone: 'warning', expanded: true, children: inheriting });
+    roots.push({ label: 'Subtypes that inherit it unchanged', description: plural(inheriting.length, 'type'), icon: 'symbol-class', tone: 'warning', expanded: true, children: inheriting });
   }
   roots.push({
     label: 'Call sites',
-    description: `${calls.base.length + calls.superCalls.length + [...calls.sub.values()].flat().length}`,
+    description: plural(calls.base.length + calls.superCalls.length + [...calls.sub.values()].flat().length, 'call'),
     icon: 'call-incoming',
     expanded: true,
     children: [
-      { label: `Through ${typeName(owner)} or a supertype: any implementation may run`, description: `${calls.base.length}`, icon: 'symbol-interface', tone: calls.base.length ? ('warning' as const) : undefined, children: calls.base.map(callRow) },
-      ...[...calls.sub].map(([type, nodes]) => ({ label: `Through ${type}`, description: `${nodes.length}`, icon: 'symbol-class', children: nodes.map(callRow) })),
-      { label: 'super calls from overrides', description: `${calls.superCalls.length}`, icon: 'debug-step-into', children: calls.superCalls.map(callRow) },
-    ].filter((n) => n.description !== '0'),
+      { label: `Through ${typeName(owner)} or a supertype: any implementation may run`, description: plural(calls.base.length, 'call'), icon: 'symbol-interface', tone: calls.base.length ? ('warning' as const) : undefined, children: calls.base.map(callRow) },
+      ...[...calls.sub].map(([type, nodes]) => ({ label: `Through ${type}`, description: plural(nodes.length, 'call'), icon: 'symbol-class', children: nodes.map(callRow) })),
+      { label: 'super calls from overrides', description: plural(calls.superCalls.length, 'call'), icon: 'debug-step-into', children: calls.superCalls.map(callRow) },
+    ].filter((n) => n.children.length > 0),
   });
   roots.push({
     label: 'Impacted tests',
-    description: `${impact.tests.length}`,
+    description: plural(impact.tests.length, 'test'),
     icon: 'beaker',
     children: impact.tests.map((t) => ({ label: t.test.titlePath.join(' › '), description: t.confidence, icon: 'beaker', location: { ...t.test.location, endLine: t.test.location.line, endCharacter: t.test.location.character } })),
   });

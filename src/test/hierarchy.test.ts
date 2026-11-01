@@ -38,14 +38,14 @@ test('changing a base method reaches super callers, inheriting subtypes and call
   const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'descr|ibe(): string {\n    return `${'));
   assert.deepEqual(outline(report.roots, 1), [
     'Base.describe — models.ts',
-    'Overrides in subtypes — 1',
+    'Overrides in subtypes — 1 override',
     '  Circle.describe — calls super: affected',
-    'Subtypes that inherit it unchanged — 2',
+    'Subtypes that inherit it unchanged — 2 types',
     '  Square — inherits describe unchanged: affected · models.ts',
     '  Tiny — inherits describe unchanged: affected · models.ts',
-    'Call sites — 1',
-    '  super calls from overrides — 1',
-    'Impacted tests — 0',
+    'Call sites — 1 call',
+    '  super calls from overrides — 1 call',
+    'Impacted tests — 0 tests',
   ]);
 });
 
@@ -55,15 +55,15 @@ test('an abstract member lists implementations and splits calls by the type they
   assert.deepEqual(lines.slice(0, 5), [
     'Base.area — overrides Shape.area',
     '  Shape.area — base declaration: callers through it reach this one',
-    'Overrides in subtypes — 3',
+    'Overrides in subtypes — 3 overrides',
     '  Square.area — implements it',
     '  Circle.area — implements it',
   ]);
   assert.ok(lines.includes('  Tiny.area — calls super: affected'), lines.join('\n'));
-  assert.ok(lines.includes('  Through Base or a supertype: any implementation may run — 2'), lines.join('\n'));
-  assert.ok(lines.includes('  Through Square — 1'), lines.join('\n'));
-  assert.ok(lines.includes('  super calls from overrides — 1'), lines.join('\n'));
-  assert.ok(lines.includes('Impacted tests — 1'), lines.join('\n'));
+  assert.ok(lines.includes('  Through Base or a supertype: any implementation may run — 2 calls'), lines.join('\n'));
+  assert.ok(lines.includes('  Through Square — 1 call'), lines.join('\n'));
+  assert.ok(lines.includes('  super calls from overrides — 1 call'), lines.join('\n'));
+  assert.ok(lines.includes('Impacted tests — 1 test'), lines.join('\n'));
 });
 
 test('with the cursor on a member, that member is selected', () => {
