@@ -8,6 +8,7 @@ import {
   functionAtOffset,
   functionLabel,
   isFunctionWithBody,
+  nodeText,
   skipOuterExpressions,
   sourceFileOf,
   symbolAt,
@@ -26,7 +27,9 @@ export type EffectKind =
   | 'global'
   | 'io'
   | 'timer'
-  | 'nondeterministic';
+  | 'nondeterministic'
+  /** A call the analysis cannot follow, such as a callback parameter, which could do anything. */
+  | 'unknown';
 
 export interface Effect {
   kind: EffectKind;
@@ -154,7 +157,14 @@ export class EffectAnalyzer {
       effects.push({ kind: 'nondeterministic', target: 'new Date()', description: 'reads the current time', node: call });
     }
     const target = calledFunction(this.checker, call);
-    if (!target || target === fn) {
+    if (!target) {
+      const unknown = this.unfollowedCall(call);
+      if (unknown) {
+        effects.push(unknown);
+      }
+      return;
+    }
+    if (target === fn) {
       return;
     }
     for (const inner of this.effectsOf(target)) {
@@ -180,6 +190,26 @@ export class EffectAnalyzer {
       }
       effects.push({ ...inner, node: call, via: { fn: target, effect: inner } });
     }
+  }
+
+  /** A call to a function value the project doesn't define: a callback parameter, a function-typed property or variable. */
+  private unfollowedCall(call: ts.CallExpression | ts.NewExpression): Effect | undefined {
+    const callee = skipOuterExpressions(call.expression);
+    const name = ts.isIdentifier(callee) ? callee : ts.isPropertyAccessExpression(callee) ? callee.name : undefined;
+    const symbol = name && this.checker.getSymbolAtLocation(name);
+    const declaration = symbol && resolveAlias(this.checker, symbol).valueDeclaration;
+    if (!declaration || declaration.getSourceFile().isDeclarationFile) {
+      // Library functions are known by name above, or assumed to have no effects.
+      return undefined;
+    }
+    const kind = ts.isParameter(declaration) || ts.isBindingElement(declaration)
+      ? 'a parameter'
+      : ts.isPropertySignature(declaration) || ts.isPropertyDeclaration(declaration) || ts.isMethodSignature(declaration)
+        ? 'a property'
+        : ts.isVariableDeclaration(declaration) && !declaration.initializer
+          ? 'a variable'
+          : undefined;
+    return kind ? { kind: 'unknown', target: name.text, description: `calls ${nodeText(callee)}(), ${kind} holding any function`, node: call } : undefined;
   }
 
   /** Classifies a write through an expression by where its root value lives. */
@@ -426,6 +456,7 @@ const kindLabels: Record<EffectKind, string> = {
   io: 'Input/output',
   timer: 'Schedules work',
   nondeterministic: 'Nondeterministic',
+  unknown: 'Calls it could not follow',
 };
 
 const kindIcons: Record<EffectKind, string> = {
@@ -439,6 +470,7 @@ const kindIcons: Record<EffectKind, string> = {
   io: 'plug',
   timer: 'watch',
   nondeterministic: 'question',
+  unknown: 'debug-disconnect',
 };
 
 /** What a mutation of each kind changes, for short summaries. */
@@ -494,7 +526,9 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
   if (roots.length === 0) {
     roots.push({ label: `${functionLabel(fn)} has no detected side effects`, description: 'pure', icon: 'pass', tone: 'ok', location: builder.at(fn) });
   }
-  return builder.finish(roots, effects.length ? plural(effects.length, 'side effect') : 'pure');
+  const known = effects.filter((e) => e.kind !== 'unknown').length;
+  const unfollowed = effects.length - known;
+  return builder.finish(roots, [known ? plural(known, 'side effect') : unfollowed ? 'no known side effects' : 'pure', unfollowed ? plural(unfollowed, 'call') + ' not followed' : ''].filter(Boolean).join(', '));
 }
 
 /** The declaration of the state named at the offset (for `cart.items`, of `cart`), if the cursor is on a name. */

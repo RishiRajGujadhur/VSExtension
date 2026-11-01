@@ -17,6 +17,7 @@ const shortLabels: Record<EffectKind, string> = {
   io: 'I/O',
   timer: 'timers',
   nondeterministic: 'nondeterministic',
+  unknown: 'calls callbacks',
 };
 
 /** Named functions and methods worth a lens: declarations, class members and `const f = () => …`. */

@@ -47,3 +47,9 @@ export class Counter {
     this.increment();
   }
 }
+
+export function each(list: string[], visit: (item: string) => void): void {
+  for (const item of list) {
+    visit(item);
+  }
+}

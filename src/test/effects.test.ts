@@ -90,3 +90,12 @@ test('mutation report selects the state at the cursor', () => {
   assert.deepEqual(focusedAt('registry.na|mes.push'), ['registry']);
   assert.deepEqual(focusedAt('function pu|re'), []);
 });
+
+test('calls to callbacks are reported as not followed rather than pure', () => {
+  assert.deepEqual(effectsAt('function ea|ch'), ['unknown visit']);
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const report = sideEffectReport(program, file, offsetIn(file, 'function ea|ch'));
+  assert.equal(report.description, 'no known side effects, 1 call not followed');
+  assert.deepEqual(report.roots.map((r) => r.label), ['Calls it could not follow']);
+  assert.equal(report.roots[0].children?.[0].label, 'calls visit(), a parameter holding any function');
+});
