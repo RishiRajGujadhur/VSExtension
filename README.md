@@ -357,6 +357,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. **Unused exports** are exported names nothing reachable imports. Each row's trash button runs **Safe Delete…** on the declaration.
 5. **Exported but only used locally** are names used inside their own module only. The button on the row (**Remove export Keyword**) keeps the code and drops `export`.
 6. Exports reached through `export *` barrels, renamed re-exports, `import * as ns` and dynamic `import()` count as used. Turn off `tsStructure.deadExports.testFilesAreEntryPoints` to also find exports that only tests use.
+7. To keep an export that is public API on purpose, such as a library function no code in the repository calls, document it with `/** @public */` or `/** @api */`. It is no longer reported.
 
 ## Test Impact Analysis
 

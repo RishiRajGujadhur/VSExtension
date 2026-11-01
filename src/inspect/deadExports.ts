@@ -116,8 +116,8 @@ export function findDeadExports(program: ts.Program, options: DeadExportOptions)
     for (const exported of checker.getExportsOfModule(moduleSymbol)) {
       const resolved = resolveAlias(checker, exported);
       const declaration = resolved.declarations?.find((d) => d.getSourceFile() === sourceFile);
-      if (!declaration) {
-        // Re-exported from elsewhere: judged where it is declared.
+      if (!declaration || isPublicApi(declaration)) {
+        // Re-exported from elsewhere, judged where it is declared; or kept on purpose.
         continue;
       }
       const users = new Set<string>();
@@ -136,6 +136,11 @@ export function findDeadExports(program: ts.Program, options: DeadExportOptions)
     }
   }
   return result;
+}
+
+/** Exports documented with `@public` or `@api` are part of an API on purpose, whether or not the project uses them. */
+function isPublicApi(declaration: ts.Node): boolean {
+  return ts.getJSDocTags(declaration).some((tag) => tag.tagName.text === 'public' || tag.tagName.text === 'api');
 }
 
 function isDeclarationName(node: ts.Identifier): boolean {

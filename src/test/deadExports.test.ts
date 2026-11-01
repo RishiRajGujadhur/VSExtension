@@ -46,6 +46,7 @@ test('a conventional index file is not an entry point when package.json names an
 });
 
 test('exports unused from the entry points are dead; re-exports and export * keep them alive', () => {
+  // lib.ts:kept is unused too, but documented as @public.
   const program = virtualProject('deadexports', 'src/index.ts').program();
   const entryPoints = defaultEntryPoints(root, programGraph(program).files);
   assert.deepEqual(summary(findDeadExports(program, { entryPoints, testsAreEntryPoints: true })), {

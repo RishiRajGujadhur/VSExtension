@@ -9,3 +9,6 @@ export function used(): number {
 }
 
 export function unused(): void {}
+
+/** Part of the public API even though nothing here uses it. @public */
+export function kept(): void {}
