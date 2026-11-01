@@ -294,6 +294,16 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
           actions.push(file);
         }
       }
+      if (finding.inspection.startsWith('custom:') && !offered.has(`custom:${finding.inspection}`)) {
+        // A custom inspection is changed where it was built: in the structural search builder.
+        offered.add(`custom:${finding.inspection}`);
+        const id = finding.inspection.slice('custom:'.length);
+        const edit = new vscode.CodeAction(`Edit custom inspection '${id}'…`, vscode.CodeActionKind.QuickFix);
+        edit.command = { command: 'tsStructure.editCustomInspection', title: edit.title, arguments: [id] };
+        const disable = new vscode.CodeAction(`Disable custom inspection '${id}'`, vscode.CodeActionKind.QuickFix);
+        disable.command = { command: 'tsStructure.disableCustomInspection', title: disable.title, arguments: [id] };
+        actions.push(edit, disable);
+      }
       if (!offered.has(`configure:${finding.inspection}`)) {
         offered.add(`configure:${finding.inspection}`);
         const configure = new vscode.CodeAction(`Configure '${finding.inspection}' severity…`, vscode.CodeActionKind.QuickFix);

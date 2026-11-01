@@ -325,6 +325,16 @@
         "icon": "$(lightbulb)"
       },
       {
+        "command": "tsStructure.editCustomInspection",
+        "title": "Edit Custom Inspection",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.disableCustomInspection",
+        "title": "Disable Custom Inspection",
+        "category": "TypeScript Structure"
+      },
+      {
         "command": "tsStructure.report.findUsages",
         "title": "Find Usages",
         "category": "TypeScript Structure",
@@ -624,6 +634,14 @@
         },
         {
           "command": "tsStructure.report.findUsages",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.editCustomInspection",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.disableCustomInspection",
           "when": "false"
         }
       ],

@@ -29,6 +29,7 @@ export async function run(): Promise<void> {
     await missingAwaitFlow();
     await compilerErrorFlow();
     await unexportAllFlow();
+    await customInspectionFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -175,6 +176,26 @@ async function moveMembersFlow(): Promise<void> {
   assert.match(document.getText(), /export \{ calculateSubtotal \} from '\.\/checkout';/);
   console.log('move members ok');
   await revert([vscode.Uri.file(cart), vscode.Uri.file(checkout)]);
+}
+
+/** A saved custom inspection reports matches, and its lightbulb can edit or disable it. */
+async function customInspectionFlow(): Promise<void> {
+  const settings = vscode.workspace.getConfiguration('tsStructure');
+  await settings.update('customInspections', [{ id: 'no-console-log', pattern: 'console.log($args*$)', message: 'Use the logger', severity: 'warning' }], vscode.ConfigurationTarget.Workspace);
+  const file = vscode.Uri.file(path.join(sample, 'src/logging.ts'));
+  fs.writeFileSync(file.fsPath, "export function hello(): void {\n  console.log('hello');\n}\n");
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+  const [finding] = await waitForDiagnostics(file, (d) => d.message === 'Use the logger');
+  assert.ok(finding, 'custom inspection did not report');
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, finding.range);
+  const titles = actions.map((a) => a.title);
+  assert.ok(titles.includes("Edit custom inspection 'no-console-log'…"), titles.join(', '));
+  const disable = actions.find((a) => a.title === "Disable custom inspection 'no-console-log'")!;
+  await vscode.commands.executeCommand(disable.command!.command, ...(disable.command!.arguments ?? []));
+  assert.equal((await waitForDiagnostics(file, (d) => d.message === 'Use the logger', 0)).length, 0);
+  await settings.update('customInspections', undefined, vscode.ConfigurationTarget.Workspace);
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+  console.log('custom inspection actions ok');
 }
 
 /** The Dead Export report's file button removes every unneeded export keyword in the file at once. */
