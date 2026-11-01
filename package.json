@@ -335,6 +335,12 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.report.overrideImpact",
+        "title": "Override Impact of This Member",
+        "category": "TypeScript Structure",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
         "command": "tsStructure.report.showHierarchy",
         "title": "Show Hierarchy of This Type",
         "category": "TypeScript Structure",
@@ -647,6 +653,10 @@
           "when": "false"
         },
         {
+          "command": "tsStructure.report.overrideImpact",
+          "when": "false"
+        },
+        {
           "command": "tsStructure.editCustomInspection",
           "when": "false"
         },
@@ -806,6 +816,11 @@
         {
           "command": "tsStructure.report.showHierarchy",
           "when": "view == tsStructure.report && viewItem =~ /action:showHierarchy/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.overrideImpact",
+          "when": "view == tsStructure.report && viewItem =~ /action:overrideImpact/",
           "group": "inline@1"
         }
       ]

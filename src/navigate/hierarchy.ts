@@ -184,6 +184,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       location: builder.at(member.name ?? member),
       focus: member === atCursor || undefined,
       expanded: member === atCursor || undefined,
+      action: { kind: 'overrideImpact', command: 'tsStructure.overrideImpact', file: member.getSourceFile().fileName, offset: (member.name ?? member).getStart() },
       children: overriding.length
         ? overriding.map((m) => ({ label: `${typeName(m.parent as TypeDeclaration)}.${name}`, icon: 'arrow-small-down', location: builder.at(m.name ?? m), description: callsSuper(m, name) ? 'calls super' : undefined }))
         : undefined,

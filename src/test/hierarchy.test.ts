@@ -83,3 +83,10 @@ test('other types in the hierarchy can become the root', () => {
   const square = report.roots.find((r) => r.label === 'Subtypes and implementations')?.children?.[0];
   assert.deepEqual(square?.action, { kind: 'showHierarchy', command: 'tsStructure.typeHierarchy', file: square?.action?.file, offset: offsetIn(models, 'class |Square') });
 });
+
+test('members open the override impact analysis', () => {
+  const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'class Ba|se'));
+  const area = report.roots.find((r) => r.label === 'Members')?.children?.find((m) => m.label === 'area()');
+  assert.equal(area?.action?.command, 'tsStructure.overrideImpact');
+  assert.equal(area?.action?.offset, offsetIn(models, 'abstract |area'));
+});
