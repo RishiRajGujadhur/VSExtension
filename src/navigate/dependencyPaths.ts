@@ -23,6 +23,24 @@ function distancesTo(graph: ModuleGraph, to: string, runtimeOnly: boolean): Map<
   return distance;
 }
 
+/** How many imports away every module the file depends on is, directly or indirectly. */
+export function distancesFrom(graph: ModuleGraph, from: string): Map<string, number> {
+  const source = normalizePath(from);
+  const distance = new Map([[source, 0]]);
+  const queue = [source];
+  while (queue.length) {
+    const file = queue.shift()!;
+    for (const edge of graph.edges.get(file) ?? []) {
+      if (!distance.has(edge.to)) {
+        distance.set(edge.to, distance.get(file)! + 1);
+        queue.push(edge.to);
+      }
+    }
+  }
+  distance.delete(source);
+  return distance;
+}
+
 /** Every shortest import path from one module to another, up to `limit` paths. */
 export function shortestPaths(graph: ModuleGraph, from: string, to: string, options: { runtimeOnly?: boolean; limit?: number } = {}): ImportEdge[][] {
   const source = normalizePath(from);

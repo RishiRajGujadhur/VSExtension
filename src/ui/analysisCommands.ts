@@ -16,10 +16,10 @@ import { copiesReport, duplicatesReport } from '../inspect/duplicates';
 import { semanticUsagesReport } from '../navigate/usages';
 import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
-import { dependencyPathReport } from '../navigate/dependencyPaths';
+import { dependencyPathReport, distancesFrom } from '../navigate/dependencyPaths';
 import { argumentFlowReport } from '../navigate/argumentFlow';
 import { discoverTests } from '../analysis/testDiscovery';
-import { defaultEntryPoints } from '../navigate/moduleGraph';
+import { defaultEntryPoints, programGraph } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
@@ -220,11 +220,26 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       let program: ts.Program | undefined;
       if (!to) {
         program = projects.createVirtualProject(from, folder).program();
+        // Modules it depends on come first, nearest first; the rest follow for checking the reverse direction.
+        const distance = distancesFrom(programGraph(program), from);
         const files = projectSourceFiles(program)
           .map((sf) => normalizePath(sf.fileName))
           .filter((f) => f !== normalizePath(from));
+        const item = (file: string) => ({
+          label: path.basename(file),
+          description: vscode.workspace.asRelativePath(path.dirname(file)),
+          detail: distance.has(file) ? `${distance.get(file)} import${distance.get(file) === 1 ? '' : 's'} away` : undefined,
+          file,
+        });
+        const reached = files.filter((f) => distance.has(f)).sort((a, b) => distance.get(a)! - distance.get(b)!);
+        const others = files.filter((f) => !distance.has(f));
         const picked = await vscode.window.showQuickPick(
-          files.map((file) => ({ label: path.basename(file), description: vscode.workspace.asRelativePath(path.dirname(file)), file })),
+          [
+            { label: `Depends on (${reached.length})`, kind: vscode.QuickPickItemKind.Separator },
+            ...reached.map(item),
+            { label: 'Not imported from here', kind: vscode.QuickPickItemKind.Separator },
+            ...others.map(item),
+          ] as (vscode.QuickPickItem & { file?: string })[],
           { title: `Why does ${path.basename(from)} depend on…`, placeHolder: 'Choose the module to explain', matchOnDescription: true },
         );
         to = picked?.file;

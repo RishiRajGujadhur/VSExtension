@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
-import { dependencyPathReport, shortestPaths } from '../navigate/dependencyPaths';
+import { dependencyPathReport, distancesFrom, shortestPaths } from '../navigate/dependencyPaths';
+import { normalizePath } from '../analysis/paths';
 import { programGraph } from '../navigate/moduleGraph';
 import { fixtures, virtualProject } from './helpers';
 
@@ -35,4 +36,12 @@ test('the report explains type-only shortest paths and the longer runtime path',
 
   const none = dependencyPathReport(virtualProject('navigate', 'src/app.tsx').program(), path.join(src, 'models.ts'), path.join(src, 'app.tsx'));
   assert.deepEqual(none.roots.map((r) => r.label).slice(0, 2), ['models.ts does not depend on app.tsx', 'But app.tsx depends on models.ts']);
+});
+
+test('distances from a module rank what it depends on', () => {
+  const graph = programGraph(virtualProject('navigate', 'src/app.tsx').program());
+  const distance = distancesFrom(graph, path.join(src, 'app.tsx'));
+  assert.equal(distance.get(normalizePath(path.join(src, 'public.ts'))), 1);
+  assert.equal(distance.get(normalizePath(path.join(src, 'utils.ts'))), 2);
+  assert.equal(distance.has(normalizePath(path.join(src, 'app.tsx'))), false);
 });
