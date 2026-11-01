@@ -158,6 +158,19 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
     { label: 'Thrown here', description: plural(own.length, 'error'), icon: 'zap', expanded: true, children: own.length ? own.map(pathRow) : [{ label: 'nothing thrown directly', icon: 'pass', tone: 'ok' }] },
     { label: 'Thrown by called functions', description: plural(fromCalls.length, 'error'), icon: 'call-outgoing', expanded: true, children: fromCalls.length ? fromCalls.map(pathRow) : [{ label: 'no called function throws', icon: 'pass', tone: 'ok' }] },
   ];
+  const types = new Map<string, ThrowPath[]>();
+  for (const p of raised) {
+    const type = errorType(checker, p);
+    types.set(type, [...(types.get(type) ?? []), p]);
+  }
+  if (types.size > 0) {
+    roots.push({
+      label: 'Error types',
+      description: [...types.keys()].join(', '),
+      icon: 'symbol-class',
+      children: [...types].map(([type, paths]) => ({ label: type, description: plural(paths.length, 'source'), icon: 'symbol-class', location: builder.at(paths[0].origin) })),
+    });
+  }
   if (catches.length) {
     roots.push({ label: 'Catch and finally blocks', description: plural(catches.length, 'handler'), icon: 'shield', expanded: true, children: catches });
   }
@@ -216,6 +229,19 @@ function callerHandling(project: VirtualProject, analyzer: ThrowAnalyzer, fn: Fu
     return { label: `${functionLabel(fn)} has no callers: errors are uncaught`, icon: 'error', tone: 'error', location: builder.at(fn) };
   }
   return { label: functionLabel(fn), icon: 'call-incoming', tone: worst(children), children, expanded: true, location: builder.at(fn) };
+}
+
+/** The class of error a path raises: `ConfigError` for `throw new ConfigError(…)`, `SyntaxError` for JSON.parse. */
+function errorType(checker: ts.TypeChecker, path: ThrowPath): string {
+  const origin = path.origin;
+  if (ts.isThrowStatement(origin)) {
+    const thrown = origin.expression;
+    if (thrown && ts.isNewExpression(thrown)) {
+      return nodeText(thrown.expression);
+    }
+    return thrown ? checker.typeToString(checker.getTypeAtLocation(thrown)) : 'unknown';
+  }
+  return /\(\): (\w+)/.exec(path.description)?.[1] ?? 'Error';
 }
 
 function calleeText(call: ts.CallExpression | ts.NewExpression): string {
