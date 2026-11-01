@@ -139,11 +139,11 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
 
   const escaping = analyzer.escaping(fn);
   const roots: ReportNode[] = [
-    { label: 'Thrown here', description: `${own.length}`, icon: 'zap', expanded: true, children: own.length ? own.map(pathRow) : [{ label: 'nothing thrown directly', icon: 'pass', tone: 'ok' }] },
-    { label: 'Thrown by called functions', description: `${fromCalls.length}`, icon: 'call-outgoing', expanded: true, children: fromCalls.length ? fromCalls.map(pathRow) : [{ label: 'no called function throws', icon: 'pass', tone: 'ok' }] },
+    { label: 'Thrown here', description: plural(own.length, 'error'), icon: 'zap', expanded: true, children: own.length ? own.map(pathRow) : [{ label: 'nothing thrown directly', icon: 'pass', tone: 'ok' }] },
+    { label: 'Thrown by called functions', description: plural(fromCalls.length, 'error'), icon: 'call-outgoing', expanded: true, children: fromCalls.length ? fromCalls.map(pathRow) : [{ label: 'no called function throws', icon: 'pass', tone: 'ok' }] },
   ];
   if (catches.length) {
-    roots.push({ label: 'Catch and finally blocks', description: `${catches.length}`, icon: 'shield', expanded: true, children: catches });
+    roots.push({ label: 'Catch and finally blocks', description: plural(catches.length, 'handler'), icon: 'shield', expanded: true, children: catches });
   }
   if (escaping.length > 0) {
     const callers = isAsync(fn)
@@ -159,6 +159,7 @@ function callerHandling(project: VirtualProject, analyzer: ThrowAnalyzer, fn: Fu
   if (depth >= maxCallerDepth || seen.has(fn)) {
     return { label: `${functionLabel(fn)} (stopped)`, icon: 'ellipsis', tone: 'warning', location: builder.at(fn) };
   }
+  // `seen` holds the functions on the current path, so a caller reached by two routes is followed both times.
   seen.add(fn);
   const { calls, escapes } = callSitesOf(project.service, fn);
   const children: ReportNode[] = calls.map(({ call }) => {
@@ -184,6 +185,7 @@ function callerHandling(project: VirtualProject, analyzer: ThrowAnalyzer, fn: Fu
       children: next.children ?? [next],
     };
   });
+  seen.delete(fn);
   children.push(...escapes.map((e) => ({ label: `passed as a value: ${nodeSnippet(e.parent, 40)}`, icon: 'question', tone: 'warning' as const, location: builder.at(e) })));
   if (children.length === 0) {
     return { label: `${functionLabel(fn)} has no callers: errors are uncaught`, icon: 'error', tone: 'error', location: builder.at(fn) };

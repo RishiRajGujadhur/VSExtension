@@ -32,3 +32,22 @@ export function quietly(text: string): unknown {
 export function main(text: string): void {
   console.log(readSetting(text, 'b'));
 }
+
+export function validate(text: string): void {
+  if (!text) {
+    throw new Error('empty');
+  }
+}
+
+export function checkName(name: string): void {
+  validate(name);
+}
+
+export function checkEmail(email: string): void {
+  validate(email);
+}
+
+export function checkForm(name: string, email: string): void {
+  checkName(name);
+  checkEmail(email);
+}

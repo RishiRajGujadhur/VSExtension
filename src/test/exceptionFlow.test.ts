@@ -16,9 +16,9 @@ function outline(nodes: readonly ReportNode[]): string[] {
 test('errors from callees are traced to their throw sites and to how each caller handles them', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function read|Setting'));
   assert.deepEqual(outline(report.roots), [
-    'Thrown here — 0',
+    'Thrown here — 0 errors',
     '  nothing thrown directly',
-    'Thrown by called functions — 2',
+    'Thrown by called functions — 2 errors',
     "  parseConfig() → throw new ConfigError('empty config') — escapes to the caller",
     "    throw new ConfigError('empty config')",
     '  parseConfig() → JSON.parse(): SyntaxError on invalid JSON — escapes to the caller',
@@ -27,6 +27,20 @@ test('errors from callees are traced to their throw sites and to how each caller
     '  caught in quietly — empty catch block swallows the error',
     '  propagates through main',
     '    main has no callers: errors are uncaught',
+  ]);
+});
+
+test('a caller reached by two routes is followed on both', () => {
+  const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function vali|date'));
+  const callers = outline(report.roots.slice(report.roots.findIndex((r) => r.label.startsWith('Escaping'))));
+  assert.deepEqual(callers, [
+    'Escaping errors (1) reach callers',
+    '  propagates through checkName',
+    '    propagates through checkForm',
+    '      checkForm has no callers: errors are uncaught',
+    '  propagates through checkEmail',
+    '    propagates through checkForm',
+    '      checkForm has no callers: errors are uncaught',
   ]);
 });
 
