@@ -90,6 +90,11 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
     const kind = classifyUsage(reference, ofProperty);
     byKind.set(kind, [...(byKind.get(kind) ?? []), reference]);
   }
+  // Only declared, imported or forwarded: nothing actually uses it.
+  const unused = [...byKind.keys()].every((kind) => kind === 'definition' || kind === 'import' || kind === 'export');
+  if (unused) {
+    builder.warnings.push(`${identifier.text} is never used: it is only declared${byKind.has('import') || byKind.has('export') ? ', imported or re-exported' : ''}. Use the trash button on its definition to delete it safely.`);
+  }
   const roots: ReportNode[] = [];
   for (const { kind, label, icon } of order) {
     const nodes = byKind.get(kind);
@@ -115,6 +120,7 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
           label: lineSnippet(node),
           description: `${functionLabel(enclosingFunction(node))} · line ${sf.getLineAndCharacterOfPosition(node.getStart()).line + 1}${node === identifier ? ' · at cursor' : ''}`,
           focus: node === identifier || undefined,
+          action: unused && kind === 'definition' ? { kind: 'deadExport' } : undefined,
           icon,
           role: kind === 'write' ? ('write' as const) : kind === 'definition' ? ('definition' as const) : ('read' as const),
           location: builder.at(node),

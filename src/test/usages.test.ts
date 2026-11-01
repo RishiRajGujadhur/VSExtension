@@ -41,3 +41,12 @@ test('the usage at the cursor is selected', () => {
   forEachReportNode(report.roots, (node) => node.focus && focused.push(`${node.label} (${node.description})`));
   assert.deepEqual(focused, ['const label = formatArea(box); (App · line 15 · at cursor)']);
 });
+
+test('a symbol nothing uses says so and offers Safe Delete', () => {
+  const report = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), utils, offsetIn(utils, 'function bu|mp'));
+  assert.match(report.warnings[0], /^bump is never used: it is only declared/);
+  assert.equal(report.roots[0].children?.[0].children?.[0].action?.kind, 'deadExport');
+  // Used symbols have neither.
+  const used = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), utils, offsetIn(utils, 'function format|Area'));
+  assert.deepEqual(used.warnings, []);
+});

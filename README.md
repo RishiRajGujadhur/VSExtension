@@ -413,6 +413,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    Each group shows its count, including how many are in test files.
 4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon. The usage you started from is selected and marked *at cursor*, and Next and Previous Result continue from it.
 5. Usages through aliases count too. In the demo, `main.ts` calls `calculateSubtotal` as `subtotal`, imported from the `index.ts` barrel.
+6. If nothing actually uses the symbol, because it is only declared, imported or re-exported, the view says so. Its definition then gets a trash button (**Safe Delete…**).
 
 ## Test Impact Analysis
 
