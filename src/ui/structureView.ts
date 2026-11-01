@@ -73,6 +73,11 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.render();
     void this.memento?.update(stateKey, report);
     await vscode.commands.executeCommand('tsStructure.report.focus');
+    const focused = this.located.find((node) => node.focus);
+    if (focused) {
+      this.cursor = this.located.indexOf(focused);
+      await this.view.reveal(focused, { select: true, focus: false, expand: true });
+    }
   }
 
   clear(): void {

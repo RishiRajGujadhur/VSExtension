@@ -37,9 +37,19 @@ test('data flow steps show their line and type', () => {
   const project = virtualProject('inspect', 'src/flow.ts');
   const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
   const checkout = report.roots.find((r) => r.label.startsWith('checkout'));
-  assert.equal(checkout?.children?.[0].description, 'line 6 · number');
+  assert.equal(checkout?.children?.[0].description, 'line 6 · number · at cursor');
   // Later steps have the declared type, so it is not repeated.
   assert.equal(checkout?.children?.[1].description, 'line 8');
+});
+
+test('data flow marks the step at the cursor', () => {
+  const project = virtualProject('inspect', 'src/flow.ts');
+  const report = dataFlowReport(project, flow, offsetIn(flow, 'total = to|tal * 0.9'));
+  const focused = report.roots.flatMap((r) => r.children ?? []).filter((c) => c.focus);
+  assert.deepEqual(
+    focused.map((c) => `${c.label} (${c.description})`),
+    ['read: total * 0.9 (line 11 · at cursor)'],
+  );
 });
 
 test('data flow shows types where narrowing changes them', () => {
@@ -47,7 +57,7 @@ test('data flow shows types where narrowing changes them', () => {
   const project = virtualProject('inspect', 'src/nullable.ts');
   const report = dataFlowReport(project, nullable, offsetIn(nullable, 'const us|er = findUser'));
   const descriptions = report.roots.flatMap((r) => r.children ?? []).map((c) => c.description);
-  assert.equal(descriptions[0], 'line 28 · User | undefined');
+  assert.equal(descriptions[0], 'line 28 · User | undefined · at cursor');
   assert.ok(descriptions.some((d) => d?.endsWith(' · User')), descriptions.join(', '));
 });
 

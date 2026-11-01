@@ -27,6 +27,8 @@ export interface ReportNode {
   role?: 'read' | 'write' | 'definition';
   /** Opaque data for context-menu actions on the row. */
   action?: { kind: string; [key: string]: unknown };
+  /** Selected when the report opens, such as the step at the cursor. */
+  focus?: boolean;
 }
 
 export interface Report {

@@ -174,6 +174,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   // Types are shown where they differ from the declared one, so narrowing and widening stand out.
   const declared = steps.find((s) => s.kind === 'declaration')?.type;
   const shownType = (s: FlowStep) => (s.kind === 'declaration' || s.type !== declared ? s.type : undefined);
+  const atCursor = (s: FlowStep) => s.node.getSourceFile().fileName === project.sourceFile(fileName).fileName && s.node.getStart() <= offset && offset <= s.node.getEnd();
   const roots: ReportNode[] = [];
   for (const [scope, scoped] of groups) {
     roots.push({
@@ -184,7 +185,8 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       expanded: true,
       children: scoped.map((s) => ({
         label: s.label,
-        description: [`line ${lineOf(s.node)}`, shownType(s)].filter(Boolean).join(' · '),
+        description: [`line ${lineOf(s.node)}`, shownType(s), atCursor(s) ? 'at cursor' : undefined].filter(Boolean).join(' · '),
+        focus: atCursor(s) || undefined,
         tooltip: `${s.kind} · line ${lineOf(s.node)}${s.type ? `\nType here: ${s.type}` : ''}`,
         icon: icons[s.kind],
         tone: s.kind === 'mutation' ? 'warning' : s.kind === 'write' || s.kind === 'update' ? 'info' : undefined,
