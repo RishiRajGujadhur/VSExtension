@@ -298,6 +298,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <div class="row">
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option></select></label>
     <button id="search" title="Ctrl+Enter in the pattern">Search</button>
+    <span id="count" class="hint"></span>
   </div>
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
@@ -406,6 +407,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   $('search').addEventListener('click', () => {
     $('error').textContent = '';
+    $('count').textContent = 'Searching…';
     $('summary').textContent = 'Searching…';
     vscode.postMessage({ type: 'search', spec: spec(), scope: $('scope').value });
   });
@@ -426,9 +428,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
         select.appendChild(option);
       }
     }
-    if (message.type === 'error') { $('summary').textContent = ''; $('error').textContent = message.message; }
+    if (message.type === 'error') { $('summary').textContent = ''; $('count').textContent = ''; $('error').textContent = message.message; }
     if (message.type === 'results') {
       $('summary').textContent = message.count + (message.count === 1 ? ' match' : ' matches') + (message.count > message.items.length ? ' (first ' + message.items.length + ' shown)' : '');
+      // The count by the button answers "did it match?" without scrolling; the list is brought into view.
+      $('count').textContent = message.count === 0 ? 'No matches' : message.count === 1 ? '1 match' : message.count + ' matches';
+      if (message.count > 0) $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
       const list = $('results');
       list.innerHTML = '';
       for (const item of message.items) {
