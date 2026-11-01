@@ -2,7 +2,7 @@ import * as ts from 'typescript';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
-import { EffectAnalyzer, EffectKind, mutationKinds } from '../inspect/effects';
+import { EffectAnalyzer, EffectKind, lensTargets, mutationKinds } from '../inspect/effects';
 import { isFunctionWithBody } from '../structure/util';
 import { languageSelector } from './refactorCommands';
 
@@ -19,21 +19,6 @@ const shortLabels: Record<EffectKind, string> = {
   nondeterministic: 'nondeterministic',
   unknown: 'calls callbacks',
 };
-
-/** Named functions and methods worth a lens: declarations, class members and `const f = () => …`. */
-function lensTargets(sourceFile: ts.SourceFile): { fn: ts.Node & { body?: ts.Node }; anchor: ts.Node }[] {
-  const targets: { fn: ts.Node & { body?: ts.Node }; anchor: ts.Node }[] = [];
-  const visit = (node: ts.Node) => {
-    if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.body && node.name) {
-      targets.push({ fn: node, anchor: node.name });
-    } else if (ts.isVariableDeclaration(node) && node.initializer && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) && ts.isIdentifier(node.name)) {
-      targets.push({ fn: node.initializer, anchor: node.name });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
-  return targets;
-}
 
 /** CodeLens above each function: "pure" or a summary of its side effects; clicking opens the full analysis. */
 export class SideEffectLens implements vscode.CodeLensProvider {

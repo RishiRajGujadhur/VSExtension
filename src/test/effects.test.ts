@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
-import { EffectAnalyzer, mutationReport, sideEffectReport } from '../inspect/effects';
+import { EffectAnalyzer, lensTargets, mutationReport, sideEffectReport } from '../inspect/effects';
 import { functionAtOffset } from '../structure/util';
 import { fixtures, offsetIn, virtualProject } from './helpers';
 
@@ -51,9 +51,9 @@ test('mutation report groups writes by shared state', () => {
   const program = virtualProject('inspect', 'src/effects.ts').program();
   const report = mutationReport(program, file);
   const state = report.roots.find((r) => r.label === 'Shared state and who changes it');
-  assert.deepEqual(state?.children?.map((c) => `${c.label} ${c.children?.length}`).sort(), ['cache 2', 'counter 2', 'registry 1', 'this 3'].sort());
+  assert.deepEqual(state?.children?.map((c) => `${c.label} ${c.children?.length}`).sort(), ['cache 2', 'counter 2', 'registry 1', 'this (Counter) 3', 'this (Button) 1'].sort());
   // Most-written first, and imported state names the file it lives in.
-  assert.equal(state?.children?.[0].label, 'this');
+  assert.equal(state?.children?.[0].label, 'this (Counter)');
   assert.equal(state?.children?.find((c) => c.label === 'registry')?.description, 'imported state · 1 write · state.ts');
 });
 
@@ -106,4 +106,12 @@ test('an effect that comes from a called function opens that function', () => {
   const inherited = report.roots.find((r) => r.label === 'Mutates module state')?.children?.[0];
   assert.match(inherited?.description ?? '', /^via remember\(\)/);
   assert.deepEqual(inherited?.action, { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: inherited?.action?.file, offset: offsetIn(file, 'function |remember') });
+});
+
+test('lenses cover class fields and object properties holding functions', () => {
+  const sourceFile = virtualProject('inspect', 'src/effects.ts').program().getSourceFile(file)!;
+  const names = lensTargets(sourceFile).map((t) => t.anchor.getText());
+  for (const name of ['addItem', 'increment', 'handle', 'onSave']) {
+    assert.ok(names.includes(name), `${name} missing from ${names.join(', ')}`);
+  }
 });

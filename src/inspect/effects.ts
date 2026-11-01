@@ -586,9 +586,15 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
       if (effect.kind === 'mutates-parameter') {
         continue;
       }
-      const stateName = effect.target.replace(/[.[].*$/, '');
-      const key = origin.declaration ? `${origin.declaration.getSourceFile().fileName}:${origin.declaration.pos}` : `${effect.kind}:${stateName}`;
-      const state = byState.get(key) ?? { label: stateName, kind: effect.kind, declaration: origin.declaration, entries: [] };
+      // `this` is a different object in each class, so instance state is grouped per class.
+      const owner = effect.kind === 'mutates-this' ? ts.findAncestor(origin.node, ts.isClassLike) : undefined;
+      const stateName = owner ? `this (${owner.name?.text ?? 'class'})` : effect.target.replace(/[.[].*$/, '');
+      const key = origin.declaration
+        ? `${origin.declaration.getSourceFile().fileName}:${origin.declaration.pos}`
+        : owner
+          ? `this:${owner.getSourceFile().fileName}:${owner.pos}`
+          : `${effect.kind}:${stateName}`;
+      const state = byState.get(key) ?? { label: stateName, kind: effect.kind, declaration: origin.declaration ?? owner, entries: [] };
       state.entries.push({ ...effectNode(effect, builder), label: `${functionLabel(fn)}: ${effect.via ? origin.description : effect.description}` });
       byState.set(key, state);
     }
@@ -623,6 +629,25 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
     });
   }
   return builder.finish(roots, total ? plural(total, 'mutation') : 'no mutations of shared state');
+}
+
+/**
+ * Named functions worth a side-effect lens: declarations, methods, `const f = () => …`, class fields such as
+ * `handle = () => …` and object properties such as `{ onClick: () => … }`.
+ */
+export function lensTargets(sourceFile: ts.SourceFile): { fn: FunctionWithBody; anchor: ts.Node }[] {
+  const targets: { fn: FunctionWithBody; anchor: ts.Node }[] = [];
+  const isFunctionValue = (node: ts.Node | undefined): node is ts.ArrowFunction | ts.FunctionExpression => !!node && (ts.isArrowFunction(node) || ts.isFunctionExpression(node));
+  const visit = (node: ts.Node) => {
+    if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.body && node.name) {
+      targets.push({ fn: node, anchor: node.name });
+    } else if ((ts.isVariableDeclaration(node) || ts.isPropertyDeclaration(node) || ts.isPropertyAssignment(node)) && isFunctionValue(node.initializer) && (ts.isIdentifier(node.name) || ts.isPrivateIdentifier(node.name))) {
+      targets.push({ fn: node.initializer, anchor: node.name });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return targets;
 }
 
 function baseName(fileName: string): string {

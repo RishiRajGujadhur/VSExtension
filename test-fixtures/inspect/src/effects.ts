@@ -53,3 +53,16 @@ export function each(list: string[], visit: (item: string) => void): void {
     visit(item);
   }
 }
+
+export class Button {
+  clicks = 0;
+  handle = (): void => {
+    this.clicks++;
+  };
+}
+
+export const handlers = {
+  onSave: (): void => {
+    console.log('saved');
+  },
+};
