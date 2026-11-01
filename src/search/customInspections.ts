@@ -1,5 +1,6 @@
 import { Finding, Inspection, Severity } from '../inspect/inspection';
 import { CompiledPattern, Matcher, PlaceholderConstraint, compilePattern, instantiate, outermost } from './structuralSearch';
+import { globToRegExp } from '../structure/glob';
 
 /** A saved structural search that runs as a live inspection. Stored in `tsStructure.customInspections`. */
 export interface CustomInspectionConfig {
@@ -14,6 +15,8 @@ export interface CustomInspectionConfig {
   enabled?: boolean;
   /** Regular expression tested against the file path; only matching files are inspected. */
   files?: string;
+  /** Glob such as `src/**` or `**\/*.tsx`; only files whose path ends with a match are inspected. */
+  include?: string;
 }
 
 /** Builds inspections from saved configurations, reporting the ones that cannot be compiled. */
@@ -26,9 +29,11 @@ export function customInspections(configs: readonly CustomInspectionConfig[]): {
     }
     let compiled: CompiledPattern;
     let files: RegExp | undefined;
+    let include: RegExp | undefined;
     try {
       compiled = compilePattern({ pattern: config.pattern, constraints: config.constraints });
       files = config.files ? new RegExp(config.files) : undefined;
+      include = config.include ? includePattern(config.include) : undefined;
     } catch (error) {
       errors.push(`Custom inspection '${config.id}': ${(error as Error).message}`);
       continue;
@@ -39,7 +44,8 @@ export function customInspections(configs: readonly CustomInspectionConfig[]): {
       title: config.id,
       defaultSeverity: config.severity ?? 'warning',
       run(context) {
-        if (files && !files.test(context.sourceFile.fileName.replace(/\\/g, '/'))) {
+        const fileName = context.sourceFile.fileName.replace(/\\/g, '/');
+        if ((files && !files.test(fileName)) || (include && !include.test(fileName))) {
           return [];
         }
         const matches = outermost(new Matcher(compiled, context.checker).search(context.sourceFile));
@@ -65,6 +71,12 @@ export function customInspections(configs: readonly CustomInspectionConfig[]): {
     });
   }
   return { inspections, errors };
+}
+
+/** A glob matched against the end of an absolute path, so `src/**` works without knowing the workspace folder. */
+export function includePattern(glob: string): RegExp {
+  const exact = globToRegExp(glob.replace(/^\.?\//, ''));
+  return new RegExp(`(?:^|/)${exact.source.slice(1)}`, exact.flags);
 }
 
 function safeEdits<T>(compute: () => T): T | undefined {

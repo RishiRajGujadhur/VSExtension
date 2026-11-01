@@ -464,7 +464,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 1. In **Structural Search…**, write and test a pattern until it finds exactly what you want to flag. For example, `console.log($args*$)`.
 2. Optionally write a **Replace with** template. It becomes the inspection's quick fix.
-3. Under **Save as inspection**, write the message, for example *Use track() instead of console.log*. Placeholders such as `$args$` are filled in from each match. Choose a severity and click **Save as Inspection**.
+3. Under **Save as inspection**, write the message, for example *Use track() instead of console.log*. Placeholders such as `$args$` are filled in from each match. Choose a severity and click **Save as Inspection**. To check only some files, fill in the glob box, such as `src/**` or `**/*.tsx`.
 4. The inspection is saved in the workspace's `tsStructure.customInspections` setting, so it is shared through `.vscode/settings.json`. It runs live on visible files like the built-in inspections: an underline, a hover, the Problems panel, the quick fix and a fix-all for the file.
 5. **Inspect Code…** includes custom inspections, so the whole project can be checked at once.
 6. Run **Manage Custom Inspections…** to edit an inspection in the builder, disable or enable it, or delete it. From a finding, the lightbulb offers **Edit custom inspection…** and **Disable custom inspection** directly.

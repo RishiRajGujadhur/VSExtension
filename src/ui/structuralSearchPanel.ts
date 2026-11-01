@@ -24,7 +24,7 @@ type Message =
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replaceOne'; index: number }
-  | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
+  | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity; include: string };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
 export class StructuralSearchPanel {
@@ -161,6 +161,7 @@ export class StructuralSearchPanel {
           message: message.message.trim(),
           severity: message.severity,
           replacement: message.template.trim() || undefined,
+          include: message.include.trim() || undefined,
         };
         await saveCustomInspections([...configs, config]);
         void this.panel.webview.postMessage({ type: 'status', text: `Saved inspection '${config.id}'. It now runs on open files.` });
@@ -401,6 +402,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
     <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()">
+    <input id="include" type="text" style="width: 160px" placeholder="all files, or src/**" title="Only inspect files whose path matches this glob, such as src/** or **/*.tsx">
     <select id="severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
     <button id="saveInspection" class="secondary">Save as Inspection</button>
   </div>
@@ -429,6 +431,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     $('template').value = p.replacement || '';
     if (p.message !== undefined) $('message').value = p.message;
     if (p.severity) $('severity').value = p.severity;
+    $('include').value = p.include || '';
     state.constraints = {};
     for (const c of p.constraints || []) state.constraints[c.name] = c;
     save();
@@ -507,7 +510,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   $('saveInspection').addEventListener('click', () => {
     $('error').textContent = '';
-    vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value });
+    vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value, include: $('include').value });
   });
   $('previewReplace').addEventListener('click', () => {
     $('error').textContent = '';

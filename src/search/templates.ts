@@ -7,6 +7,8 @@ export interface SearchPreset {
   constraints?: PlaceholderConstraint[];
   replacement?: string;
   message?: string;
+  /** For saved inspections: only files matching this glob. */
+  include?: string;
   /** Where to search; the builder's current choice when absent. */
   scope?: 'project' | 'file' | 'selection';
 }
