@@ -3,7 +3,7 @@ import * as ts from 'typescript';
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';
 import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, lineSnippet, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, codeContext, lineSnippet, plural } from '../structure/report';
 import { identifierAt } from '../structure/util';
 
 export interface ChainStep {
@@ -182,6 +182,7 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
         description: `${relative(step.file)}${step.name !== chain[chain.length - 1].name ? ` · as ${step.name}` : ''}`,
         icon: i === chain.length - 1 ? 'symbol-class' : 'arrow-down',
         tone: i === chain.length - 1 ? ('ok' as const) : undefined,
+        tooltip: codeContext(step.node),
         location: builder.at(step.node),
       })),
     },
@@ -216,7 +217,13 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
       label: `'${via}'`,
       description: plural(list.length, 'importer'),
       icon: 'symbol-namespace',
-      children: list.map((entry) => ({ label: relative(entry.node.getSourceFile().fileName), description: entry.local !== target.name ? `as ${entry.local}` : undefined, icon: 'file-code', location: builder.at(entry.node) })),
+      children: list.map((entry) => ({
+        label: relative(entry.node.getSourceFile().fileName),
+        description: [`line ${entry.node.getSourceFile().getLineAndCharacterOfPosition(entry.node.getStart()).line + 1}`, entry.local !== target.name ? `as ${entry.local}` : undefined].filter(Boolean).join(' · '),
+        tooltip: codeContext(entry.node),
+        icon: 'file-code',
+        location: builder.at(entry.node),
+      })),
     })),
   });
   return builder.finish(roots, `${plural(chain.length - 1, 'hop')} from the cursor, exported by ${plural(exported.length, 'module')}`);
