@@ -1,7 +1,8 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
-import { DeadExportResult, findDeadExports } from '../inspect/deadExports';
+import { DeadExportResult, deadExportReport, findDeadExports } from '../inspect/deadExports';
+import { ReportNode, forEachReportNode } from '../structure/report';
 import { defaultEntryPoints, programGraph } from '../navigate/moduleGraph';
 import { fixtures, virtualProject } from './helpers';
 
@@ -21,6 +22,17 @@ test('package.json entry points map back to source files', () => {
   const program = virtualProject('deadexports', 'src/index.ts').program();
   const entries = defaultEntryPoints(root, programGraph(program).files);
   assert.deepEqual(entries.map((e) => path.basename(e)), ['index.ts']);
+});
+
+test('rows show the kind of declaration and mark type-only exports', () => {
+  const program = virtualProject('deadexports', 'src/index.ts').program();
+  const report = deadExportReport(program, { entryPoints: defaultEntryPoints(root, programGraph(program).files), testsAreEntryPoints: true });
+  const rows = new Map<string, ReportNode>();
+  forEachReportNode(report.roots, (node) => node.action?.name && rows.set(String(node.action.name), node));
+  assert.equal(rows.get('unused')?.icon, 'symbol-function');
+  assert.equal(rows.get('localOnly')?.icon, 'symbol-constant');
+  assert.equal(rows.get('Unused')?.icon, 'symbol-type-parameter');
+  assert.equal(rows.get('Unused')?.description, 'unused · type');
 });
 
 test('a conventional index file is not an entry point when package.json names another', () => {

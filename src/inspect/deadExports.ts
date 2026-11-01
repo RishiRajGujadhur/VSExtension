@@ -156,8 +156,8 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
   }
   const exportRow = (sf: ts.SourceFile, e: DeadExport): ReportNode => ({
     label: e.name,
-    description: e.usedLocally ? 'used only inside this module' : 'unused',
-    icon: 'symbol-misc',
+    description: [e.usedLocally ? 'used only inside this module' : 'unused', isTypeOnly(e.declaration) ? 'type' : undefined].filter(Boolean).join(' · '),
+    icon: declarationIcon(e.declaration),
     tone: e.usedLocally ? 'info' : 'warning',
     location: builder.at(nameOf(e.declaration), sf),
     action: { kind: e.usedLocally ? 'unexport' : 'deadExport', file: normalizePath(sf.fileName), name: e.name },
@@ -196,6 +196,33 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
     children: result.entries.map((e) => ({ label: path.basename(e), description: root ? path.relative(root, e).replace(/\\/g, '/') : undefined, icon: 'file', location: { file: e, line: 0, character: 0, endLine: 0, endCharacter: 0 } })),
   });
   return builder.finish(roots, `${plural(count(unusedOnly), 'unused export')}, ${plural(result.unreachable.length, 'unreachable module')}`);
+}
+
+function declarationIcon(declaration: ts.Node): string {
+  if (ts.isFunctionDeclaration(declaration) || (ts.isVariableDeclaration(declaration) && declaration.initializer && (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer)))) {
+    return 'symbol-function';
+  }
+  if (ts.isClassDeclaration(declaration)) {
+    return 'symbol-class';
+  }
+  if (ts.isInterfaceDeclaration(declaration)) {
+    return 'symbol-interface';
+  }
+  if (ts.isTypeAliasDeclaration(declaration)) {
+    return 'symbol-type-parameter';
+  }
+  if (ts.isEnumDeclaration(declaration)) {
+    return 'symbol-enum';
+  }
+  if (ts.isVariableDeclaration(declaration)) {
+    return ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const ? 'symbol-constant' : 'symbol-variable';
+  }
+  return 'symbol-misc';
+}
+
+/** Interfaces and type aliases: removing them never changes runtime behavior. */
+function isTypeOnly(declaration: ts.Node): boolean {
+  return ts.isInterfaceDeclaration(declaration) || ts.isTypeAliasDeclaration(declaration);
 }
 
 function nameOf(declaration: ts.Node): ts.Node {
