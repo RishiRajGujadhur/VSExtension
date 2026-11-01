@@ -399,6 +399,9 @@ export interface Replacement {
   line: number;
   before: string;
   after: string;
+  /** Offsets of the matched code, to replace just this match later. */
+  start: number;
+  end: number;
 }
 
 export function structuralReplace(project: VirtualProject, spec: SearchSpec, template: string, scope: SearchScope = {}): RefactorResult & { matches: number; replacements: Replacement[] } {
@@ -433,6 +436,8 @@ export function structuralReplace(project: VirtualProject, spec: SearchSpec, tem
     line: m.sourceFile.getLineAndCharacterOfPosition(m.start).line + 1,
     before: m.sourceFile.text.slice(m.start, m.end),
     after: instantiate(template, m),
+    start: m.start,
+    end: m.end,
   }));
   const label = `Replace ${spec.pattern.trim().split('\n')[0]}`;
   return { label: label.length > 60 ? `${label.slice(0, 59)}…` : label, changes: project.changes(), conflicts: introducedErrors(project, [], 20), matches: matches.length, replacements };

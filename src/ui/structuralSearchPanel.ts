@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
-import { Match, PlaceholderConstraint, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
+import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
 import { CustomInspectionConfig, inspectionId } from '../search/customInspections';
@@ -23,12 +23,15 @@ type Message =
   | { type: 'copyKeybinding'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
+  | { type: 'replaceOne'; index: number }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
 export class StructuralSearchPanel {
   private static current: StructuralSearchPanel | undefined;
   private matches: Match[] = [];
+  /** The last preview, so a single listed replacement can be applied. */
+  private preview?: { spec: SearchSpec; template: string; replacements: Replacement[] };
   /** The file the search was opened from; scope "file" and project loading use it. */
   private anchor: string;
 
@@ -166,11 +169,31 @@ export class StructuralSearchPanel {
       }
       return;
     }
+    if (message.type === 'replaceOne') {
+      const target = this.preview?.replacements[message.index];
+      if (!this.preview || !target) {
+        return;
+      }
+      try {
+        // The same replacement, limited to the one match's range.
+        const project = this.projects.createVirtualProject(this.anchor, this.folder());
+        const result = structuralReplace(project, this.preview.spec, this.preview.template, { files: [target.file], range: { start: target.start, end: target.end } });
+        if (result.matches === 0) {
+          void this.panel.webview.postMessage({ type: 'status', text: 'That match has changed since the preview; preview again.' });
+          return;
+        }
+        await applyRefactor(result, previewEnabled());
+      } catch (error) {
+        void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
     if (message.type === 'previewReplace') {
       // Computed in a copy of the project, so nothing is written.
       try {
         const project = this.projects.createVirtualProject(this.anchor, this.folder());
         const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        this.preview = { spec: clean(message.spec), template: message.template, replacements: result.replacements };
         void this.panel.webview.postMessage({
           type: 'preview',
           items: result.replacements.slice(0, 200).map((r) => ({
@@ -500,12 +523,16 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
         li.textContent = problem;
         list.appendChild(li);
       }
-      for (const item of message.items) {
+      for (const [index, item] of message.items.entries()) {
         const li = document.createElement('li');
-        li.innerHTML = '<div><code class="before"></code></div><div><code class="after"></code></div><div class="where"></div>';
+        li.innerHTML = '<div><code class="before"></code></div><div><code class="after"></code></div><div class="where"><span></span> · <a href="#">Replace this one</a></div>';
         li.querySelector('.before').textContent = '− ' + item.before;
         li.querySelector('.after').textContent = '+ ' + item.after;
-        li.querySelector('.where').textContent = item.where;
+        li.querySelector('.where span').textContent = item.where;
+        li.querySelector('a').addEventListener('click', (event) => {
+          event.preventDefault();
+          vscode.postMessage({ type: 'replaceOne', index });
+        });
         list.appendChild(li);
       }
       $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
