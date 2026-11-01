@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'fs';
 import * as path from 'path';
 import { test } from 'node:test';
 import { semanticUsagesReport } from '../navigate/usages';
@@ -21,4 +22,14 @@ test('usages are grouped into definitions, calls, imports, writes and reads', ()
 test('JSX, type references, inheritance and type imports are told apart', () => {
   assert.deepEqual(groups(app, 'function La|bel'), ['Definitions 1', 'JSX usages 1']);
   assert.deepEqual(groups(models, 'interface Sh|ape'), ['Definitions 1', 'Extended or implemented 1', 'Type references 2', 'Imports 2']);
+});
+
+test('destructuring a property reads it', () => {
+  const project = virtualProject('navigate', 'src/utils.ts');
+  const text = fs.readFileSync(utils, 'utf8');
+  project.setText(utils, `${text}\nexport function nameOf(shape: Shape): string {\n  const { name } = shape;\n  return name;\n}\n`);
+  const report = semanticUsagesReport(project, models, offsetIn(models, '  na|me: string;'));
+  const labels = report.roots.map((r) => `${r.label}: ${r.children?.flatMap((f) => f.children ?? []).map((c) => c.label).join(' | ')}`);
+  assert.ok(labels.some((l) => l.startsWith('Reads:') && l.includes('const { name } = shape;')), labels.join('\n'));
+  assert.ok(!labels.some((l) => l.startsWith('Definitions:') && l.includes('const { name }')), labels.join('\n'));
 });

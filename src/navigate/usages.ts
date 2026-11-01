@@ -3,7 +3,7 @@ import * as ts from 'typescript';
 import { discoverTests } from '../analysis/testDiscovery';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, lineSnippet, plural } from '../structure/report';
-import { accessExpression, enclosingFunction, functionLabel, identifierAt, isTypePosition, referencesAt, skipParentheses, writeOf } from '../structure/util';
+import { accessExpression, enclosingFunction, functionLabel, identifierAt, isTypePosition, referencesAt, skipParentheses, symbolAt, writeOf } from '../structure/util';
 
 export type UsageKind = 'definition' | 'import' | 'export' | 'write' | 'call' | 'jsx' | 'inheritance' | 'type' | 'read';
 
@@ -19,9 +19,15 @@ const order: { kind: UsageKind; label: string; icon: string }[] = [
   { kind: 'export', label: 'Exports and re-exports', icon: 'export' },
 ];
 
-/** What a reference does with the symbol, from the syntax around it. */
-export function classifyUsage(node: ts.Node): UsageKind {
+/**
+ * What a reference does with the symbol, from the syntax around it. `ofProperty` says the symbol is a property,
+ * so `const { price } = book` reads it rather than declaring it.
+ */
+export function classifyUsage(node: ts.Node, ofProperty = false): UsageKind {
   const parent = node.parent;
+  if (ofProperty && ts.isBindingElement(parent) && (parent.propertyName ?? parent.name) === node) {
+    return 'read';
+  }
   for (let current: ts.Node | undefined = parent; current && !ts.isSourceFile(current); current = current.parent) {
     if (ts.isImportDeclaration(current) || ts.isImportEqualsDeclaration(current)) {
       return 'import';
@@ -69,6 +75,8 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
   const sourceFile = project.sourceFile(fileName);
   const identifier = identifierAt(sourceFile, offset, 'Place the cursor on a symbol to find its usages.');
   const references = referencesAt(project.service, fileName, identifier.getStart());
+  const symbol = symbolAt(project.program().getTypeChecker(), identifier);
+  const ofProperty = !!symbol && !!(symbol.flags & (ts.SymbolFlags.Property | ts.SymbolFlags.Method | ts.SymbolFlags.Accessor));
   const builder = new ReportBuilder('usages', `Usages of ${identifier.text}`);
   const testFiles = new Map<ts.SourceFile, boolean>();
   const isTest = (sf: ts.SourceFile) => {
@@ -79,7 +87,7 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
   };
   const byKind = new Map<UsageKind, ts.Node[]>();
   for (const reference of references) {
-    const kind = classifyUsage(reference);
+    const kind = classifyUsage(reference, ofProperty);
     byKind.set(kind, [...(byKind.get(kind) ?? []), reference]);
   }
   const roots: ReportNode[] = [];
