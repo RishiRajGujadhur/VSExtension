@@ -31,6 +31,8 @@ export interface FlowStep {
   label: string;
   /** The value's type at this point, after narrowing. */
   type?: string;
+  /** For a hand-off, the parameter the value becomes in the called function. */
+  parameter?: ts.ParameterDeclaration;
 }
 
 const mutatingMethods = new Set(['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', 'fill', 'copyWithin', 'set', 'add', 'delete', 'clear']);
@@ -118,7 +120,7 @@ function classify(node: ts.Node, checker: ts.TypeChecker): FlowStep {
     const callee = calledFunction(checker, outerParent);
     const parameter = callee?.parameters[Math.min(index, callee.parameters.length - 1)];
     const target = parameter ? ` as ${parameter.name.getText()}` : '';
-    return step('argument', `→ ${nodeText(outerParent.expression)}(…)${target}`);
+    return { ...step('argument', `→ ${nodeText(outerParent.expression)}(…)${target}`), parameter };
   }
   if ((ts.isCallExpression(outerParent) || ts.isNewExpression(outerParent)) && outerParent.expression === outer) {
     return step('call', `called: ${nodeSnippet(outerParent, 50)}`);
@@ -187,6 +189,10 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
         label: s.label,
         description: [`line ${lineOf(s.node)}`, shownType(s), atCursor(s) ? 'at cursor' : undefined].filter(Boolean).join(' · '),
         focus: atCursor(s) || undefined,
+        action:
+          s.parameter && ts.isIdentifier(s.parameter.name)
+            ? { kind: 'follow', command: 'tsStructure.dataFlow', file: s.parameter.getSourceFile().fileName, offset: s.parameter.name.getStart() }
+            : undefined,
         tooltip: `${s.kind} · line ${lineOf(s.node)}${s.type ? `\nType here: ${s.type}` : ''}`,
         icon: icons[s.kind],
         tone: s.kind === 'mutation' ? 'warning' : s.kind === 'write' || s.kind === 'update' ? 'info' : undefined,

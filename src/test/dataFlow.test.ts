@@ -42,6 +42,16 @@ test('data flow steps show their line and type', () => {
   assert.equal(checkout?.children?.[1].description, 'line 8');
 });
 
+test('hand-offs can be followed into the called function', () => {
+  const project = virtualProject('inspect', 'src/flow.ts');
+  const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
+  const handOff = report.roots.flatMap((r) => r.children ?? []).find((c) => c.label === '→ applyTax(…) as amount');
+  const action = handOff?.action as { kind: string; command: string; file: string; offset: number };
+  assert.equal(action.kind, 'follow');
+  assert.equal(action.command, 'tsStructure.dataFlow');
+  assert.equal(action.offset, offsetIn(flow, 'applyTax(|amount'));
+});
+
 test('data flow marks the step at the cursor', () => {
   const project = virtualProject('inspect', 'src/flow.ts');
   const report = dataFlowReport(project, flow, offsetIn(flow, 'total = to|tal * 0.9'));
