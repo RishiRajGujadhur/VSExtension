@@ -20,9 +20,14 @@ function gitLines(cwd: string, args: string[]): string[] {
 }
 
 /** Revisions worth comparing against: HEAD, the branch point, recent commits and branches. */
-async function pickRef(root: string): Promise<{ ref: string; label: string } | undefined> {
+async function pickRef(root: string, last?: { ref: string; label: string }): Promise<{ ref: string; label: string } | undefined> {
   type Item = vscode.QuickPickItem & { ref?: string; custom?: boolean };
-  const items: Item[] = [{ label: '$(git-commit) HEAD', description: 'Uncommitted changes', ref: 'HEAD' }];
+  const items: Item[] = [];
+  // Comparing with the same revision again is the common case while working on a branch.
+  if (last && last.ref !== 'HEAD') {
+    items.push({ label: `$(history) ${last.label}`, description: 'Last used', ref: last.ref });
+  }
+  items.push({ label: '$(git-commit) HEAD', description: 'Uncommitted changes', ref: 'HEAD' });
   for (const base of ['origin/main', 'main', 'origin/master', 'master']) {
     const mergeBase = gitLines(root, ['merge-base', 'HEAD', base])[0];
     if (mergeBase) {
@@ -50,6 +55,8 @@ async function pickRef(root: string): Promise<{ ref: string; label: string } | u
   return picked?.ref ? { ref: picked.ref, label: picked.label.replace(/^\$\([^)]*\)\s*/, '') } : undefined;
 }
 
+const lastRefKey = 'tsStructure.graphDiff.lastRevision';
+
 export function registerGraphDiff(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('tsStructure.dependencyGraphDiff', async (refArg?: string) => {
@@ -62,10 +69,11 @@ export function registerGraphDiff(context: vscode.ExtensionContext, projects: Pr
       try {
         const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(anchor))?.uri.fsPath;
         const repo = gitRoot(path.extname(anchor) ? path.dirname(anchor) : anchor);
-        const choice = refArg ? { ref: refArg, label: refArg } : await pickRef(repo);
+        const choice = refArg ? { ref: refArg, label: refArg } : await pickRef(repo, context.workspaceState.get(lastRefKey));
         if (!choice) {
           return;
         }
+        void context.workspaceState.update(lastRefKey, choice);
         return runAnalysis(view, `Comparing dependencies with ${choice.label}`, () => {
           // The graph covers the compiler project's directory, or the workspace folder without one.
           const { configPath, parsed } = path.extname(anchor) ? projects.resolve(anchor, folder) : { configPath: undefined, parsed: { options: {} } };
