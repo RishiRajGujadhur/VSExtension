@@ -185,9 +185,9 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
   });
   const roots: ReportNode[] = [
     { label: `${kindLabel(target)} ${typeName(target)}`, description: where(target), icon: ts.isInterfaceDeclaration(target) ? 'symbol-interface' : 'symbol-class', tone: 'ok', location: builder.at(target.name ?? target) },
-    { label: 'Supertypes', description: `${allSupers.length}`, icon: 'type-hierarchy-super', expanded: true, children: supers.length ? supers : [{ label: 'none', icon: 'dash' }] },
-    { label: 'Subtypes and implementations', description: `${allSubs.length}`, icon: 'type-hierarchy-sub', expanded: true, children: subs.length ? subs : [{ label: 'none in this project', icon: 'dash' }] },
-    { label: 'Members', description: `${members.length}`, icon: 'symbol-field', expanded: true, children: members },
+    { label: 'Supertypes', description: plural(allSupers.length, 'type'), icon: 'type-hierarchy-super', expanded: true, children: supers.length ? supers : [{ label: 'none', icon: 'dash' }] },
+    { label: 'Subtypes and implementations', description: plural(allSubs.length, 'type'), icon: 'type-hierarchy-sub', expanded: true, children: subs.length ? subs : [{ label: 'none in this project', icon: 'dash' }] },
+    { label: 'Members', description: plural(members.length, 'member'), icon: 'symbol-field', expanded: true, children: members },
   ];
   return builder.finish(roots, `${plural(allSupers.length, 'supertype')}, ${plural(allSubs.length, 'subtype')}`);
 }

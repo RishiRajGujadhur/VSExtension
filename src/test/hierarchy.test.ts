@@ -17,13 +17,13 @@ test('the hierarchy shows supertypes, nested subtypes and member overrides', () 
   const report = hierarchyReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'class Ba|se'));
   assert.deepEqual(outline(report.roots), [
     'abstract class Base — models.ts',
-    'Supertypes — 1',
+    'Supertypes — 1 type',
     '  interface Shape — implements · models.ts',
-    'Subtypes and implementations — 3',
+    'Subtypes and implementations — 3 types',
     '  class Square — extends · overrides area · models.ts',
     '    class Tiny — extends · overrides area · models.ts',
     '  class Circle — extends · overrides area, describe · models.ts',
-    'Members — 3',
+    'Members — 3 members',
     '  name — from Shape',
     '  area() — abstract · from Shape · 3 overrides',
     '    Square.area',
