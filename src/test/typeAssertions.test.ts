@@ -33,6 +33,16 @@ test('assertions are classified as unsafe, unnecessary, widening or unchecked na
   assert.match(satisfies, /\{ kind: 'circle', radius: 1 \} satisfies Shape;/);
   const unknown = applyTextEdits(sourceFile.text, findings[4].fixes![0].edits);
   assert.match(unknown, /const e = shape as unknown;/);
+  // Test files can be skipped; this file is not one, so the option changes nothing here.
+  assert.equal(runInspections([typeAssertions], { sourceFile, program, checker: program.getTypeChecker(), options: { typeAssertionIgnoreTests: true } }).length, findings.length);
+  const project = virtualProject('inspect', 'src/assertions.ts');
+  const testFile = file.replace('assertions.ts', 'assertions.test.ts');
+  project.setText(testFile, `import { test } from 'node:test';\n${sourceFile.text}`);
+  const testProgram = project.program();
+  const testSource = testProgram.getSourceFile(testFile)!;
+  const inTest = (ignore: boolean) => runInspections([typeAssertions], { sourceFile: testSource, program: testProgram, checker: testProgram.getTypeChecker(), options: { typeAssertionIgnoreTests: ignore } }).length;
+  assert.equal(inTest(false), findings.length);
+  assert.equal(inTest(true), 0);
   const optional = applyTextEdits(sourceFile.text, findings[7].fixes![0].edits);
   assert.match(optional, /const h = maybe\?\.length;/);
 });

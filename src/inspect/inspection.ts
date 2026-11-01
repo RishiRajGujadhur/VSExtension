@@ -35,6 +35,8 @@ export interface InspectionContext {
 export interface InspectionOptions {
   /** Calls whose promises may be dropped on purpose, such as `track` or `logger.*`. */
   missingAwaitIgnore?: string[];
+  /** Skip type assertions in test files, where mocks and fixtures often need them. */
+  typeAssertionIgnoreTests?: boolean;
 }
 
 export interface Inspection {

@@ -62,7 +62,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       vscode.workspace.onDidChangeTextDocument((e) => this.isVisible(e.document) && this.schedule(e.document)),
       vscode.workspace.onDidCloseTextDocument((d) => this.forget(d.uri)),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait')) {
+        if (e.affectsConfiguration('tsStructure.inspections') || e.affectsConfiguration('tsStructure.customInspections') || e.affectsConfiguration('tsStructure.exclude') || e.affectsConfiguration('tsStructure.missingAwait') || e.affectsConfiguration('tsStructure.typeAssertion')) {
           this.results.clear();
           this.refreshAll();
         }
@@ -346,5 +346,6 @@ async function applyReportFix(node: ReportNode): Promise<void> {
 }
 
 function inspectionOptions(): InspectionOptions {
-  return { missingAwaitIgnore: vscode.workspace.getConfiguration('tsStructure').get<string[]>('missingAwait.ignore', []) };
+  const config = vscode.workspace.getConfiguration('tsStructure');
+  return { missingAwaitIgnore: config.get<string[]>('missingAwait.ignore', []), typeAssertionIgnoreTests: config.get('typeAssertion.ignoreTestFiles', false) };
 }

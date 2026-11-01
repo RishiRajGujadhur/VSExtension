@@ -955,6 +955,11 @@
           "default": true,
           "description": "Show the number of inspection findings in the active file in the status bar."
         },
+        "tsStructure.typeAssertion.ignoreTestFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "Don't report type assertions in test files, where mocks and fixtures often need them."
+        },
         "tsStructure.missingAwait.ignore": {
           "type": "array",
           "items": { "type": "string" },

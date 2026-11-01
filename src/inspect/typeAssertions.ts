@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import { TextEdit } from '../intentions/intentions';
 import { Finding, Inspection, InspectionContext } from './inspection';
 import { containsNullish, nodeText, typeText } from '../structure/util';
+import { discoverTests } from '../analysis/testDiscovery';
 
 /**
  * Type Assertion Inspector: `as` and `!` assertions that are unnecessary, silently widen,
@@ -13,6 +14,9 @@ export const typeAssertions: Inspection = {
   defaultSeverity: 'warning',
   run(context) {
     const findings: Finding[] = [];
+    if (context.options?.typeAssertionIgnoreTests && discoverTests(context.sourceFile).isTestFile) {
+      return findings;
+    }
     const visit = (node: ts.Node) => {
       if ((ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) && !ts.isConstTypeReference(node.type)) {
         const finding = inspectAssertion(context, node);
