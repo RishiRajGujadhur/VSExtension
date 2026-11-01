@@ -238,6 +238,12 @@
         "icon": "$(filter)"
       },
       {
+        "command": "tsStructure.report.chooseGroups",
+        "title": "Show Groups…",
+        "category": "TypeScript Structure",
+        "icon": "$(list-selection)"
+      },
+      {
         "command": "tsStructure.report.next",
         "title": "Go to Next Result",
         "category": "TypeScript Structure",
@@ -549,6 +555,10 @@
           "when": "tsStructure.hasReport"
         },
         {
+          "command": "tsStructure.report.chooseGroups",
+          "when": "tsStructure.hasReport"
+        },
+        {
           "command": "tsStructure.report.next",
           "when": "tsStructure.hasReport"
         },
@@ -642,6 +652,11 @@
           "command": "tsStructure.report.filter",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.report.chooseGroups",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "0_view@1"
         },
         {
           "command": "tsStructure.report.previous",

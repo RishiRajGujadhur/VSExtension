@@ -107,6 +107,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     vscode.commands.registerCommand('tsStructure.report.back', () => view.go(-1)),
     vscode.commands.registerCommand('tsStructure.report.forward', () => view.go(1)),
     vscode.commands.registerCommand('tsStructure.report.filter', () => view.setFilter()),
+    vscode.commands.registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
     vscode.commands.registerCommand('tsStructure.report.next', () => view.step(1)),
     vscode.commands.registerCommand('tsStructure.report.previous', () => view.step(-1)),
     vscode.commands.registerCommand('tsStructure.report.copyMarkdown', async () => {

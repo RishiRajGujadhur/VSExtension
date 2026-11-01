@@ -30,6 +30,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private history: Entry[] = [];
   private position = -1;
   private filter = '';
+  /** Top-level groups hidden with Show Groups…, by label. */
+  private hidden = new Set<string>();
   private roots: ReportNode[] = [];
   private readonly parents = new Map<ReportNode, ReportNode | undefined>();
   private located: ReportNode[] = [];
@@ -70,6 +72,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.history = [...this.history.slice(0, this.position + 1), { report, rerun }].slice(-maxHistory);
     this.position = this.history.length - 1;
     this.filter = '';
+    this.hidden.clear();
     this.render();
     void this.memento?.update(stateKey, report);
     await vscode.commands.executeCommand('tsStructure.report.focus');
@@ -93,6 +96,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     if (next >= 0 && next < this.history.length) {
       this.position = next;
       this.filter = '';
+      this.hidden.clear();
       this.render();
     }
   }
@@ -120,9 +124,29 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
   }
 
+  /** Chooses which top-level groups to show, such as only Calls and Writes of a usage search. */
+  async chooseGroups(labels?: string[]): Promise<void> {
+    const groups = (this.report?.roots ?? []).filter((r) => r.children?.length).map((r) => r.label);
+    if (groups.length === 0) {
+      return;
+    }
+    const chosen =
+      labels ??
+      (
+        await vscode.window.showQuickPick(
+          groups.map((label) => ({ label, picked: !this.hidden.has(label) })),
+          { title: 'Show Groups', canPickMany: true, placeHolder: 'Groups to show in the report' },
+        )
+      )?.map((item) => item.label);
+    if (chosen) {
+      this.hidden = new Set(groups.filter((g) => !chosen.includes(g)));
+      this.render();
+    }
+  }
+
   private render(): void {
     const report = this.report;
-    this.roots = report ? filterReport(report.roots, this.filter) : [];
+    this.roots = report ? filterReport(report.roots, this.filter).filter((r) => !this.hidden.has(r.label)) : [];
     this.parents.clear();
     this.located = [];
     this.cursor = -1;
@@ -139,7 +163,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.stale = false;
     // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the message.
     this.view.title = titleParts(report).heading;
-    this.view.description = this.filter ? `filtered: “${this.filter}”` : undefined;
+    this.view.description = [this.filter ? `filtered: “${this.filter}”` : '', this.hidden.size ? `${this.hidden.size} hidden` : ''].filter(Boolean).join(' · ') || undefined;
     this.updateMessage();
     let problems = 0;
     forEachReportNode(report?.roots ?? [], (node) => {

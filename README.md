@@ -241,7 +241,7 @@ The builder starts from ten examples (async `forEach`, JSON deep clone, `== null
 
 The TypeScript Structure view keeps every analysis's report:
 - **Back and forward** through the last 20 reports, and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
-- **Filter** rows by text, and **go to the next or previous result**.
+- **Filter** rows by text, **Show Groups…** to hide whole groups, and **go to the next or previous result**.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
@@ -410,7 +410,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Extended or implemented**, **Type references**;
    - **Imports**, **Exports and re-exports**.
 
-   Each group shows its count, including how many are in test files.
+   Each group shows its count, including how many are in test files. To see only some groups, such as just **Calls** and **Writes**, choose **Show Groups…** in the view's `…` menu. That works in every report.
 4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon. The usage you started from is selected and marked *at cursor*, and Next and Previous Result continue from it.
 5. Usages through aliases count too. In the demo, `main.ts` calls `calculateSubtotal` as `subtotal`, imported from the `index.ts` barrel.
 6. If nothing actually uses the symbol, because it is only declared, imported or re-exported, the view says so. Its definition then gets a trash button (**Safe Delete…**).

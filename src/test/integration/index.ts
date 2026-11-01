@@ -276,6 +276,16 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.equal(vscode.window.activeTextEditor?.document.uri.fsPath.toLowerCase(), cart.fsPath.toLowerCase());
   console.log('report history, export and navigation ok');
 
+  // Show Groups hides the other top-level groups, in the view and in what is copied.
+  at('calculateSubtotal(');
+  await vscode.commands.executeCommand('tsStructure.semanticUsages');
+  await vscode.commands.executeCommand('tsStructure.report.chooseGroups', ['Calls']);
+  await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+  const shown = await vscode.env.clipboard.readText();
+  assert.match(shown, /Calls/);
+  assert.doesNotMatch(shown, /Definitions/);
+  console.log('show groups ok');
+
   // Side-effect CodeLens, off by default.
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', true, vscode.ConfigurationTarget.Global);
   const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>('vscode.executeCodeLensProvider', cart);
