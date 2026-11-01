@@ -67,23 +67,26 @@ function inspectAssertion(context: InspectionContext, node: Assertion): Finding 
     return at(
       `Double assertion from ${typeText(checker, original, node)} to ${targetText} through ${inner.type.getText(sourceFile)}: the compiler no longer checks that these types are related, so any value passes.`,
       'warning',
+      { category: 'Unsafe' },
     );
   }
   if (target.flags & ts.TypeFlags.Any) {
     // `unknown` keeps the escape hatch but makes every use narrow the value first.
     return at(`'as any' turns off type checking for ${nodeText(inner)} and for everything it flows into.`, 'warning', {
+      category: 'Unsafe',
       fixes: [{ title: "Use 'as unknown' and narrow where it is used", edits: [{ start: node.type.getStart(sourceFile), end: node.type.end, text: 'unknown' }] }],
     });
   }
   // Widening drops object-literal freshness, which would otherwise fail on excess properties.
   const source = ts.isObjectLiteralExpression(inner) ? checker.getWidenedType(checker.getTypeAtLocation(node.expression)) : checker.getTypeAtLocation(node.expression);
   if (source.flags & ts.TypeFlags.Any) {
-    return at(`${nodeText(inner)} is 'any', so nothing verifies at runtime that it is ${targetText}. Consider validating it with a type guard or schema.`, 'info');
+    return at(`${nodeText(inner)} is 'any', so nothing verifies at runtime that it is ${targetText}. Consider validating it with a type guard or schema.`, 'info', { category: 'Unverified' });
   }
   const widens = checker.isTypeAssignableTo(source, target);
   const narrows = checker.isTypeAssignableTo(target, source);
   if (widens && narrows && typeText(checker, source, node) === typeText(checker, target, node)) {
     return at(`Unnecessary assertion: ${nodeText(inner)} is already ${targetText}.`, 'hint', {
+      category: 'Unnecessary',
       unnecessary: true,
       fixes: [{ title: 'Remove unnecessary assertion', preferred: true, edits: removeAssertion(node, sourceFile) }],
     });
@@ -93,12 +96,12 @@ function inspectAssertion(context: InspectionContext, node: Assertion): Finding 
       `Widening assertion: ${typeText(checker, source, node)} already fits ${targetText}. A type annotation or 'satisfies ${targetText}' keeps the check without discarding type information.`,
       'info',
       ts.isAsExpression(node)
-        ? { fixes: [{ title: `Use 'satisfies ${targetText}'`, edits: [{ start: node.expression.end, end: node.type.getStart(sourceFile), text: ' satisfies ' }] }] }
-        : {},
+        ? { category: 'Widening', fixes: [{ title: `Use 'satisfies ${targetText}'`, edits: [{ start: node.expression.end, end: node.type.getStart(sourceFile), text: ' satisfies ' }] }] }
+        : { category: 'Widening' },
     );
   }
   if (narrows) {
-    return at(`Unchecked narrowing from ${typeText(checker, source, node)} to ${targetText}: ${narrowingRisk(checker, source, target, node)} Prefer a type guard that checks at runtime.`, 'warning');
+    return at(`Unchecked narrowing from ${typeText(checker, source, node)} to ${targetText}: ${narrowingRisk(checker, source, target, node)} Prefer a type guard that checks at runtime.`, 'warning', { category: 'Unchecked narrowing' });
   }
   return undefined;
 }
@@ -139,6 +142,7 @@ function inspectNonNull(context: InspectionContext, node: ts.NonNullExpression):
       inspection: 'typeAssertion',
       message: `Unnecessary non-null assertion: ${nodeText(node.expression)} is ${typeText(checker, source, node)}, which is never null or undefined.`,
       severity: 'hint',
+      category: 'Unnecessary',
       unnecessary: true,
       ...bang,
       fixes: [{ title: "Remove '!'", preferred: true, edits: [{ ...bang, text: '' }] }],
@@ -148,6 +152,7 @@ function inspectNonNull(context: InspectionContext, node: ts.NonNullExpression):
     inspection: 'typeAssertion',
     message: `Non-null assertion on ${nodeText(node.expression)}, which is ${typeText(checker, source, node)}: if it is null or undefined here, the next access throws at runtime.`,
     severity: 'hint',
+    category: 'Non-null on a nullable value',
     ...bang,
     explain: name && { title: `Explain why ${nodeText(node.expression)} may be null or undefined…`, command: 'tsStructure.nullability', offset: name.getStart(sourceFile) },
     fixes: ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node ? [{ title: "Use optional chaining '?.'", edits: [{ start: node.end - 1, end: node.parent.name.getStart(sourceFile), text: '?.' }] }] : undefined,

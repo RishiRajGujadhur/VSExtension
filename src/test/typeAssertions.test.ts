@@ -3,6 +3,7 @@ import * as path from 'path';
 import { test } from 'node:test';
 import { runInspections } from '../inspect/inspection';
 import { typeAssertions } from '../inspect/typeAssertions';
+import { assertionAuditReport } from '../inspect/assertionAudit';
 import { applyTextEdits } from '../intentions/intentions';
 import { fixtures, virtualProject } from './helpers';
 
@@ -50,4 +51,15 @@ test('assertions are classified as unsafe, unnecessary, widening or unchecked na
   assert.equal(inTest(true), 0);
   const optional = applyTextEdits(sourceFile.text, findings[7].fixes![0].edits);
   assert.match(optional, /const h = maybe\?\.length;/);
+});
+
+test('the audit groups assertions from riskiest to harmless', () => {
+  const program = virtualProject('inspect', 'src/assertions.ts').program();
+  const report = assertionAuditReport(program, [program.getSourceFile(file)!]);
+  assert.deepEqual(
+    report.roots.map((r) => `${r.label} ${r.children?.length}`),
+    ['Unsafe 2', 'Unchecked narrowing 2', 'Unverified 1', 'Non-null on a nullable value 1', 'Widening 1', 'Unnecessary 2'],
+  );
+  assert.equal(report.description, '9 assertions, 5 unchecked or unsafe, in 1 file');
+  assert.equal(report.roots[0].children?.[0].label, 'const d = raw as unknown as Circle;');
 });

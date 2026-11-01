@@ -6,6 +6,7 @@ import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
+import { assertionAuditReport } from '../inspect/assertionAudit';
 import { nullabilityReport } from '../inspect/nullability';
 import { rejectionReport } from '../inspect/rejections';
 import { deadExportReport } from '../inspect/deadExports';
@@ -160,6 +161,11 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded }, root);
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', (t) => {
+      const program = t.project().program();
+      const ignoreTests = vscode.workspace.getConfiguration('tsStructure').get('typeAssertion.ignoreTestFiles', false);
+      return assertionAuditReport(program, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)), { typeAssertionIgnoreTests: ignoreTests }, t.folder);
+    }),
     vscode.commands.registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project') => {
       const editor = sourceEditor();
       if (!editor) {

@@ -31,6 +31,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.promiseRejections', label: 'Promise Rejections', detail: 'Where this function’s rejections are handled or lost', icon: 'debug-disconnect' },
       { command: 'tsStructure.exceptionFlow', label: 'Exception Flow', detail: 'Where errors are thrown, caught, transformed or swallowed', icon: 'error' },
       { command: 'tsStructure.inspectCode', label: 'Inspect Code…', detail: 'Run every inspection over the file or project', icon: 'checklist' },
+      { command: 'tsStructure.auditTypeAssertions', label: 'Audit Type Assertions', detail: 'Every as, <T> and ! in the project, riskiest first', icon: 'shield' },
       { command: 'tsStructure.findDuplicates', label: 'Find Structural Duplicates…', detail: 'Copies of code with renamed variables or changed values', icon: 'files' },
       { command: 'tsStructure.deadExports', label: 'Dead Exports', detail: 'Exports nothing reachable from the entry points uses', icon: 'debug-disconnect' },
       { command: 'tsImpact.analyze', label: 'Test Impact Analysis', detail: 'Tests that depend on this symbol or file', icon: 'beaker' },

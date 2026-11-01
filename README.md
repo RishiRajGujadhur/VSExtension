@@ -343,7 +343,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Use 'as unknown'** instead of `as any`, so every use has to narrow the value;
    - **Show where … comes from…** runs Data Flow on the asserted value, and **Explain why … may be null or undefined…** runs the Nullability Path Explorer on a `!`;
    - suppression comments for the line or file.
-4. Hints don't appear in the Problems panel. Run **Inspect Code…** on the file to list every finding, hints included, in the TypeScript Structure view.
+4. Hints don't appear in the Problems panel. Run **Inspect Code…** on the file to list every finding, hints included, in the TypeScript Structure view. To review a codebase, run **Audit Type Assertions (Project)**. It groups every assertion from riskiest (*Unsafe*) to harmless (*Unnecessary*), one row per line, with the fix button where there is one.
 5. Change how loud each inspection is with `tsStructure.inspections.severity`, for example `{ "typeAssertion": "info" }`, or `"off"` to disable it.
 6. Tests often need assertions for mocks and fixtures. Turn on `tsStructure.typeAssertion.ignoreTestFiles` to skip test files, such as `*.test.ts` or files that import a test framework.
 

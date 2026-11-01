@@ -279,6 +279,11 @@
         "icon": "$(checklist)"
       },
       {
+        "command": "tsStructure.auditTypeAssertions",
+        "title": "Audit Type Assertions (Project)",
+        "category": "TypeScript Structure"
+      },
+      {
         "command": "tsStructure.report.applyFix",
         "title": "Apply Fix",
         "category": "TypeScript Structure",
@@ -468,6 +473,10 @@
         {
           "command": "tsStructure.inspectCode",
           "group": "2_inspect@1"
+        },
+        {
+          "command": "tsStructure.auditTypeAssertions",
+          "group": "2_inspect@2"
         }
       ],
       "explorer/context": [

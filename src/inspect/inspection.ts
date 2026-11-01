@@ -22,6 +22,8 @@ export interface Finding {
   fixes?: Fix[];
   /** Other places that explain the finding, such as the helper that drops a promise. */
   related?: { message: string; node: ts.Node }[];
+  /** A finer classification within the inspection, such as `Unchecked narrowing`, for grouping. */
+  category?: string;
   /** An analysis that explains the finding, run with the cursor at `offset`. */
   explain?: { title: string; command: string; offset: number };
 }
