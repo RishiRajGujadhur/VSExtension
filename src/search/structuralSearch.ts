@@ -320,6 +320,8 @@ export interface SearchScope {
   /** Only these files; otherwise every project source file. */
   files?: readonly string[];
   isExcluded?: (fileName: string) => boolean;
+  /** Only matches inside this range of offsets, such as the editor's selection; used with a single file. */
+  range?: { start: number; end: number };
 }
 
 /** Structural Search across a project. */
@@ -329,7 +331,8 @@ export function structuralSearch(program: ts.Program, spec: SearchSpec, scope: S
   const only = scope.files ? new Set(scope.files.map(normalizePath)) : undefined;
   return projectSourceFiles(program)
     .filter((sf) => (!only || only.has(normalizePath(sf.fileName))) && !scope.isExcluded?.(sf.fileName))
-    .flatMap((sf) => matcher.search(sf));
+    .flatMap((sf) => matcher.search(sf))
+    .filter((m) => !scope.range || (scope.range.start <= m.start && m.end <= scope.range.end));
 }
 
 /** Matches as a report, grouped by file, with each match's placeholder bindings. */

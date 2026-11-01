@@ -64,6 +64,12 @@ test('replace rewrites matches and reports type errors it would introduce', () =
   assert.ok(broken.conflicts.length > 0);
   assert.match(broken.conflicts[0].message, /toFixed/);
 
+  // A range limits the search and the replacement to part of a file, such as the selection.
+  const whole = structuralSearch(virtualProject('search', 'src/code.ts').program(), { pattern: 'console.log($a$)' });
+  const ranged = structuralReplace(virtualProject('search', 'src/code.ts'), { pattern: 'console.log($a$)' }, 'console.info($a$)', { range: { start: whole[1].start, end: whole[1].end } });
+  assert.equal(ranged.matches, 1);
+  assert.equal(ranged.replacements[0].before, whole[1].sourceFile.text.slice(whole[1].start, whole[1].end));
+
   // A replacement that is not valid code is refused before anything is written.
   assert.throws(
     () => structuralReplace(virtualProject('search', 'src/code.ts'), { pattern: '$x$ === $x$' }, '($x$'),

@@ -11,7 +11,7 @@ import { isExcluded } from './exclude';
 import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
 
-export type Scope = 'project' | 'file';
+export type Scope = 'project' | 'file' | 'selection';
 
 const historyKey = 'tsStructure.searchHistory';
 const maxHistory = 15;
@@ -96,6 +96,14 @@ export class StructuralSearchPanel {
   }
 
   protected scopeOf(scope: Scope): SearchScope {
+    if (scope === 'selection') {
+      // The selection in the editor the builder was opened from, as it is now.
+      const editor = vscode.window.visibleTextEditors.find((e) => normalizePath(e.document.uri.fsPath) === normalizePath(this.anchor));
+      if (!editor || editor.selection.isEmpty) {
+        throw new Error(`Select the code to search in ${vscode.workspace.asRelativePath(this.anchor)} first.`);
+      }
+      return { files: [this.anchor], range: { start: editor.document.offsetAt(editor.selection.start), end: editor.document.offsetAt(editor.selection.end) } };
+    }
     return scope === 'file' ? { files: [this.anchor] } : { isExcluded };
   }
 
@@ -343,7 +351,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
-    <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option></select></label>
+    <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option></select></label>
     <button id="search" title="Ctrl+Enter in the pattern">Search</button>
     <span id="count" class="hint"></span>
     <button id="copyKeybinding" class="secondary" title="Copy this search as a keybindings.json entry that runs it">Copy as Keybinding</button>

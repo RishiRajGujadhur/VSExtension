@@ -8,7 +8,7 @@ export interface SearchPreset {
   replacement?: string;
   message?: string;
   /** Where to search; the builder's current choice when absent. */
-  scope?: 'project' | 'file';
+  scope?: 'project' | 'file' | 'selection';
 }
 
 /** Starting points offered in the builder. */

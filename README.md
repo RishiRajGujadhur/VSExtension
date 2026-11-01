@@ -444,7 +444,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor.
 2. Write the **Pattern** as code with placeholders, or pick one from **Start from an example…**. In the demo, `$list$.find($callback$)` finds every `.find()` call. Problems, such as a pattern that isn't valid TypeScript or a broken regular expression, show under the box as you type.
 3. Each placeholder gets a row under **Placeholder constraints**. **Type** is a regular expression tested against the matched code's type. Here `^LineItem\[\]$` keeps only searches through line item arrays and skips `coupons.find()`. **Text** tests the code itself; **Invert** negates either one.
-4. Choose the **Scope** (whole project or current file) and click **Search**, or press `Ctrl+Enter` in the pattern.
+4. Choose the **Scope** and click **Search**, or press `Ctrl+Enter` in the pattern. The scope is the whole project, the current file, or the code selected in the editor right now. A selection is handy for replacing inside one function.
 5. Matches appear in the builder and in the TypeScript Structure view, grouped by file. Each shows what every placeholder matched, such as *$list$ = items*. Click one to open it.
 6. **Recent searches…** brings back any of your last 15 searches with their constraints.
 
