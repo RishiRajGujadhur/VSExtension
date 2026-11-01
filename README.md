@@ -383,6 +383,20 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Click the diff button on a group (**Compare Copies**) to open the first two copies side by side. Common indentation is removed so they line up.
 6. Tune sensitivity with `tsStructure.duplicates.minStatements` (default 3) and `minTokens` (default 40). Turn on `tsStructure.duplicates.matchRenamedProperties` to also match copies that use other property names. For example, `parcelWeight` in `shipping.ts` sums `.weight` the way `calculateSubtotal` sums `.price`. Test files are skipped unless `tsStructure.duplicates.ignoreTestFiles` is off.
 
+### Side-Effect Analyzer
+
+![Side effects of addToCart: it mutates its items argument, reassigns lastUpdated, changes analytics events through track(), writes to the console and reads the current time; CodeLenses above each function summarize the same](docs/images/side-effects.png)
+
+1. Put the cursor on a function name, inside a function body, or on a call. In the demo, use `addToCart` in `src/cart.ts`.
+2. Run **Side-Effect Analyzer**.
+3. Effects are grouped by kind, each with how many are direct and how many come through calls:
+   - **Mutates arguments**, **Mutates the instance**, **Mutates module state** or **imported state**, **Mutates captured variables**, **Writes globals**;
+   - **Input/output**: console, network, storage, `fs`, dialogs;
+   - **Schedules work**: timers;
+   - **Nondeterministic**: `Math.random()`, `Date.now()`, `new Date()`.
+4. An effect inherited from a called function says so (*changes module state events (.push()) via track()*). Expand it to see the call chain. A mutation of a parameter in a callee is mapped to what this function passed.
+5. To see this at a glance in the editor, turn on `tsStructure.codeLens.sideEffects`. Every function then gets a lens: **pure**, or a summary such as *mutates arguments · mutates module state · I/O*. Click a lens to open the full analysis.
+
 ## Test Impact Analysis
 
 ### Usage
