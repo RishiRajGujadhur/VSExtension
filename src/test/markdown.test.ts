@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { filterReport, reportMarkdown } from '../structure/markdown';
-import { Report } from '../structure/report';
+import { Report, titleParts } from '../structure/report';
 
 const report: Report = {
   kind: 'test',
@@ -63,4 +63,14 @@ test('fix-all takes one fix per finding and skips overlaps; file suppression ext
   const existing = ts.createSourceFile('a.ts', '// ts-structure-ignore-file typeAssertion\nconst a = 1;\n', ts.ScriptTarget.Latest, true);
   const edit = fileSuppressionEdit(existing, 'missingAwait');
   assert.equal(existing.text.slice(0, edit.start) + edit.text + existing.text.slice(edit.end), '// ts-structure-ignore-file typeAssertion, missingAwait\nconst a = 1;\n');
+});
+
+test('report titles split into the analysis and its subject', () => {
+  const parts = (kind: string, title: string) => titleParts({ ...report, kind, title });
+  assert.deepEqual(parts('mutations', 'Mutations in cart.ts'), { heading: 'Mutations', subject: 'cart.ts' });
+  assert.deepEqual(parts('overrideImpact', 'Impact of changing Base.area'), { heading: 'Override impact', subject: 'Base.area' });
+  assert.deepEqual(parts('graphDiff', 'Dependency changes since HEAD'), { heading: 'Dependency changes', subject: 'since HEAD' });
+  assert.deepEqual(parts('dependencyPath', 'main.ts → analytics.ts'), { heading: 'Dependency path', subject: 'main.ts → analytics.ts' });
+  assert.deepEqual(parts('deadExports', 'Dead exports'), { heading: 'Dead exports' });
+  assert.deepEqual(titleParts(undefined), { heading: 'Analysis' });
 });

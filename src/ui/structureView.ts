@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { hashText, pathKey } from '../analysis/paths';
 import { filterReport, reportMarkdown } from '../structure/markdown';
-import { Report, ReportLocation, ReportNode, Tone, forEachReportNode } from '../structure/report';
+import { Report, ReportLocation, ReportNode, Tone, forEachReportNode, titleParts } from '../structure/report';
 import { currentHash } from '../resultsView';
 
 const toneColors: Record<Tone, string> = {
@@ -132,9 +132,13 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     };
     index(this.roots);
     this.stale = false;
-    this.view.title = report ? report.title : 'Analysis';
+    // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the description.
+    const { heading, subject } = titleParts(report);
+    this.view.title = heading;
     const timing = report?.durationMs !== undefined ? ` · ${report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`}` : '';
-    this.view.description = report ? `${this.filter ? `filtered: “${this.filter}” · ` : ''}${report.description ?? ''}${timing}` : undefined;
+    this.view.description = report
+      ? [this.filter ? `filtered: “${this.filter}”` : '', subject, `${report.description ?? ''}${timing}`.replace(/^ · /, '')].filter(Boolean).join(' · ')
+      : undefined;
     this.updateMessage();
     let problems = 0;
     forEachReportNode(report?.roots ?? [], (node) => {
@@ -261,3 +265,4 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     await vscode.window.showTextDocument(uri, { selection, preview: !sideBySide, viewColumn: sideBySide ? vscode.ViewColumn.Beside : undefined });
   }
 }
+

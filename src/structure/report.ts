@@ -101,3 +101,17 @@ export function forEachReportNode(nodes: readonly ReportNode[], visit: (node: Re
     forEachReportNode(node.children ?? [], visit, depth + 1);
   }
 }
+
+const headings: Record<string, string> = { dependencyPath: 'Dependency path', overrideImpact: 'Override impact' };
+
+/** Splits a report title such as "Data flow of total" into the analysis ("Data flow") and its subject ("total"). */
+export function titleParts(report: Report | undefined): { heading: string; subject?: string } {
+  if (!report) {
+    return { heading: 'Analysis' };
+  }
+  const match = /^(.+?) (of changing|of|in|since) (.+)$/.exec(report.title);
+  if (headings[report.kind]) {
+    return { heading: headings[report.kind], subject: match ? match[3] : report.title };
+  }
+  return match ? { heading: match[1], subject: match[2] === 'since' ? `since ${match[3]}` : match[3] } : { heading: report.title };
+}
