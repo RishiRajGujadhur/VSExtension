@@ -97,3 +97,12 @@ test('overrides show their code on hover', () => {
   const tiny = area?.children?.find((c) => c.label === 'Tiny.area');
   assert.match(tiny?.tooltip ?? '', /area\(\): number \{\n\s+return super\.area\(\) \/ 10;/);
 });
+
+test('override impact rows show code on hover and drive editor highlights', () => {
+  const report = overrideImpactReport(virtualProject('navigate', 'src/models.ts'), models, offsetIn(models, 'abstract ar|ea'));
+  const tiny = report.roots.find((r) => r.label === 'Overrides in subtypes')?.children?.find((c) => c.label === 'Tiny.area');
+  assert.equal(tiny?.role, 'definition');
+  assert.match(tiny?.tooltip ?? '', /super\.area\(\)/);
+  const calls = report.roots.find((r) => r.label === 'Call sites')?.children?.flatMap((g) => g.children ?? []) ?? [];
+  assert.ok(calls.length > 0 && calls.every((c) => c.role === 'read' && c.tooltip?.startsWith('```')));
+});

@@ -288,6 +288,8 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
         icon: extendsBase ? 'debug-step-into' : 'symbol-method',
         tone: extendsBase ? 'warning' : 'info',
         location: builder.at(own.name ?? own),
+        tooltip: codeContext(own.name ?? own, 2),
+        role: 'definition',
       });
     } else if (!ts.isInterfaceDeclaration(sub) && !ts.isInterfaceDeclaration(owner)) {
       const between = index.allSupertypes(sub).filter((s) => subtypes.includes(s) && findMember(s, name));
@@ -323,7 +325,14 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
       }
     }
   }
-  const callRow = (node: ts.Node): ReportNode => ({ label: `${functionLabel(enclosingFunction(node))}`, description: `${where(node)}:${node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1}`, icon: 'symbol-method', location: builder.at(node) });
+  const callRow = (node: ts.Node): ReportNode => ({
+    label: `${functionLabel(enclosingFunction(node))}`,
+    description: `${where(node)}:${node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1}`,
+    icon: 'symbol-method',
+    location: builder.at(node),
+    tooltip: codeContext(node),
+    role: 'read',
+  });
 
   const impact = analyzeImpact({ program, checker }, { fileName, offset: (member.name ?? member).getStart(), scope: 'symbol' }, { includeInheritedMembers: true });
   const roots: ReportNode[] = [
