@@ -132,13 +132,9 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     };
     index(this.roots);
     this.stale = false;
-    // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the description.
-    const { heading, subject } = titleParts(report);
-    this.view.title = heading;
-    const timing = report?.durationMs !== undefined ? ` · ${report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`}` : '';
-    this.view.description = report
-      ? [this.filter ? `filtered: “${this.filter}”` : '', subject, `${report.description ?? ''}${timing}`.replace(/^ · /, '')].filter(Boolean).join(' · ')
-      : undefined;
+    // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the message.
+    this.view.title = titleParts(report).heading;
+    this.view.description = this.filter ? `filtered: “${this.filter}”` : undefined;
     this.updateMessage();
     let problems = 0;
     forEachReportNode(report?.roots ?? [], (node) => {
@@ -158,11 +154,12 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private updateMessage(): void {
     const report = this.report;
     const messages = [
+      ...(report ? [summaryLine(report)] : []),
       ...(this.stale ? ['Files changed since this analysis ran; re-run it to refresh the results.'] : []),
       ...(report?.warnings ?? []),
       ...(report && this.roots.length === 0 ? [this.filter ? `No rows match “${this.filter}”.` : 'Nothing found.'] : []),
     ];
-    this.view.message = messages.length ? messages.join(' ') : undefined;
+    this.view.message = messages.length ? messages.join('\n') : undefined;
   }
 
   private checkStale(document: vscode.TextDocument): void {
@@ -266,3 +263,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 }
 
+/** "total · 3 definitions, 1 check · 12 ms": what the report is about, its summary and how long it took. */
+function summaryLine(report: Report): string {
+  const timing = report.durationMs === undefined ? '' : report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`;
+  return [titleParts(report).subject, report.description, timing].filter(Boolean).join(' · ');
+}
