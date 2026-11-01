@@ -64,6 +64,12 @@ test('an error that enters an async caller is followed as a rejection', () => {
   assert.match(callers[2], /^ {4}not awaited: the rejection is unhandled/);
 });
 
+test('errors from a called function can be followed into it', () => {
+  const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function read|Setting'));
+  const fromCall = report.roots.find((r) => r.label === 'Thrown by called functions')?.children?.[0];
+  assert.deepEqual(fromCall?.action, { kind: 'follow', command: 'tsStructure.exceptionFlow', file: fromCall?.action?.file, offset: offsetIn(file, 'function |parseConfig') });
+});
+
 test('a catch block that throws a new error transforms it; the new throw escapes', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function load|Config'));
   const lines = outline(report.roots);

@@ -123,6 +123,7 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
       icon: p.chain.length ? 'call-outgoing' : 'zap',
       tone,
       location: builder.at(p.chain[0] ?? p.origin),
+      action: p.chain.length ? followCallee(checker, p.chain[0]) : undefined,
       children: p.chain.length
         ? [
             ...p.chain.slice(1).map((c) => ({ label: `calls ${calleeText(c)}()`, icon: 'arrow-small-right', location: builder.at(c) })),
@@ -246,6 +247,13 @@ function errorType(checker: ts.TypeChecker, path: ThrowPath): string {
     return thrown ? checker.typeToString(checker.getTypeAtLocation(thrown)) : 'unknown';
   }
   return /\(\): (\w+)/.exec(path.description)?.[1] ?? 'Error';
+}
+
+/** Opens the exception flow of the function a call goes into. */
+function followCallee(checker: ts.TypeChecker, call: ts.CallExpression | ts.NewExpression): ReportNode['action'] {
+  const callee = calledFunction(checker, call);
+  const name = callee && ((callee as ts.FunctionDeclaration).name ?? callee);
+  return name ? { kind: 'follow', command: 'tsStructure.exceptionFlow', file: callee.getSourceFile().fileName, offset: name.getStart() } : undefined;
 }
 
 function calleeText(call: ts.CallExpression | ts.NewExpression): string {
