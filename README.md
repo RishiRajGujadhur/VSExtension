@@ -291,6 +291,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. **Paths that produce null or undefined** traces every source back to its origin. Examples: an optional parameter, a caller that omits an argument, a `return undefined`, a function that can reach its end without returning, or a library call such as `Array.find()`.
 5. If the value is safe at the cursor, **Ruled out by** lists the checks that narrow it, such as `if (!coupon) return amount;`.
 6. **Uses** lists every read of the variable and what it is at that point: *safe* (narrowed), *check* (a test such as `!coupon` or `coupon?.code`), or *may be undefined*. A use that may still be null is one that needs a guard.
+7. You can also start from a TypeScript error. On *Object is possibly 'undefined'* or *'user' is possibly 'null'*, open the lightbulb (`Ctrl+.`) and choose **Explain why 'user' may be null or undefined**.
 
 ## Test Impact Analysis
 

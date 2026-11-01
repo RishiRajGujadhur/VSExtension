@@ -27,6 +27,7 @@ export async function run(): Promise<void> {
     await introduceParameterFlow();
     await moveMembersFlow();
     await missingAwaitFlow();
+    await compilerErrorFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -173,6 +174,21 @@ async function moveMembersFlow(): Promise<void> {
   assert.match(document.getText(), /export \{ calculateSubtotal \} from '\.\/checkout';/);
   console.log('move members ok');
   await revert([vscode.Uri.file(cart), vscode.Uri.file(checkout)]);
+}
+
+/** TypeScript's "possibly undefined" errors offer to explain themselves with the Nullability Path Explorer. */
+async function compilerErrorFlow(): Promise<void> {
+  const file = vscode.Uri.file(path.join(sample, 'src/possiblyUndefined.ts'));
+  fs.writeFileSync(file.fsPath, 'export function nameOf(user?: { name: string }): string {\n  return user.name;\n}\n');
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+  const [error] = await waitForDiagnostics(file, (d) => d.source === 'ts');
+  assert.ok(error, 'no TypeScript error');
+  const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', file, error.range);
+  const explain = actions.find((a) => a.title === "Explain why 'user' may be null or undefined");
+  assert.ok(explain?.command, actions.map((a) => a.title).join(', '));
+  await vscode.commands.executeCommand(explain.command.command, ...(explain.command.arguments ?? []));
+  console.log('explain compiler error ok');
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
 async function missingAwaitFlow(): Promise<void> {
