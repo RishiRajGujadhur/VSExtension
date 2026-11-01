@@ -4,7 +4,7 @@ import { normalizePath } from '../analysis/paths';
 import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
-import { CustomInspectionConfig, inspectionId } from '../search/customInspections';
+import { CustomInspectionConfig, includePattern, inspectionId } from '../search/customInspections';
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
 import { isExcluded } from './exclude';
@@ -164,7 +164,14 @@ export class StructuralSearchPanel {
           include: message.include.trim() || undefined,
         };
         await saveCustomInspections([...configs, config]);
-        void this.panel.webview.postMessage({ type: 'status', text: `Saved inspection '${config.id}'. It now runs on open files.` });
+        // How much it will flag right away, so an overly broad pattern is noticed before it fills the Problems panel.
+        const include = config.include ? includePattern(config.include) : undefined;
+        const program = this.projects.createVirtualProject(this.anchor, this.folder()).program();
+        const count = structuralSearch(program, spec, { isExcluded: (f) => isExcluded(f) || (!!include && !include.test(f.replace(/\\/g, '/'))) }).length;
+        void this.panel.webview.postMessage({
+          type: 'status',
+          text: `Saved inspection '${config.id}'. It matches ${plural(count, 'place')} in the project now and runs on open files; Inspect Code… lists them all.`,
+        });
       } catch (error) {
         void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
       }
