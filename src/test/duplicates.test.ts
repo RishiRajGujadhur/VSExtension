@@ -28,7 +28,7 @@ test('a different operator or property is not a duplicate', () => {
 
 test('an empty result says what was searched for', () => {
   const sourceFile = virtualProject('inspect', 'src/duplicates.ts').program().getSourceFile(file)!;
-  const report = duplicatesReport([sourceFile], { minStatements: 10, minTokens: 40 });
+  const report = duplicatesReport([sourceFile], { minStatements: 3, minTokens: 1000 });
   assert.equal(report.roots.length, 0);
-  assert.match(report.warnings[0], /^No run of 10 statements and 40\+ syntax tokens repeats in 1 file\. Lower tsStructure\.duplicates\.minStatements/);
+  assert.match(report.warnings[0], /^No run of 3 statements and 1000\+ syntax tokens repeats in 1 file\. Lower tsStructure\.duplicates\.minStatements/);
 });
