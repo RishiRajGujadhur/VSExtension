@@ -359,6 +359,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. Exports reached through `export *` barrels, renamed re-exports, `import * as ns` and dynamic `import()` count as used. Turn off `tsStructure.deadExports.testFilesAreEntryPoints` to also find exports that only tests use.
 7. To keep an export that is public API on purpose, such as a library function no code in the repository calls, document it with `/** @public */` or `/** @api */`. It is no longer reported.
 
+### Exception Flow Visualizer
+
+![Exception flow of parseConfig: it throws ConfigError and JSON.parse can throw SyntaxError; loadConfig catches and rethrows, readSetting passes errors on, and currencyOrDefault swallows them](docs/images/exception-flow.png)
+
+1. Put the cursor on a function or method. In the demo, use `parseConfig` in `src/config.ts`.
+2. Run **Exception Flow Visualizer**.
+3. **Thrown here** lists `throw` statements and library calls known to throw, such as `JSON.parse()` (*SyntaxError on invalid JSON*) or `new URL()`.
+4. **Thrown by called functions** lists errors that come out of functions this one calls, with the call chain down to the original `throw`. Each row says whether the error is caught here or *escapes to the caller*.
+5. **Catch and finally blocks** says what each handler does: recovers, rethrows, transforms (throws a different error), logs and continues, or swallows (an empty `catch`).
+6. **Escaping errors reach callers** follows what escapes up through every caller, until it is caught, or reaches code with no callers (*errors are uncaught*). In the demo, `currencyOrDefault` swallows `parseConfig`'s errors through `readSetting`, which is worth a look.
+
 ## Test Impact Analysis
 
 ### Usage
