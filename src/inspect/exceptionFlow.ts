@@ -189,7 +189,16 @@ function callerHandling(project: VirtualProject, analyzer: ThrowAnalyzer, fn: Fu
       return { label: 'called at module level: an error fails the module load', icon: 'error', tone: 'error', location: builder.at(call) };
     }
     if (isAsync(caller)) {
-      return { label: `propagates into async ${functionLabel(caller)}, becoming a rejection`, icon: 'debug-step-out', tone: 'warning', location: builder.at(call) };
+      // From here the error travels as a rejection of the caller's promise.
+      const rejection = new RejectionTracer(project, builder).propagate(caller, `${functionLabel(caller)} rejects`, call, 0);
+      return {
+        label: `propagates into async ${functionLabel(caller)}, becoming a rejection`,
+        icon: 'debug-step-out',
+        tone: rejection.tone ?? 'warning',
+        location: builder.at(call),
+        expanded: true,
+        children: rejection.children ?? [rejection],
+      };
     }
     const next = callerHandling(project, analyzer, caller, builder, depth + 1, seen);
     return {

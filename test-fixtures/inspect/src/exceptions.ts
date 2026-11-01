@@ -57,3 +57,19 @@ declare const fs: { readFileSync(path: string, encoding: string): string };
 export function snapshot(path: string, state: object): string {
   return fs.readFileSync(path, 'utf8') + JSON.stringify(state);
 }
+
+export function parsePort(text: string): number {
+  const port = Number(text);
+  if (Number.isNaN(port)) {
+    throw new RangeError('bad port');
+  }
+  return port;
+}
+
+export async function connect(text: string): Promise<void> {
+  parsePort(text);
+}
+
+export function boot(text: string): void {
+  connect(text);
+}

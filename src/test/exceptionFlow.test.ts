@@ -52,6 +52,13 @@ test('common library calls that throw are recognized', () => {
   ]);
 });
 
+test('an error that enters an async caller is followed as a rejection', () => {
+  const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function parse|Port'));
+  const callers = outline(report.roots.slice(report.roots.findIndex((r) => r.label.startsWith('Escaping'))));
+  assert.equal(callers[1], '  propagates into async connect, becoming a rejection');
+  assert.match(callers[2], /^ {4}not awaited: the rejection is unhandled/);
+});
+
 test('a catch block that throws a new error transforms it; the new throw escapes', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function load|Config'));
   const lines = outline(report.roots);
