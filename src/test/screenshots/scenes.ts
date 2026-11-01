@@ -80,6 +80,7 @@ export const scenes: Scene[] = [
     async cleanup() {
       await settings().update('codeLens.sideEffects', undefined, vscode.ConfigurationTarget.Global);
     },
+    settle: 3000,
   },
   // Navigation and search
   analysis('semantic-usages', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.semanticUsages'),
