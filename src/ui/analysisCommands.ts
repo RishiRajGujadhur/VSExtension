@@ -1,3 +1,4 @@
+import * as ts from 'typescript';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
@@ -215,8 +216,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
       const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(from))?.uri.fsPath;
       let to = toUri?.fsPath;
+      // The picker's program is reused for the analysis instead of building the project twice.
+      let program: ts.Program | undefined;
       if (!to) {
-        const program = projects.createVirtualProject(from, folder).program();
+        program = projects.createVirtualProject(from, folder).program();
         const files = projectSourceFiles(program)
           .map((sf) => normalizePath(sf.fileName))
           .filter((f) => f !== normalizePath(from));
@@ -230,7 +233,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return;
       }
       const target = to;
-      return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(projects.createVirtualProject(from, folder).program(), from, target, folder));
+      return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.createVirtualProject(from, folder).program(), from, target, folder));
     }),
     editorCommand('tsStructure.argumentFlow', 'Tracing argument propagation', (t) =>
       argumentFlowReport(t.project(), t.fileName, t.offset, vscode.workspace.getConfiguration('tsStructure').get('argumentFlow.maxDepth', 6)),

@@ -116,14 +116,14 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
   } else if (paths.every((p) => p.some((e) => e.typeOnly))) {
     roots.push({ label: 'Longer runtime path', description: `${plural(runtime[0].length, 'import')}`, icon: 'warning', tone: 'warning', expanded: true, children: [pathRow(runtime[0], 0)] });
   }
-  roots.push({ label: 'Shortest paths', description: `${paths.length}${paths.length >= 20 ? '+' : ''}`, icon: 'git-merge', expanded: true, children: paths.map(pathRow) });
+  roots.push({ label: 'Shortest paths', description: paths.length >= 20 ? 'first 20 paths' : plural(paths.length, 'path'), icon: 'git-merge', expanded: true, children: paths.map(pathRow) });
   const lastHops = new Map<string, ImportEdge>();
   for (const p of paths) {
     lastHops.set(p[p.length - 1].from, p[p.length - 1]);
   }
   roots.push({
     label: `Modules on these paths that import ${path.basename(target)} directly`,
-    description: `${lastHops.size}`,
+    description: plural(lastHops.size, 'module'),
     icon: 'call-incoming',
     children: [...lastHops.values()].map((edge) => ({ label: relative(edge.from), description: describeEdge(edge), icon: 'file-code', location: builder.span(program.getSourceFile(edge.from)!, edge.start, edge.end) })),
   });
