@@ -407,12 +407,23 @@ export function structuralReplace(project: VirtualProject, spec: SearchSpec, tem
   }
   // Compute every replacement before changing any text: matches hold nodes of the original program.
   const edits = [...byFile].map(([file, list]) => ({ file, text: list[0].sourceFile.text, replacements: list.map((m) => ({ start: m.start, end: m.end, text: instantiate(template, m) })) }));
+  const syntaxErrors = (file: string) => program.getSyntacticDiagnostics(project.sourceFile(file)).length;
+  const before = new Map(edits.map((e) => [e.file, syntaxErrors(e.file)]));
   for (const { file, text, replacements } of edits) {
     let result = text;
     for (const r of [...replacements].sort((a, b) => b.start - a.start)) {
       result = result.slice(0, r.start) + r.text + result.slice(r.end);
     }
     project.setText(file, result);
+  }
+  // A replacement that does not parse would leave broken files behind; refuse it, saying where.
+  for (const { file } of edits) {
+    const after = project.program().getSyntacticDiagnostics(project.sourceFile(file));
+    if (after.length > before.get(file)!) {
+      const first = after[0];
+      const line = first.file && first.start !== undefined ? first.file.getLineAndCharacterOfPosition(first.start).line + 1 : 0;
+      throw new RefactorError(`The replacement is not valid code at ${path.basename(file)}:${line}: ${ts.flattenDiagnosticMessageText(first.messageText, ' ')}`);
+    }
   }
   const replacements = matches.map((m) => ({
     file: m.sourceFile.fileName,

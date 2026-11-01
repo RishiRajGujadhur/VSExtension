@@ -63,6 +63,12 @@ test('replace rewrites matches and reports type errors it would introduce', () =
   assert.equal(broken.matches, 4);
   assert.ok(broken.conflicts.length > 0);
   assert.match(broken.conflicts[0].message, /toFixed/);
+
+  // A replacement that is not valid code is refused before anything is written.
+  assert.throws(
+    () => structuralReplace(virtualProject('search', 'src/code.ts'), { pattern: '$x$ === $x$' }, '($x$'),
+    /^Error: The replacement is not valid code at code\.ts:\d+: '\)' expected\.|The replacement is not valid code at code\.ts:\d+/,
+  );
 });
 
 test('every built-in search template compiles and its replacement uses only its placeholders', async () => {

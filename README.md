@@ -456,7 +456,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 2. Under **Replace with**, write the new code using the same placeholders: `Number($value$.toFixed(2))`. `$name*$` placeholders insert the whole matched list.
 3. Click **Preview Replacements**. Every match is listed with its old code (−) and new code (+). The summary says whether the result *type-checks cleanly* or lists each new type error, such as calling a method the value doesn't have.
 4. Click **Replace All…**, or press `Ctrl+Enter` in the replacement. The changes open in VS Code's Refactor Preview, where you can untick individual files or changes before applying them. Turn off `tsStructure.previewRefactorings` to apply directly.
-5. Nothing is written when the replacement doesn't parse. Use **Undo** (`Ctrl+Z`) in the edited files to revert an applied replacement.
+5. A replacement that doesn't parse is refused before anything is written, with the file and line where it breaks. Use **Undo** (`Ctrl+Z`) in the edited files to revert an applied replacement.
 
 ## Test Impact Analysis
 
