@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural } from '../structure/report';
 import {
   FunctionWithBody,
   callSitesOf,
@@ -284,10 +284,10 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
   const results = leaves(destination);
   const count = (tone: Tone) => results.filter((r) => r.tone === tone).length;
   const roots: ReportNode[] = [
-    { label: 'Rejection sources', description: `${sources.length}`, icon: 'zap', expanded: true, children: sources.length ? sources : [{ label: 'no throws or awaits outside try/catch', icon: 'pass', tone: 'ok' }] },
+    { label: 'Rejection sources', description: plural(sources.length, 'source'), icon: 'zap', expanded: true, children: sources.length ? sources : [{ label: 'no throws or awaits outside try/catch', icon: 'pass', tone: 'ok' }] },
     { ...destination, label: 'Where rejections go', description: `${count('ok') + count('info')} handled, ${count('error')} unhandled, ${count('warning')} swallowed or unknown` },
   ];
-  return builder.finish(roots, `${count('error')} unhandled path(s)`);
+  return builder.finish(roots, plural(count('error'), 'unhandled path'));
 }
 
 function returnsThenable(checker: ts.TypeChecker, fn: FunctionWithBody): boolean {
