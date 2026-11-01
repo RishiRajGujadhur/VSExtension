@@ -369,6 +369,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. **Thrown by called functions** lists errors that come out of functions this one calls, with the call chain down to the original `throw`. Each row says whether the error is caught here or *escapes to the caller*.
 5. **Error types** names the error classes that can come out, such as *ConfigError, SyntaxError*. That's what a `catch` would need to handle. **Catch and finally blocks** says what each handler does: recovers, rethrows, transforms (throws a different error), logs and continues, or swallows (an empty `catch`).
 6. **Escaping errors reach callers** follows what escapes up through every caller, until it is caught, or reaches code with no callers (*errors are uncaught*). When it enters an async function it becomes a rejection, and the report keeps following that promise through awaits, `.catch()` and dropped calls. In the demo, `currencyOrDefault` swallows `parseConfig`'s errors through `readSetting`, which is worth a look.
+7. When some path ends uncaught, an **Uncaught** group at the top lists each one with the callers it passes through.
 
 ## Test Impact Analysis
 

@@ -275,7 +275,7 @@ function leaves(node: ReportNode): ReportNode[] {
 }
 
 /** Every unhandled end of the tree, flattened, with the steps that lead to it, so deep paths are not missed. */
-function unhandledPaths(root: ReportNode): ReportNode[] {
+export function unhandledPaths(root: ReportNode): ReportNode[] {
   const result: ReportNode[] = [];
   const visit = (node: ReportNode, trail: string[]) => {
     if (!node.children?.length) {
@@ -285,7 +285,7 @@ function unhandledPaths(root: ReportNode): ReportNode[] {
       return;
     }
     for (const child of node.children) {
-      visit(child, node === root ? trail : [...trail, node.label.replace(/^(awaited|returned) (in|from) /, '').replace(/,.*$/, '')]);
+      visit(child, node === root ? trail : [...trail, node.label.replace(/^((awaited|returned) (in|from)|propagates (through|into async)) /, '').replace(/,.*$/, '')]);
     }
   };
   visit(root, []);

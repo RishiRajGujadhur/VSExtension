@@ -3,7 +3,7 @@ import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural } from '../structure/report';
 import { FunctionWithBody, callSitesOf, calledFunction, enclosingFunction, forEachInFunction, functionAtOffset, functionLabel, nodeText } from '../structure/util';
 import { isAsync } from './missingAwait';
-import { RejectionTracer, classifyCatch, enclosingCatch, worst } from './rejections';
+import { RejectionTracer, classifyCatch, enclosingCatch, unhandledPaths, worst } from './rejections';
 
 /** Library calls that throw on bad input. */
 const throwingCalls: Record<string, string> = {
@@ -179,6 +179,10 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
       ? new RejectionTracer(project, builder).propagate(fn, `${functionLabel(fn)} rejects`, fn, 0)
       : callerHandling(project, analyzer, fn, builder, 0, new Set());
     roots.push({ ...callers, label: `Escaping errors (${escaping.length}) reach callers`, icon: 'call-incoming', expanded: true });
+    const uncaught = unhandledPaths(callers);
+    if (uncaught.length > 0) {
+      roots.unshift({ label: 'Uncaught', description: plural(uncaught.length, 'path'), icon: 'error', tone: 'error', expanded: true, children: uncaught });
+    }
   }
   return builder.finish(roots, `${plural(raised.length, 'error source')}, ${escaping.length} escaping`);
 }

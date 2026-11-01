@@ -16,6 +16,8 @@ function outline(nodes: readonly ReportNode[]): string[] {
 test('errors from callees are traced to their throw sites and to how each caller handles them', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function read|Setting'));
   assert.deepEqual(outline(report.roots), [
+    'Uncaught — 1 path',
+    '  main has no callers: errors are uncaught — via main',
     'Thrown here — 0 errors',
     '  nothing thrown directly',
     'Thrown by called functions — 2 errors',
@@ -49,7 +51,7 @@ test('a caller reached by two routes is followed on both', () => {
 
 test('common library calls that throw are recognized', () => {
   const report = exceptionFlowReport(virtualProject('inspect', 'src/exceptions.ts'), file, offsetIn(file, 'function snap|shot'));
-  assert.deepEqual(report.roots[0].children?.map((c) => c.label), [
+  assert.deepEqual(report.roots.find((r) => r.label === 'Thrown here')?.children?.map((c) => c.label), [
     'fs.readFileSync(): Error when the path is missing or not accessible',
     'JSON.stringify(): TypeError on circular structures or BigInt values',
   ]);
