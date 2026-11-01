@@ -45,3 +45,16 @@ export async function main(): Promise<unknown> {
 export function sync(): void {
   fetchUser('j');
 }
+
+export function listen(target: EventTarget): void {
+  setTimeout(async () => {
+    await fetchUser('k');
+  }, 0);
+  target.addEventListener('click', async () => {
+    try {
+      await fetchUser('l');
+    } catch {
+      // handled inside the callback
+    }
+  });
+}

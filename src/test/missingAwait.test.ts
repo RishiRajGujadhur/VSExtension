@@ -29,6 +29,8 @@ test('dropped promises are found directly, through wrappers and through helpers'
     'forEach | forEach ignores the promises returned by an async callback',
     "loadUser('i') | This promise is returned without await inside try",
     "fetchUser('j') | The promise returned by fetchUser() is neither awaited nor returned",
+    // The listener's callback catches its own errors, so only the timer is reported.
+    'setTimeout | setTimeout ignores the promise returned by this async callback',
   ]);
   const helper = findings[1];
   assert.match(helper.message, /relay\(value\) → logLater\(value\) never awaits it/);

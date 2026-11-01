@@ -24,6 +24,7 @@ export const missingAwait: Inspection = {
       checkStringified(context, node, findings);
       checkHelperArgument(context, node, findings);
       checkAsyncCallback(context, node, findings);
+      checkIgnoredCallback(context, node, findings);
       checkReturnInTry(context, node, findings);
       ts.forEachChild(node, visit);
     };
@@ -344,6 +345,43 @@ function checkAsyncCallback(context: InspectionContext, node: ts.Node, findings:
         : undefined,
     });
   }
+}
+
+const timerFunctions = new Set(['setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask', 'requestAnimationFrame']);
+const listenerMethods = new Set(['addEventListener', 'on', 'once', 'addListener', 'prependListener', 'subscribe']);
+
+/** `setTimeout(async () => …)`, `button.addEventListener('click', async …)`: the caller ignores the callback's promise. */
+function checkIgnoredCallback(context: InspectionContext, node: ts.Node, findings: Finding[]): void {
+  if (!ts.isCallExpression(node)) {
+    return;
+  }
+  const callee = skipOuterExpressions(node.expression);
+  const name = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : '';
+  const isTimer = ts.isIdentifier(callee) ? timerFunctions.has(name) : ts.isPropertyAccessExpression(callee) && timerFunctions.has(name) && /^(window|globalThis|self)$/.test(callee.expression.getText());
+  if (!isTimer && !(ts.isPropertyAccessExpression(callee) && listenerMethods.has(name))) {
+    return;
+  }
+  for (const callback of node.arguments) {
+    if (!(ts.isArrowFunction(callback) || ts.isFunctionExpression(callback)) || !isAsync(callback) || catchesEverything(callback)) {
+      continue;
+    }
+    findings.push({
+      inspection: 'missingAwait',
+      message: `${name} ignores the promise returned by this async callback, so if it rejects, the rejection is unhandled. Catch errors inside the callback.`,
+      start: callee.getStart(context.sourceFile),
+      end: callee.end,
+      severity: 'warning',
+    });
+  }
+}
+
+/** Whether the function body is a single try/catch, which handles its own rejections. */
+function catchesEverything(fn: ts.ArrowFunction | ts.FunctionExpression): boolean {
+  if (!ts.isBlock(fn.body)) {
+    return false;
+  }
+  const statements = fn.body.statements;
+  return statements.length === 1 && ts.isTryStatement(statements[0]) && !!statements[0].catchClause;
 }
 
 /** `return fetchX()` inside `try` of an async function: the rejection bypasses the catch block. */
