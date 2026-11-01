@@ -241,6 +241,12 @@ function differences(a: Fragment, b: Fragment): string[] {
 export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions, root?: string): Report {
   const groups = findDuplicates(sourceFiles, options);
   const builder = new ReportBuilder('duplicates', 'Structural duplicates');
+  if (groups.length === 0) {
+    builder.warnings.push(
+      `No run of ${plural(options.minStatements, 'statement')} and ${options.minTokens}+ syntax tokens repeats in ${plural(sourceFiles.length, 'file')}. ` +
+        'Lower tsStructure.duplicates.minStatements or minTokens to find smaller copies.',
+    );
+  }
   const where = (f: Fragment) => {
     const fn = enclosingFunction(f.nodes[0]);
     const file = root ? path.relative(root, f.sourceFile.fileName).replace(/\\/g, '/') : path.basename(f.sourceFile.fileName);

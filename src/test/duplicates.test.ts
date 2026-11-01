@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
-import { findDuplicates } from '../inspect/duplicates';
+import { duplicatesReport, findDuplicates } from '../inspect/duplicates';
 import { fixtures, virtualProject } from './helpers';
 
 const file = path.join(fixtures, 'inspect/src/duplicates.ts');
@@ -24,4 +24,11 @@ test('a different operator or property is not a duplicate', () => {
   const sourceFile = virtualProject('inspect', 'src/duplicates.ts').program().getSourceFile(file)!;
   const groups = findDuplicates([sourceFile], { minStatements: 2, minTokens: 10 });
   assert.ok(groups.every((g) => g.fragments.every((f) => !f.sourceFile.text.slice(f.start, f.end).includes('-='))));
+});
+
+test('an empty result says what was searched for', () => {
+  const sourceFile = virtualProject('inspect', 'src/duplicates.ts').program().getSourceFile(file)!;
+  const report = duplicatesReport([sourceFile], { minStatements: 10, minTokens: 40 });
+  assert.equal(report.roots.length, 0);
+  assert.match(report.warnings[0], /^No run of 10 statements and 40\+ syntax tokens repeats in 1 file\. Lower tsStructure\.duplicates\.minStatements/);
 });
