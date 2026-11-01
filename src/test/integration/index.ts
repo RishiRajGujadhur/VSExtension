@@ -288,6 +288,12 @@ async function analysisCommandsFlow(): Promise<void> {
     assert.ok(report, `${command} returned no report`);
     console.log(`${command}: ${report.title} — ${report.description ?? ''} (${report.roots.length} rows)`);
   }
+  // From the Explorer with two files selected, the path between them, without the picker.
+  const discount = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
+  const between = await vscode.commands.executeCommand<{ title: string }>('tsStructure.dependencyPath', cart, [cart, discount]);
+  assert.equal(between?.title, 'cart.ts → discount.ts');
+  console.log('dependency path from two selected files ok');
+
   // History, navigation and export of the last reports.
   await vscode.commands.executeCommand('tsStructure.report.back');
   await vscode.commands.executeCommand('tsStructure.report.forward');

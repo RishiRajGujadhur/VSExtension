@@ -215,7 +215,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return vscode.commands.executeCommand('tsStructure.dependencyPath', vscode.Uri.file(from), vscode.Uri.file(to));
       }
     }),
-    vscode.commands.registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toUri?: vscode.Uri) => {
+    // From the Explorer the second argument is every selected file: with two selected, the path between them.
+    vscode.commands.registerCommand('tsStructure.dependencyPath', async (fromUri?: vscode.Uri, toArg?: vscode.Uri | vscode.Uri[]) => {
+      let toUri = Array.isArray(toArg) ? undefined : toArg;
+      if (Array.isArray(toArg) && toArg.length === 2 && fromUri) {
+        toUri = toArg.find((u) => u.fsPath !== fromUri.fsPath);
+      }
       const from = fromUri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
       if (!from) {
         return;
