@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'fs';
 import * as path from 'path';
 import { test } from 'node:test';
 import { dependencyPathReport, distancesFrom, shortestPaths } from '../navigate/dependencyPaths';
@@ -44,4 +45,15 @@ test('distances from a module rank what it depends on', () => {
   assert.equal(distance.get(normalizePath(path.join(src, 'public.ts'))), 1);
   assert.equal(distance.get(normalizePath(path.join(src, 'utils.ts'))), 2);
   assert.equal(distance.has(normalizePath(path.join(src, 'app.tsx'))), false);
+});
+
+test('modules that depend on each other are reported as a cycle', () => {
+  const project = virtualProject('navigate', 'src/app.tsx');
+  const utils = path.join(src, 'utils.ts');
+  project.setText(utils, `import { App } from './app';\nexport const app = App;\n${fs.readFileSync(utils, 'utf8')}`);
+  const report = dependencyPathReport(project.program(), path.join(src, 'app.tsx'), utils);
+  assert.match(report.warnings[0], /^Circular dependency: utils\.ts also depends on app\.tsx/);
+  assert.ok(report.roots.some((r) => r.label === 'Circular: utils.ts depends back on app.tsx' && r.tone === 'error'));
+  const plain = dependencyPathReport(virtualProject('navigate', 'src/app.tsx').program(), path.join(src, 'app.tsx'), utils);
+  assert.deepEqual(plain.warnings, []);
 });

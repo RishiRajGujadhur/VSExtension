@@ -134,6 +134,12 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
   } else if (paths.every((p) => p.some((e) => e.typeOnly))) {
     roots.push({ label: 'Longer runtime path', description: `${plural(runtime[0].length, 'import')}`, icon: 'warning', tone: 'warning', expanded: true, children: [pathRow(runtime[0], 0)] });
   }
+  // Both directions at once is an import cycle: module initialization order then decides what is undefined.
+  const back = shortestPaths(graph, target, source, { runtimeOnly: true, limit: 3 });
+  if (runtime.length && back.length) {
+    builder.warnings.push(`Circular dependency: ${relative(target)} also depends on ${relative(source)} at runtime, so one of them sees the other half-initialized while loading.`);
+    roots.push({ label: `Circular: ${relative(target)} depends back on ${relative(source)}`, description: plural(back.length, 'path'), icon: 'sync', tone: 'error', expanded: true, children: back.map(pathRow) });
+  }
   roots.push({ label: 'Shortest paths', description: paths.length >= 20 ? 'first 20 paths' : plural(paths.length, 'path'), icon: 'git-merge', expanded: true, children: paths.map(pathRow) });
   const lastHops = new Map<string, ImportEdge>();
   for (const p of paths) {
