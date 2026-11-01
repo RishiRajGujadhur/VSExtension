@@ -46,6 +46,13 @@ test('the add-await fix produces an awaited call, and suppression comments hide 
   assert.match(applyTextEdits(sourceFile.text, sync.fixes![0].edits), /export async function sync\(\): Promise<void> \{\n {2}await fetchUser\('j'\);/);
   assert.match(applyTextEdits(sourceFile.text, sync.fixes![2].edits), /fetchUser\('j'\)\.catch\(\(error\) => console\.error\(error\)\);/);
 
+  // Without a declared return type, the last statement's promise can be returned instead.
+  const unannotated = inspect(sourceFile.text.replace('export function sync(): void {', 'export function sync() {'));
+  const last = unannotated.findings.find((f) => unannotated.sourceFile.text.slice(f.start, f.end) === "fetchUser('j')")!;
+  const returnFix = last.fixes?.find((f) => f.title === 'Return the promise to the caller');
+  assert.ok(returnFix, last.fixes?.map((f) => f.title).join(', '));
+  assert.match(applyTextEdits(unannotated.sourceFile.text, returnFix.edits), /\n {2}return fetchUser\('j'\);/);
+
   // Fire-and-forget calls can be ignored by name, including through wrappers (loadUser comes from fetchUser).
   const ignoring = (names: string[]) => {
     const project = virtualProject('inspect', 'src/async.ts');

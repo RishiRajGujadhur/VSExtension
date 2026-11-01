@@ -316,6 +316,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Add await**, in an async function, or **Make … async and await the call** elsewhere. That also wraps a declared return type in `Promise<…>`;
    - **Mark as intentionally not awaited (void)**;
    - **Handle the rejection with .catch()**, which works outside async functions too;
+   - **Return the promise to the caller**, when the call is the last statement of a function without a declared return type;
    - **Trace where this promise's rejection goes…**, which opens the Promise Rejection Analyzer;
    - suppress the warning for the line or the file.
 4. The Problems panel (`Ctrl+Shift+M`) lists the findings, and the status bar shows the count for the active file.

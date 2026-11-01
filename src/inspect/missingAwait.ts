@@ -73,6 +73,10 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
   if (makeAsync) {
     fixes.push(makeAsync);
   }
+  // As the last statement of a function that returns nothing else, the promise can go to the caller instead.
+  if (fn && !isAsync(fn) && fn.body && ts.isBlock(fn.body) && fn.body.statements.at(-1) === node && !returnedExpressions(fn).length && (!fn.type || isThenable(context.checker, context.checker.getTypeFromTypeNode(fn.type)))) {
+    fixes.push({ title: 'Return the promise to the caller', edits: [{ start: node.expression.getStart(context.sourceFile), end: node.expression.getStart(context.sourceFile), text: 'return ' }] });
+  }
   fixes.push({ title: 'Mark as intentionally not awaited (void)', edits: [{ start: node.expression.getStart(context.sourceFile), end: node.expression.getStart(context.sourceFile), text: 'void ' }] });
   // `.catch` binds to the whole expression only when it is a call or a name, not `a ? p() : q()`.
   if (ts.isCallExpression(expression) || ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression)) {
