@@ -243,7 +243,7 @@ To run a search from a key, pass it to the command in `keybindings.json`:
 {
   "key": "ctrl+alt+f",
   "command": "tsStructure.structuralSearch",
-  "args": { "pattern": "$list$.find($callback$)", "constraints": [{ "name": "list", "type": "^LineItem\[\]$" }], "run": true }
+  "args": { "pattern": "$list$.find($callback$)", "constraints": [{ "name": "list", "type": "^LineItem\\[\\]$" }], "run": true }
 }
 ```
 
@@ -436,6 +436,17 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. **Exported as** lists every module that exports the symbol, under which name, and how many files import it from there. Use it to decide which path to import from, or to find barrels with *no importers* left over after a move.
 5. **Imported through** groups the project's imports of the symbol by the module path they use, here `'./pricing'` and `'./index'`. Mixed paths to the same declaration are a common source of circular-import trouble, so the view warns when there is more than one.
 6. An importer that goes through a barrel has an **Apply Fix** button. It imports the symbol straight from the module that declares it, keeping any local name: `import { calculateSubtotal as subtotal } from './pricing';`.
+
+### Structural Search Builder
+
+![Structural Search for $list$.find($callback$) where $list$ must be a LineItem array: two matches, in api.ts and cart.ts, in the builder and the TypeScript Structure view](docs/images/structural-search.png)
+
+1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor.
+2. Write the **Pattern** as code with placeholders, or pick one from **Start from an example…**. In the demo, `$list$.find($callback$)` finds every `.find()` call.
+3. Each placeholder gets a row under **Placeholder constraints**. **Type** is a regular expression tested against the matched code's type. Here `^LineItem\[\]$` keeps only searches through line item arrays and skips `coupons.find()`. **Text** tests the code itself; **Invert** negates either one.
+4. Choose the **Scope** (whole project or current file) and click **Search**.
+5. Matches appear in the builder and in the TypeScript Structure view, grouped by file. Each shows what every placeholder matched, such as *$list$ = items*. Click one to open it.
+6. **Recent searches…** brings back any of your last 15 searches with their constraints.
 
 ## Test Impact Analysis
 
