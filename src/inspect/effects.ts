@@ -503,17 +503,20 @@ function stateAt(checker: ts.TypeChecker, sourceFile: ts.SourceFile, offset: num
   return symbol?.valueDeclaration ?? symbol?.declarations?.[0];
 }
 
-/** Mutation Tracking: which functions in a file change state they do not own, grouped both ways. With an offset on a state's name, that state is selected. */
-export function mutationReport(program: ts.Program, fileName: string, offset?: number): Report {
+/**
+ * Mutation Tracking: which functions change state they do not own, grouped both ways. Covers the file, or every
+ * file in `project` when given. With an offset on a state's name, that state is selected.
+ */
+export function mutationReport(program: ts.Program, fileName: string, offset?: number, project?: readonly ts.SourceFile[]): Report {
   const checker = program.getTypeChecker();
   const sourceFile = sourceFileOf(program, fileName);
   const atCursor = stateAt(checker, sourceFile, offset);
   const analyzer = new EffectAnalyzer(checker);
-  const builder = new ReportBuilder('mutations', `Mutations in ${sourceFile.fileName.replace(/^.*[\\/]/, '')}`);
+  const builder = new ReportBuilder('mutations', `Mutations in ${project ? 'the project' : baseName(sourceFile.fileName)}`);
   const byFunction: ReportNode[] = [];
   const byState = new Map<string, { label: string; kind: EffectKind; declaration?: ts.Node; entries: ReportNode[] }>();
   let total = 0;
-  for (const fn of functionsIn(sourceFile)) {
+  for (const fn of (project ?? [sourceFile]).flatMap(functionsIn)) {
     const mutations = analyzer.effectsOf(fn).filter((e) => mutationKinds.has(e.kind));
     if (mutations.length === 0) {
       continue;
@@ -521,7 +524,7 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
     total += mutations.length;
     byFunction.push({
       label: functionLabel(fn),
-      description: plural(mutations.length, 'mutation'),
+      description: [project ? baseName(fn.getSourceFile().fileName) : undefined, plural(mutations.length, 'mutation')].filter(Boolean).join(' · '),
       icon: 'symbol-function',
       location: builder.at(functionNameOrSelf(fn)),
       children: mutations.map((e) => effectNode(e, builder)),
@@ -554,7 +557,7 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
           const home = s.declaration?.getSourceFile();
           return {
             label: s.label,
-            description: [kindLabels[s.kind].replace(/^Mutates /, ''), plural(s.entries.length, 'write'), home && home !== sourceFile ? home.fileName.replace(/^.*[\\/]/, '') : undefined]
+            description: [kindLabels[s.kind].replace(/^Mutates /, ''), plural(s.entries.length, 'write'), home && (project || home !== sourceFile) ? baseName(home.fileName) : undefined]
               .filter(Boolean)
               .join(' · '),
             icon: kindIcons[s.kind],
@@ -568,6 +571,10 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
     });
   }
   return builder.finish(roots, total ? plural(total, 'mutation') : 'no mutations of shared state');
+}
+
+function baseName(fileName: string): string {
+  return fileName.replace(/^.*[\\/]/, '');
 }
 
 function functionNameOrSelf(fn: FunctionWithBody): ts.Node {

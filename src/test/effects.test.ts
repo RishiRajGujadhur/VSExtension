@@ -57,6 +57,17 @@ test('mutation report groups writes by shared state', () => {
   assert.equal(state?.children?.find((c) => c.label === 'registry')?.description, 'imported state · 1 write · state.ts');
 });
 
+test('mutation report can cover the whole project', () => {
+  const program = virtualProject('inspect', 'src/effects.ts').program();
+  const files = program.getSourceFiles().filter((sf) => !sf.isDeclarationFile && sf.fileName.includes('test-fixtures'));
+  const report = mutationReport(program, file, undefined, files);
+  assert.equal(report.title, 'Mutations in the project');
+  const functions = report.roots[0].children!;
+  // Functions from other files are included and name their file.
+  assert.ok(functions.some((f) => /^[a-z]+\.ts · /.test(f.description ?? '') && !f.description!.startsWith('effects.ts')), functions.map((f) => f.description).join(', '));
+  assert.ok(functions.length > mutationReport(program, file).roots[0].children!.length);
+});
+
 test('mutation report selects the state at the cursor', () => {
   const program = virtualProject('inspect', 'src/effects.ts').program();
   const focusedAt = (marker: string) =>

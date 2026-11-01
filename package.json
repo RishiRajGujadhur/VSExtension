@@ -122,6 +122,11 @@
         "category": "TypeScript Structure"
       },
       {
+        "command": "tsStructure.mutationTrackingProject",
+        "title": "Mutation Tracking (Project)",
+        "category": "TypeScript Structure"
+      },
+      {
         "command": "tsStructure.sideEffects",
         "title": "Side-Effect Analyzer",
         "category": "TypeScript Structure"
@@ -386,6 +391,10 @@
         },
         {
           "command": "tsStructure.mutationTracking",
+          "group": "3_analysis@3"
+        },
+        {
+          "command": "tsStructure.mutationTrackingProject",
           "group": "3_analysis@3"
         },
         {

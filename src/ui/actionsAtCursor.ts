@@ -27,6 +27,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.nullability', label: 'Nullability', detail: 'Which paths make this value null or undefined', icon: 'circle-slash' },
       { command: 'tsStructure.sideEffects', label: 'Side Effects', detail: 'What this function changes or reads besides its result', icon: 'zap' },
       { command: 'tsStructure.mutationTracking', label: 'Mutation Tracking', detail: 'Functions in this file that mutate shared state', icon: 'edit' },
+      { command: 'tsStructure.mutationTrackingProject', label: 'Mutation Tracking (Project)', detail: 'Every function in the project that mutates shared state', icon: 'edit' },
       { command: 'tsStructure.promiseRejections', label: 'Promise Rejections', detail: 'Where this function’s rejections are handled or lost', icon: 'debug-disconnect' },
       { command: 'tsStructure.exceptionFlow', label: 'Exception Flow', detail: 'Where errors are thrown, caught, transformed or swallowed', icon: 'error' },
       { command: 'tsStructure.inspectCode', label: 'Inspect Code…', detail: 'Run every inspection over the file or project', icon: 'checklist' },

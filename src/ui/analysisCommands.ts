@@ -139,6 +139,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     vscode.commands.registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
+    editorCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', (t) => {
+      const program = t.project().program();
+      return mutationReport(program, t.fileName, t.offset, projectSourceFiles(program).filter((sf) => !isExcluded(sf.fileName)));
+    }),
     editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.deadExports', 'Dead Export Analysis', async (t) => {
