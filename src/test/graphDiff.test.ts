@@ -22,7 +22,7 @@ function repo(): string {
 test('a Git revision and the working tree are compared module by module', () => {
   const dir = repo();
   try {
-    // A new runtime cycle, a removed import and a new module.
+    // A new cycle, a removed import and a new module.
     fs.appendFileSync(path.join(dir, 'src/models.ts'), "\nimport { counter } from './utils';\nexport const seen = counter;\n");
     fs.writeFileSync(path.join(dir, 'src/public.ts'), 'export const nothing = 1;\n');
     fs.writeFileSync(path.join(dir, 'src/extra.ts'), "import { bump } from './utils';\nbump();\n");
@@ -38,6 +38,8 @@ test('a Git revision and the working tree are compared module by module', () => 
     assert.deepEqual(diff.removedEdges.map((e) => `${e.from} → ${e.to}`), ['src/public.ts → src/index.ts']);
     assert.deepEqual(diff.newCycles, [['src/models.ts', 'src/utils.ts']]);
     assert.deepEqual(diff.newCycleEdges[0].map((e) => `${e.from} → ${e.to}`).sort(), ['src/models.ts → src/utils.ts', 'src/utils.ts → src/models.ts']);
+    // utils.ts imports models.ts only as a type, so this cycle disappears at runtime.
+    assert.deepEqual(diff.newCycleAtRuntime, [false]);
     const report = graphDiffReport(diff, afterFiles, root, 'HEAD');
     const cycle = report.roots[0].children?.[0];
     assert.ok(cycle?.children?.every((c) => c.location), 'cycle edges open their import');

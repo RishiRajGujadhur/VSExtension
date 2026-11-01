@@ -146,6 +146,8 @@ export interface GraphDiff {
   newCycles: string[][];
   /** For each new cycle, the imports between its modules, which are the edges to cut. */
   newCycleEdges: MergedEdge[][];
+  /** For each new cycle, whether it also exists without type-only imports, that is, at runtime. */
+  newCycleAtRuntime: boolean[];
   resolvedCycles: string[][];
   fanIn: { module: string; before: number; after: number }[];
 }
@@ -173,6 +175,7 @@ export function diffGraphs(before: ModuleGraph, after: ModuleGraph, root: string
   const beforeCycles = new Set(cycles(before).map(cycleKey));
   const afterCycleList = cycles(after);
   const afterCycles = new Set(afterCycleList.map(cycleKey));
+  const runtimeCycles = cycles(after, true);
   const fanInOf = (edges: Map<string, MergedEdge>) => {
     const counts = new Map<string, number>();
     for (const edge of edges.values()) {
@@ -194,6 +197,12 @@ export function diffGraphs(before: ModuleGraph, after: ModuleGraph, root: string
     removedEdges: [...beforeEdges].filter(([key]) => !afterEdges.has(key)).map(([, e]) => e),
     changedEdges,
     newCycles: afterCycleList.filter((c) => !beforeCycles.has(cycleKey(c))).map((c) => c.map(rel)),
+    newCycleAtRuntime: afterCycleList
+      .filter((c) => !beforeCycles.has(cycleKey(c)))
+      .map((c) => {
+        const members = new Set(c);
+        return runtimeCycles.some((r) => r.some((m) => members.has(m)) && r.every((m) => members.has(m)));
+      }),
     newCycleEdges: afterCycleList
       .filter((c) => !beforeCycles.has(cycleKey(c)))
       .map((c) => {
@@ -250,11 +259,13 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
       label: 'New import cycles',
       description: plural(diff.newCycles.length, 'cycle'),
       icon: 'sync',
-      tone: 'error',
+      tone: diff.newCycleAtRuntime.some((runtime) => runtime) ? 'error' : 'info',
       expanded: true,
       // A new cycle lists the imports that close it, each opening its line.
       children: diff.newCycles.map((c, i) => ({
-        ...cycleRow(c, 'error'),
+        ...cycleRow(c, diff.newCycleAtRuntime[i] === false ? 'ok' : 'error'),
+        // A cycle through type-only imports is erased at runtime, so it cannot break module loading.
+        ...(diff.newCycleAtRuntime[i] === false ? { tone: 'info' as const, description: `${plural(c.length, 'module')} · type-only: erased at runtime` } : {}),
         expanded: true,
         children: (diff.newCycleEdges[i] ?? []).map((e) => ({ label: `${e.from} → ${e.to}`, description: `${e.typeOnly ? 'type ' : ''}${names(e.names)}`, icon: 'arrow-right', location: locate(e) })),
       })),
