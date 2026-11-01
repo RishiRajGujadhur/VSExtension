@@ -315,6 +315,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 3. Press `Ctrl+.` on the underline for fixes:
    - **Add await**, in an async function;
    - **Mark as intentionally not awaited (void)**;
+   - **Handle the rejection with .catch()**, which works outside async functions too;
    - **Trace where this promise's rejection goes…**, which opens the Promise Rejection Analyzer;
    - suppress the warning for the line or the file.
 4. The Problems panel (`Ctrl+Shift+M`) lists the findings, and the status bar shows the count for the active file.

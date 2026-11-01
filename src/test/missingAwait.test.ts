@@ -40,6 +40,11 @@ test('the add-await fix produces an awaited call, and suppression comments hide 
   const fix = findings[0].fixes!.find((f) => f.title === 'Add await')!;
   assert.match(applyTextEdits(sourceFile.text, fix.edits), /\n {2}await loadUser\('a'\);/);
 
+  // Outside async functions, the rejection can still be handled.
+  const sync = findings.find((f) => sourceFile.text.slice(f.start, f.end) === "fetchUser('j')")!;
+  assert.deepEqual(sync.fixes?.map((f) => f.title), ['Mark as intentionally not awaited (void)', 'Handle the rejection with .catch()']);
+  assert.match(applyTextEdits(sourceFile.text, sync.fixes![1].edits), /fetchUser\('j'\)\.catch\(\(error\) => console\.error\(error\)\);/);
+
   const suppressed = sourceFile.text.replace("  loadUser('a');", "  // ts-structure-ignore-next-line missingAwait\n  loadUser('a');");
   assert.equal(inspect(suppressed).findings.length, findings.length - 1);
   assert.equal(inspect(`// ts-structure-ignore-file\n${sourceFile.text}`).findings.length, 0);

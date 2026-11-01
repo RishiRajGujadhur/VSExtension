@@ -65,6 +65,10 @@ function checkFloating(context: InspectionContext, node: ts.Node, findings: Find
     fixes.push(...awaitFix(context, node.expression)!);
   }
   fixes.push({ title: 'Mark as intentionally not awaited (void)', edits: [{ start: node.expression.getStart(context.sourceFile), end: node.expression.getStart(context.sourceFile), text: 'void ' }] });
+  // `.catch` binds to the whole expression only when it is a call or a name, not `a ? p() : q()`.
+  if (ts.isCallExpression(expression) || ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression)) {
+    fixes.push({ title: 'Handle the rejection with .catch()', edits: [{ start: expression.end, end: expression.end, text: '.catch((error) => console.error(error))' }] });
+  }
   findings.push({
     inspection: 'missingAwait',
     message: isAsync(fn)
