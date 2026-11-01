@@ -16,6 +16,9 @@ function outline(nodes: readonly ReportNode[]): string[] {
 test('rejection sources and every path a rejection takes through callers', () => {
   const report = rejectionReport(virtualProject('inspect', 'src/rejections.ts'), file, offsetIn(file, 'function sa|ve('));
   assert.deepEqual(outline(report.roots), [
+    'Unhandled [error]',
+    '  not awaited: the rejection is unhandled [error]',
+    '  returned from arrow function, a callback passed to setTimeout(), which ignores returned promises [error]',
     'Rejection sources',
     "  throws new Error('empty') [error]",
     '  awaits write(data) [warning]',
@@ -30,5 +33,7 @@ test('rejection sources and every path a rejection takes through callers', () =>
     '    returned from arrow function, a callback passed to setTimeout(), which ignores returned promises [error]',
     '  collected by Promise.allSettled, which never rejects [ok]',
   ]);
-  assert.equal(report.roots[1].description, '3 handled, 2 unhandled, 1 swallowed or unknown');
+  assert.equal(report.roots[2].description, '3 handled, 2 unhandled, 1 swallowed or unknown');
+  // The flat list says how each unhandled end is reached.
+  assert.deepEqual(report.roots[0].children?.map((c) => c.description), ['save(data);', 'via relaySave']);
 });

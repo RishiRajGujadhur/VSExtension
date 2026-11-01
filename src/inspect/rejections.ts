@@ -271,6 +271,24 @@ function leaves(node: ReportNode): ReportNode[] {
   return node.children?.length ? node.children.flatMap(leaves) : [node];
 }
 
+/** Every unhandled end of the tree, flattened, with the steps that lead to it, so deep paths are not missed. */
+function unhandledPaths(root: ReportNode): ReportNode[] {
+  const result: ReportNode[] = [];
+  const visit = (node: ReportNode, trail: string[]) => {
+    if (!node.children?.length) {
+      if (node.tone === 'error') {
+        result.push({ ...node, description: trail.length ? `via ${trail.join(' → ')}` : node.description });
+      }
+      return;
+    }
+    for (const child of node.children) {
+      visit(child, node === root ? trail : [...trail, node.label.replace(/^(awaited|returned) (in|from) /, '').replace(/,.*$/, '')]);
+    }
+  };
+  visit(root, []);
+  return result;
+}
+
 export function rejectionReport(project: VirtualProject, fileName: string, offset: number): Report {
   const program = project.program();
   const fn = functionAtOffset(project.sourceFile(fileName), offset, program.getTypeChecker());
@@ -287,6 +305,10 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
     { label: 'Rejection sources', description: plural(sources.length, 'source'), icon: 'zap', expanded: true, children: sources.length ? sources : [{ label: 'no throws or awaits outside try/catch', icon: 'pass', tone: 'ok' }] },
     { ...destination, label: 'Where rejections go', description: `${count('ok') + count('info')} handled, ${count('error')} unhandled, ${count('warning')} swallowed or unknown` },
   ];
+  const unhandled = unhandledPaths(destination);
+  if (unhandled.length > 0) {
+    roots.unshift({ label: 'Unhandled', description: plural(unhandled.length, 'path'), icon: 'error', tone: 'error', expanded: true, children: unhandled });
+  }
   return builder.finish(roots, plural(count('error'), 'unhandled path'));
 }
 
