@@ -274,12 +274,22 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Mutations in cart.ts: four functions that change shared state, and the module variables they change](docs/images/mutation-tracking.png)
 
-1. Open the file you want to audit, for example `src/cart.ts`. The cursor position doesn't matter.
+1. Open the file you want to audit, for example `src/cart.ts`. If the cursor is on a module variable or an import, that state is selected in the report.
 2. Run **Mutation Tracking (Active File)**, or **Mutation Tracking (Project)** to cover every file. In the project report each function names its file.
 3. **Functions that mutate state** lists each function that changes something it doesn't own. Expand one to see each change. A change made inside a called function shows the call chain, such as *changes module state events (.push()) via track()*.
 4. **Shared state and who changes it** turns the same data around: one row per module variable, import, global or `this` field, with every function that writes it. Use it to find the unexpected writer of a piece of state.
 5. Click any row to open the line. The editor shades every write while the report is open.
 6. Click the lightning button (**Show All Side Effects**) on a function row to run the Side-Effect Analyzer on it. That also shows I/O, timers and other effects besides mutations.
+
+### Nullability Path Explorer
+
+![Nullability of coupon: findCoupon can return undefined from an explicit return and from coupons.find()](docs/images/nullability.png)
+
+1. Put the cursor on a variable, property access or call that might be `null` or `undefined`. In the demo, use `coupon` in `applyCoupon` (`src/pricing.ts`).
+2. Run **Nullability Path Explorer**.
+3. The first row gives the verdict: the type, and whether the value *may be null or undefined here* or is *never null or undefined here*.
+4. **Paths that produce null or undefined** traces every source back to its origin. Examples: an optional parameter, a caller that omits an argument, a `return undefined`, a function that can reach its end without returning, or a library call such as `Array.find()`.
+5. If the value is safe at the cursor, **Ruled out by** lists the checks that narrow it, such as `if (!coupon) return amount;`.
 
 ## Test Impact Analysis
 
