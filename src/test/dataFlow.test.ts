@@ -37,6 +37,7 @@ test('data flow steps show their line and type', () => {
   const project = virtualProject('inspect', 'src/flow.ts');
   const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
   const checkout = report.roots.find((r) => r.label.startsWith('checkout'));
+  assert.equal(checkout?.description, 'flow.ts · 3 writes, 1 check, 2 hand-offs, 1 read');
   assert.equal(checkout?.children?.[0].description, 'line 6 · number · at cursor');
   // Later steps have the declared type, so it is not repeated.
   assert.equal(checkout?.children?.[1].description, 'line 8');

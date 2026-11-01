@@ -265,9 +265,10 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - an eye for each read;
    - an arrow where the value is passed to another function, with the parameter it becomes.
 
-   The type after each step is shown on the right.
+   Each function's row summarizes what happens there, for example *3 writes, 1 check*. Each step shows its line. A type is shown where it differs from the declared type, so narrowing stands out. The step under the cursor is selected and marked *at cursor*.
 4. Click a step to jump to it, or use the up and down arrows in the view's title bar to walk through them. The editor shades writes and reads of the value while the report is open.
-5. On a parameter, an extra **Incoming values from call sites** group lists what every caller passes, including omitted arguments and defaults.
+5. To keep tracing into a called function, click the arrow button (**Follow Into Call**) on a hand-off row. It runs Data Flow on the parameter there.
+6. On a parameter, an extra **Incoming values from call sites** group lists what every caller passes, including omitted arguments and defaults.
 
 ## Test Impact Analysis
 

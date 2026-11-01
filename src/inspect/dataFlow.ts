@@ -181,7 +181,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   for (const [scope, scoped] of groups) {
     roots.push({
       label: ts.isSourceFile(scope) ? `${baseName(scope.fileName)} (module scope)` : functionLabel(scope),
-      description: `${baseName(scope.getSourceFile().fileName)} · ${plural(scoped.length, 'step')}`,
+      description: `${baseName(scope.getSourceFile().fileName)} · ${stepSummary(scoped)}`,
       icon: ts.isSourceFile(scope) ? 'file-code' : 'symbol-function',
       location: builder.at(ts.isSourceFile(scope) ? scope : (scope as ts.Node), scope.getSourceFile()),
       expanded: true,
@@ -236,6 +236,22 @@ function incomingValues(project: VirtualProject, parameter: ts.ParameterDeclarat
       location: builder.at(expression ?? call),
     };
   });
+}
+
+/** "2 writes, 1 check, 1 hand-off": what happens to the value in one function. */
+function stepSummary(steps: FlowStep[]): string {
+  const groups: [string, FlowKind[]][] = [
+    ['write', ['declaration', 'write', 'update']],
+    ['mutation', ['mutation']],
+    ['check', ['condition']],
+    ['hand-off', ['argument']],
+    ['read', ['read', 'call', 'return', 'import']],
+  ];
+  return groups
+    .map(([noun, kinds]) => [noun, steps.filter((s) => kinds.includes(s.kind)).length] as const)
+    .filter(([, count]) => count > 0)
+    .map(([noun, count]) => plural(count, noun))
+    .join(', ');
 }
 
 function lineOf(node: ts.Node): number {
