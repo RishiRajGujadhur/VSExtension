@@ -324,6 +324,26 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. For helpers that are meant to run in the background, such as analytics or logging, list them in `tsStructure.missingAwait.ignore` instead of suppressing every call. For example, `["track", "logger.*"]`.
 6. To check the whole project, run **Inspect Code…** and choose the project. Results open in the TypeScript Structure view, and fixable rows have an **Apply Fix** button.
 
+### Type Assertion Inspector (live inspection)
+
+![Five assertions in api.ts classified: JSON.parse as Book is unverified, found! may be undefined, BookResponse as Book narrows without a check, as any turns off checking, and book as Book is unnecessary](docs/images/type-assertions.png)
+
+1. Like Missing Await, this inspection runs on every visible TypeScript or JavaScript file. Open `src/api.ts` in the demo.
+2. Each `as`, `<T>` and `!` is classified:
+   - **Unchecked narrowing** (warning), with what it assumes, such as *it assumes properties title, price, weight exist*;
+   - **Unsafe** (warning): `as any`, double assertions through `unknown`;
+   - **Unverified** (information): an assertion on an `any` value, such as `JSON.parse(body) as Book`;
+   - **Widening** (information);
+   - **Non-null `!` on a nullable value** (hint);
+   - **Unnecessary** (hint, shown faded), such as `book as Book` when `book` is already a `Book`.
+3. Hover a finding to read the explanation, or press `Ctrl+.` for fixes:
+   - **Remove unnecessary assertion**;
+   - **Use 'satisfies Shape'** for widening, which keeps the compiler's check;
+   - **Use optional chaining '?.'** instead of `!`;
+   - suppression comments for the line or file.
+4. Hints don't appear in the Problems panel. Run **Inspect Code…** on the file to list every finding, hints included, in the TypeScript Structure view.
+5. Change how loud each inspection is with `tsStructure.inspections.severity`, for example `{ "typeAssertion": "info" }`, or `"off"` to disable it.
+
 ## Test Impact Analysis
 
 ### Usage
