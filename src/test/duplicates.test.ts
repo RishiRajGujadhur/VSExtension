@@ -3,6 +3,7 @@ import * as path from 'path';
 import { test } from 'node:test';
 import { copiesReport, duplicatesReport, findDuplicates } from '../inspect/duplicates';
 import { fixtures, virtualProject } from './helpers';
+import { normalizePath } from '../analysis/paths';
 
 const file = path.join(fixtures, 'inspect/src/duplicates.ts');
 
@@ -55,4 +56,17 @@ test('groups are ordered by how many repeated lines they would remove', () => {
   assert.ok(repeated.length > 0);
   assert.deepEqual(repeated, [...repeated].sort((a, b) => b - a));
   assert.match(report.roots[0].label, /^Duplicate 1: \d+ lines × \d+, \d+ repeated$/);
+});
+
+test('renamed properties can be matched too', () => {
+  const demo = path.join(fixtures, '..', 'docs', 'demo');
+  const program = virtualProject('../docs/demo', 'src/main.ts').program();
+  const files = ['pricing.ts', 'shipping.ts'].map((f) => program.getSourceFile(normalizePath(path.join(demo, 'src', f)))!);
+  const labels = (match: boolean) =>
+    findDuplicates(files, { minStatements: 3, minTokens: 40, matchRenamedProperties: match }).map((g) => g.fragments.map((f) => path.basename(f.sourceFile.fileName)).join(' + '));
+  // calculateSubtotal reads .price and parcelWeight reads .weight.
+  assert.deepEqual(labels(false), []);
+  assert.deepEqual(labels(true), ['pricing.ts + shipping.ts']);
+  const [group] = findDuplicates(files, { minStatements: 3, minTokens: 40, matchRenamedProperties: true });
+  assert.ok(group.differences.includes('.price ↔ .weight'), group.differences.join(', '));
 });

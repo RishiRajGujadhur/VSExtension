@@ -890,6 +890,11 @@
           "minimum": 5,
           "description": "Smallest duplicated fragment, in syntax nodes, that is reported."
         },
+        "tsStructure.duplicates.matchRenamedProperties": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Also report copies that use different property or method names, such as `item.price` in one copy and `parcel.weight` in the other. Finds more near-duplicates, with more noise."
+        },
         "tsStructure.duplicates.ignoreTestFiles": {
           "type": "boolean",
           "default": true,

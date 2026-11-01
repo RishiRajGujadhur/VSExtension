@@ -9,6 +9,8 @@ export interface DuplicateOptions {
   minStatements: number;
   /** Smallest fragment, in syntax tokens, worth reporting. */
   minTokens: number;
+  /** Treat property and method names like local names, so copies that use other properties still match. */
+  matchRenamedProperties?: boolean;
 }
 
 export interface Fragment {
@@ -38,22 +40,25 @@ interface Serialized {
  * Serializes nodes to a structure fingerprint in which local names are numbered by first use and
  * literals keep only their kind, so copies with renamed variables and changed values match.
  */
-function serialize(nodes: readonly ts.Node[]): Serialized {
+function serialize(nodes: readonly ts.Node[], matchRenamedProperties = false): Serialized {
   const parts: string[] = [];
   const values: string[] = [];
   const names = new Map<string, number>();
   const visit = (node: ts.Node) => {
     if (ts.isIdentifier(node) || ts.isPrivateIdentifier(node)) {
-      if (isMemberName(node)) {
+      const member = isMemberName(node);
+      if (member && !matchRenamedProperties) {
         parts.push(`.${node.text}`);
       } else {
-        let index = names.get(node.text);
+        // Members are numbered apart from locals, so `x.x` keeps its shape.
+        const key = member ? `.${node.text}` : node.text;
+        let index = names.get(key);
         if (index === undefined) {
           index = names.size;
-          names.set(node.text, index);
+          names.set(key, index);
         }
         parts.push(`$${index}`);
-        values.push(node.text);
+        values.push(member ? `.${node.text}` : node.text);
       }
       return;
     }
@@ -114,11 +119,12 @@ const fixedId = (text: string) => {
 };
 
 /** The same token sequence `serialize` produces for one statement, computed once per statement. */
-function tokenize(node: ts.Node): Token[] {
+function tokenize(node: ts.Node, matchRenamedProperties = false): Token[] {
   const tokens: Token[] = [];
   const visit = (current: ts.Node) => {
     if (ts.isIdentifier(current) || ts.isPrivateIdentifier(current)) {
-      tokens.push(isMemberName(current) ? { fixed: fixedId(`.${current.text}`) } : { name: current.text });
+      const member = isMemberName(current);
+      tokens.push(member && !matchRenamedProperties ? { fixed: fixedId(`.${current.text}`) } : { name: member ? `.${current.text}` : current.text });
       return;
     }
     if (ts.isStringLiteralLike(current) || ts.isNumericLiteral(current) || ts.isBigIntLiteral(current) || ts.isRegularExpressionLiteral(current)) {
@@ -144,7 +150,7 @@ export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: D
   for (const sourceFile of sourceFiles) {
     for (const list of statementLists(sourceFile)) {
       const n = list.length;
-      const tokenized = list.map(tokenize);
+      const tokenized = list.map((statement) => tokenize(statement, options.matchRenamedProperties));
       for (let i = 0; i < n; i++) {
         const names = new Map<string, number>();
         let h1 = 0x811c9dc5;
@@ -197,7 +203,7 @@ export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: D
     }
     for (const fragment of candidate.fragments) {
       covered.set(fragment.sourceFile, [...(covered.get(fragment.sourceFile) ?? []), { start: fragment.start, end: fragment.end }]);
-      fragment.values = serialize(fragment.nodes).values;
+      fragment.values = serialize(fragment.nodes, options.matchRenamedProperties).values;
     }
     const first = candidate.fragments[0];
     groups.push({

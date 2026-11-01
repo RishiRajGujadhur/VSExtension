@@ -200,7 +200,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         const program = target.project().program();
         const ignoreTests = config.get('ignoreTestFiles', true);
         const files = scope === 'file' ? [program.getSourceFile(normalizePath(target.fileName))!] : projectSourceFiles(program).filter((sf) => (!ignoreTests || !discoverTests(sf).isTestFile) && !isExcluded(sf.fileName));
-        return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40) }, target.folder);
+        return duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, target.folder);
       });
     }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
