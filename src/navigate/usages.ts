@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { discoverTests } from '../analysis/testDiscovery';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, lineSnippet, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, codeContext, lineSnippet, plural } from '../structure/report';
 import { accessExpression, enclosingFunction, functionLabel, identifierAt, isTypePosition, referencesAt, skipParentheses, symbolAt, writeOf } from '../structure/util';
 
 export type UsageKind = 'definition' | 'import' | 'export' | 'write' | 'call' | 'jsx' | 'inheritance' | 'type' | 'read';
@@ -119,6 +119,7 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
         children: list.map((node) => ({
           label: lineSnippet(node),
           description: `${functionLabel(enclosingFunction(node))} · line ${sf.getLineAndCharacterOfPosition(node.getStart()).line + 1}${node === identifier ? ' · at cursor' : ''}`,
+          tooltip: codeContext(node),
           focus: node === identifier || undefined,
           action: unused && kind === 'definition' ? { kind: 'deadExport' } : undefined,
           icon,

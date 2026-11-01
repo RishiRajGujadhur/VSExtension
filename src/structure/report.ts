@@ -90,6 +90,17 @@ export function withPlace(node: ts.Node, description?: string): string {
   return description ? `${description} · ${place}` : place;
 }
 
+/** The node's line with one line around it, as a Markdown code block for a row's hover. */
+export function codeContext(node: ts.Node, around = 1): string {
+  const sourceFile = node.getSourceFile();
+  const lines = sourceFile.text.split(/\r?\n/);
+  const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const shown = lines.slice(Math.max(0, line - around), line + around + 1);
+  const indent = Math.min(...shown.filter((l) => l.trim()).map((l) => /^\s*/.exec(l)![0].length));
+  const language = /\.[jt]sx?$/.exec(sourceFile.fileName)?.[0].slice(1) ?? 'ts';
+  return ['```' + language, ...shown.map((l) => l.slice(indent)), '```'].join('\n');
+}
+
 /** Node text on one line, shortened for display. */
 export function nodeSnippet(node: ts.Node, max = 60): string {
   return shorten(node.getText().replace(/\s+/g, ' '), max);

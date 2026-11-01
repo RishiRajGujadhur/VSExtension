@@ -50,3 +50,14 @@ test('a symbol nothing uses says so and offers Safe Delete', () => {
   const used = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), utils, offsetIn(utils, 'function format|Area'));
   assert.deepEqual(used.warnings, []);
 });
+
+test('usage rows show the surrounding code on hover', () => {
+  const report = semanticUsagesReport(virtualProject('navigate', 'src/utils.ts'), app, offsetIn(app, 'const label = format|Area(box)'));
+  let tooltip = '';
+  forEachReportNode(report.roots, (node) => {
+    if (node.focus) {
+      tooltip = node.tooltip ?? '';
+    }
+  });
+  assert.equal(tooltip, '```tsx\nconst box = new Box(2);\nconst label = formatArea(box);\nreturn <Label text={label} />;\n```');
+});

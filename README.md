@@ -411,7 +411,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Imports**, **Exports and re-exports**.
 
    Each group shows its count, including how many are in test files. To see only some groups, such as just **Calls** and **Writes**, choose **Show Groups…** in the view's `…` menu. That works in every report.
-4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon. The usage you started from is selected and marked *at cursor*, and Next and Previous Result continue from it.
+4. Inside a group, references are listed per file. Each one shows its line of code and the function it's in. Test files have a beaker icon. Hover a row to see the lines around it. The usage you started from is selected and marked *at cursor*, and Next and Previous Result continue from it.
 5. Usages through aliases count too. In the demo, `main.ts` calls `calculateSubtotal` as `subtotal`, imported from the `index.ts` barrel.
 6. If nothing actually uses the symbol, because it is only declared, imported or re-exported, the view says so. Its definition then gets a trash button (**Safe Delete…**).
 
