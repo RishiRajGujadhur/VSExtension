@@ -1124,7 +1124,8 @@
             },
             "default": [],
             "markdownDescription": "Glob patterns, relative to the workspace folder, for the only files that inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results look at (for example `src/**`). A folder such as `src/app` includes everything below it. When empty, every file in the compiler project is included. `#tsStructure.exclude#` is applied after this.",
-            "scope": "resource"
+            "scope": "resource",
+            "order": 0
           },
           "tsStructure.exclude": {
             "type": "array",
@@ -1132,8 +1133,9 @@
               "type": "string"
             },
             "default": [],
-            "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection and dead export results (for example `**/generated/**` or `src/legacy/*.ts`).",
-            "scope": "resource"
+            "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results (for example `**/generated/**` or `src/legacy/*.ts`). A folder such as `src/legacy` excludes everything below it. Right-click files or folders in the Explorer and choose **Exclude from TypeScript Structure Analysis** to add them.",
+            "scope": "resource",
+            "order": 1
           }
         }
       },

@@ -262,12 +262,16 @@ The TypeScript Structure view keeps every analysis's report:
 
 Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens. Settings about files, such as the scope, inspection severities and dead-export entry points, can differ per folder of a multi-root workspace.
 
+![The extension's settings, grouped into sections](docs/images/settings.png)
+
 ### Choosing which files are analyzed
 
 By default every file in the compiler project is analyzed. To leave generated code, vendored code or old code out:
 
 1. In the Explorer, right-click a file or folder (or several) and choose **Exclude from TypeScript Structure Analysis**. The message that follows has **Undo**.
 2. To see or change the whole scope, run **TypeScript Structure: Edit Analysis Scope…** (also in the **⋯** menu of the TypeScript Structure view). Choose **Exclude Files…** or **Only Analyze…** to add a pattern, or select a pattern to remove it.
+
+![Edit Analysis Scope listing an include and two exclude patterns](docs/images/analysis-scope.png)
 
 The scope is stored in two settings, with globs relative to the workspace folder. A plain folder path such as `src/legacy` covers everything below it.
 
@@ -286,6 +290,8 @@ Every feature can be switched off on its own, for example when another extension
 
 1. Run **TypeScript Structure: Choose Features…** from the Command Palette, or from the **⋯** menu of the TypeScript Structure view.
 2. Untick the features you don't use and press `Enter`.
+
+![Choose Features with Test Impact Analysis turned off](docs/images/choose-features.png)
 
 A feature that is off disappears from the editor's right-click menu, the Command Palette, **Analyze or Refactor This…**, its keybindings, lightbulb entries and CodeLens. Running one of its commands anyway, from a keybinding or another extension, offers to turn it back on.
 

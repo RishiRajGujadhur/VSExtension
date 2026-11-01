@@ -162,4 +162,38 @@ export const scenes: Scene[] = [
     },
   },
   analysis('argument-flow', 'src/pricing.ts', 'code?: string): number', 'tsStructure.argumentFlow'),
+  // Configuration. The pickers wait for an answer, so they are opened without awaiting them.
+  {
+    name: 'choose-features',
+    async run({ open }) {
+      await vscode.workspace.getConfiguration('tsStructure.features').update('testImpact', false, vscode.ConfigurationTarget.Workspace);
+      await open('src/cart.ts', 'addToCart(');
+      void vscode.commands.executeCommand('tsStructure.configureFeatures');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+      await vscode.workspace.getConfiguration('tsStructure.features').update('testImpact', undefined, vscode.ConfigurationTarget.Workspace);
+    },
+  },
+  {
+    name: 'analysis-scope',
+    async run({ open }) {
+      await settings().update('exclude', ['**/generated/**', 'src/legacy.ts'], vscode.ConfigurationTarget.Workspace);
+      await settings().update('include', ['src'], vscode.ConfigurationTarget.Workspace);
+      await open('src/cart.ts', 'addToCart(');
+      void vscode.commands.executeCommand('tsStructure.editAnalysisScope');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+      await settings().update('exclude', undefined, vscode.ConfigurationTarget.Workspace);
+      await settings().update('include', undefined, vscode.ConfigurationTarget.Workspace);
+    },
+  },
+  {
+    name: 'settings',
+    async run() {
+      await vscode.commands.executeCommand('tsStructure.openSettings');
+    },
+    settle: 2500,
+  },
 ];
