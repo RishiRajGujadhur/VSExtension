@@ -22,6 +22,7 @@ type Message =
   | { type: 'validate'; spec: SearchSpec }
   | { type: 'copyKeybinding'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
+  | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
@@ -35,7 +36,7 @@ export class StructuralSearchPanel {
     context: vscode.ExtensionContext,
     projects: ProjectService,
     view: StructureView,
-    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig; preset?: SearchPreset & { run?: boolean } },
+    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig; preset?: SearchPreset & { run?: boolean; preview?: boolean } },
   ): StructuralSearchPanel {
     const anchor = initial?.anchor ?? vscode.window.activeTextEditor?.document.uri.fsPath;
     if (!anchor) {
@@ -157,6 +158,26 @@ export class StructuralSearchPanel {
       }
       return;
     }
+    if (message.type === 'previewReplace') {
+      // Computed in a copy of the project, so nothing is written.
+      try {
+        const project = this.projects.createVirtualProject(this.anchor, this.folder());
+        const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        void this.panel.webview.postMessage({
+          type: 'preview',
+          items: result.replacements.slice(0, 200).map((r) => ({
+            where: `${vscode.workspace.asRelativePath(r.file)}:${r.line}`,
+            before: r.before.replace(/\s+/g, ' ').slice(0, 120),
+            after: r.after.replace(/\s+/g, ' ').slice(0, 120),
+          })),
+          count: result.matches,
+          conflicts: result.conflicts.map((c) => c.message),
+        });
+      } catch (error) {
+        void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
     if (message.type === 'replace') {
       try {
         const project = this.projects.createVirtualProject(this.anchor, this.folder());
@@ -262,7 +283,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
       }
     }),
     // Takes an optional saved search, so a keybinding can run one: { pattern, constraints, replacement, scope, run }.
-    vscode.commands.registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean }) => {
+    vscode.commands.registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
       try {
@@ -278,7 +299,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
   );
 }
 
-function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & { run?: boolean }): string {
+function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & { run?: boolean; preview?: boolean }): string {
   const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
   return `<!DOCTYPE html>
 <html lang="en">
@@ -305,6 +326,8 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   li:hover { background: var(--vscode-list-hoverBackground); }
   code { font-family: var(--vscode-editor-font-family); }
   .where, .bindings { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+  .before { color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39); }
+  .after { color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
 </style>
 </head>
 <body>
@@ -328,7 +351,10 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
-  <div class="row"><button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button></div>
+  <div class="row">
+    <button id="previewReplace" class="secondary" title="Show each match with its replacement, without changing any file">Preview Replacements</button>
+    <button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button>
+  </div>
   <h2>Save as inspection</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
@@ -434,6 +460,11 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     $('error').textContent = '';
     vscode.postMessage({ type: 'saveInspection', spec: spec(), template: $('template').value, message: $('message').value, severity: $('severity').value });
   });
+  $('previewReplace').addEventListener('click', () => {
+    $('error').textContent = '';
+    $('summary').textContent = 'Computing replacements…';
+    vscode.postMessage({ type: 'previewReplace', spec: spec(), scope: $('scope').value, template: $('template').value });
+  });
   $('replace').addEventListener('click', () => {
     $('error').textContent = '';
     $('summary').textContent = 'Computing replacements…';
@@ -450,6 +481,27 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
     if (message.type === 'preset') applyPreset(message.preset);
     if (message.type === 'validation') $('patternProblem').textContent = message.problem || '';
+    if (message.type === 'preview') {
+      $('summary').textContent = message.count + (message.count === 1 ? ' replacement' : ' replacements') + (message.conflicts.length ? ', ' + message.conflicts.length + ' new type error' + (message.conflicts.length === 1 ? '' : 's') : ', type-checks cleanly');
+      $('count').textContent = '';
+      const list = $('results');
+      list.innerHTML = '';
+      for (const problem of message.conflicts) {
+        const li = document.createElement('li');
+        li.className = 'error';
+        li.textContent = problem;
+        list.appendChild(li);
+      }
+      for (const item of message.items) {
+        const li = document.createElement('li');
+        li.innerHTML = '<div><code class="before"></code></div><div><code class="after"></code></div><div class="where"></div>';
+        li.querySelector('.before').textContent = '− ' + item.before;
+        li.querySelector('.after').textContent = '+ ' + item.after;
+        li.querySelector('.where').textContent = item.where;
+        list.appendChild(li);
+      }
+      $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     if (message.type === 'load') loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
     if (message.type === 'history') {
       recent = message.items;
@@ -487,7 +539,8 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   function applyPreset(p) {
     loadPreset(p);
     if (p.scope) { $('scope').value = p.scope; save(); }
-    if (p.run) $('search').click();
+    if (p.preview) $('previewReplace').click();
+    else if (p.run) $('search').click();
   }
   const initialPreset = ${JSON.stringify(preset ?? null).replace(/</g, '\\u003c')};
   if (initialPreset) applyPreset(initialPreset);

@@ -104,7 +104,7 @@ export const scenes: Scene[] = [
       await vscode.commands.executeCommand('tsStructure.structuralSearch', {
         pattern: 'Math.round($value$ * 100) / 100',
         replacement: 'Number($value$.toFixed(2))',
-        run: true,
+        preview: true,
       });
     },
     settle: 2500,

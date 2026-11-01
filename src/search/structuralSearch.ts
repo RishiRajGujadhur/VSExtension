@@ -390,7 +390,15 @@ export function outermost(matches: readonly Match[]): Match[] {
 }
 
 /** Type-Safe Structural Replace: rewrites every match, then type-checks the result against the original. */
-export function structuralReplace(project: VirtualProject, spec: SearchSpec, template: string, scope: SearchScope = {}): RefactorResult & { matches: number } {
+/** One rewrite of a structural replace, for previewing before anything is written. */
+export interface Replacement {
+  file: string;
+  line: number;
+  before: string;
+  after: string;
+}
+
+export function structuralReplace(project: VirtualProject, spec: SearchSpec, template: string, scope: SearchScope = {}): RefactorResult & { matches: number; replacements: Replacement[] } {
   const program = project.program();
   const matches = outermost(structuralSearch(program, spec, scope));
   const byFile = new Map<string, Match[]>();
@@ -406,6 +414,12 @@ export function structuralReplace(project: VirtualProject, spec: SearchSpec, tem
     }
     project.setText(file, result);
   }
+  const replacements = matches.map((m) => ({
+    file: m.sourceFile.fileName,
+    line: m.sourceFile.getLineAndCharacterOfPosition(m.start).line + 1,
+    before: m.sourceFile.text.slice(m.start, m.end),
+    after: instantiate(template, m),
+  }));
   const label = `Replace ${spec.pattern.trim().split('\n')[0]}`;
-  return { label: label.length > 60 ? `${label.slice(0, 59)}…` : label, changes: project.changes(), conflicts: introducedErrors(project, [], 20), matches: matches.length };
+  return { label: label.length > 60 ? `${label.slice(0, 59)}…` : label, changes: project.changes(), conflicts: introducedErrors(project, [], 20), matches: matches.length, replacements };
 }

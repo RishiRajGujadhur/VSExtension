@@ -54,6 +54,10 @@ test('replace rewrites matches and reports type errors it would introduce', () =
   assert.equal(ok.matches, 1);
   assert.deepEqual(ok.conflicts, []);
   assert.match(changedText(ok, file), /const same = true;/);
+  // Each rewrite is listed for the preview.
+  assert.equal(ok.replacements.length, 1);
+  assert.equal(ok.replacements[0].after, 'true');
+  assert.match(ok.replacements[0].before, /^(\w+) === \1$/);
 
   const broken = structuralReplace(virtualProject('search', 'src/code.ts'), { pattern: 'console.log($a$)', constraints: [{ name: 'a', type: '^string$' }] }, '$a$.toFixed()');
   assert.equal(broken.matches, 4);
