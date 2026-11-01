@@ -73,3 +73,9 @@ export function shadow(input: string): string {
   assert.ok(lines.some((l) => l.includes('input — initializes text')), lines.join('\n'));
   assert.ok(!lines.some((l) => l.includes("'inner'")), lines.join('\n'));
 });
+
+test('rows show their code on hover', () => {
+  const report = argumentFlowReport(virtualProject('navigate', 'src/flow.tsx'), file, offsetIn(file, 'page(na|me: string)'));
+  const local = report.roots[2].children?.[0];
+  assert.equal(local?.tooltip, '```tsx\nconst label = name.trim();\n```');
+});

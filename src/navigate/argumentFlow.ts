@@ -2,7 +2,7 @@ import * as ts from 'typescript';
 import { AnalysisError } from '../analysis/types';
 import { resolveAlias } from '../analysis/referenceIndex';
 import { VirtualProject } from '../refactor/virtualProject';
-import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
+import { ReportBuilder, ReportNode, Report, plural, codeContextAt, forEachReportNode } from '../structure/report';
 import {
   FunctionWithBody,
   argumentFor,
@@ -304,5 +304,13 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
     { label: 'Where values come from', description: plural(origins.length, 'call site'), icon: 'call-incoming', expanded: true, children: origins.length ? origins : [{ label: 'no call sites in the project', icon: 'dash' }] },
     { label: 'Where the value goes', description: plural(destinations.length, 'destination'), icon: 'call-outgoing', expanded: true, children: destinations.length ? destinations : [{ label: 'not passed on, returned or stored', icon: 'dash' }] },
   ];
+  // Every row shows its line of code on hover; values often come from far away.
+  const program = project.program();
+  forEachReportNode(roots, (node) => {
+    const sourceFile = node.location && !node.tooltip ? program.getSourceFile(node.location.file) : undefined;
+    if (sourceFile) {
+      node.tooltip = codeContextAt(sourceFile, sourceFile.getPositionOfLineAndCharacter(node.location!.line, node.location!.character), 0);
+    }
+  });
   return builder.finish(roots, `${plural(origins.length, 'call site')}, ${plural(destinations.length, 'hand-off')}`);
 }
