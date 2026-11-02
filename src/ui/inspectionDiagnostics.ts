@@ -87,6 +87,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       ),
       registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
+      registerCommand('tsStructure.configureInspections', () => this.configureInspections()),
       registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
@@ -178,6 +179,48 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     this.collection.set(document.uri, diagnostics);
     this.updateStatus();
     return findings;
+  }
+
+  /** Lists every inspection with its severity; picking one asks for a new severity, until the list is closed. */
+  private async configureInspections(): Promise<void> {
+    const uri = vscode.window.activeTextEditor?.document.uri;
+    const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+    for (;;) {
+      const config = vscode.workspace.getConfiguration('tsStructure', uri);
+      const overrides = config.get<Record<string, string>>('inspections.severity', {});
+      const items = this.inspections().map((inspection) => {
+        const setting = overrides[inspection.id] ?? 'default';
+        return {
+          label: inspection.title,
+          description: setting === 'default' ? inspection.defaultSeverity : setting === 'off' ? 'off' : `${setting} (default ${inspection.defaultSeverity})`,
+          detail: inspection.id,
+          inspection,
+        };
+      });
+      const picked = await vscode.window.showQuickPick(items, { title: 'Configure Inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
+      if (!picked) {
+        return;
+      }
+      const current = overrides[picked.inspection.id] ?? 'default';
+      const severity = await vscode.window.showQuickPick(
+        ['default', 'error', 'warning', 'info', 'hint', 'off'].map((value) => ({
+          label: `${value === current ? '$(check) ' : ''}${value}`,
+          description: value === 'default' ? `as reported (${picked.inspection.defaultSeverity})` : value === 'off' ? 'not reported' : undefined,
+          value,
+        })),
+        { title: picked.inspection.title, placeHolder: 'Severity' },
+      );
+      if (severity && severity.value !== current) {
+        const inspected = config.inspect<Record<string, string>>('inspections.severity');
+        const before = { ...((target === vscode.ConfigurationTarget.Workspace ? inspected?.workspaceValue : inspected?.globalValue) ?? {}) };
+        if (severity.value === 'default') {
+          delete before[picked.inspection.id];
+        } else {
+          before[picked.inspection.id] = severity.value;
+        }
+        await config.update('inspections.severity', Object.keys(before).length ? before : undefined, target);
+      }
+    }
   }
 
   /** Counts for the active file in the status bar; clicking runs Inspect Code on it. */
@@ -377,7 +420,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       if (!offered.has(`configure:${finding.inspection}`)) {
         offered.add(`configure:${finding.inspection}`);
         const configure = new vscode.CodeAction(`Configure '${finding.inspection}' severity…`, vscode.CodeActionKind.QuickFix);
-        configure.command = { command: 'workbench.action.openSettings', title: 'Configure', arguments: ['tsStructure.inspections'] };
+        configure.command = { command: 'tsStructure.configureInspections', title: 'Configure' };
         configure.diagnostics = [diagnostic];
         actions.push(configure);
       }

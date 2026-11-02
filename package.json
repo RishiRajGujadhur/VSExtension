@@ -454,6 +454,12 @@
         "title": "Show Analysis History…",
         "category": "TypeScript Structure",
         "icon": "$(history)"
+      },
+      {
+        "command": "tsStructure.configureInspections",
+        "title": "Configure Inspections…",
+        "category": "TypeScript Structure",
+        "icon": "$(settings)"
       }
     ],
     "viewsContainers": {
@@ -958,6 +964,10 @@
         {
           "command": "tsStructure.report.history",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.configureInspections",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "view/title": [
