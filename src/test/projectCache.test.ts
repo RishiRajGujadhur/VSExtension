@@ -34,3 +34,23 @@ test('a file created after the project was listed is found without a manual refr
   const project = projects.load(created);
   assert.ok(project.program.getSourceFiles().some((sf) => sf.fileName.endsWith('/src/b.ts')));
 });
+
+test('an analysis project is reused between runs and follows edits', () => {
+  const dir = tempProject();
+  const file = path.join(dir, 'src', 'a.ts');
+  let overlay: string | undefined;
+  const projects = new ProjectService((f) => (path.resolve(f) === path.resolve(file) ? overlay : undefined));
+  const first = projects.analysisProject(file);
+  const program = first.program();
+  const again = projects.analysisProject(file);
+  assert.equal(again, first);
+  assert.equal(again.program(), program, 'nothing changed, so the program and its types are kept');
+  overlay = 'export const a = "edited";\n';
+  const edited = projects.analysisProject(file).program();
+  assert.notEqual(edited, program);
+  assert.match(edited.getSourceFile(edited.getRootFileNames()[0])!.text, /edited/);
+  fs.writeFileSync(path.join(dir, 'src', 'b.ts'), 'export const b = 1;\n');
+  projects.invalidateFileList();
+  const grown = projects.analysisProject(file).program();
+  assert.ok(grown.getSourceFiles().some((sf) => sf.fileName.endsWith('/src/b.ts')), 'a new file is picked up once the file list is refreshed');
+});

@@ -45,6 +45,8 @@ export class VirtualProject {
     private readonly parsed: ts.ParsedCommandLine,
     private readonly overlay: (fileName: string) => string | undefined,
     readonly configPath?: string,
+    /** Reads a file that is not open in an editor; the project service passes its cached reader. */
+    private readonly readDisk: (fileName: string) => string | undefined = ts.sys.readFile,
   ) {
     this.roots = parsed.fileNames.map(normalizePath);
     const host: ts.LanguageServiceHost = {
@@ -116,6 +118,26 @@ export class VirtualProject {
     return result;
   }
 
+  /** The root file names the project was created with, to tell whether it still matches its configuration. */
+  get rootNames(): readonly string[] {
+    return this.roots;
+  }
+
+  /**
+   * Reads every file again. For a project kept between analyses, which never edits it: files whose
+   * text is unchanged keep their version, so the language service reuses the program and its types.
+   */
+  refresh(): void {
+    for (const file of this.files.values()) {
+      const text = this.overlay(file.fileName) ?? this.readDisk(file.fileName);
+      if (text !== file.text) {
+        file.original = text;
+        file.text = text;
+        file.version = versionOf(text);
+      }
+    }
+  }
+
   locationOf(node: ts.Node): SourceLocation {
     const sourceFile = node.getSourceFile();
     const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
@@ -137,7 +159,7 @@ export class VirtualProject {
     let file = this.files.get(key);
     if (!file) {
       const normalized = normalizePath(fileName);
-      const text = this.overlay(normalized) ?? ts.sys.readFile(normalized);
+      const text = this.overlay(normalized) ?? this.readDisk(normalized);
       file = { fileName: normalized, original: text, text, version: versionOf(text) };
       this.files.set(key, file);
     }

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as ts from 'typescript';
-import { normalizePath } from '../analysis/paths';
+import { pathKey } from '../analysis/paths';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { introducedErrors } from '../refactor/common';
 import { RefactorError, RefactorResult } from '../refactor/types';
@@ -328,9 +328,9 @@ export interface SearchScope {
 export function structuralSearch(program: ts.Program, spec: SearchSpec, scope: SearchScope = {}): Match[] {
   const compiled = compilePattern(spec);
   const matcher = new Matcher(compiled, program.getTypeChecker());
-  const only = scope.files ? new Set(scope.files.map(normalizePath)) : undefined;
+  const only = scope.files ? new Set(scope.files.map(pathKey)) : undefined;
   return projectSourceFiles(program)
-    .filter((sf) => (!only || only.has(normalizePath(sf.fileName))) && !scope.isExcluded?.(sf.fileName))
+    .filter((sf) => (!only || only.has(pathKey(sf.fileName))) && !scope.isExcluded?.(sf.fileName))
     .flatMap((sf) => matcher.search(sf))
     .filter((m) => !scope.range || (scope.range.start <= m.start && m.end <= scope.range.end));
 }

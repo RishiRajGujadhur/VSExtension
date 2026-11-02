@@ -68,10 +68,14 @@ export class SideEffectLens implements vscode.CodeLensProvider {
 
   private compute(document: vscode.TextDocument): vscode.CodeLens[] {
     try {
+      // Checked before the program is built, which is the expensive part.
+      if (isExcluded(document.uri.fsPath)) {
+        return [];
+      }
       const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
       const project = this.projects.load(document.uri.fsPath, folder);
       const sourceFile = project.program.getSourceFile(normalizePath(document.uri.fsPath));
-      if (!sourceFile || sourceFile.text !== document.getText() || isExcluded(document.uri.fsPath)) {
+      if (!sourceFile || sourceFile.text !== document.getText()) {
         return [];
       }
       if (vscode.workspace.getConfiguration('tsStructure', document.uri).get('codeLens.sideEffectsIgnoreTestFiles', false) && discoverTests(sourceFile).isTestFile) {

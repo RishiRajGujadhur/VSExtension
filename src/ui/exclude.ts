@@ -4,6 +4,8 @@ import { pathMatcher } from '../structure/glob';
 
 /** Matchers per workspace folder, rebuilt when the scope settings change. */
 const matchers = new Map<string, (relativePath: string) => boolean>();
+/** Answers by file, cleared with the matchers: project-wide analyses ask for every file on every run. */
+const answers = new Map<string, boolean>();
 
 function scopeMatcher(uri: vscode.Uri, folder: vscode.WorkspaceFolder | undefined): (relativePath: string) => boolean {
   const key = folder?.uri.toString() ?? '';
@@ -21,10 +23,15 @@ function scopeMatcher(uri: vscode.Uri, folder: vscode.WorkspaceFolder | undefine
 
 /** Whether `tsStructure.include` and `tsStructure.exclude` leave the file out of inspections, searches and project-wide analyses. */
 export function isExcluded(fileName: string): boolean {
-  const uri = vscode.Uri.file(fileName);
-  const folder = vscode.workspace.getWorkspaceFolder(uri);
-  const relative = (folder ? path.relative(folder.uri.fsPath, fileName) : fileName).replace(/\\/g, '/');
-  return scopeMatcher(uri, folder)(relative);
+  let excluded = answers.get(fileName);
+  if (excluded === undefined) {
+    const uri = vscode.Uri.file(fileName);
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    const relative = (folder ? path.relative(folder.uri.fsPath, fileName) : fileName).replace(/\\/g, '/');
+    excluded = scopeMatcher(uri, folder)(relative);
+    answers.set(fileName, excluded);
+  }
+  return excluded;
 }
 
 /** The files inside the analysis scope, and a note for the report when some were left out. */
@@ -50,8 +57,12 @@ export function registerScope(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('tsStructure.include') || e.affectsConfiguration('tsStructure.exclude')) {
         matchers.clear();
+        answers.clear();
       }
     }),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => matchers.clear()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      matchers.clear();
+      answers.clear();
+    }),
   );
 }

@@ -27,6 +27,20 @@ const inferredExtensions = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs'
 const inferredExcludes = ['**/node_modules/**', '**/dist/**', '**/out/**', '**/build/**', '**/coverage/**', '**/.git/**'];
 const maxInferredFiles = 5000;
 const packageRecheckMs = 60_000;
+/** Analysis projects kept between runs, one per configuration, most recently used last. */
+const maxAnalysisProjects = 3;
+
+/** Path keys of each file list, so finding a file's configuration is a lookup, not a scan. */
+const fileKeys = new WeakMap<readonly string[], Set<string>>();
+
+function includesFile(fileNames: readonly string[], key: string): boolean {
+  let keys = fileKeys.get(fileNames);
+  if (!keys) {
+    keys = new Set(fileNames.map(pathKey));
+    fileKeys.set(fileNames, keys);
+  }
+  return keys.has(key);
+}
 
 /**
  * Loads compiler projects for files and caches them. Parsed source files are reused across
@@ -40,6 +54,7 @@ export class ProjectService {
   private readonly configs = new Map<string, ts.ParsedCommandLine | undefined>();
   private readonly inferredFiles = new Map<string, string[]>();
   private readonly diskTexts = new Map<string, { mtimeMs: number; size: number; text: string; checkedAt: number }>();
+  private readonly analysisProjects = new Map<string, VirtualProject>();
 
   constructor(private readonly overlay: OverlayProvider = () => undefined) {}
 
@@ -82,12 +97,40 @@ export class ProjectService {
   /** An editable in-memory copy of the file's project, for computing refactorings. */
   createVirtualProject(fileName: string, fallbackRoot?: string): VirtualProject {
     const { configPath, parsed } = this.resolve(fileName, fallbackRoot);
-    return new VirtualProject(parsed, this.overlay, configPath);
+    return new VirtualProject(parsed, this.overlay, configPath, (f) => this.readDisk(f));
+  }
+
+  /**
+   * The file's project for analyses, which only read it. It is kept between runs and brought up
+   * to date, so running an analysis again (or another one) reuses the parse and type information
+   * of every unchanged file instead of type-checking the project from scratch.
+   */
+  analysisProject(fileName: string, fallbackRoot?: string): VirtualProject {
+    const { configPath, parsed } = this.resolve(fileName, fallbackRoot);
+    const key = configPath ? pathKey(configPath) : `inferred:${pathKey(fallbackRoot ?? path.dirname(fileName))}`;
+    let project = this.analysisProjects.get(key);
+    const roots = parsed.fileNames.map(normalizePath);
+    if (project && project.rootNames.length === roots.length && project.rootNames.every((f, i) => f === roots[i])) {
+      project.refresh();
+    } else {
+      project = new VirtualProject(parsed, this.overlay, configPath, (f) => this.readDisk(f));
+    }
+    this.analysisProjects.delete(key);
+    this.analysisProjects.set(key, project);
+    for (const old of [...this.analysisProjects.keys()].slice(0, -maxAnalysisProjects)) {
+      this.analysisProjects.get(old)?.service.dispose();
+      this.analysisProjects.delete(old);
+    }
+    return project;
   }
 
   /** Drops cached programs, for example after a configuration file changes. */
   invalidate(): void {
     this.projects.clear();
+    for (const project of this.analysisProjects.values()) {
+      project.service.dispose();
+    }
+    this.analysisProjects.clear();
     this.invalidateFileList();
     // package.json changing is how an install usually shows up: check installed packages again.
     for (const entry of this.diskTexts.values()) {
@@ -202,7 +245,7 @@ export class ProjectService {
     if (!parsed) {
       return undefined;
     }
-    if (parsed.fileNames.some((f) => pathKey(f) === target)) {
+    if (includesFile(parsed.fileNames, target)) {
       return { configPath: normalizePath(configPath), parsed };
     }
     for (const reference of parsed.projectReferences ?? []) {
@@ -227,7 +270,7 @@ export class ProjectService {
       this.inferredFiles.set(rootKey, listed);
     }
     const fileNames = [...listed];
-    if (!fileNames.some((f) => pathKey(f) === pathKey(file))) {
+    if (!includesFile(listed, pathKey(file))) {
       fileNames.push(file);
     }
     return {
