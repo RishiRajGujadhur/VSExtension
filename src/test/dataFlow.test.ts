@@ -48,7 +48,7 @@ test('hand-offs can be followed into the called function', () => {
   const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'));
   const handOff = report.roots.flatMap((r) => r.children ?? []).find((c) => c.label === '→ applyTax(…) as amount');
   const action = handOff?.action as { kind: string; command: string; file: string; offset: number };
-  assert.equal(action.kind, 'follow');
+  assert.equal(action.kind, 'traceValue');
   assert.equal(action.command, 'tsStructure.dataFlow');
   assert.equal(action.offset, offsetIn(flow, 'applyTax(|amount'));
 });

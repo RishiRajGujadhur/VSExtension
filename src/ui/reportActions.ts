@@ -31,6 +31,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
     }),
     // Run another analysis where the row points, such as the data flow of the parameter a value is passed to.
     registerCommand('tsStructure.report.follow', followRow),
+    registerCommand('tsStructure.report.traceValue', followRow),
     registerCommand('tsStructure.report.showSideEffects', followRow),
     registerCommand('tsStructure.report.findUsages', followRow),
     registerCommand('tsStructure.report.showHierarchy', followRow),

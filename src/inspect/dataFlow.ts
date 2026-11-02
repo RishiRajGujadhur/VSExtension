@@ -191,7 +191,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
         focus: atCursor(s) || undefined,
         action:
           s.parameter && ts.isIdentifier(s.parameter.name)
-            ? { kind: 'follow', command: 'tsStructure.dataFlow', file: s.parameter.getSourceFile().fileName, offset: s.parameter.name.getStart() }
+            ? { kind: 'traceValue', command: 'tsStructure.dataFlow', file: s.parameter.getSourceFile().fileName, offset: s.parameter.name.getStart() }
             : undefined,
         tooltip: `${s.kind} · line ${lineOf(s.node)}${s.type ? `\nType here: ${s.type}` : ''}`,
         icon: icons[s.kind],
@@ -221,13 +221,13 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   );
 }
 
-type Follow = { kind: 'follow'; command: string; file: string; offset: number };
+type Follow = { kind: 'traceValue'; command: string; file: string; offset: number };
 
 /** A row action that opens the data flow of another variable or property. */
 function followFlow(name: ts.Node): Follow | undefined {
   const target = ts.isPropertyAccessExpression(name) ? name.name : name;
   return ts.isIdentifier(target) || ts.isPrivateIdentifier(target)
-    ? { kind: 'follow', command: 'tsStructure.dataFlow', file: target.getSourceFile().fileName, offset: target.getStart() }
+    ? { kind: 'traceValue', command: 'tsStructure.dataFlow', file: target.getSourceFile().fileName, offset: target.getStart() }
     : undefined;
 }
 

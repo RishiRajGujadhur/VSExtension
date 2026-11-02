@@ -348,7 +348,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. Click a step to jump to it, or use the up and down arrows in the view's title bar to walk through them. The editor shades writes and reads of the value while the report is open.
 5. To keep tracing into a called function, click the arrow button (**Follow Into Call**) on a hand-off row. It runs Data Flow on the parameter there.
 6. **Flows in**, at the top, lists every value the variable is given: its initial value, each assignment and each loop item. Under each one are the variables, properties and calls it is computed from, such as *from subtotal* or *returned by applyCoupon(…)*. On a parameter, **Incoming values from call sites** lists what every caller passes, including omitted arguments and defaults.
-7. **Flows out** lists where the value goes: the variables it is copied into (`→ shipping`), the calls it is passed to (`→ applyTax(…) as amount`) and the functions that return it. Under a return are the callers and what they do with the result: *received as total*, *returned again from checkout* or *passed to formatPrice(…)*. Click the arrow button on a row to trace that variable or parameter next.
+7. **Flows out** lists where the value goes: the variables it is copied into (`→ shipping`), the calls it is passed to (`→ applyTax(…) as amount`) and the functions that return it. Under a return are the callers and what they do with the result: *received as total*, *returned again from checkout* or *passed to formatPrice(…)*. Click **Trace This Value** (the step-into button) on a row to trace that variable or parameter next.
 
 ### Mutation Tracking
 

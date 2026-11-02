@@ -431,6 +431,12 @@
         "title": "Guide Me",
         "category": "TypeScript Structure",
         "icon": "$(question)"
+      },
+      {
+        "command": "tsStructure.report.traceValue",
+        "title": "Trace This Value",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-step-into)"
       }
     ],
     "viewsContainers": {
@@ -893,6 +899,10 @@
         {
           "command": "tsStructure.toggleSideEffectLens",
           "when": "config.tsStructure.features.sideEffects"
+        },
+        {
+          "command": "tsStructure.report.traceValue",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1086,6 +1096,11 @@
         {
           "command": "tsStructure.report.compareRevision",
           "when": "config.tsStructure.features.graphDiff && view == tsStructure.report && viewItem =~ /action:compareRevision/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.traceValue",
+          "when": "config.tsStructure.features.dataFlow && view == tsStructure.report && viewItem =~ /action:traceValue/",
           "group": "inline@1"
         }
       ]
