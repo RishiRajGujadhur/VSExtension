@@ -19,7 +19,11 @@ interface Entry {
   rerun?: Rerun;
 }
 
-const stateKey = 'tsStructure.lastReport';
+/** Before 0.11 only the last report was kept, under this key. */
+const legacyStateKey = 'tsStructure.lastReport';
+const historyKey = 'tsStructure.reportHistory';
+/** Reports kept across reloads; older ones are only kept for the session, to keep workspace state small. */
+const persistedReports = 10;
 
 /** Shows analysis reports as a tree with history, filtering, result navigation and editor highlights. */
 /** Settings each kind of report depends on: changing one marks the shown report as out of date. */
@@ -57,12 +61,22 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
 
   constructor(private readonly memento?: vscode.Memento) {
     this.view = vscode.window.createTreeView('tsStructure.report', { treeDataProvider: this, showCollapseAll: true, canSelectMany: true });
-    const saved = memento?.get<Report>(stateKey);
-    if (saved) {
-      this.history = [{ report: saved }];
-      this.position = 0;
+    const saved = memento?.get<{ reports: Report[]; position: number }>(historyKey);
+    const legacy = memento?.get<Report>(legacyStateKey);
+    const reports = saved?.reports ?? (legacy ? [legacy] : []);
+    if (reports.length > 0) {
+      this.history = reports.map((report) => ({ report }));
+      this.position = Math.min(Math.max(saved?.position ?? 0, 0), reports.length - 1);
       this.render();
     }
+  }
+
+  /** Saves the history, so Back, Forward and Show Analysis History work after a reload. */
+  private persist(): void {
+    const start = Math.max(0, this.history.length - persistedReports);
+    const reports = this.history.slice(start).map((entry) => entry.report);
+    void this.memento?.update(historyKey, reports.length ? { reports, position: Math.max(0, this.position - start) } : undefined);
+    void this.memento?.update(legacyStateKey, undefined);
   }
 
   get report(): Report | undefined {
@@ -97,7 +111,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.filter = '';
     this.hidden.clear();
     this.render();
-    void this.memento?.update(stateKey, report);
+    this.persist();
     if (config.get('focusView', true)) {
       await vscode.commands.executeCommand('tsStructure.report.focus');
     } else if (!this.view.visible) {
@@ -116,7 +130,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.position = -1;
     this.filter = '';
     this.render();
-    void this.memento?.update(stateKey, undefined);
+    this.persist();
   }
 
   go(delta: number): void {
@@ -126,6 +140,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       this.filter = '';
       this.hidden.clear();
       this.render();
+      this.persist();
     }
   }
 
@@ -163,7 +178,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       // Replace the entry in place: a refreshed report is not a new step in the history.
       this.history[this.position] = { report, rerun: entry.rerun };
       this.render();
-      void this.memento?.update(stateKey, report);
+      this.persist();
     }
   }
 
