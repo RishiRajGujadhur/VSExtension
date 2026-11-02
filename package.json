@@ -491,6 +491,11 @@
         "command": "tsStructure.inspectionsMenu",
         "title": "Inspections Menu…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.structuralSearchInFolder",
+        "title": "Structural Search in Folder…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -732,6 +737,11 @@
           "command": "tsStructure.findDuplicatesInFolder",
           "when": "config.tsStructure.features.duplicates && explorerResourceIsFolder",
           "group": "7_modification@94"
+        },
+        {
+          "command": "tsStructure.structuralSearchInFolder",
+          "when": "config.tsStructure.features.structuralSearch && explorerResourceIsFolder",
+          "group": "4_search@9"
         }
       ],
       "commandPalette": [
@@ -1038,6 +1048,10 @@
         {
           "command": "tsStructure.inspectionsMenu",
           "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.structuralSearchInFolder",
+          "when": "false"
         }
       ],
       "view/title": [

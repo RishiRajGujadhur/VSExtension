@@ -10,7 +10,9 @@ export interface SearchPreset {
   /** For saved inspections: only files matching this glob. */
   include?: string;
   /** Where to search; the builder's current choice when absent. */
-  scope?: 'project' | 'file' | 'selection';
+  scope?: 'project' | 'file' | 'selection' | 'folder';
+  /** With scope `folder`: the folder's workspace-relative name, shown in the scope list. */
+  folderLabel?: string;
 }
 
 /** Starting points offered in the builder. */

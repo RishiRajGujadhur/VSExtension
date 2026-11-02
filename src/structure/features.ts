@@ -99,7 +99,7 @@ export const features: Feature[] = [
     id: 'structuralSearch',
     title: 'Structural Search and Replace',
     description: 'Search and replace code by shape, and build custom inspections.',
-    commands: ['tsStructure.structuralSearch', 'tsStructure.manageCustomInspections', 'tsStructure.editCustomInspection', 'tsStructure.disableCustomInspection'],
+    commands: ['tsStructure.structuralSearch', 'tsStructure.manageCustomInspections', 'tsStructure.editCustomInspection', 'tsStructure.disableCustomInspection', 'tsStructure.structuralSearchInFolder'],
   },
   {
     id: 'hierarchy',

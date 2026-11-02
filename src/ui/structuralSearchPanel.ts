@@ -11,8 +11,9 @@ import { isExcluded } from './exclude';
 import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
 import { registerCommand } from './features';
+import { pathKey } from '../analysis/paths';
 
-export type Scope = 'project' | 'file' | 'selection';
+export type Scope = 'project' | 'file' | 'selection' | 'folder';
 
 const historyKey = 'tsStructure.searchHistory';
 const maxHistory = 15;
@@ -35,12 +36,14 @@ export class StructuralSearchPanel {
   private preview?: { spec: SearchSpec; template: string; replacements: Replacement[] };
   /** The file the search was opened from; scope "file" and project loading use it. */
   private anchor: string;
+  /** The folder picked in the Explorer, for scope `folder`. */
+  private folderRoot: string | undefined;
 
   static open(
     context: vscode.ExtensionContext,
     projects: ProjectService,
     view: StructureView,
-    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig; preset?: SearchPreset & { run?: boolean; preview?: boolean } },
+    initial?: { pattern?: string; anchor?: string; inspection?: CustomInspectionConfig; preset?: SearchPreset & { run?: boolean; preview?: boolean }; folder?: string },
   ): StructuralSearchPanel {
     const anchor = initial?.anchor ?? vscode.window.activeTextEditor?.document.uri.fsPath;
     if (!anchor) {
@@ -48,6 +51,7 @@ export class StructuralSearchPanel {
     }
     if (StructuralSearchPanel.current) {
       StructuralSearchPanel.current.anchor = anchor;
+      StructuralSearchPanel.current.folderRoot = initial?.folder ?? StructuralSearchPanel.current.folderRoot;
       StructuralSearchPanel.current.panel.reveal();
       if (initial?.pattern) {
         void StructuralSearchPanel.current.panel.webview.postMessage({ type: 'prefill', pattern: initial.pattern });
@@ -62,6 +66,7 @@ export class StructuralSearchPanel {
     }
     const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Structural Search', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
+    StructuralSearchPanel.current.folderRoot = initial?.folder;
     // A preset is part of the page, since messages posted before its script runs are lost.
     panel.webview.html = html(panel.webview, initial?.pattern ?? '', initial?.preset);
     void StructuralSearchPanel.current.postHistory();
@@ -107,6 +112,10 @@ export class StructuralSearchPanel {
         throw new Error(`Select the code to search in ${vscode.workspace.asRelativePath(this.anchor)} first.`);
       }
       return { files: [this.anchor], range: { start: editor.document.offsetAt(editor.selection.start), end: editor.document.offsetAt(editor.selection.end) } };
+    }
+    if (scope === 'folder' && this.folderRoot) {
+      const root = pathKey(this.folderRoot);
+      return { isExcluded: (f) => isExcluded(f) || !pathKey(f).startsWith(`${root}/`) };
     }
     return scope === 'file' ? { files: [this.anchor] } : { isExcluded };
   }
@@ -351,6 +360,25 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
       }
     }),
     // Takes an optional saved search, so a keybinding can run one: { pattern, constraints, replacement, scope, run }.
+    registerCommand('tsStructure.structuralSearchInFolder', async (uri?: vscode.Uri) => {
+      if (!uri) {
+        return;
+      }
+      const anchor = (await vscode.workspace.findFiles(new vscode.RelativePattern(uri, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1))[0];
+      if (!anchor) {
+        void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there to search.');
+        return;
+      }
+      try {
+        StructuralSearchPanel.open(context, projects, view, {
+          anchor: normalizePath(anchor.fsPath),
+          folder: uri.fsPath,
+          preset: { pattern: '', scope: 'folder', folderLabel: vscode.workspace.asRelativePath(uri) },
+        });
+      } catch (error) {
+        reportError(error, 'Structural Search');
+      }
+    }),
     registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
@@ -629,7 +657,17 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   renderConstraints();
   function applyPreset(p) {
-    loadPreset(p);
+    if (p.folderLabel) {
+      // A folder picked in the Explorer becomes a scope of its own.
+      let option = document.querySelector('#scope option[value="folder"]');
+      if (!option) {
+        option = document.createElement('option');
+        option.value = 'folder';
+        $('scope').appendChild(option);
+      }
+      option.textContent = 'Folder ' + p.folderLabel;
+    }
+    if (p.pattern) loadPreset(p);
     if (p.scope) { $('scope').value = p.scope; save(); }
     if (p.preview) $('previewReplace').click();
     else if (p.run) $('search').click();

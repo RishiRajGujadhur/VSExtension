@@ -511,7 +511,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Structural Search for $list$.find($callback$) where $list$ must be a LineItem array: two matches, in api.ts and cart.ts, in the builder and the TypeScript Structure view](docs/images/structural-search.png)
 
-1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor.
+1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor. To search one folder only, right-click it in the Explorer and choose **Structural Search in Folder…**; the folder is added to the **Scope** list.
 2. Write the **Pattern** as code with placeholders, or pick one from **Start from an example…**. In the demo, `$list$.find($callback$)` finds every `.find()` call. Problems, such as a pattern that isn't valid TypeScript or a broken regular expression, show under the box as you type.
 3. Each placeholder gets a row under **Placeholder constraints**. **Type** is a regular expression tested against the matched code's type. Here `^LineItem\[\]$` keeps only searches through line item arrays and skips `coupons.find()`. **Text** tests the code itself; **Invert** negates either one.
 4. Choose the **Scope** and click **Search**, or press `Ctrl+Enter` in the pattern. The scope is the whole project, the current file, or the code selected in the editor right now. A selection is handy for replacing inside one function.
