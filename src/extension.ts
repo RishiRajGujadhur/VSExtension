@@ -139,6 +139,29 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
     registerCommand('tsImpact.runTest', (item) => run(results.testsOf(item))),
+    // One test per line, "file: suite › test", or the test files only, for a commit message, a ticket or a CI filter.
+    registerCommand('tsImpact.copyTests', async () => {
+      const tests = results.result?.tests.map((t) => t.test) ?? [];
+      if (tests.length === 0) {
+        void vscode.window.showInformationMessage('There are no impacted tests to copy. Run the analysis first.');
+        return;
+      }
+      const picked = await vscode.window.showQuickPick(
+        [
+          { label: 'Test Names', description: 'file: suite › test, one per line', files: false },
+          { label: 'Test Files', description: 'each file once', files: true },
+        ],
+        { title: `Copy ${countLabel(tests.length)}` },
+      );
+      if (!picked) {
+        return;
+      }
+      const lines = picked.files
+        ? [...new Set(tests.map((t) => vscode.workspace.asRelativePath(t.file)))]
+        : tests.map((t) => `${vscode.workspace.asRelativePath(t.file)}: ${t.isFileEntry ? '(whole file)' : t.titlePath.join(' › ')}`);
+      await vscode.env.clipboard.writeText(lines.join('\n'));
+      void vscode.window.setStatusBarMessage(`Copied ${lines.length} ${picked.files ? 'test file' : 'test'}${lines.length === 1 ? '' : 's'}`, 3000);
+    }),
     registerCommand('tsImpact.open', (location: SourceLocation) => openLocation(location)),
     registerCommand('tsImpact.clear', () => results.set(undefined)),
   );

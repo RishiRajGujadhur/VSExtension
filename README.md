@@ -613,6 +613,8 @@ Every analysis can be started three ways: from the editor's right-click menu und
    To check a whole file without opening it, right-click it in the Explorer and choose **Find Impacted Tests**.
 4. A searchable picker lists each affected test, its file and the dependency chain that explains the match. Select one to open its registration. The **Impacted Tests** view in the Testing sidebar keeps the results as a tree, with each step of the chain clickable.
 
+**Copy Impacted Tests…** in the view's title bar copies the tests, one per line as `file: suite › test`, or just their files, for a commit message, a ticket or a CI filter.
+
 Tests never run automatically. Use the play buttons in the picker or the view, or **Run Impacted Tests**, to run them through Jest, Vitest, Mocha, Playwright or `node --test` with name filtering.
 
 #### Try it

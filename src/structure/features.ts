@@ -15,7 +15,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Test Impact Analysis',
     description: 'Find and run the tests that depend on a symbol or file, and the Impacted Tests view.',
-    commands: ['tsImpact.analyze', 'tsImpact.showLastResults', 'tsImpact.runImpactedTests', 'tsImpact.runTest', 'tsImpact.clear', 'tsStructure.report.runTests', 'tsImpact.analyzeFile'],
+    commands: ['tsImpact.analyze', 'tsImpact.showLastResults', 'tsImpact.runImpactedTests', 'tsImpact.runTest', 'tsImpact.clear', 'tsStructure.report.runTests', 'tsImpact.analyzeFile', 'tsImpact.copyTests'],
   },
   {
     id: 'refactorings',

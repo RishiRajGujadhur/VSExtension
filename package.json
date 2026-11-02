@@ -507,6 +507,12 @@
         "command": "tsStructure.report.exportJson",
         "title": "Export Analysis to JSON…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsImpact.copyTests",
+        "title": "Copy Impacted Tests…",
+        "category": "TypeScript Structure",
+        "icon": "$(copy)"
       }
     ],
     "viewsContainers": {
@@ -1071,6 +1077,10 @@
         {
           "command": "tsStructure.report.exportJson",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsImpact.copyTests",
+          "when": "config.tsStructure.features.testImpact"
         }
       ],
       "view/title": [
@@ -1183,6 +1193,11 @@
           "command": "tsStructure.report.exportJson",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "1_export@3"
+        },
+        {
+          "command": "tsImpact.copyTests",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
