@@ -123,7 +123,7 @@ export const features: Feature[] = [
     id: 'argumentFlow',
     title: 'Argument Propagation Explorer',
     description: 'Where a parameter’s values come from and where they go.',
-    commands: ['tsStructure.argumentFlow'],
+    commands: ['tsStructure.argumentFlow', 'tsStructure.report.traceDeeper'],
   },
 ];
 

@@ -38,7 +38,7 @@ export class ArgumentFlow {
     const parameter = parameterOf(input);
     const fn = parameter.parent;
     if (!isFunctionWithBody(fn) || seen.has(input) || depth > this.maxDepth) {
-      return depth > this.maxDepth ? [{ label: '… (depth limit)', icon: 'ellipsis' }] : [];
+      return depth > this.maxDepth ? [{ label: '… (depth limit)', icon: 'ellipsis', tooltip: 'Trace Deeper follows three more calls', action: { kind: 'traceDeeper' } }] : [];
     }
     const nextSeen = new Set(seen).add(input);
     const { calls, escapes } = callSitesOf(this.project.service, fn);
@@ -118,7 +118,7 @@ export class ArgumentFlow {
   /** Calls, JSX props, returns, stores and derived locals the input's value flows into. */
   destinations(input: Input | ts.VariableDeclaration, depth: number, seen: Set<ts.Node>): ReportNode[] {
     if (seen.has(input) || depth > this.maxDepth) {
-      return depth > this.maxDepth ? [{ label: '… (depth limit)', icon: 'ellipsis' }] : [];
+      return depth > this.maxDepth ? [{ label: '… (depth limit)', icon: 'ellipsis', tooltip: 'Trace Deeper follows three more calls', action: { kind: 'traceDeeper' } }] : [];
     }
     const nextSeen = new Set(seen).add(input);
     const scope: ts.Node | undefined = ts.isVariableDeclaration(input) ? enclosingFunction(input) ?? input.getSourceFile() : parameterOf(input).parent;

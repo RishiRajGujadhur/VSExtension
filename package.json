@@ -496,6 +496,12 @@
         "command": "tsStructure.structuralSearchInFolder",
         "title": "Structural Search in Folder…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.traceDeeper",
+        "title": "Trace Deeper",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-step-over)"
       }
     ],
     "viewsContainers": {
@@ -1052,6 +1058,10 @@
         {
           "command": "tsStructure.structuralSearchInFolder",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.traceDeeper",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1271,6 +1281,11 @@
           "command": "tsStructure.report.copyRow",
           "when": "view == tsStructure.report",
           "group": "9_cutcopypaste@1"
+        },
+        {
+          "command": "tsStructure.report.traceDeeper",
+          "when": "config.tsStructure.features.argumentFlow && view == tsStructure.report && viewItem =~ /action:traceDeeper/",
+          "group": "inline@1"
         }
       ]
     },

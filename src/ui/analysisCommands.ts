@@ -107,6 +107,7 @@ function followEdits(target: AnalysisTarget, before: string | undefined): Analys
 }
 
 export function registerAnalyses(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
+  let latestArgumentRun: { extra: number } | undefined;
   /** A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other extensions. */
   const editorCommand = (id: string, title: string, compute: Compute) =>
     registerCommand(id, () => {
@@ -326,9 +327,28 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const target = to;
       return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.createVirtualProject(from, folder).program(), from, target, folder));
     }),
-    editorCommand('tsStructure.argumentFlow', 'Tracing argument propagation', (t) =>
-      argumentFlowReport(t.project(), t.fileName, t.offset, vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('argumentFlow.maxDepth', 6)),
-    ),
+    registerCommand('tsStructure.argumentFlow', () => {
+      const editor = sourceEditor();
+      if (!editor) {
+        return;
+      }
+      const target = editorTarget(projects, editor);
+      const text = editor.document.getText();
+      // Trace Deeper raises the depth of this run; a new run starts from the setting again.
+      const run = { extra: 0 };
+      latestArgumentRun = run;
+      return runAnalysis(view, 'Tracing argument propagation', () => {
+        const t = followEdits(target, text);
+        const depth = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('argumentFlow.maxDepth', 6);
+        return argumentFlowReport(t.project(), t.fileName, t.offset, depth + run.extra);
+      });
+    }),
+    registerCommand('tsStructure.report.traceDeeper', async () => {
+      if (view.report?.kind === 'argumentFlow' && latestArgumentRun) {
+        latestArgumentRun.extra += 3;
+        await view.rerun();
+      }
+    }),
     editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }
