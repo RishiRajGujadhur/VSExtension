@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext): void {
   new SideEffectLens(projects).register(context);
   new CompilerErrorActions().register(context);
   registerGuide(context);
-  context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState)), registerCommand('tsStructure.configureFeatures', configureFeatures),
+  context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState, context.extension.packageJSON.contributes?.keybindings)), registerCommand('tsStructure.configureFeatures', configureFeatures),
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
   );
   new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);

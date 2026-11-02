@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { sourceEditor } from './refactorCommands';
+import { Keybinding, shortcuts } from '../structure/keys';
 import { featureOf, features } from '../structure/features';
 import { isFeatureEnabled } from './features';
 
@@ -58,7 +59,7 @@ const recentKey = 'tsStructure.recentActions';
 const maxRecent = 3;
 
 /** "Analyze or Refactor This": every refactoring and analysis for the cursor in one searchable list, the last ones used first. */
-export async function showActionsAtCursor(memento?: vscode.Memento): Promise<void> {
+export async function showActionsAtCursor(memento?: vscode.Memento, keybindings: readonly Keybinding[] = []): Promise<void> {
   const editor = sourceEditor();
   if (!editor) {
     return;
@@ -68,7 +69,8 @@ export async function showActionsAtCursor(memento?: vscode.Memento): Promise<voi
     const feature = featureOf(action.command);
     return !(action.needsSelection && editor.selection.isEmpty) && !(feature && !isFeatureEnabled(feature.id));
   };
-  const item = (action: Action): Item => ({ label: `$(${action.icon}) ${action.label}`, detail: action.detail, command: action.command });
+  const keys = shortcuts(keybindings);
+  const item = (action: Action): Item => ({ label: `$(${action.icon}) ${action.label}`, description: keys.get(action.command), detail: action.detail, command: action.command });
   const all = groups.flatMap((g) => g.actions);
   const recent = (memento?.get<string[]>(recentKey) ?? [])
     .map((command) => all.find((a) => a.command === command))
