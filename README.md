@@ -187,7 +187,7 @@ Findings appear in the Problems panel with quick fixes in the lightbulb, plus:
 - **Severity** per inspection with **Configure Inspections…** (also offered in the lightbulb), stored in `tsStructure.inspections.severity` (`off` disables one, as does **Turn off '…' inspection** in the lightbulb, with Undo); `tsStructure.inspections.enabled` turns them all off.
 - **Timing**: `tsStructure.inspections.run` is `type` (after a pause in typing, `tsStructure.inspections.delay` milliseconds) or `save`, which inspects only when the file is saved, for big projects.
 
-**Inspect Code…** runs every inspection, including custom ones, over the current file, the files changed since the last commit (**Changed Files**, using Git) or the whole project, with cancellable progress. In the Explorer, right-click files or folders and choose **Inspect Code** to inspect only those. Results are grouped by inspection and file, and fixable rows have an **Apply Fix** button. The status bar shows the count for the active file. Click it for a menu: show the problems, inspect the file, the changed files or the project, configure inspections, or pause live inspections for the workspace.
+**Inspect Code…** runs every inspection, including custom ones, with cancellable progress, over the scope you choose ([choosing where to analyze](#choosing-where-to-analyze)): the whole project, the current folder or folders you pick, the open editors, the files changed since the last commit (**Changed Files**, using Git), the current file, or only the current function or selection. In the Explorer, right-click files or folders and choose **Inspect Code** to inspect only those. Results are grouped by inspection and file, and fixable rows have an **Apply Fix** button. The status bar shows the count for the active file. Click it for a menu: show the problems, inspect the file, the changed files or the project, configure inspections, or pause live inspections for the workspace.
 
 #### Inspections: missingAwait
 
@@ -270,17 +270,38 @@ To run a search from a key, click **Copy as Keybinding** in the builder and past
 
 The TypeScript Structure view keeps every analysis's report:
 - **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), or jump to any of them with **Show Analysis History…** in the **⋯** menu, and **re-run** the current one. Re-running follows the symbol through edits. The last 10 reports are restored after a reload, so Back, Forward and the history still work.
+- **Limit Results to Scope…** (the filter button with a dot) keeps only the rows in a folder, the open editors, the changed files, the current file, function or selection, for any report, such as the usages of a function inside one feature folder. The view's subtitle names the scope and the banner says how many results are shown, such as *Showing 4 of 19 results, those in src/cart*. **Show All Results** in the **⋯** menu removes the limit. The limit stays when the report is re-run.
 - **Filter** rows by text (`Ctrl+F` in the view), **Show Groups…** to hide whole groups, **Expand All** (next to Collapse All), and **go to the next or previous result** (`F4` and `Shift+F4` from anywhere, as for search results; the status bar shows *Result 3 of 12*). `F5` in the view re-runs the report.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded. Turn them off or on with **Toggle Result Highlights** in the **⋯** menu (`tsStructure.highlightResults`).
 - **Copy as Markdown**, **Export to Markdown…** or **Export to JSON…** (rows with workspace-relative file, line and column, for scripts and CI), **Open to the Side**, **Copy Location**, and **Copy** on a row, which copies it with everything under it as indented text.
 - The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first. With `tsStructure.results.rerunOnSave`, saving such a file re-runs the report instead.
 
+![Usages of calculateSubtotal limited to cart.ts: Showing 2 of 9 results, with Calls 1 of 3 and Imports 1 of 3](docs/images/limit-results.png)
+
 ## Configuration
 
 Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens. Settings about files, such as the scope, inspection severities and dead-export entry points, can differ per folder of a multi-root workspace.
 
 ![The extension's settings, grouped into sections](docs/images/settings.png)
+
+### Choosing where to analyze
+
+Analyses that look at many files ask where to look first: **Inspect Code…**, **Find Structural Duplicates…**, **Dead Export Analyzer**, **Audit Type Assertions** and **Mutation Tracking (Project)**.
+
+![The scope question before Inspect Code: whole project, current folder, folders to choose, open editors, changed files, current file and current function](docs/images/scope-picker.png)
+
+- **Whole Project**: every source file in the compiler project.
+- **Current Folder**, or **Choose Folders…** to pick one or more in a dialog: the files in and below them.
+- **Open Editors**: the files open in editor tabs, including background ones.
+- **Changed Files**: files changed, staged or added since the last commit (needs Git).
+- **Current File**, **Current Function** (the function around the cursor) or **Selection**: only results on those lines. Offered where it makes sense, for Inspect Code and the type assertion audit.
+
+The scope appears in the report title, such as *Inspection results in src/cart*, and re-running the report keeps it. The last choice for each analysis is offered first, so pressing `Enter` repeats it. To skip the question and always analyze the whole project, turn off `tsStructure.askForScope`.
+
+A smaller scope is also faster: only the files in it are inspected or compared. Dead exports are the exception: the whole project still decides what is used, and the scope only limits which exports are listed.
+
+For reports that follow one symbol, such as Find Usages, Data Flow or Argument Propagation, use **Limit Results to Scope…** in the results view instead (see [Working with results](#working-with-results)).
 
 ### Choosing which files are analyzed
 
@@ -355,7 +376,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 ![Mutations in cart.ts: four functions that change shared state, and the module variables they change](docs/images/mutation-tracking.png)
 
 1. Open the file you want to audit, for example `src/cart.ts`. If the cursor is on a module variable or an import, that state is selected in the report.
-2. Run **Mutation Tracking (Active File)**, or **Mutation Tracking (Project)** to cover every file. In the project report each function names its file.
+2. Run **Mutation Tracking (Active File)**, or **Mutation Tracking (Project)** to cover more files: choose the whole project, a folder, the open editors or the changed files. In that report each function names its file.
 3. **Functions that mutate state** lists each function that changes something it doesn't own. Expand one to see each change. A change made inside a called function shows the call chain, such as *changes module state events (.push()) via track()*.
 4. **Shared state and who changes it** turns the same data around: one row per module variable, import, global or `this` field, with every function that writes it. Use it to find the unexpected writer of a piece of state.
 5. Click any row to open the line. The editor shades every write while the report is open.
@@ -423,7 +444,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
    - **Use 'as unknown'** instead of `as any`, so every use has to narrow the value;
    - **Show where … comes from…** runs Data Flow on the asserted value, and **Explain why … may be null or undefined…** runs the Nullability Path Explorer on a `!`;
    - suppression comments for the line or file.
-4. Hints don't appear in the Problems panel. Run **Inspect Code…** on the file to list every finding, hints included, in the TypeScript Structure view. To review a codebase, run **Audit Type Assertions (Project)**. It groups every assertion from riskiest (*Unsafe*) to harmless (*Unnecessary*), one row per line, with the fix button where there is one.
+4. Hints don't appear in the Problems panel. Run **Inspect Code…** on the file to list every finding, hints included, in the TypeScript Structure view. To review a codebase, run **Audit Type Assertions (Project)** and choose the whole project, a folder, the changed files or just the current function. It groups every assertion from riskiest (*Unsafe*) to harmless (*Unnecessary*), one row per line, with the fix button where there is one.
 5. Change how loud each inspection is with `tsStructure.inspections.severity`, for example `{ "typeAssertion": "info" }`, or `"off"` to disable it.
 6. Tests often need assertions for mocks and fixtures. Turn on `tsStructure.typeAssertion.ignoreTestFiles` to skip test files, such as `*.test.ts` or files that import a test framework.
 
@@ -431,7 +452,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Dead exports in the demo: legacy.ts and reports.ts are unreachable, and unused exports are listed per file with their kind and the barrel that still re-exports them](docs/images/dead-exports.png)
 
-1. Open any file in the project and run **Dead Export Analyzer**. The whole project is analyzed. To clean up one area at a time, right-click a folder in the Explorer and choose **Find Dead Exports in Folder**: the whole project still decides what is used, but only that folder's results are listed.
+1. Open any file in the project and run **Dead Export Analyzer**. Choose where to list dead exports: the whole project, the current folder or folders you pick, the open editors, the changed files or the current file. The whole project always decides what is used; the scope only limits the results, to clean up one area at a time. From the Explorer, right-click a folder and choose **Find Dead Exports in Folder**.
 2. Check **Entry points** at the bottom. The analyzer starts from the files named in `package.json` (`main`, `module`, `exports`, `bin`, here `src/main.ts`) and from test files. Without those it falls back to `src/index.ts`, `src/main.ts` and similar. Set `tsStructure.deadExports.entryPoints` (globs) if the guess is wrong.
 3. **Unreachable modules** are files no entry point imports, directly or indirectly, such as `legacy.ts`. The trash button (**Safe Delete File…**) checks for remaining references before deleting.
 4. **Unused exports** are exported names nothing reachable imports. Each row's trash button runs **Safe Delete…** on the declaration. Rows say what kind of declaration it is, mark interfaces and type aliases as *type*, and name any barrel that still forwards the name (*re-exported by index.ts*).
@@ -456,7 +477,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 ![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
 
 1. Open a file in the project and run **Find Structural Duplicates…**. To compare only the files of one area, right-click folders in the Explorer and choose **Find Duplicates in Folder**.
-2. Choose **Whole Project** or **Active File**. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
+2. Choose where to look: the whole project, the current folder or folders you pick, the open editors, the changed files, or the current file. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
 3. Each **Duplicate** group is a run of statements with the same structure. It shows the number of lines, the number of copies, and how many lines are repeated, which is what consolidating would remove. The biggest payoff is listed first. Copies count even when variables are renamed or literal values differ. In the demo, `revenue` in `reports.ts` is a copy of `calculateSubtotal` in `pricing.ts`.
 4. Expand a group to see each copy and the function it's in. The last row says what differs between them, such as *total ↔ sum, item ↔ line*. Those are the parameters a shared function would need.
    The wrench button on a copy (**Refactor…**) selects that code and opens the refactor menu, where VS Code's **Extract to function** turns it into a shared function.
@@ -514,7 +535,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor. To search one folder only, right-click it in the Explorer and choose **Structural Search in Folder…**; the folder is added to the **Scope** list.
 2. Write the **Pattern** as code with placeholders, or pick one from **Start from an example…**. In the demo, `$list$.find($callback$)` finds every `.find()` call. Problems, such as a pattern that isn't valid TypeScript or a broken regular expression, show under the box as you type.
 3. Each placeholder gets a row under **Placeholder constraints**. **Type** is a regular expression tested against the matched code's type. Here `^LineItem\[\]$` keeps only searches through line item arrays and skips `coupons.find()`. **Text** tests the code itself; **Invert** negates either one.
-4. Choose the **Scope** and click **Search**, or press `Ctrl+Enter` in the pattern. The scope is the whole project, the current file, or the code selected in the editor right now. A selection is handy for replacing inside one function.
+4. Choose the **Scope** and click **Search**, or press `Ctrl+Enter` in the pattern. The scope is the whole project, the current file, the code selected in the editor right now, the open editors, the files changed since the last commit, or a folder: **Choose folder…** opens a dialog. A selection is handy for replacing inside one function.
 5. Matches appear in the builder and in the TypeScript Structure view, grouped by file. Each shows what every placeholder matched, such as *$list$ = items*. Click one to open it.
 6. **Recent searches…** brings back any of your last 15 searches with their constraints.
 
@@ -646,7 +667,7 @@ Press F5 to open the `sample` project. In `src/impactSource.ts`, place the curso
 
 - Source and tests must be in the same compiler project. Excluded test projects are not scanned. If the application's `tsconfig` excludes tests, open a test file under a config that includes them and select the imported symbol there.
 - Static analysis cannot see dynamic dispatch through untyped values, runtime dependency injection, string-based lookups or module mocks. Mocked modules are still reported as impacts.
-- Analysis runs on the extension host thread. Very large projects may pause the editor for the first analysis while the index is built. Live inspections only run on files that are on screen.
+- Analysis runs on the extension host thread. Very large projects may pause the editor for the first analysis while the project is type-checked; later analyses reuse the types of every unchanged file, and a smaller [scope](#choosing-where-to-analyze) does less work. Live inspections only run on files that are on screen.
 - The inspections and navigation features follow calls the compiler can resolve. Callbacks passed to library functions, dynamic property access and values that escape into untyped code are reported as unknown rather than guessed.
 - Dependency Graph Diff needs `git` on the `PATH`. It resolves imports in both revisions with the current compiler options.
 - The extension depends on TypeScript 6.0.3, the latest release with the stable JavaScript Compiler API. TypeScript 7 only exposes an unstable API.
