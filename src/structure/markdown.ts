@@ -7,9 +7,11 @@ export function filterReport(nodes: readonly ReportNode[], filter: string): Repo
   if (!needle) {
     return [...nodes];
   }
+  // `file:cart` keeps rows whose file path contains "cart", whatever their text.
+  const byFile = needle.startsWith('file:') ? needle.slice('file:'.length).trim().replace(/\\/g, '/') : undefined;
   const result: ReportNode[] = [];
   for (const node of nodes) {
-    const own = `${node.label} ${node.description ?? ''}`.toLowerCase().includes(needle);
+    const own = byFile !== undefined ? !!node.location && node.location.file.toLowerCase().replace(/\\/g, '/').includes(byFile) : `${node.label} ${node.description ?? ''}`.toLowerCase().includes(needle);
     const children = own ? (node.children ?? []) : filterReport(node.children ?? [], filter);
     if (own || children.length > 0) {
       result.push({ ...node, children: children.length ? children : undefined, expanded: true });

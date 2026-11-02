@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { findNode } from '../analysis/impact';
 import { ReportNode } from '../structure/report';
 import { parse } from './codeActions';
+import { publicTagEdit } from '../inspect/deadExports';
 import { StructureView } from './structureView';
 import { TestCase } from '../analysis/types';
 import { runTests } from '../runner';
@@ -18,9 +19,21 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(fragmentScheme, { provideTextDocumentContent: (uri) => fragments.get(uri.query) ?? '' }),
     registerCommand('tsStructure.report.compareDuplicates', async (node: ReportNode) => {
-      const copies = node?.action?.copies as { file: string; label: string; text: string }[] | undefined;
+      let copies = node?.action?.copies as { file: string; label: string; text: string }[] | undefined;
       if (!copies || copies.length < 2) {
         return;
+      }
+      // With more than two copies, choose which one to set beside the first.
+      if (copies.length > 2) {
+        const first = copies[0];
+        const picked = await vscode.window.showQuickPick(
+          copies.slice(1).map((copy) => ({ label: copy.label, copy })),
+          { title: `Compare ${first.label} with…`, placeHolder: `${copies.length - 1} other copies` },
+        );
+        if (!picked) {
+          return;
+        }
+        copies = [first, picked.copy];
       }
       const uris = copies.map((copy, i) => {
         const key = `${Date.now()}-${i}`;
@@ -93,25 +106,43 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
         await vscode.commands.executeCommand('tsStructure.safeDeleteFile', vscode.Uri.file(file));
       }
     }),
-    // Every export in the file that is only used locally, as one edit.
+    // Every export in the file that is only used locally, as one edit; on the group row, in every file below it.
     registerCommand('tsStructure.report.unexportAll', async (node: ReportNode) => {
-      const file = node?.action?.file;
-      if (typeof file !== 'string') {
-        return;
-      }
-      const document = await vscode.workspace.openTextDocument(file);
-      const sourceFile = parse(document);
+      const files = typeof node?.action?.file === 'string' ? [node] : (node?.children ?? []).filter((c) => typeof c.action?.file === 'string' && !view.isDone(c));
       const edit = new vscode.WorkspaceEdit();
       let removed = 0;
-      for (const child of node.children ?? []) {
-        const range = child.location && exportKeywordRange(sourceFile, document.offsetAt(new vscode.Position(child.location.line, child.location.character)));
-        if (range) {
-          edit.delete(document.uri, new vscode.Range(document.positionAt(range.start), document.positionAt(range.end)));
-          removed++;
+      for (const fileRow of files) {
+        const document = await vscode.workspace.openTextDocument(fileRow.action!.file as string);
+        const sourceFile = parse(document);
+        for (const child of fileRow.children ?? []) {
+          const range = !view.isDone(child) && child.location && exportKeywordRange(sourceFile, document.offsetAt(new vscode.Position(child.location.line, child.location.character)));
+          if (range) {
+            edit.delete(document.uri, new vscode.Range(document.positionAt(range.start), document.positionAt(range.end)));
+            removed++;
+          }
         }
       }
       if (removed > 0 && (await vscode.workspace.applyEdit(edit))) {
-        void vscode.window.setStatusBarMessage(`Removed ${removed} export keyword${removed === 1 ? '' : 's'} from ${node.label}`, 3000);
+        view.markDone(node, 'export removed');
+        void vscode.window.setStatusBarMessage(`Removed ${removed} export keyword${removed === 1 ? '' : 's'}${files.length === 1 ? ` from ${files[0].label}` : ` in ${files.length} files`}`, 3000);
+      }
+    }),
+    // Keeps an export that is public API on purpose: tagged @public, the analyzer stops reporting it.
+    registerCommand('tsStructure.report.markPublic', async (node: ReportNode) => {
+      if (!node?.location) {
+        return;
+      }
+      const document = await vscode.workspace.openTextDocument(node.location.file);
+      const sourceFile = parse(document);
+      const insert = publicTagEdit(sourceFile, document.offsetAt(new vscode.Position(node.location.line, node.location.character)));
+      if (!insert) {
+        void vscode.window.showWarningMessage(`Could not find the declaration of ${node.label}; the file may have changed.`);
+        return;
+      }
+      const edit = new vscode.WorkspaceEdit();
+      edit.insert(document.uri, document.positionAt(insert.offset), insert.text);
+      if (await vscode.workspace.applyEdit(edit)) {
+        view.markDone(node, 'marked @public', (n) => n === node);
       }
     }),
     registerCommand('tsStructure.report.unexport', async (node: ReportNode) => {
@@ -127,7 +158,9 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       }
       const edit = new vscode.WorkspaceEdit();
       edit.delete(document.uri, new vscode.Range(document.positionAt(range.start), document.positionAt(range.end)));
-      await vscode.workspace.applyEdit(edit);
+      if (await vscode.workspace.applyEdit(edit)) {
+        view.markDone(node, 'export removed', (n) => n === node);
+      }
     }),
   );
 }

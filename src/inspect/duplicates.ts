@@ -321,7 +321,7 @@ export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options:
     expanded: i < 5,
     action: {
       kind: 'compareDuplicates',
-      copies: group.fragments.slice(0, 2).map((f) => ({ file: f.sourceFile.fileName, label: where(f), text: f.sourceFile.text.slice(f.start, f.end) })),
+      copies: group.fragments.slice(0, 20).map((f) => ({ file: f.sourceFile.fileName, label: where(f), text: f.sourceFile.text.slice(f.start, f.end) })),
     },
     children: [
       ...group.fragments.map((f) => ({ label: where(f), icon: 'code', location: builder.span(f.sourceFile, f.start, f.end), action: { kind: 'refactor' } })),

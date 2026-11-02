@@ -196,6 +196,18 @@ export const scenes: Scene[] = [
     },
   },
   {
+    name: 'analysis-lightbulb',
+    async run({ open }) {
+      await open('src/pricing.ts', 'applyCoupon(amount');
+      void vscode.commands.executeCommand('editor.action.refactor');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+      await vscode.commands.executeCommand('hideCodeActionWidget');
+    },
+    settle: 2500,
+  },
+  {
     name: 'change-signature',
     walkthrough: { x: 984, y: 30, width: 456, height: 440 },
     async run({ open }) {

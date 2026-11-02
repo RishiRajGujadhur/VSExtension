@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as ts from 'typescript';
 import { normalizePath } from '../analysis/paths';
+import { findNode } from '../analysis/impact';
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';
 import { discoverTests } from '../analysis/testDiscovery';
 import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
@@ -227,6 +228,8 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
       description: plural(count(localOnly), 'export'),
       icon: 'eye-closed',
       tone: 'info',
+      // Without a file: every file below it at once.
+      action: { kind: 'unexportAll' },
       children: localOnly.map((g) => ({ ...fileGroup(g, fewEnough(localOnly)), action: { kind: 'unexportAll', file: normalizePath(g.sourceFile.fileName) } })),
     });
   }
@@ -270,3 +273,35 @@ function nameOf(declaration: ts.Node): ts.Node {
   const name = (declaration as ts.NamedDeclaration).name;
   return name ?? declaration;
 }
+
+/**
+ * Where to add `@public` to the top-level declaration at the offset: inside its JSDoc when it has
+ * one, or as a new JSDoc line above it.
+ */
+export function publicTagEdit(sourceFile: ts.SourceFile, offset: number): { offset: number; text: string } | undefined {
+  let statement: ts.Node | undefined = findNode(sourceFile, offset);
+  while (statement && statement.parent && !ts.isSourceFile(statement.parent)) {
+    statement = statement.parent;
+  }
+  if (!statement || ts.isSourceFile(statement)) {
+    return undefined;
+  }
+  const text = sourceFile.text;
+  const comments = ts.getLeadingCommentRanges(text, statement.pos) ?? [];
+  const doc = [...comments].reverse().find((c) => text.startsWith('/**', c.pos));
+  const start = statement.getStart(sourceFile);
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const indent = /^[ \t]*/.exec(text.slice(lineStart))![0];
+  if (!doc) {
+    return { offset: lineStart, text: `${indent}/** @public */\n` };
+  }
+  const close = doc.end - 2;
+  if (!text.slice(doc.pos, doc.end).includes('\n')) {
+    // `/** Totals. */` becomes `/** Totals. @public */`.
+    return { offset: close, text: text[close - 1] === ' ' ? '@public ' : ' @public ' };
+  }
+  // A multi-line comment gets a line of its own before the closing `*/`.
+  const closeLine = text.lastIndexOf('\n', close - 1) + 1;
+  return { offset: closeLine, text: `${indent} * @public\n` };
+}
+

@@ -24,12 +24,18 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
   static readonly kinds = [refactorKind];
 
   provideCodeActions(document: vscode.TextDocument, range: vscode.Range): vscode.CodeAction[] {
-    if (!isFeatureEnabled('refactorings')) {
-      return [];
-    }
     const sourceFile = parse(document);
-    const node = findNode(sourceFile, document.offsetAt(range.start));
     const actions: vscode.CodeAction[] = [];
+    // Selected statements: where else the same code is, before extracting it.
+    if (isFeatureEnabled('duplicates') && !range.isEmpty && selectsStatements(sourceFile, document.offsetAt(range.start), document.offsetAt(range.end))) {
+      const find = new vscode.CodeAction('Find copies of the selected code', refactorKind);
+      find.command = { command: 'tsStructure.findDuplicates', title: find.title, arguments: ['selection'] };
+      actions.push(find);
+    }
+    if (!isFeatureEnabled('refactorings')) {
+      return actions;
+    }
+    const node = findNode(sourceFile, document.offsetAt(range.start));
     if (!range.isEmpty && isInsideFunctionBody(node)) {
       actions.push(command('Introduce Parameter…', 'tsStructure.introduceParameter'));
     }
@@ -44,6 +50,29 @@ export class RefactorCommandProvider implements vscode.CodeActionProvider {
     }
     return actions;
   }
+}
+
+/** Whether the range covers one or more whole statements, give or take surrounding whitespace. */
+function selectsStatements(sourceFile: ts.SourceFile, start: number, end: number): boolean {
+  const text = sourceFile.text;
+  while (start < end && /\s/.test(text[start])) start++;
+  while (end > start && /\s/.test(text[end - 1])) end--;
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (found || node.end < start || node.getStart(sourceFile) > end) {
+      return;
+    }
+    if (ts.isBlock(node) || ts.isSourceFile(node) || ts.isModuleBlock(node) || ts.isCaseClause(node) || ts.isDefaultClause(node)) {
+      const statements = node.statements.filter((s) => s.getStart(sourceFile) >= start && s.end <= end);
+      if (statements.length && statements[0].getStart(sourceFile) === start && statements[statements.length - 1].end === end) {
+        found = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
 }
 
 function command(title: string, id: string): vscode.CodeAction {

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
   "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -43,7 +43,7 @@
         "command": "tsImpact.analyze",
         "title": "Test Impact Analysis",
         "category": "TypeScript Structure",
-        "icon": "$(search)"
+        "icon": "$(beaker)"
       },
       {
         "command": "tsImpact.showLastResults",
@@ -72,12 +72,14 @@
       {
         "command": "tsStructure.changeSignature",
         "title": "Change Signature…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-method)"
       },
       {
         "command": "tsStructure.safeDelete",
         "title": "Safe Delete…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(trash)"
       },
       {
         "command": "tsStructure.safeDeleteFile",
@@ -87,12 +89,14 @@
       {
         "command": "tsStructure.introduceParameter",
         "title": "Introduce Parameter…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-parameter)"
       },
       {
         "command": "tsStructure.moveMembers",
         "title": "Move Members to Module…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(file-symlink-file)"
       },
       {
         "command": "tsStructure.openLocation",
@@ -114,37 +118,44 @@
       {
         "command": "tsStructure.dataFlow",
         "title": "Data Flow Path Explorer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(pulse)"
       },
       {
         "command": "tsStructure.mutationTracking",
         "title": "Mutation Tracking (Active File)",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(diff-modified)"
       },
       {
         "command": "tsStructure.mutationTrackingProject",
         "title": "Mutation Tracking (Project)",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(project)"
       },
       {
         "command": "tsStructure.sideEffects",
         "title": "Side-Effect Analyzer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(zap)"
       },
       {
         "command": "tsStructure.nullability",
         "title": "Nullability Path Explorer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(circle-slash)"
       },
       {
         "command": "tsStructure.promiseRejections",
         "title": "Promise Rejection Analyzer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(debug-disconnect)"
       },
       {
         "command": "tsStructure.deadExports",
         "title": "Dead Export Analyzer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(export)"
       },
       {
         "command": "tsStructure.report.safeDelete",
@@ -167,57 +178,68 @@
       {
         "command": "tsStructure.exceptionFlow",
         "title": "Exception Flow Visualizer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(flame)"
       },
       {
         "command": "tsStructure.findDuplicates",
         "title": "Find Structural Duplicates…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(files)"
       },
       {
         "command": "tsStructure.semanticUsages",
         "title": "Semantic Find Usages",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(references)"
       },
       {
         "command": "tsStructure.reexportChain",
         "title": "Re-export Chain Navigator",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(link)"
       },
       {
         "command": "tsStructure.structuralSearch",
         "title": "Structural Search…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-structure)"
       },
       {
         "command": "tsStructure.manageCustomInspections",
         "title": "Manage Custom Inspections…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-ruler)"
       },
       {
         "command": "tsStructure.typeHierarchy",
         "title": "Inheritance Hierarchy Explorer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(type-hierarchy)"
       },
       {
         "command": "tsStructure.overrideImpact",
         "title": "Override Impact Analyzer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(type-hierarchy-sub)"
       },
       {
         "command": "tsStructure.dependencyPath",
         "title": "Dependency Path Finder…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(git-merge)"
       },
       {
         "command": "tsStructure.dependencyGraphDiff",
         "title": "Dependency Graph Diff…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(git-compare)"
       },
       {
         "command": "tsStructure.argumentFlow",
         "title": "Argument Propagation Explorer",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(call-incoming)"
       },
       {
         "command": "tsStructure.report.back",
@@ -287,7 +309,8 @@
       {
         "command": "tsStructure.auditTypeAssertions",
         "title": "Audit Type Assertions (Project)",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(shield)"
       },
       {
         "command": "tsStructure.report.applyFix",
@@ -391,7 +414,11 @@
       {
         "command": "tsStructure.actionsAtCursor",
         "title": "Analyze or Refactor This…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": {
+          "light": "media/structure-light.svg",
+          "dark": "media/structure-dark.svg"
+        }
       },
       {
         "command": "tsStructure.configureFeatures",
@@ -414,7 +441,7 @@
         "command": "tsStructure.editAnalysisScope",
         "title": "Edit Analysis Scope…",
         "category": "TypeScript Structure",
-        "icon": "$(filter)"
+        "icon": "$(exclude)"
       },
       {
         "command": "tsStructure.turnOffInspection",
@@ -464,7 +491,8 @@
       {
         "command": "tsStructure.chooseIntentions",
         "title": "Choose Intention Actions…",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(wand)"
       },
       {
         "command": "tsStructure.toggleHighlights",
@@ -524,7 +552,24 @@
         "command": "tsStructure.report.clearLimit",
         "title": "Show All Results",
         "category": "TypeScript Structure",
-        "icon": "$(clear-all)"
+        "icon": "$(eye)"
+      },
+      {
+        "command": "tsStructure.report.applyAllFixes",
+        "title": "Apply All Fixes",
+        "category": "TypeScript Structure",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "tsStructure.report.markPublic",
+        "title": "Mark as Public API",
+        "category": "TypeScript Structure",
+        "icon": "$(verified)"
+      },
+      {
+        "command": "tsStructure.semanticUsagesInFile",
+        "title": "Find Usages in Current File",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -591,6 +636,11 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == tsStructure.report && tsStructure.hasReport"
+      },
+      {
+        "key": "shift+alt+f7",
+        "command": "tsStructure.semanticUsagesInFile",
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -729,6 +779,11 @@
         {
           "command": "tsStructure.guideMe",
           "group": "9_help@1"
+        },
+        {
+          "command": "tsStructure.semanticUsagesInFile",
+          "when": "config.tsStructure.features.usages",
+          "group": "4_navigate@1"
         }
       ],
       "explorer/context": [
@@ -1101,6 +1156,18 @@
         {
           "command": "tsStructure.report.clearLimit",
           "when": "tsStructure.limited"
+        },
+        {
+          "command": "tsStructure.report.applyAllFixes",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.markPublic",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.semanticUsagesInFile",
+          "when": "config.tsStructure.features.usages"
         }
       ],
       "view/title": [
@@ -1345,6 +1412,30 @@
           "command": "tsStructure.report.traceDeeper",
           "when": "config.tsStructure.features.argumentFlow && view == tsStructure.report && viewItem =~ /action:traceDeeper/",
           "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.applyAllFixes",
+          "when": "config.tsStructure.features.inspections && view == tsStructure.report && viewItem =~ /fixAll/",
+          "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.markPublic",
+          "when": "config.tsStructure.features.deadExports && view == tsStructure.report && viewItem =~ /action:(deadExport|unexport)( |$)/",
+          "group": "inline@3"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "tsStructure.dependencyGraphDiff",
+          "when": "config.tsStructure.features.graphDiff && scmProvider == git",
+          "group": "1_tsStructure@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "tsStructure.actionsAtCursor",
+          "when": "config.tsStructure.editorTitleButton && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@90"
         }
       ]
     },
@@ -1563,6 +1654,16 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Re-run the report in the TypeScript Structure view when you save a file it covers, instead of showing the *Files changed* banner."
+          },
+          "tsStructure.lightbulbAnalyses": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Offer analyses in the lightbulb menu on a declaration name, such as **Show data flow of 'total'** on a variable or **Show side effects of f()** on a function. Only analyses whose feature is on are offered."
+          },
+          "tsStructure.editorTitleButton": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show the TypeScript Structure button in the editor title bar of TypeScript and JavaScript files. It opens **Analyze or Refactor This…**."
           }
         }
       },
@@ -2005,5 +2106,6 @@
     "@types/node": "22.20.5",
     "@types/vscode": "1.90.0",
     "@vscode/vsce": "4.1.0"
-  }
+  },
+  "icon": "media/icon.png"
 }

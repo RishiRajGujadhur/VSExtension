@@ -5,6 +5,8 @@ import { filterReport, reportMarkdown } from '../structure/markdown';
 import { Report, ReportLocation, ReportNode, Tone, forEachReportNode, titleParts } from '../structure/report';
 import { currentHash } from '../resultsView';
 import { countResults, limitReport } from '../structure/scope';
+import { countFixes, rowFix } from '../structure/fixes';
+import { reportIcons } from '../structure/icons';
 
 const toneColors: Record<Tone, string> = {
   error: 'problemsErrorIcon.foreground',
@@ -58,6 +60,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private cursor = -1;
   private stale = false;
   private settingsChanged = false;
+  /** Rows acted on from the view since the report was shown, such as "fixed", by rowKey. */
+  private done = new Map<string, string>();
   private readonly decorations = {
     read: vscode.window.createTextEditorDecorationType({ backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'), overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.wordHighlightForeground'), overviewRulerLane: vscode.OverviewRulerLane.Center }),
     write: vscode.window.createTextEditorDecorationType({ backgroundColor: new vscode.ThemeColor('editor.wordHighlightStrongBackground'), overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.wordHighlightStrongForeground'), overviewRulerLane: vscode.OverviewRulerLane.Center }),
@@ -122,7 +126,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     if (config.get('focusView', true)) {
       await vscode.commands.executeCommand('tsStructure.report.focus');
     } else if (!this.view.visible) {
-      void vscode.window.setStatusBarMessage(`$(list-tree) ${titleParts(report).heading} is ready in the TypeScript Structure view`, 5000);
+      void vscode.window.setStatusBarMessage(`$(${reportIcons[report.kind] ?? 'list-tree'}) ${titleParts(report).heading} is ready in the TypeScript Structure view`, 5000);
     }
     const focused = this.located.find((node) => node.focus);
     if (focused) {
@@ -175,7 +179,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       .map((entry, index) => {
         const { heading, subject } = titleParts(entry.report);
         return {
-          label: `${index === this.position ? '$(arrow-right) ' : ''}${heading}`,
+          label: `${index === this.position ? '$(arrow-right) ' : ''}$(${reportIcons[entry.report.kind] ?? 'list-tree'}) ${heading}`,
           description: subject,
           detail: [entry.report.description, entry.rerun ? undefined : 'from an earlier session'].filter(Boolean).join(' · ') || undefined,
           index,
@@ -204,7 +208,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   async setFilter(): Promise<void> {
-    const value = await vscode.window.showInputBox({ title: 'Filter Analysis Results', value: this.filter, placeHolder: 'Text in a row label or description; empty to clear' });
+    const value = await vscode.window.showInputBox({ title: 'Filter Analysis Results', value: this.filter, placeHolder: 'Text in a row label or description, or file:name for rows in matching files; empty to clear' });
     if (value !== undefined) {
       this.filter = value;
       this.render(true);
@@ -256,6 +260,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     };
     index(this.roots);
     if (!kept) {
+      this.done.clear();
       this.stale = false;
       this.settingsChanged = false;
       // A report from the history, or restored after a reload, may already be out of date.
@@ -339,6 +344,29 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     return this.parents.get(node);
   }
 
+  /**
+   * Marks rows as done without re-running the analysis: the row and every row under it that `which`
+   * accepts, such as the fixable ones after Fix All. Their buttons for that action go away.
+   */
+  markDone(node: ReportNode, note: string, which: (n: ReportNode) => boolean = () => true): void {
+    const mark = (n: ReportNode): void => {
+      if (which(n)) {
+        this.done.set(rowKey(n), note);
+      }
+      (n.children ?? []).forEach(mark);
+    };
+    mark(node);
+    this.changed.fire();
+  }
+
+  isDone(node: ReportNode): boolean {
+    return this.done.has(rowKey(node));
+  }
+
+  markFixed(node: ReportNode): void {
+    this.markDone(node, 'fixed', (n) => !!rowFix(n));
+  }
+
   getTreeItem(node: ReportNode): vscode.TreeItem {
     const state = node.children?.length
       ? node.expanded || this.filter
@@ -355,7 +383,14 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     if (node.location) {
       item.command = { command: 'tsStructure.openLocation', title: 'Open', arguments: [node.location] };
     }
-    item.contextValue = [node.location ? 'location' : '', node.action ? `action:${node.action.kind}` : ''].filter(Boolean).join(' ');
+    const done = this.done.get(rowKey(node));
+    if (done) {
+      item.description = [done, node.description].filter(Boolean).join(' · ');
+      item.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor(toneColors.ok));
+    }
+    // A group with several fixes below it gets Fix All; a row already acted on loses its buttons.
+    const fixAll = !done && !rowFix(node) && node.children?.length && countFixes(node, (n) => this.isDone(n)) > 1 ? 'fixAll' : '';
+    item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll].filter(Boolean).join(' ');
     return item;
   }
 
@@ -428,4 +463,10 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
 function summaryLine(report: Report): string {
   const timing = report.durationMs === undefined ? '' : report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`;
   return [titleParts(report).subject, report.description, timing].filter(Boolean).join(' · ');
+}
+
+/** A row's identity across re-renders, which copy rows when filtering or limiting. */
+function rowKey(node: ReportNode): string {
+  const where = node.location ? `${node.location.file}:${node.location.line}:${node.location.character}` : String(node.action?.file ?? '');
+  return `${node.label} @ ${where}`;
 }

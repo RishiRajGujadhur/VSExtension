@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Feature, enabledByDefault, featureOf, features } from '../structure/features';
+import { featureIcon } from '../structure/icons';
 
 export function isFeatureEnabled(id: string): boolean {
   const feature = features.find((f) => f.id === id);
@@ -48,7 +49,7 @@ async function setFeature(id: string, enabled: boolean): Promise<void> {
 /** A checklist of every feature; unticking one hides its commands, menus, lenses and lightbulb entries. */
 export async function configureFeatures(): Promise<void> {
   type Item = vscode.QuickPickItem & { feature?: Feature };
-  const item = (feature: Feature): Item => ({ label: feature.title, detail: feature.description, picked: isFeatureEnabled(feature.id), feature });
+  const item = (feature: Feature): Item => ({ label: `$(${featureIcon(feature)}) ${feature.title}`, detail: feature.description, picked: isFeatureEnabled(feature.id), feature });
   const items: Item[] = [
     { label: 'Core', kind: vscode.QuickPickItemKind.Separator },
     ...features.filter(enabledByDefault).map(item),

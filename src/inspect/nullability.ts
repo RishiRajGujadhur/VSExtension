@@ -372,6 +372,8 @@ function usesOf(project: VirtualProject, explorer: NullabilityExplorer, builder:
       tone: check ? undefined : nullable ? 'warning' : 'ok',
       role: 'read',
       location: builder.at(reference),
+      // A use that may be null usually has a compiler error there, with fixes such as optional chaining.
+      action: nullable && !check ? { kind: 'quickFix' } : undefined,
     });
   }
   return uses;

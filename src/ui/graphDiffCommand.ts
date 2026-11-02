@@ -37,10 +37,16 @@ async function pickRef(root: string, last?: { ref: string; label: string }): Pro
     }
   }
   items.push({ label: '$(history) HEAD~1', description: 'Including the last commit', ref: 'HEAD~1' });
-  const commits = gitLines(root, ['log', '-15', '--format=%h%x09%s']);
+  // Who made each commit and when, to recognize the one to compare with.
+  const commits = gitLines(root, ['log', '-15', '--format=%h%x09%s%x09%an%x09%cr']);
   if (commits.length) {
     items.push({ label: 'Recent commits', kind: vscode.QuickPickItemKind.Separator });
-    items.push(...commits.map((line) => ({ label: `$(git-commit) ${line.split('\t')[0]}`, description: line.split('\t')[1], ref: line.split('\t')[0] })));
+    items.push(
+      ...commits.map((line) => {
+        const [hash, subject, author, when] = line.split('\t');
+        return { label: `$(git-commit) ${hash}`, description: subject, detail: author && when ? `${author}, ${when}` : undefined, ref: hash };
+      }),
+    );
   }
   const branches = gitLines(root, ['for-each-ref', '--format=%(refname:short)', '--count=20', 'refs/heads', 'refs/remotes']);
   if (branches.length) {

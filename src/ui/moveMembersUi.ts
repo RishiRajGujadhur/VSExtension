@@ -7,7 +7,9 @@ import { projectSourceFiles } from '../analysis/referenceIndex';
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
 
-export async function runMoveMembers(projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
+const recentTargetsKey = 'tsStructure.moveMembers.recentTargets';
+
+export async function runMoveMembers(projects: ProjectService, editor: vscode.TextEditor, memento?: vscode.Memento): Promise<void> {
   const document = editor.document;
   const source = normalizePath(document.uri.fsPath);
   const root = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
@@ -18,20 +20,23 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
       void vscode.window.showInformationMessage(`${path.basename(source)} has no top-level declarations to move.`);
       return;
     }
-    const cursorLine = editor.selection.active.line;
-    const atCursor = [...members].reverse().find((m) => m.line <= cursorLine);
+    // Every declaration the selection touches is ticked, or the one at the cursor.
+    const { start, end } = editor.selection;
+    const selected = editor.selection.isEmpty ? [] : members.filter((m) => m.endLine >= start.line && m.line <= end.line);
+    const atCursor = selected.length ? selected : [...members].reverse().filter((m) => m.line <= start.line).slice(0, 1);
     const picked = await vscode.window.showQuickPick(
-      members.map((m) => ({ label: m.name, description: `${m.kind}${m.exported ? '' : ' · not exported'}`, picked: m === atCursor, member: m })),
+      members.map((m) => ({ label: m.name, description: `${m.kind}${m.exported ? '' : ' · not exported'}`, picked: atCursor.includes(m), member: m })),
       { title: `Move members of ${path.basename(source)}`, placeHolder: 'Select the declarations to move', canPickMany: true },
     );
     if (!picked || picked.length === 0) {
       return;
     }
 
-    const target = await pickTarget(projects, source, root);
+    const target = await pickTarget(projects, source, root, memento?.get<string[]>(recentTargetsKey) ?? []);
     if (!target) {
       return;
     }
+    void memento?.update(recentTargetsKey, [target, ...(memento.get<string[]>(recentTargetsKey) ?? []).filter((t) => pathKey(t) !== pathKey(target))].slice(0, 5));
 
     let keepReExport = false;
     if (picked.some((p) => p.member.exported)) {
@@ -60,7 +65,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
 }
 
 /** Project modules ordered by folder distance from the source, plus options for a new or browsed file. */
-async function pickTarget(projects: ProjectService, source: string, root: string | undefined): Promise<string | undefined> {
+async function pickTarget(projects: ProjectService, source: string, root: string | undefined, recent: readonly string[]): Promise<string | undefined> {
   const files = projectSourceFiles(projects.load(source, root).program)
     .map((sf) => normalizePath(sf.fileName))
     .filter((f) => pathKey(f) !== pathKey(source));
@@ -68,11 +73,17 @@ async function pickTarget(projects: ProjectService, source: string, root: string
   files.sort((a, b) => distance(a) - distance(b) || a.localeCompare(b));
 
   type Item = vscode.QuickPickItem & { file?: string; action?: 'new' | 'browse' };
+  const item = (file: string): Item => ({ label: path.basename(file), description: vscode.workspace.asRelativePath(path.dirname(file)), file });
+  // Modules moved to recently come first: moving several things to one place is usually done in a row.
+  const keys = new Set(files.map(pathKey));
+  const recentFiles = recent.filter((f) => keys.has(pathKey(f)));
+  const recentKeys = new Set(recentFiles.map(pathKey));
   const items: Item[] = [
+    ...(recentFiles.length ? [{ label: 'Recently used', kind: vscode.QuickPickItemKind.Separator }, ...recentFiles.map(item), { label: '', kind: vscode.QuickPickItemKind.Separator }] : []),
     { label: '$(new-file) New module…', action: 'new' },
     { label: '$(folder-opened) Browse…', action: 'browse' },
     { label: 'Project modules', kind: vscode.QuickPickItemKind.Separator },
-    ...files.map((file) => ({ label: path.basename(file), description: vscode.workspace.asRelativePath(path.dirname(file)), file })),
+    ...files.filter((f) => !recentKeys.has(pathKey(f))).map(item),
   ];
   const picked = await vscode.window.showQuickPick(items, { title: 'Move to module', placeHolder: 'Type to search for the target module', matchOnDescription: true });
   if (!picked) {

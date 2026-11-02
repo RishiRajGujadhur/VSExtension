@@ -24,12 +24,14 @@ import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
 import { isExcluded, scopedFiles, withNote } from './exclude';
-import { ChosenScope, ScopeKind, ScopeRequest, chooseScope } from './analysisScope';
+import { ChosenScope, ScopeKind, ScopeRequest, chooseScope, openSourceFiles } from './analysisScope';
 import { limitReport, locationFilter, scopeFilter } from '../structure/scope';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
 import { registerCommand } from './features';
+import { AnalysisError } from '../analysis/types';
+import { offerSymbols } from './analysisActions';
 
 /** The file, cursor and project an analysis runs against, captured so it can be re-run later. */
 export interface AnalysisTarget {
@@ -117,9 +119,33 @@ function filesIn(program: ts.Program, scope: ChosenScope): { files: ts.SourceFil
   return scope.kind === 'file' || scope.spec.lines ? { files: candidates } : scopedFiles(candidates);
 }
 
+const recentDependencyKey = 'tsStructure.dependencyPath.recent';
+
+/** Position in a most-recent-first list, with files not in it after every one that is. */
+function rank(recent: readonly string[], file: string): number {
+  const index = recent.findIndex((r) => pathKey(r) === pathKey(file));
+  return index < 0 ? recent.length : index;
+}
+
 /** Scopes for analyses that look at every file. */
 const projectScopes: readonly ScopeKind[] = ['project', 'folder', 'pickFolder', 'open', 'changed', 'file'];
 const fineScopes: readonly ScopeKind[] = [...projectScopes, 'function', 'selection'];
+
+/**
+ * Runs an analysis that starts from the symbol at the cursor. When there is nothing there for it,
+ * the message offers the file's declarations to start from instead.
+ */
+async function startingAtCursor(command: string, editor: vscode.TextEditor, compute: () => Report | Promise<Report | undefined> | undefined): Promise<Report | undefined> {
+  try {
+    return await compute();
+  } catch (error) {
+    if (error instanceof AnalysisError) {
+      void offerSymbols(command, error.message, editor);
+      return undefined;
+    }
+    throw error;
+  }
+}
 
 /** The same target after the file was edited: the cursor follows the symbol it was on. */
 function followEdits(target: AnalysisTarget, before: string | undefined): AnalysisTarget {
@@ -141,7 +167,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       if (editor) {
         const target = editorTarget(projects, editor);
         const text = editor.document.getText();
-        return runAnalysis(view, title, () => compute(followEdits(target, text)));
+        return runAnalysis(view, title, () => startingAtCursor(id, editor, () => compute(followEdits(target, text))));
       }
     });
 
@@ -360,6 +386,14 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       });
     }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
+    // The usages in the file at hand only: the whole project is still searched, then the report is limited.
+    registerCommand('tsStructure.semanticUsagesInFile', async () => {
+      const report = await vscode.commands.executeCommand<Report | undefined>('tsStructure.semanticUsages');
+      if (report) {
+        await vscode.commands.executeCommand('tsStructure.report.limitScope', 'file');
+      }
+      return report;
+    }),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
@@ -390,29 +424,51 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         const files = projectSourceFiles(program)
           .map((sf) => normalizePath(sf.fileName))
           .filter((f) => f !== normalizePath(from));
+        // Each module's button asks the reverse question: why it depends on this one.
+        const reverse: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('arrow-swap'), tooltip: `Why does this module depend on ${path.basename(from)}?` };
         const item = (file: string) => ({
           label: path.basename(file),
           description: vscode.workspace.asRelativePath(path.dirname(file)),
           detail: distance.has(file) ? `${distance.get(file)} import${distance.get(file) === 1 ? '' : 's'} away` : undefined,
+          buttons: [reverse],
           file,
         });
-        const reached = files.filter((f) => distance.has(f)).sort((a, b) => distance.get(a)! - distance.get(b)!);
-        const others = files.filter((f) => !distance.has(f));
-        const picked = await vscode.window.showQuickPick(
-          [
-            { label: `Depends on (${reached.length})`, kind: vscode.QuickPickItemKind.Separator },
-            ...reached.map(item),
-            { label: 'Not imported from here', kind: vscode.QuickPickItemKind.Separator },
-            ...others.map(item),
-          ] as (vscode.QuickPickItem & { file?: string })[],
-          { title: `Why does ${path.basename(from)} depend on…`, placeHolder: 'Choose the module to explain', matchOnDescription: true },
-        );
-        to = picked?.file;
+        // Modules open in editors or asked about recently are usually the ones in question.
+        const recent = context.workspaceState.get<string[]>(recentDependencyKey, []);
+        const open = new Set(openSourceFiles().map(pathKey));
+        const isShortcut = (f: string) => open.has(pathKey(f)) || recent.some((r) => pathKey(r) === pathKey(f));
+        const shortcuts = files.filter(isShortcut).sort((a, b) => rank(recent, a) - rank(recent, b));
+        const reached = files.filter((f) => distance.has(f) && !isShortcut(f)).sort((a, b) => distance.get(a)! - distance.get(b)!);
+        const others = files.filter((f) => !distance.has(f) && !isShortcut(f));
+        type Item = vscode.QuickPickItem & { file?: string };
+        const picker = vscode.window.createQuickPick<Item>();
+        picker.title = `Why does ${path.basename(from)} depend on…`;
+        picker.placeholder = 'Choose the module to explain; its swap button asks why it depends on this one';
+        picker.matchOnDescription = true;
+        picker.items = [
+          ...(shortcuts.length ? [{ label: 'Recent and open', kind: vscode.QuickPickItemKind.Separator }, ...shortcuts.map(item)] : []),
+          { label: `Depends on (${reached.length})`, kind: vscode.QuickPickItemKind.Separator },
+          ...reached.map(item),
+          { label: 'Not imported from here', kind: vscode.QuickPickItemKind.Separator },
+          ...others.map(item),
+        ];
+        const choice = await new Promise<{ file: string; reverse: boolean } | undefined>((resolve) => {
+          picker.onDidAccept(() => resolve(picker.selectedItems[0]?.file ? { file: picker.selectedItems[0].file, reverse: false } : undefined));
+          picker.onDidTriggerItemButton((e) => resolve(e.item.file ? { file: e.item.file, reverse: true } : undefined));
+          picker.onDidHide(() => resolve(undefined));
+          picker.show();
+        });
+        picker.dispose();
+        if (choice?.reverse) {
+          return vscode.commands.executeCommand('tsStructure.dependencyPath', vscode.Uri.file(choice.file), vscode.Uri.file(from));
+        }
+        to = choice?.file;
       }
       if (!to) {
         return;
       }
       const target = to;
+      void context.workspaceState.update(recentDependencyKey, [target, ...context.workspaceState.get<string[]>(recentDependencyKey, []).filter((f) => pathKey(f) !== pathKey(target))].slice(0, 5));
       return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.analysisProject(from, folder).program(), from, target, folder));
     }),
     registerCommand('tsStructure.argumentFlow', () => {
@@ -425,11 +481,13 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       // Trace Deeper raises the depth of this run; a new run starts from the setting again.
       const run = { extra: 0 };
       latestArgumentRun = run;
-      return runAnalysis(view, 'Tracing argument propagation', () => {
-        const t = followEdits(target, text);
-        const depth = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('argumentFlow.maxDepth', 6);
-        return argumentFlowReport(t.project(), t.fileName, t.offset, depth + run.extra);
-      });
+      return runAnalysis(view, 'Tracing argument propagation', () =>
+        startingAtCursor('tsStructure.argumentFlow', editor, () => {
+          const t = followEdits(target, text);
+          const depth = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('argumentFlow.maxDepth', 6);
+          return argumentFlowReport(t.project(), t.fileName, t.offset, depth + run.extra);
+        }),
+      );
     }),
     registerCommand('tsStructure.report.traceDeeper', async () => {
       if (view.report?.kind === 'argumentFlow' && latestArgumentRun) {

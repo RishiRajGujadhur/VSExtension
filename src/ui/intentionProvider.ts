@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { intentionList, intentionsAt } from '../intentions/intentions';
 import { parse } from './codeActions';
 import { isFeatureEnabled } from './features';
+import { languageSelector } from './refactorCommands';
 
 export const intentionKind = vscode.CodeActionKind.RefactorRewrite.append('tsStructure');
 
@@ -26,18 +27,42 @@ export class IntentionProvider implements vscode.CodeActionProvider {
   }
 }
 
-/** A checklist of the intention actions; unticked ones are left out of the lightbulb menu. */
+const conditionIntentions = new Set(['invertIf', 'ifToTernary', 'ternaryToIf', 'flipTernary', 'mergeNestedIfs', 'splitAndCondition', 'ifChainToSwitch', 'deMorgan', 'flipComparison']);
+
+/** The rewrites that apply at the editor's cursor, whether or not they are turned off. */
+export function intentionsAtCursor(editor: vscode.TextEditor | undefined, disabled: ReadonlySet<string> = new Set()): ReturnType<typeof intentionsAt> {
+  if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
+    return [];
+  }
+  return intentionsAt(parse(editor.document), editor.document.offsetAt(editor.selection.active), indentUnit(editor.document), disabled);
+}
+
+/** A checklist of the intention actions, in the README's two groups; unticked ones are left out of the lightbulb menu. */
 export async function chooseIntentions(): Promise<void> {
   const config = vscode.workspace.getConfiguration('tsStructure');
   const disabled = new Set(config.get<string[]>('intentions.disabled', []));
-  const picked = await vscode.window.showQuickPick(
-    intentionList.map((intention) => ({ label: intention.title, description: intention.id, picked: !disabled.has(intention.id), id: intention.id })),
+  // Marking what applies here shows what an intention does on code you know.
+  const here = new Set(intentionsAtCursor(vscode.window.activeTextEditor).map((a) => a.id));
+  type Item = vscode.QuickPickItem & { id?: string };
+  const item = (intention: (typeof intentionList)[number]): Item => ({
+    label: intention.title,
+    description: here.has(intention.id) ? `${intention.id} · applies at the cursor` : intention.id,
+    picked: !disabled.has(intention.id),
+    id: intention.id,
+  });
+  const picked = await vscode.window.showQuickPick<Item>(
+    [
+      { label: 'Conditions', kind: vscode.QuickPickItemKind.Separator },
+      ...intentionList.filter((i) => conditionIntentions.has(i.id)).map(item),
+      { label: 'Loops, functions and expressions', kind: vscode.QuickPickItemKind.Separator },
+      ...intentionList.filter((i) => !conditionIntentions.has(i.id)).map(item),
+    ],
     { title: 'Intention Actions', placeHolder: 'Tick the rewrites to offer in the lightbulb menu', canPickMany: true, matchOnDescription: true },
   );
   if (!picked) {
     return;
   }
-  const on = new Set(picked.map((p) => p.id));
+  const on = new Set(picked.map((p) => p.id).filter((id): id is string => !!id));
   const off = intentionList.map((i) => i.id).filter((id) => !on.has(id));
   const inspected = config.inspect<string[]>('intentions.disabled');
   const target = inspected?.workspaceValue !== undefined ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;

@@ -5,7 +5,9 @@ import { IntroduceParameterOptions, describeIntroduceParameter, introduceParamet
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
 
-export async function runIntroduceParameter(projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
+const lastModeKey = 'tsStructure.introduceParameter.mode';
+
+export async function runIntroduceParameter(projects: ProjectService, editor: vscode.TextEditor, memento?: vscode.Memento): Promise<void> {
   const document = editor.document;
   const start = document.offsetAt(editor.selection.start);
   const end = document.offsetAt(editor.selection.end);
@@ -20,22 +22,24 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
       prompt: `New parameter for ${short}${info.type ? ` (${info.type})` : ''}`,
       value: info.suggestedName,
       valueSelection: [0, info.suggestedName.length],
-      validateInput: (value) => (isValidIdentifier(value.trim()) ? undefined : 'Enter a valid identifier.'),
+      validateInput: (value) =>
+        !isValidIdentifier(value.trim()) ? 'Enter a valid identifier.' : info.usedNames.includes(value.trim()) ? `'${value.trim()}' is already used in ${info.functionName}.` : undefined,
     });
     if (!name) {
       return;
     }
 
-    const mode = await vscode.window.showQuickPick(
-      [
-        { label: 'Required', description: `callers pass ${short}`, mode: 'required' as const },
-        { label: 'Optional', description: `default value = ${short}; callers unchanged`, mode: 'optional' as const },
-      ],
-      { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' },
-    );
+    // The last choice comes first, so Enter repeats it.
+    const last = memento?.get<'required' | 'optional'>(lastModeKey);
+    const modes = [
+      { label: 'Required', description: `callers pass ${short}`, mode: 'required' as const },
+      { label: 'Optional', description: `default value = ${short}; callers unchanged`, mode: 'optional' as const },
+    ].sort((a, b) => Number(b.mode === last) - Number(a.mode === last));
+    const mode = await vscode.window.showQuickPick(modes, { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' });
     if (!mode) {
       return;
     }
+    void memento?.update(lastModeKey, mode.mode);
 
     let replaceAll = false;
     if (info.occurrences > 1) {

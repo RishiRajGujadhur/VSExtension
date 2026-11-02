@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext): void {
           void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file and place the cursor on a symbol.');
           return;
         }
-        scope = scopeArg ?? (await pickScope());
+        scope = scopeArg ?? (await pickScope(context.workspaceState));
         document = editor.document;
         offset = document.offsetAt(editor.selection.active);
       }
@@ -169,14 +169,21 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-async function pickScope(): Promise<AnalysisScope | undefined> {
-  const picked = await vscode.window.showQuickPick(
-    [
-      { label: 'Function or Symbol at Cursor', description: 'Tests that depend on the selected symbol', scope: 'symbol' as const },
-      { label: 'Active Module', description: 'Tests that depend on anything in this file', scope: 'module' as const },
-    ],
-    { title: 'Test Impact Analysis', placeHolder: 'Choose what changed' },
-  );
+const lastScopeKey = 'tsImpact.lastScope';
+
+/** What changed: the symbol at the cursor or the whole module, with the last choice first. */
+async function pickScope(memento: vscode.Memento): Promise<AnalysisScope | undefined> {
+  const last = memento.get<AnalysisScope>(lastScopeKey);
+  const items = [
+    { label: 'Function or Symbol at Cursor', description: 'Tests that depend on the selected symbol', scope: 'symbol' as const },
+    { label: 'Active Module', description: 'Tests that depend on anything in this file', scope: 'module' as const },
+  ]
+    .map((item) => (item.scope === last ? { ...item, description: `${item.description} · last used` } : item))
+    .sort((a, b) => Number(b.scope === last) - Number(a.scope === last));
+  const picked = await vscode.window.showQuickPick(items, { title: 'Test Impact Analysis', placeHolder: 'Choose what changed' });
+  if (picked) {
+    void memento.update(lastScopeKey, picked.scope);
+  }
   return picked?.scope;
 }
 

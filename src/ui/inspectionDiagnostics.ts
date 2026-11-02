@@ -9,6 +9,7 @@ import { Finding, Inspection, InspectionOptions, Severity, fileSuppressionEdit, 
 import { InspectedFile, inspectionReport } from '../inspect/inspectionReport';
 import { builtInInspections } from '../inspect/registry';
 import { Report, ReportNode } from '../structure/report';
+import { FixLedger, RowFix, fixesUnder, rowFix } from '../structure/fixes';
 import { languageSelector } from './refactorCommands';
 import { StructureView } from './structureView';
 import { isExcluded, scopedFiles, withNote } from './exclude';
@@ -40,6 +41,8 @@ interface Inspected {
   findings: Finding[];
   diagnostics: vscode.Diagnostic[];
 }
+
+const severityRank: Record<Severity, number> = { error: 0, warning: 1, info: 2, hint: 3 };
 
 /** Runs the live inspections on visible TypeScript and JavaScript files and offers their fixes. */
 export class InspectionDiagnostics implements vscode.CodeActionProvider {
@@ -86,7 +89,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project' | 'changed' | vscode.Uri, selected?: vscode.Uri[]) =>
         this.inspectCode(view, scope instanceof vscode.Uri ? (selected?.length ? selected : [scope]) : scope),
       ),
-      registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
+      registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFixes(view, node, rowFix(node) ? [rowFix(node)!] : [])),
+      registerCommand('tsStructure.report.applyAllFixes', (node: ReportNode) => applyReportFixes(view, node, node ? fixesUnder(node, (n) => view.isDone(n)) : [])),
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.configureInspections', () => this.configureInspections()),
       registerCommand('tsStructure.inspectionsMenu', () => this.menu()),
@@ -187,20 +191,49 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   private async menu(): Promise<void> {
     const document = vscode.window.activeTextEditor?.document;
     const findings = document ? this.findingsFor(document) : undefined;
-    const items: (vscode.QuickPickItem & { run: () => Thenable<unknown> })[] = [
+    const paused = !vscode.workspace.getConfiguration('tsStructure', document?.uri).get('inspections.enabled', true);
+    type Item = vscode.QuickPickItem & { run?: () => Thenable<unknown> };
+    // The file's own problems come first, worst first, to jump straight to one.
+    const problems: Item[] = (findings ?? [])
+      .map((finding) => ({ finding, line: document!.positionAt(finding.start).line }))
+      .sort((a, b) => severityRank[a.finding.severity] - severityRank[b.finding.severity] || a.line - b.line)
+      .slice(0, 50)
+      .map(({ finding, line }) => ({
+        label: `$(${finding.severity === 'error' ? 'error' : finding.severity === 'warning' ? 'warning' : 'info'}) ${finding.message}`,
+        description: `line ${line + 1} · ${finding.inspection}`,
+        run: async () => {
+          const range = new vscode.Range(document!.positionAt(finding.start), document!.positionAt(finding.end));
+          await vscode.window.showTextDocument(document!, { selection: range });
+        },
+      }));
+    const items: Item[] = [
+      ...(problems.length ? [{ label: 'In this file', kind: vscode.QuickPickItemKind.Separator }, ...problems, { label: 'Inspections', kind: vscode.QuickPickItemKind.Separator }] : []),
       { label: '$(list-flat) Show Problems in This File', description: findings ? `${findings.length}` : undefined, run: () => vscode.commands.executeCommand('workbench.actions.view.problems') },
       { label: '$(file-code) Inspect Current File', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'file') },
       { label: '$(git-compare) Inspect Changed Files', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed') },
       { label: '$(project) Inspect Whole Project', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'project') },
       { label: '$(settings) Configure Inspections…', run: () => vscode.commands.executeCommand('tsStructure.configureInspections') },
-      {
-        label: '$(debug-pause) Pause Live Inspections',
-        detail: 'Stops inspecting while you type, for this workspace. Turn back on in the settings or from this menu.',
-        run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
-      },
+      paused
+        ? {
+            label: '$(debug-start) Resume Live Inspections',
+            detail: 'Inspects visible files as you type again.',
+            run: async () => {
+              const config = vscode.workspace.getConfiguration('tsStructure');
+              // Clear the workspace value that paused them; a user setting that turns them off is changed only if it is the reason.
+              await config.update('inspections.enabled', undefined, vscode.ConfigurationTarget.Workspace);
+              if (!vscode.workspace.getConfiguration('tsStructure').get('inspections.enabled', true)) {
+                await config.update('inspections.enabled', true, vscode.ConfigurationTarget.Global);
+              }
+            },
+          }
+        : {
+            label: '$(debug-pause) Pause Live Inspections',
+            detail: 'Stops inspecting while you type, for this workspace. Turn back on in the settings or from this menu.',
+            run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
+          },
     ];
-    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections' });
-    await picked?.run();
+    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action' : undefined, matchOnDescription: true });
+    await picked?.run?.();
   }
 
   /** Lists every inspection with its severity; picking one asks for a new severity, until the list is closed. */
@@ -248,15 +281,37 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   /** Counts for the active file in the status bar; clicking runs Inspect Code on it. */
   private updateStatus(): void {
     const document = vscode.window.activeTextEditor?.document;
-    const result = document && this.results.get(pathKey(document.uri.fsPath));
-    if (!document || !result || !vscode.workspace.getConfiguration('tsStructure', document.uri).get('inspections.statusBar', true)) {
+    const config = document && vscode.workspace.getConfiguration('tsStructure', document.uri);
+    if (!document || !config?.get('inspections.statusBar', true) || !isFeatureEnabled('inspections') || vscode.languages.match(languageSelector, document) === 0) {
+      this.status.hide();
+      return;
+    }
+    // Paused inspections stay visible, so it is clear why nothing is reported and how to resume.
+    if (!config.get('inspections.enabled', true)) {
+      this.status.text = '$(debug-pause) TS Structure';
+      this.status.tooltip = 'TypeScript Structure live inspections are paused. Click to resume them or inspect on demand.';
+      this.status.show();
+      return;
+    }
+    const result = this.results.get(pathKey(document.uri.fsPath));
+    if (!result) {
       this.status.hide();
       return;
     }
     const count = (severity: Severity) => result.findings.filter((f) => f.severity === severity).length;
     const problems = result.findings.filter((f) => f.severity !== 'hint').length;
     this.status.text = problems ? `$(checklist) ${problems}` : '$(pass) TS Structure';
-    this.status.tooltip = `TypeScript Structure inspections in this file: ${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints. Click to inspect more or configure.`;
+    // Which inspections report what in this file, as a table in the hover.
+    const byInspection = new Map<string, number>();
+    for (const finding of result.findings) {
+      byInspection.set(finding.inspection, (byInspection.get(finding.inspection) ?? 0) + 1);
+    }
+    const tooltip = new vscode.MarkdownString(`**TypeScript Structure inspections in this file**\n\n${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints`);
+    if (byInspection.size) {
+      tooltip.appendMarkdown(`\n\n| Inspection | Problems |\n| --- | --: |\n${[...byInspection].map(([id, n]) => `| ${id} | ${n} |`).join('\n')}`);
+    }
+    tooltip.appendMarkdown('\n\nClick to go to a problem, inspect more or configure.');
+    this.status.tooltip = tooltip;
     this.status.show();
   }
 
@@ -466,23 +521,42 @@ async function turnOffInspection(id: string, uri?: vscode.Uri): Promise<void> {
   }
 }
 
-/** Applies the fix stored on an Inspect Code row, if the file is unchanged since the inspection. */
-async function applyReportFix(node: ReportNode): Promise<void> {
-  const action = node?.action;
-  if (action?.kind !== 'applyFix' || typeof action.file !== 'string') {
-    return;
-  }
-  const document = await vscode.workspace.openTextDocument(action.file);
-  if (hashText(document.getText()) !== action.hash) {
-    void vscode.window.showWarningMessage(`${path.basename(action.file)} changed since the inspection ran. Re-run Inspect Code to refresh the fixes.`);
+/** Fixes applied from reports, so the next fix in the same file still applies without re-running. */
+const ledger = new FixLedger();
+
+/**
+ * Applies fixes stored on report rows (one row's, or every one under a group) and marks the rows
+ * fixed. A file changed only by earlier fixes from the report is still fixable; any other change is not.
+ */
+async function applyReportFixes(view: StructureView, node: ReportNode, fixes: RowFix[]): Promise<void> {
+  if (fixes.length === 0) {
     return;
   }
   const edit = new vscode.WorkspaceEdit();
-  for (const e of action.edits as TextEdit[]) {
-    edit.replace(document.uri, new vscode.Range(document.positionAt(e.start), document.positionAt(e.end)), e.text);
+  const applied: { fix: RowFix; edits: TextEdit[]; before: string; document: vscode.TextDocument }[] = [];
+  const stale: string[] = [];
+  for (const fix of fixes) {
+    const document = await vscode.workspace.openTextDocument(fix.file);
+    const before = hashText(document.getText());
+    const edits = ledger.rebase(fix, before);
+    if (!edits) {
+      stale.push(path.basename(fix.file));
+      continue;
+    }
+    for (const e of edits) {
+      edit.replace(document.uri, new vscode.Range(document.positionAt(e.start), document.positionAt(e.end)), e.text);
+    }
+    applied.push({ fix, edits, before, document });
   }
-  if (await vscode.workspace.applyEdit(edit)) {
-    void vscode.window.setStatusBarMessage(`Applied: ${String(action.title)}`, 3000);
+  if (applied.length && (await vscode.workspace.applyEdit(edit))) {
+    for (const { fix, edits, before, document } of applied) {
+      ledger.record(fix.file, edits, before, hashText(document.getText()));
+    }
+    view.markFixed(node);
+    void vscode.window.setStatusBarMessage(`Applied: ${applied.length === 1 ? applied[0].fix.title : `fixes in ${applied.length} files`}`, 3000);
+  }
+  if (stale.length) {
+    void vscode.window.showWarningMessage(`${stale.join(', ')} changed since the analysis ran, so ${stale.length === 1 ? 'its fixes were' : 'their fixes were'} not applied. Re-run the analysis to refresh them.`);
   }
 }
 

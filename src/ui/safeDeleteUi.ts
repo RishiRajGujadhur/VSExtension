@@ -12,7 +12,13 @@ export async function safeDeleteSymbol(projects: ProjectService, editor: vscode.
   try {
     const plan = planSafeDelete(projects.createVirtualProject(document.uri.fsPath, root), document.uri.fsPath, offset);
     const tests = plan.kind === 'parameter' ? 0 : impactedTestCount(projects, document.uri.fsPath, offset, 'symbol', root);
-    await confirmAndApply(plan, tests);
+    // The usages stay in the results view after the question closes, to fix them one by one.
+    const showUsages = async () => {
+      const position = document.positionAt(offset);
+      await vscode.window.showTextDocument(document, { selection: new vscode.Range(position, position) });
+      await vscode.commands.executeCommand('tsStructure.semanticUsages');
+    };
+    await confirmAndApply(plan, tests, showUsages);
   } catch (error) {
     reportError(error, 'Safe Delete');
   }
@@ -33,7 +39,7 @@ export async function safeDeleteFile(projects: ProjectService, uri: vscode.Uri |
   }
 }
 
-async function confirmAndApply(plan: SafeDeletePlan, tests: number): Promise<void> {
+async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?: () => Promise<void>): Promise<void> {
   const blocking = plan.usages.filter((u) => !u.removable);
   const removable = plan.usages.length - blocking.length;
   const what = plan.kind === 'file' ? plan.name : `${plan.kind} '${plan.name}'`;
@@ -45,16 +51,19 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number): Promise<voi
       testNote,
       plan.exported ? 'It is exported, so code outside this project could still use it.' : '',
     ].filter(Boolean);
-    const choice = await vscode.window.showWarningMessage(`Delete ${what}?`, { modal: true, detail: details.join('\n') }, 'Delete');
+    // Preview is offered even with tsStructure.previewRefactorings off, for a one-off look at the edits.
+    const preview = previewEnabled();
+    const choice = await vscode.window.showWarningMessage(`Delete ${what}?`, { modal: true, detail: details.join('\n') }, 'Delete', ...(preview ? [] : ['Preview…']));
     if (choice) {
-      await applyRefactor(plan.result, previewEnabled());
+      await applyRefactor(plan.result, preview || choice === 'Preview…');
     }
     return;
   }
 
-  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel'; usage?: SafeDeletePlan['usages'][number] };
+  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages'; usage?: SafeDeletePlan['usages'][number] };
   const items: Item[] = [
     { label: '$(trash) Delete Anyway', description: 'The usages listed below will no longer compile', action: 'delete' },
+    ...(showUsages ? [{ label: '$(references) Show Usages in Results View', description: 'Keep the list open while you remove them', action: 'usages' as const }] : []),
     { label: '$(close) Cancel', action: 'cancel' },
     { label: `Usages that block deletion (${blocking.length})`, kind: vscode.QuickPickItemKind.Separator },
     ...blocking.map((usage) => usageItem(usage)),
@@ -70,6 +79,8 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number): Promise<voi
   });
   if (picked?.action === 'delete') {
     await applyRefactor(plan.result, previewEnabled());
+  } else if (picked?.action === 'usages') {
+    await showUsages?.();
   } else if (picked?.usage) {
     const position = new vscode.Position(picked.usage.location.line, picked.usage.location.character);
     await vscode.window.showTextDocument(vscode.Uri.file(picked.usage.location.file), { selection: new vscode.Range(position, position) });

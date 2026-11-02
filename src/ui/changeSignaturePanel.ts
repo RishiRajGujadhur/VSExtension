@@ -115,6 +115,7 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   .spacer { flex: 1; }
   pre { background: var(--vscode-textCodeBlock-background); padding: 8px; white-space: pre-wrap; word-break: break-word; font-family: var(--vscode-editor-font-family); }
   .hint { opacity: .75; font-size: .92em; }
+  .problems { color: var(--vscode-errorForeground); min-height: 1em; margin: 4px 0 0; }
 </style>
 </head>
 <body>
@@ -130,9 +131,10 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
 <button id="add">+ Add parameter</button>
 <p class="hint">Existing parameters keep the argument each caller passes. For a new parameter, the value for existing callers is inserted at every call site; leave it empty when the parameter is optional or has a default value.</p>
 <pre id="preview"></pre>
+<p id="problems" class="problems" role="alert"></p>
 <div class="actions">
-  <button class="primary" id="previewBtn">Preview Changes</button>
-  <button id="apply">Refactor</button>
+  <button class="primary" id="previewBtn" title="Ctrl+Enter">Preview Changes</button>
+  <button id="apply" title="Ctrl+Shift+Enter">Refactor</button>
   <span class="spacer"></span>
   <button id="cancel">Cancel</button>
 </div>
@@ -201,7 +203,28 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
     });
     update();
   }
+  const identifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+  /** What stops the refactoring, checked as you type so the buttons say why they are off. */
+  function problems() {
+    const found = [];
+    if (!identifier.test($('name').value.trim())) found.push('The function name is not a valid identifier.');
+    const seen = new Set();
+    rows.forEach((r) => {
+      const original = r.originalIndex === null ? null : info.parameters[r.originalIndex];
+      const name = r.name.trim();
+      // Destructured parameters keep their pattern and can't be renamed.
+      if (original && !original.renamable) return;
+      if (!identifier.test(name)) found.push('"' + name + '" is not a valid parameter name.');
+      else if (seen.has(name)) found.push('Two parameters are named "' + name + '".');
+      seen.add(name);
+      if (!original && !r.optional && !r.initializer.trim() && !r.callValue.trim()) found.push('New parameter "' + name + '" needs a value for existing callers' + (info.typed ? ', a default value, or to be optional.' : ' or a default value.'));
+    });
+    return found;
+  }
   function update() {
+    const found = problems();
+    $('problems').textContent = found.join(' ');
+    $('previewBtn').disabled = $('apply').disabled = found.length > 0;
     const params = rows.map((r) => {
       const original = r.originalIndex === null ? null : info.parameters[r.originalIndex];
       const rest = original && original.rest ? '...' : '';
@@ -214,6 +237,7 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
     $('preview').textContent = $('name').value + '(' + params.join(', ') + ')' + ret;
   }
   function submit(preview) {
+    if (problems().length) return;
     vscode.postMessage({ type: 'submit', preview, name: $('name').value, returnType: $('returnType').value, rows });
   }
   $('add').addEventListener('click', () => {
@@ -225,7 +249,29 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   $('previewBtn').addEventListener('click', () => submit(true));
   $('apply').addEventListener('click', () => submit(false));
   $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel' }));
+  // Ctrl+Enter previews, Ctrl+Shift+Enter refactors, Escape cancels, Alt+Up/Down moves the parameter being edited.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      submit(!e.shiftKey);
+    } else if (e.key === 'Escape') {
+      vscode.postMessage({ type: 'cancel' });
+    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      const cell = e.target.closest && e.target.closest('td');
+      const tr = cell && cell.parentElement;
+      const i = tr ? Array.prototype.indexOf.call($('rows').children, tr) : -1;
+      const to = i + (e.key === 'ArrowUp' ? -1 : 1);
+      if (i < 0 || to < 0 || to >= rows.length) return;
+      e.preventDefault();
+      const column = Array.prototype.indexOf.call(tr.children, cell);
+      rows.splice(to, 0, rows.splice(i, 1)[0]);
+      render();
+      const input = $('rows').children[to].children[column].querySelector('input');
+      if (input) input.focus();
+    }
+  });
   render();
+  $('name').focus();
 </script>
 </body>
 </html>`;

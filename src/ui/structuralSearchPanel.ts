@@ -3,7 +3,7 @@ import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
 import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
-import { previewEnabled } from './refactorCommands';
+import { languageSelector, previewEnabled } from './refactorCommands';
 import { CustomInspectionConfig, includePattern, inspectionId } from '../search/customInspections';
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
@@ -27,6 +27,8 @@ type Message =
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replaceOne'; index: number }
+  | { type: 'openReplacement'; index: number }
+  | { type: 'fromSelection' }
   | { type: 'pickFolder'; previous: Scope }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity; include: string; editing?: string };
 
@@ -152,6 +154,25 @@ export class StructuralSearchPanel {
       }
       const preset = picked?.[0] ? { scope: 'folder', folderLabel: vscode.workspace.asRelativePath(picked[0]) } : { scope: message.previous };
       void this.panel.webview.postMessage({ type: 'preset', preset });
+      return;
+    }
+    if (message.type === 'fromSelection') {
+      // The editor the builder came from first, else any editor with code selected.
+      const editors = [...vscode.window.visibleTextEditors].sort((a, b) => Number(pathKey(b.document.uri.fsPath) === pathKey(this.anchor)) - Number(pathKey(a.document.uri.fsPath) === pathKey(this.anchor)));
+      const editor = editors.find((e) => !e.selection.isEmpty && vscode.languages.match(languageSelector, e.document) > 0);
+      if (!editor) {
+        void this.panel.webview.postMessage({ type: 'status', text: 'Select code in an editor first.' });
+        return;
+      }
+      void this.panel.webview.postMessage({ type: 'prefill', pattern: editor.document.getText(editor.selection).trim() });
+      return;
+    }
+    if (message.type === 'openReplacement') {
+      const target = this.preview?.replacements[message.index];
+      if (target) {
+        const document = await vscode.workspace.openTextDocument(target.file);
+        await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One, selection: new vscode.Range(document.positionAt(target.start), document.positionAt(target.end)) });
+      }
       return;
     }
     if (message.type === 'open') {
@@ -453,6 +474,9 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   .where, .bindings { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
   .before { color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39); }
   .after { color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
+  .tools { margin: 4px 0; }
+  .tools button { padding: 2px 8px; font-size: 0.9em; }
+  .where a { color: var(--vscode-textLink-foreground); }
 </style>
 </head>
 <body>
@@ -463,6 +487,10 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <h2>Pattern</h2>
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
+  <div class="row tools">
+    <button id="makePlaceholder" class="secondary" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">Make Placeholder</button>
+    <button id="fromSelection" class="secondary" title="Use the code selected in the editor as the pattern">From Editor Selection</button>
+  </div>
   <div id="patternProblem" class="error"></div>
   <h2>Placeholder constraints</h2>
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
@@ -478,6 +506,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
   <div id="templateProblem" class="error"></div>
   <div class="row">
+    <button id="copyPattern" class="secondary" title="Start the replacement from the pattern, to edit only what changes">Copy Pattern</button>
     <button id="previewReplace" class="secondary" title="Show each match with its replacement, without changing any file">Preview Replacements</button>
     <button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button>
   </div>
@@ -489,6 +518,8 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     <select id="severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
     <button id="saveInspection" class="secondary">Save as Inspection</button>
   </div>
+  <div class="row tools" id="messagePlaceholders"></div>
+  <div id="messageProblem" class="error"></div>
   <div id="error" class="error"></div>
   <h2 id="summary"></h2>
   <ul id="results"></ul>
@@ -521,6 +552,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     for (const c of p.constraints || []) state.constraints[c.name] = c;
     save();
     renderConstraints();
+    renderMessageTools();
   }
   // Starting from an example or a past search makes a new inspection, not an edit of the open one.
   function startNew() {
@@ -605,6 +637,65 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   }
   $('template').addEventListener('input', () => { save(); checkTemplate(); });
   $('pattern').addEventListener('input', checkTemplate);
+  // The message can quote what each placeholder matched: one click inserts it, and a name not in the pattern is flagged.
+  function renderMessageTools() {
+    const known = placeholders($('pattern').value);
+    const tools = $('messagePlaceholders');
+    tools.innerHTML = '';
+    if (known.length) {
+      const label = document.createElement('span');
+      label.className = 'hint';
+      label.textContent = 'Insert in the message:';
+      tools.appendChild(label);
+    }
+    for (const name of known) {
+      const chip = document.createElement('button');
+      chip.className = 'secondary';
+      chip.textContent = '$' + name + '$';
+      chip.addEventListener('click', () => {
+        const input = $('message');
+        const at = input.selectionStart ?? input.value.length;
+        input.value = input.value.slice(0, at) + '$' + name + '$' + input.value.slice(input.selectionEnd ?? at);
+        input.focus();
+        input.selectionStart = input.selectionEnd = at + name.length + 2;
+        checkMessage();
+      });
+      tools.appendChild(chip);
+    }
+    checkMessage();
+  }
+  function checkMessage() {
+    const known = placeholders($('pattern').value);
+    const unknown = placeholders($('message').value).filter((name) => !known.includes(name));
+    $('messageProblem').textContent = unknown.length ? 'Not in the pattern: ' + unknown.map((n) => '$' + n + '$').join(', ') : '';
+  }
+  $('message').addEventListener('input', checkMessage);
+  $('pattern').addEventListener('input', renderMessageTools);
+  // Selected code in the pattern becomes $name$ (named after it when it is an identifier), everywhere it occurs.
+  function makePlaceholder() {
+    const box = $('pattern');
+    const selected = box.value.slice(box.selectionStart, box.selectionEnd).trim();
+    if (!selected) {
+      $('patternProblem').textContent = 'Select the code in the pattern to turn into a placeholder.';
+      return;
+    }
+    const used = placeholders(box.value);
+    let name = /^[A-Za-z_][A-Za-z0-9_]*$/.test(selected) ? selected : 'x';
+    for (let i = 2; used.includes(name); i++) name = name.replace(/[0-9]*$/, '') + i;
+    box.value = box.value.split(selected).join('$' + name + '$');
+    box.focus();
+    save(); renderConstraints(); renderMessageTools(); checkTemplate(); validate();
+  }
+  $('makePlaceholder').addEventListener('click', makePlaceholder);
+  $('pattern').addEventListener('keydown', (event) => {
+    if (event.altKey && event.code === 'KeyP') { event.preventDefault(); makePlaceholder(); }
+  });
+  $('fromSelection').addEventListener('click', () => vscode.postMessage({ type: 'fromSelection' }));
+  $('copyPattern').addEventListener('click', () => {
+    $('template').value = $('pattern').value;
+    $('template').focus();
+    save(); checkTemplate();
+  });
   $('copyKeybinding').addEventListener('click', () => {
     vscode.postMessage({ type: 'copyKeybinding', spec: spec(), scope: $('scope').value, template: $('template').value });
   });
@@ -630,7 +721,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   window.addEventListener('message', (event) => {
     const message = event.data;
-    if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); }
+    if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); renderMessageTools(); checkTemplate(); validate(); }
     if (message.type === 'preset') applyPreset(message.preset);
     if (message.type === 'validation') $('patternProblem').textContent = message.problem || '';
     if (message.type === 'preview') {
@@ -652,8 +743,11 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
         li.querySelector('.where span').textContent = item.where;
         li.querySelector('a').addEventListener('click', (event) => {
           event.preventDefault();
+          event.stopPropagation();
           vscode.postMessage({ type: 'replaceOne', index });
         });
+        // Clicking the match opens it, as in the search results.
+        li.addEventListener('click', () => vscode.postMessage({ type: 'openReplacement', index }));
         list.appendChild(li);
       }
       $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -697,6 +791,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     if (message.type && message.type.startsWith('status')) { $('error').textContent = ''; $('summary').textContent = message.text; }
   });
   renderConstraints();
+  renderMessageTools();
   function applyPreset(p) {
     if (p.folderLabel) {
       // A folder picked in the Explorer becomes a scope of its own.

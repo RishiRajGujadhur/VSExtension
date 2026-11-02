@@ -7,6 +7,7 @@ import { runIntroduceParameter } from './introduceParameterUi';
 import { runMoveMembers } from './moveMembersUi';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
 import { registerCommand } from './features';
+import { AnalysisActionProvider } from './analysisActions';
 
 export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].map((language) => ({
   language,
@@ -46,17 +47,20 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
     registerCommand('tsStructure.moveMembers', () => {
       const editor = sourceEditor();
       if (editor) {
-        return runMoveMembers(projects, editor);
+        return runMoveMembers(projects, editor, context.workspaceState);
       }
     }),
     registerCommand('tsStructure.introduceParameter', () => {
       const editor = sourceEditor();
       if (editor) {
-        return runIntroduceParameter(projects, editor);
+        return runIntroduceParameter(projects, editor, context.workspaceState);
       }
     }),
     vscode.languages.registerCodeActionsProvider(languageSelector, new RefactorCommandProvider(), {
       providedCodeActionKinds: RefactorCommandProvider.kinds,
+    }),
+    vscode.languages.registerCodeActionsProvider(languageSelector, new AnalysisActionProvider(), {
+      providedCodeActionKinds: AnalysisActionProvider.kinds,
     }),
     vscode.languages.registerCodeActionsProvider(languageSelector, new IntentionProvider(), {
       providedCodeActionKinds: IntentionProvider.kinds,

@@ -22,6 +22,8 @@ export interface IntroduceParameterInfo {
   suggestedName: string;
   type: string;
   occurrences: number;
+  /** Parameters and locals of the function, which the new parameter's name must not reuse. */
+  usedNames: string[];
 }
 
 interface Selection {
@@ -40,6 +42,7 @@ export function describeIntroduceParameter(project: VirtualProject, fileName: st
     suggestedName: suggestName(selection),
     type: typeOf(project, selection.expression),
     occurrences: occurrences(selection).length,
+    usedNames: [...selection.fn.parameters.map((p) => p.name.getText()), ...declaredInBody(selection.fn)],
   };
 }
 

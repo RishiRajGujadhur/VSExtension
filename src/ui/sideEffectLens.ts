@@ -94,7 +94,10 @@ export class SideEffectLens implements vscode.CodeLensProvider {
           const range = new vscode.Range(document.positionAt(anchor.getStart(sourceFile)), document.positionAt(anchor.end));
           return new vscode.CodeLens(range, {
             title,
-            tooltip: kinds.length ? `${effects.length} side effect${effects.length === 1 ? '' : 's'}. Click for the full analysis.` : 'No side effects detected.',
+            // The effects themselves, so a hover answers most questions without opening the analysis.
+            tooltip: kinds.length
+              ? [`${effects.length} side effect${effects.length === 1 ? '' : 's'}:`, ...[...new Set(effects.map((e) => `• ${e.description}`))].slice(0, 8), ...(effects.length > 8 ? ['…'] : []), 'Click for the full analysis.'].join('\n')
+              : 'No side effects detected.',
             command: 'tsStructure.explainFinding',
             arguments: [document.uri, anchor.getStart(sourceFile), 'tsStructure.sideEffects'],
           });

@@ -36,7 +36,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Inspections',
     description: 'Live inspections in the Problems panel, Inspect Code and Audit Type Assertions.',
-    commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix', 'tsStructure.configureInspections', 'tsStructure.inspectionsMenu'],
+    commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix', 'tsStructure.configureInspections', 'tsStructure.inspectionsMenu', 'tsStructure.report.applyAllFixes'],
   },
   {
     id: 'dataFlow',
@@ -68,7 +68,7 @@ export const features: Feature[] = [
     id: 'deadExports',
     title: 'Dead Export Analyzer',
     description: 'Exports and files nothing reachable from the entry points uses.',
-    commands: ['tsStructure.deadExports', 'tsStructure.report.unexport', 'tsStructure.report.unexportAll', 'tsStructure.deadExportsInFolder'],
+    commands: ['tsStructure.deadExports', 'tsStructure.report.unexport', 'tsStructure.report.unexportAll', 'tsStructure.deadExportsInFolder', 'tsStructure.report.markPublic'],
   },
   {
     id: 'exceptionFlow',
@@ -87,7 +87,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Semantic Find Usages',
     description: 'References grouped by reads, writes, calls, imports, types and JSX.',
-    commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages'],
+    commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages', 'tsStructure.semanticUsagesInFile'],
   },
   {
     id: 'reexports',

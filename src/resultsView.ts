@@ -120,6 +120,15 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
   picker.matchOnDescription = true;
   picker.matchOnDetail = true;
   picker.items = items;
+  // Run every impacted test without closing the list first.
+  const runAll: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('run-all'), tooltip: `Run All ${countLabel(result.tests.length)}` };
+  picker.buttons = [runAll];
+  picker.onDidTriggerButton((button) => {
+    if (button === runAll) {
+      picker.hide();
+      run(result.tests.map((t) => t.test));
+    }
+  });
   picker.onDidTriggerItemButton((e) => {
     if (e.item.impacted) {
       run([e.item.impacted.test]);

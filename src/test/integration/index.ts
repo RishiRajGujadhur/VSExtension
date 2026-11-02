@@ -11,6 +11,7 @@ import { introduceParameter } from '../../refactor/introduceParameter';
 import { moveMembers } from '../../refactor/moveMembers';
 import { applyRefactor } from '../../ui/applyRefactor';
 import { features } from '../../structure/features';
+import { hashText } from '../../analysis/paths';
 
 // Refactorings write to files, so the tests work on a throwaway copy of the sample project.
 const sample = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-structure-sample-'));
@@ -34,6 +35,7 @@ export async function run(): Promise<void> {
     await missingAwaitFlow();
     await compilerErrorFlow();
     await unexportAllFlow();
+    await reportActionsFlow();
     await customInspectionFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
@@ -219,6 +221,39 @@ async function unexportAllFlow(): Promise<void> {
   console.log('remove all export keywords ok');
 }
 
+/** Fix All on a group, fixes applied one after another in one file, @public and the group's Remove export. */
+async function reportActionsFlow(): Promise<void> {
+  const file = path.join(sample, 'src/fixes.ts');
+  const original = 'load();\nsave();\nsend();\n';
+  fs.writeFileSync(file, original);
+  const hash = hashText(original);
+  const fix = (offset: number) => ({ kind: 'applyFix', file, hash, edits: [{ start: offset, end: offset, text: 'void ' }], title: 'void' });
+  // Two rows computed against the same text: the second still applies after the first changed the file.
+  await vscode.commands.executeCommand('tsStructure.report.applyFix', { label: 'load', action: fix(0) });
+  await vscode.commands.executeCommand('tsStructure.report.applyFix', { label: 'send', action: fix(16) });
+  const document = await vscode.workspace.openTextDocument(file);
+  assert.equal(document.getText(), 'void load();\nsave();\nvoid send();\n');
+  // Fix All on a group applies what is left, skipping what is already done.
+  await vscode.commands.executeCommand('tsStructure.report.applyAllFixes', { label: 'missingAwait', children: [0, 8, 16].map((offset) => ({ label: `at ${offset}`, action: fix(offset) })) });
+  assert.equal(document.getText(), 'void load();\nvoid save();\nvoid send();\n');
+  console.log('apply fix after fix, and fix all ok');
+
+  const api = path.join(sample, 'src/api.ts');
+  fs.writeFileSync(api, '/** Totals. */\nexport function total(): number {\n  return 1;\n}\n\nexport const rate = 2;\nexport const used = rate;\n');
+  const at = (line: number, character: number, length: number) => ({ file: api, line, character, endLine: line, endCharacter: character + length });
+  await vscode.commands.executeCommand('tsStructure.report.markPublic', { label: 'total', location: at(1, 16, 5), action: { kind: 'deadExport', file: api, name: 'total' } });
+  // On the group row, every file below it.
+  await vscode.commands.executeCommand('tsStructure.report.unexportAll', {
+    label: 'Exported but only used locally',
+    action: { kind: 'unexportAll' },
+    children: [{ label: 'api.ts', action: { kind: 'unexportAll', file: api }, children: [{ label: 'rate', location: at(5, 13, 4) }] }],
+  });
+  assert.equal((await vscode.workspace.openTextDocument(api)).getText(), '/** Totals. @public */\nexport function total(): number {\n  return 1;\n}\n\nconst rate = 2;\nexport const used = rate;\n');
+  console.log('mark as public API and remove exports from the group ok');
+  await vscode.commands.executeCommand('workbench.action.files.saveAll');
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
 /** TypeScript's "possibly undefined" errors offer to explain themselves with the Nullability Path Explorer. */
 async function compilerErrorFlow(): Promise<void> {
   const file = vscode.Uri.file(path.join(sample, 'src/possiblyUndefined.ts'));
@@ -334,6 +369,27 @@ async function analysisCommandsFlow(): Promise<void> {
   await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
   assert.match(await vscode.env.clipboard.readText(), /(checkout|cart\.test)\.ts:\d+/);
   console.log('limit results to scope ok');
+
+  // Find Usages in Current File: the same search, limited to the file at hand.
+  at('calculateSubtotal(');
+  await vscode.commands.executeCommand('tsStructure.semanticUsagesInFile');
+  await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+  const inFile = await vscode.env.clipboard.readText();
+  assert.match(inFile, /cart\.ts:\d+/);
+  assert.doesNotMatch(inFile, /checkout\.ts:\d+|cart\.test\.ts:\d+/, inFile);
+  await vscode.commands.executeCommand('tsStructure.report.clearLimit');
+  console.log('find usages in current file ok');
+
+  // Analyses in the lightbulb on a declaration name, and copies of selected statements.
+  const name = document.positionAt(document.getText().indexOf('calculateTotal') + 2);
+  const analyses = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', cart, new vscode.Range(name, name), 'refactor.tsStructure.analyze');
+  const analysisTitles = analyses.map((a) => a.title);
+  assert.ok(analysisTitles.includes('Show side effects of calculateTotal()') && analysisTitles.includes('Show errors thrown by calculateTotal()'), analysisTitles.join(', '));
+  const statement = document.getText().indexOf('const subtotal = calculateSubtotal(items);');
+  const selected = new vscode.Range(document.positionAt(statement), document.positionAt(statement + 'const subtotal = calculateSubtotal(items);'.length));
+  const refactors = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider', cart, selected, 'refactor.tsStructure');
+  assert.ok(refactors.some((a) => a.title === 'Find copies of the selected code'), refactors.map((a) => a.title).join(', '));
+  console.log('analysis lightbulb entries ok');
 
   // Side-effect CodeLens, off by default.
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', true, vscode.ConfigurationTarget.Global);

@@ -1,0 +1,97 @@
+import * as vscode from 'vscode';
+import { FileSymbol, SymbolKind, fileSymbols, symbolAt } from '../structure/symbols';
+import { parse, refactorKind } from './codeActions';
+import { isFeatureEnabled } from './features';
+
+/** An analysis that starts from a named thing at the cursor, and the things it can start from. */
+interface CursorAnalysis {
+  command: string;
+  feature: string;
+  kinds: readonly SymbolKind[];
+  accepts?: (symbol: FileSymbol) => boolean;
+  /** Its lightbulb entry; analyses without one are only offered by the symbol picker. */
+  lightbulb?: (symbol: FileSymbol) => string;
+}
+
+const notMethod = (s: FileSymbol) => s.kind !== 'member' || !s.callable;
+const notProperty = (s: FileSymbol) => s.kind !== 'member' || !!s.callable;
+const qualified = (s: FileSymbol) => (s.container && s.kind === 'member' ? `${s.container.replace(/\(\)$/, '')}.${s.name}` : s.name);
+
+const analyses: readonly CursorAnalysis[] = [
+  { command: 'tsStructure.dataFlow', feature: 'dataFlow', kinds: ['variable', 'parameter', 'member'], accepts: notMethod, lightbulb: (s) => `Show data flow of '${s.name}'` },
+  { command: 'tsStructure.nullability', feature: 'nullability', kinds: ['variable', 'parameter', 'member', 'function'] },
+  { command: 'tsStructure.argumentFlow', feature: 'argumentFlow', kinds: ['parameter'], lightbulb: (s) => `Trace values of parameter '${s.name}'` },
+  { command: 'tsStructure.sideEffects', feature: 'sideEffects', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show side effects of ${qualified(s)}()` },
+  { command: 'tsStructure.exceptionFlow', feature: 'exceptionFlow', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show errors thrown by ${qualified(s)}()` },
+  { command: 'tsStructure.promiseRejections', feature: 'promiseRejections', kinds: ['function', 'member'], accepts: (s) => notProperty(s), lightbulb: (s) => `Trace rejections of ${qualified(s)}()` },
+  { command: 'tsStructure.typeHierarchy', feature: 'hierarchy', kinds: ['class', 'interface'], lightbulb: (s) => `Show inheritance hierarchy of ${s.name}` },
+  { command: 'tsStructure.overrideImpact', feature: 'hierarchy', kinds: ['member'], lightbulb: (s) => `Show impact of changing ${qualified(s)}` },
+  { command: 'tsStructure.reexportChain', feature: 'reexports', kinds: ['import'], lightbulb: (s) => `Follow the re-exports of '${s.name}'` },
+  { command: 'tsStructure.semanticUsages', feature: 'usages', kinds: ['variable', 'function', 'class', 'interface', 'member', 'parameter', 'import'] },
+];
+
+const analyzeKind = refactorKind.append('analyze');
+
+/** Lightbulb entries that run an analysis on the declaration under the cursor, such as "Show data flow of 'total'". */
+export class AnalysisActionProvider implements vscode.CodeActionProvider {
+  static readonly kinds = [analyzeKind];
+
+  provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
+    if ((context.only && !analyzeKind.intersects(context.only)) || !range.isEmpty || !vscode.workspace.getConfiguration('tsStructure', document.uri).get('lightbulbAnalyses', true)) {
+      return [];
+    }
+    const symbol = symbolAt(parse(document), document.offsetAt(range.start));
+    if (!symbol) {
+      return [];
+    }
+    return analyses
+      .filter((a) => a.lightbulb && isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async))
+      .map((a) => {
+        const action = new vscode.CodeAction(a.lightbulb!(symbol), analyzeKind);
+        action.command = { command: a.command, title: action.title };
+        return action;
+      });
+  }
+}
+
+function fits(analysis: CursorAnalysis, symbol: FileSymbol): boolean {
+  return analysis.kinds.includes(symbol.kind) && (!analysis.accepts || analysis.accepts(symbol));
+}
+
+const icons: Record<SymbolKind, string> = {
+  variable: 'symbol-variable',
+  function: 'symbol-function',
+  class: 'symbol-class',
+  interface: 'symbol-interface',
+  member: 'symbol-field',
+  parameter: 'symbol-parameter',
+  import: 'symbol-namespace',
+};
+
+/**
+ * After an analysis found nothing to start from at the cursor, offers the file's declarations it can
+ * start from, and runs it on the one picked.
+ */
+export async function offerSymbols(command: string, message: string, editor: vscode.TextEditor): Promise<void> {
+  const analysis = analyses.find((a) => a.command === command);
+  const symbols = analysis ? fileSymbols(parse(editor.document)).filter((s) => fits(analysis, s)) : [];
+  if (!analysis || symbols.length === 0) {
+    void vscode.window.showErrorMessage(message);
+    return;
+  }
+  const choice = await vscode.window.showErrorMessage(message, 'Choose a Symbol…');
+  if (!choice) {
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    symbols.map((s) => ({ label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`].filter(Boolean).join(' · '), symbol: s })),
+    { title: `Start from…`, placeHolder: `Declarations in ${vscode.workspace.asRelativePath(editor.document.uri)}`, matchOnDescription: true },
+  );
+  if (!picked) {
+    return;
+  }
+  const position = editor.document.positionAt(picked.symbol.offset);
+  const shown = await vscode.window.showTextDocument(editor.document, { selection: new vscode.Range(position, position) });
+  shown.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  await vscode.commands.executeCommand(command);
+}

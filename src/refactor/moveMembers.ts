@@ -11,6 +11,8 @@ export interface MovableMember {
   kind: string;
   exported: boolean;
   line: number;
+  /** The last line of the declaration. */
+  endLine: number;
 }
 
 /** Top-level declarations of a module that can be moved. */
@@ -22,6 +24,7 @@ export function listMovableMembers(project: VirtualProject, fileName: string): M
       kind: kindOf(statement),
       exported: isExported(statement),
       line: sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line,
+      endLine: sourceFile.getLineAndCharacterOfPosition(statement.end).line,
     })),
   );
 }

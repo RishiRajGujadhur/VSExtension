@@ -580,6 +580,9 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
   const checker = program.getTypeChecker();
   const sourceFile = sourceFileOf(program, fileName);
   const atCursor = stateAt(checker, sourceFile, offset);
+  // Unless the cursor is on state the report lists, the function around it is the one selected.
+  const fnAtCursor = offset === undefined ? undefined : functionsIn(sourceFile).filter((fn) => fn.getStart(sourceFile) <= offset && offset <= fn.end).at(-1);
+  let cursorRow: ReportNode | undefined;
   const analyzer = new EffectAnalyzer(checker);
   const builder = new ReportBuilder('mutations', `Mutations in ${project ? 'the project' : baseName(sourceFile.fileName)}`);
   const byFunction: ReportNode[] = [];
@@ -604,6 +607,9 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
       action: { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: fn.getSourceFile().fileName, offset: functionNameOrSelf(fn).getStart() },
       children: mutations.map((e) => effectNode(e, builder)),
     });
+    if (fn === fnAtCursor) {
+      cursorRow = byFunction[byFunction.length - 1];
+    }
     for (const effect of mutations) {
       const origin = effectChain(effect).at(-1)!;
       if (effect.kind === 'mutates-parameter') {
@@ -621,6 +627,9 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
       state.entries.push({ ...effectNode(effect, builder), label: `${functionLabel(fn)}: ${effect.via ? origin.description : effect.description}` });
       byState.set(key, state);
     }
+  }
+  if (cursorRow && ![...byState.values()].some((s) => atCursor && s.declaration === atCursor)) {
+    cursorRow.expanded = cursorRow.focus = true;
   }
   const roots: ReportNode[] = [];
   if (byFunction.length > 0) {
@@ -644,6 +653,8 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
             icon: kindIcons[s.kind],
             tone: 'warning' as const,
             location: s.declaration ? builder.at(s.declaration) : undefined,
+            // Every read and write of the state, not only the writes listed here.
+            action: s.kind !== 'mutates-this' && stateName(s.declaration) ? { kind: 'findUsages', command: 'tsStructure.semanticUsages', file: s.declaration!.getSourceFile().fileName, offset: stateName(s.declaration)!.getStart() } : undefined,
             children: s.entries,
             expanded: (atCursor && s.declaration === atCursor) || undefined,
             focus: (atCursor && s.declaration === atCursor) || undefined,
@@ -671,6 +682,12 @@ export function lensTargets(sourceFile: ts.SourceFile): { fn: FunctionWithBody; 
   };
   visit(sourceFile);
   return targets;
+}
+
+/** The name of a state's declaration, where Find Usages can start; none for `this` of a class without a name. */
+function stateName(declaration: ts.Node | undefined): ts.Node | undefined {
+  const name = declaration && (declaration as ts.NamedDeclaration).name;
+  return name && ts.isIdentifier(name) ? name : undefined;
 }
 
 function baseName(fileName: string): string {
