@@ -33,7 +33,7 @@ The icon names are [VS Code codicons](https://microsoft.github.io/vscode-codicon
 
 The first time the extension starts, it opens a short **Get Started with TypeScript Structure** walkthrough. Open it again any time with the **?** (**Guide Me**) button in the TypeScript Structure view, **TypeScript Structure: Guide Me** in the Command Palette, or **Help → Welcome → Walkthroughs**.
 
-![The Get Started walkthrough](docs/images/walkthrough.png)
+![The Get Started walkthrough](docs/images/walkthrough.gif)
 
 Its seven steps each have a button that runs the feature on the file you have open, and a step is ticked off when you use it:
 
@@ -249,7 +249,7 @@ The Type Assertion Inspector classifies `as`, `<T>` and `!` assertions:
 
 Each of these analyses is also in the lightbulb's refactor menu (`Ctrl+Shift+R`) when the cursor is on a declaration's name. A function offers **Show side effects of f()**, **Show errors thrown by f()** and, when it is async, **Trace rejections of f()**. A variable offers **Show data flow of 'total'** and a parameter **Trace values of parameter 'code'**. A class or interface offers its hierarchy, a member its override impact, and an import its re-export chain. Only analyses whose feature is on are listed; turn them all off with `tsStructure.lightbulbAnalyses`.
 
-![The refactor menu on applyCoupon: Change Signature, Safe Delete and Move, then Show side effects of applyCoupon() and Show errors thrown by applyCoupon()](docs/images/analysis-lightbulb.png)
+![The refactor menu on applyCoupon: Change Signature, Safe Delete and Move, then Show side effects of applyCoupon() and Show errors thrown by applyCoupon()](docs/images/analysis-lightbulb.gif)
 
 When an analysis finds nothing at the cursor to start from, such as Data Flow on a keyword, the message has a **Choose a Symbol…** button. It lists the file's declarations the analysis can start from, such as its functions, and runs on the one you pick.
 
@@ -308,19 +308,19 @@ The TypeScript Structure view keeps every analysis's report:
 - The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first. With `tsStructure.results.rerunOnSave`, saving such a file re-runs the report instead.
 
-![Usages of calculateSubtotal limited to cart.ts: Showing 2 of 9 results, with Calls 1 of 3 and Imports 1 of 3](docs/images/limit-results.png)
+![Usages of calculateSubtotal limited to cart.ts: Showing 2 of 9 results, with Calls 1 of 3 and Imports 1 of 3](docs/images/limit-results.gif)
 
 ## Configuration
 
 Open the settings with **TypeScript Structure: Open Settings** or from the **⋯** menu of the TypeScript Structure view. They are grouped into sections: Scope, Features, General, Inspections, Intentions, Test Impact, Dead Exports, Duplicates, Argument Propagation and Code Lens. Settings about files, such as the scope, inspection severities and dead-export entry points, can differ per folder of a multi-root workspace.
 
-![The extension's settings, grouped into sections](docs/images/settings.png)
+![The extension's settings, grouped into sections](docs/images/settings.gif)
 
 ### Choosing where to analyze
 
 Analyses that look at many files ask where to look first: **Inspect Code…**, **Find Structural Duplicates…**, **Dead Export Analyzer**, **Audit Type Assertions** and **Mutation Tracking (Project)**.
 
-![The scope question before Inspect Code: whole project, current folder, folders to choose, open editors, changed files, current file and current function](docs/images/scope-picker.png)
+![The scope question before Inspect Code: whole project, current folder, folders to choose, open editors, changed files, current file and current function](docs/images/scope-picker.gif)
 
 - **Whole Project**: every source file in the compiler project.
 - **Current Folder**, or **Choose Folders…** to pick one or more in a dialog: the files in and below them.
@@ -341,7 +341,7 @@ By default every file in the compiler project is analyzed. To leave generated co
 1. In the Explorer, right-click a file or folder (or several) and choose **Exclude from TypeScript Structure Analysis**. The message that follows has **Undo**.
 2. To see or change the whole scope, run **TypeScript Structure: Edit Analysis Scope…** (also in the **⋯** menu of the TypeScript Structure view). Choose **Exclude Files…** or **Only Analyze…** to add a pattern, or select a pattern to remove it.
 
-![Edit Analysis Scope listing an include and two exclude patterns](docs/images/analysis-scope.png)
+![Edit Analysis Scope listing an include and two exclude patterns](docs/images/analysis-scope.gif)
 
 The scope is stored in two settings, with globs relative to the workspace folder. A plain folder path such as `src/legacy` covers everything below it.
 
@@ -361,7 +361,7 @@ Seven core features are on at first and eleven more are optional, so the menus s
 1. Run **TypeScript Structure: Choose Features…** from the Command Palette, from the **⋯** menu of the TypeScript Structure view, or from **More Features…** at the bottom of **Analyze or Refactor This…**.
 2. Tick the features you want, untick the ones you don't use, and press `Enter`.
 
-![Choose Features, with the core features on and the optional ones off](docs/images/choose-features.png)
+![Choose Features, with the core features on and the optional ones off](docs/images/choose-features.gif)
 
 A feature that is off is left out of the editor's right-click menu, the Command Palette, **Analyze or Refactor This…**, its keybindings, lightbulb entries and CodeLens. Running one of its commands anyway, from a keybinding or another extension, offers to turn it on.
 
@@ -381,13 +381,13 @@ Each switch is also a setting, `tsStructure.features.<name>`, so a workspace can
 
 ## Step-by-step guides
 
-Each guide uses the small bookshop project in [`docs/demo`](docs/demo). Open that folder in VS Code to follow along. The screenshots are captured from a real VS Code session with `npm run screenshots`.
+Each guide uses the small bookshop project in [`docs/demo`](docs/demo). Open that folder in VS Code to follow along. The animations are recorded from a real VS Code session with `npm run screenshots`: each one shows the cursor on the code, the command typed into the Command Palette, and its result.
 
 Every analysis can be started three ways: from the editor's right-click menu under **TypeScript Structure**, from the Command Palette (`Ctrl+Shift+P`, then type its name), or from **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`). Results open in the **TypeScript Structure** view in the Activity Bar. Guides marked *(optional feature)* need the feature turned on first with **Choose Features…**.
 
 ### Data Flow Path Explorer
 
-![Data flow of total in checkoutTotal: three values flow in (the subtotal, the discount and the coupon) and it flows out to applyCoupon and applyTax, above the step-by-step timeline](docs/images/data-flow.png)
+![Data flow of total in checkoutTotal: three values flow in (the subtotal, the discount and the coupon) and it flows out to applyCoupon and applyTax, above the step-by-step timeline](docs/images/data-flow.gif)
 
 1. Put the cursor on a variable, parameter or property. In the demo, use `total` in `checkoutTotal` (`src/cart.ts`).
 2. Run **Data Flow Path Explorer**.
@@ -404,7 +404,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Mutation Tracking
 
-![Mutations in cart.ts: four functions that change shared state, and the module variables they change](docs/images/mutation-tracking.png)
+![Mutations in cart.ts: four functions that change shared state, and the module variables they change](docs/images/mutation-tracking.gif)
 
 1. Open the file you want to audit, for example `src/cart.ts`. If the cursor is on a module variable or an import, that state is selected in the report. If it is inside a function that mutates state, that function is selected and expanded.
 2. Run **Mutation Tracking (Active File)**, or **Mutation Tracking (Project)** to cover more files: choose the whole project, a folder, the open editors or the changed files. In that report each function names its file.
@@ -415,7 +415,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Nullability Path Explorer
 
-![Nullability of coupon: findCoupon can return undefined from an explicit return and from coupons.find()](docs/images/nullability.png)
+![Nullability of coupon: findCoupon can return undefined from an explicit return and from coupons.find()](docs/images/nullability.gif)
 
 1. Put the cursor on a variable, property access or call that might be `null` or `undefined`. In the demo, use `coupon` in `applyCoupon` (`src/pricing.ts`). On a function's name, such as `findCoupon`, it explains which of its returns give `null` or `undefined`.
 2. Run **Nullability Path Explorer**.
@@ -427,7 +427,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Promise Rejection Analyzer *(optional feature)*
 
-![Rejections of saveOrder: it throws OrderError, and the rejection is caught in submitSafely, unhandled in quickReorder and fails main.ts at the top level](docs/images/promise-rejections.png)
+![Rejections of saveOrder: it throws OrderError, and the rejection is caught in submitSafely, unhandled in quickReorder and fails main.ts at the top level](docs/images/promise-rejections.gif)
 
 1. Put the cursor on an async function, or a function that returns a promise. In the demo, use `saveOrder` in `src/orders.ts`. On a call, such as `placeOrder(…)` in `quickReorder`, the report starts with **This call**, where that call's promise goes.
 2. Run **Promise Rejection Analyzer**.
@@ -440,7 +440,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Missing Await (live inspection)
 
-![quickReorder calls placeOrder without awaiting it: a warning squiggle, its hover, the Problems panel and the Inspect Code report](docs/images/missing-await.png)
+![quickReorder calls placeOrder without awaiting it: a warning squiggle, its hover, the Problems panel and the Inspect Code report](docs/images/missing-await.gif)
 
 1. Nothing to run: the inspection checks every TypeScript and JavaScript file that is visible in an editor. Open `src/orders.ts` in the demo.
 2. A dropped promise is underlined, here `placeOrder(id, items, payment);` in `quickReorder`. Hover it to read why. The message names the original function when the promise comes through wrappers.
@@ -458,7 +458,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Type Assertion Inspector (live inspection)
 
-![Five assertions in api.ts classified: JSON.parse as Book is unverified, found! may be undefined, BookResponse as Book narrows without a check, as any turns off checking, and book as Book is unnecessary](docs/images/type-assertions.png)
+![Five assertions in api.ts classified: JSON.parse as Book is unverified, found! may be undefined, BookResponse as Book narrows without a check, as any turns off checking, and book as Book is unnecessary](docs/images/type-assertions.gif)
 
 1. Like Missing Await, this inspection runs on every visible TypeScript or JavaScript file. Open `src/api.ts` in the demo.
 2. Each `as`, `<T>` and `!` is classified:
@@ -481,7 +481,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Dead Export Analyzer *(optional feature)*
 
-![Dead exports in the demo: legacy.ts and reports.ts are unreachable, and unused exports are listed per file with their kind and the barrel that still re-exports them](docs/images/dead-exports.png)
+![Dead exports in the demo: legacy.ts and reports.ts are unreachable, and unused exports are listed per file with their kind and the barrel that still re-exports them](docs/images/dead-exports.gif)
 
 1. Open any file in the project and run **Dead Export Analyzer**. Choose where to list dead exports: the whole project, the current folder or folders you pick, the open editors, the changed files or the current file. The whole project always decides what is used; the scope only limits the results, to clean up one area at a time. From the Explorer, right-click a folder and choose **Find Dead Exports in Folder**.
 2. Check **Entry points** at the bottom. The analyzer starts from the files named in `package.json` (`main`, `module`, `exports`, `bin`, here `src/main.ts`) and from test files. Without those it falls back to `src/index.ts`, `src/main.ts` and similar. Set `tsStructure.deadExports.entryPoints` (globs) if the guess is wrong.
@@ -493,7 +493,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Exception Flow Visualizer *(optional feature)*
 
-![Exception flow of parseConfig: it throws ConfigError and JSON.parse can throw SyntaxError; loadConfig catches and rethrows, readSetting passes errors on, and currencyOrDefault swallows them](docs/images/exception-flow.png)
+![Exception flow of parseConfig: it throws ConfigError and JSON.parse can throw SyntaxError; loadConfig catches and rethrows, readSetting passes errors on, and currencyOrDefault swallows them](docs/images/exception-flow.gif)
 
 1. Put the cursor on a function or method. In the demo, use `parseConfig` in `src/config.ts`.
 2. Run **Exception Flow Visualizer**.
@@ -505,7 +505,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Structural Duplicate Finder *(optional feature)*
 
-![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
+![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.gif)
 
 1. Open a file in the project and run **Find Structural Duplicates…**. To compare only the files of one area, right-click folders in the Explorer and choose **Find Duplicates in Folder**.
 2. Choose where to look: the whole project, the current folder or folders you pick, the open editors, the changed files, or the current file. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
@@ -518,7 +518,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Side-Effect Analyzer *(optional feature)*
 
-![Side effects of addToCart: it mutates its items argument, reassigns lastUpdated, changes analytics events through track(), writes to the console and reads the current time; CodeLenses above each function summarize the same](docs/images/side-effects.png)
+![Side effects of addToCart: it mutates its items argument, reassigns lastUpdated, changes analytics events through track(), writes to the console and reads the current time; CodeLenses above each function summarize the same](docs/images/side-effects.gif)
 
 1. Put the cursor on a function name, inside a function body, or on a call. In the demo, use `addToCart` in `src/cart.ts`.
 2. Run **Side-Effect Analyzer**.
@@ -534,7 +534,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Semantic Find Usages (`Alt+F7`)
 
-![Usages of calculateSubtotal: its definition, calls in cart.ts and main.ts (through the alias subtotal), imports and re-exports](docs/images/semantic-usages.png)
+![Usages of calculateSubtotal: its definition, calls in cart.ts and main.ts (through the alias subtotal), imports and re-exports](docs/images/semantic-usages.gif)
 
 1. Put the cursor on any symbol: a function, variable, class, property or type. In the demo, use `calculateSubtotal` in `src/pricing.ts`.
 2. Press `Alt+F7`, or run **Semantic Find Usages**. `Shift+Alt+F7` (**Find Usages in Current File**) runs the same search and shows only the usages in the file you are in. **Show All Results** in the view's `…` menu brings back the rest.
@@ -551,7 +551,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Re-export Chain Navigator *(optional feature)*
 
-![Re-export chain of subtotal: main.ts imports it from index.ts, which renames calculateSubtotal from pricing.ts](docs/images/reexport-chain.png)
+![Re-export chain of subtotal: main.ts imports it from index.ts, which renames calculateSubtotal from pricing.ts](docs/images/reexport-chain.gif)
 
 1. Put the cursor on an imported name, a re-export, or a usage of an imported symbol. In the demo, use `subtotal` in the first import of `src/main.ts`.
 2. Run **Re-export Chain Navigator**.
@@ -562,7 +562,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Structural Search Builder *(optional feature)*
 
-![Structural Search for $list$.find($callback$) where $list$ must be a LineItem array: two matches, in api.ts and cart.ts, in the builder and the TypeScript Structure view](docs/images/structural-search.png)
+![Structural Search for $list$.find($callback$) where $list$ must be a LineItem array: two matches, in api.ts and cart.ts, in the builder and the TypeScript Structure view](docs/images/structural-search.gif)
 
 1. Open a file in the project and run **Structural Search…**. Selected code becomes the starting pattern. The builder opens beside the editor. To search one folder only, right-click it in the Explorer and choose **Structural Search in Folder…**; the folder is added to the **Scope** list.
 2. Write the **Pattern** as code with placeholders, or pick one from **Start from an example…**. **From Editor Selection** copies the code selected in the editor into the box. To turn part of it into a placeholder, select that text in the box and click **Make Placeholder** (`Alt+P`): every copy of it becomes `$name$`, named after it when it is an identifier. In the demo, `$list$.find($callback$)` finds every `.find()` call. Problems, such as a pattern that isn't valid TypeScript or a broken regular expression, show under the box as you type.
@@ -573,7 +573,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Type-Safe Structural Replace *(optional feature)*
 
-![Replacing Math.round($value$ * 100) / 100 with Number($value$.toFixed(2)): the preview shows both rewrites, in pricing.ts and reports.ts, and that the result type-checks cleanly](docs/images/structural-replace.png)
+![Replacing Math.round($value$ * 100) / 100 with Number($value$.toFixed(2)): the preview shows both rewrites, in pricing.ts and reports.ts, and that the result type-checks cleanly](docs/images/structural-replace.gif)
 
 1. In **Structural Search…**, write the pattern to find. In the demo, use `Math.round($value$ * 100) / 100`.
 2. Under **Replace with**, write the new code using the same placeholders: `Number($value$.toFixed(2))`. **Copy Pattern** starts it from the pattern, so you only edit what changes. `$name*$` placeholders insert the whole matched list. A placeholder the pattern doesn't define, usually a typo, is flagged under the box.
@@ -583,7 +583,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Custom Inspection Builder *(optional feature)*
 
-![A saved no-console-log inspection underlines console.log in orders.ts with "Use track() instead of console.log", in the hover, the Problems panel and the Inspect Code report](docs/images/custom-inspections.png)
+![A saved no-console-log inspection underlines console.log in orders.ts with "Use track() instead of console.log", in the hover, the Problems panel and the Inspect Code report](docs/images/custom-inspections.gif)
 
 1. In **Structural Search…**, write and test a pattern until it finds exactly what you want to flag. For example, `console.log($args*$)`.
 2. Optionally write a **Replace with** template. It becomes the inspection's quick fix.
@@ -594,7 +594,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Inheritance Hierarchy Explorer *(optional feature)*
 
-![Hierarchy of PaymentMethod: CardPayment and GiftCardPayment extend it, StoreCredit extends GiftCardPayment, and each member lists the subtypes that override it](docs/images/type-hierarchy.png)
+![Hierarchy of PaymentMethod: CardPayment and GiftCardPayment extend it, StoreCredit extends GiftCardPayment, and each member lists the subtypes that override it](docs/images/type-hierarchy.gif)
 
 1. Put the cursor on a class or interface name, or anywhere inside its body. In the demo, use `PaymentMethod` in `src/models.ts`.
 2. Run **Inheritance Hierarchy Explorer**, or choose **Show inheritance hierarchy of PaymentMethod** in the lightbulb's refactor menu on the name.
@@ -606,7 +606,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Override Impact Analyzer *(optional feature)*
 
-![Impact of changing PaymentMethod.charge: three overrides, StoreCredit calls super, and the call sites that go through PaymentMethod](docs/images/override-impact.png)
+![Impact of changing PaymentMethod.charge: three overrides, StoreCredit calls super, and the call sites that go through PaymentMethod](docs/images/override-impact.gif)
 
 1. Put the cursor on a method or property of a class or interface. In the demo, use `charge` in `PaymentMethod` (`src/models.ts`).
 2. Run **Override Impact Analyzer**, or choose **Show impact of changing PaymentMethod.charge** in the lightbulb's refactor menu on the member's name.
@@ -617,7 +617,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Dependency Path Finder *(optional feature)*
 
-![main.ts depends on analytics.ts three imports deep, through index.ts and cart.ts, orders.ts and cart.ts, or orders.ts and notifications.ts](docs/images/dependency-path.png)
+![main.ts depends on analytics.ts three imports deep, through index.ts and cart.ts, orders.ts and cart.ts, or orders.ts and notifications.ts](docs/images/dependency-path.gif)
 
 1. Open the module whose dependency you want to explain, such as `src/main.ts`, and run **Dependency Path Finder…**. In the Explorer, you can also right-click a file. With two files selected, it explains the path between them without asking.
 2. Choose the module it depends on, here `analytics.ts`. Modules open in editors and the ones you asked about recently come first. Then come the modules it depends on, nearest first, with how many imports away each one is. The swap button on a module asks the reverse question instead: why that module depends on this one.
@@ -629,7 +629,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Dependency Graph Diff *(optional feature)*
 
-![Dependency changes since HEAD: analytics.ts now imports cart.ts, creating a new cycle, and orders.ts no longer imports notifications.ts](docs/images/graph-diff.png)
+![Dependency changes since HEAD: analytics.ts now imports cart.ts, creating a new cycle, and orders.ts no longer imports notifications.ts](docs/images/graph-diff.gif)
 
 1. Open a file of the project in a Git repository and run **Dependency Graph Diff…**, or click **Dependency Graph Diff…** in the **⋯** menu of the Source Control view. It needs `git` on your `PATH`.
 2. Choose what to compare with:
@@ -645,7 +645,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Argument Propagation Explorer *(optional feature)*
 
-![Propagation of the code parameter of applyCoupon: it comes from checkoutTotal's couponCode, which comes from placeOrder's coupon (READ10 from main.ts, or omitted), and it goes into findCoupon](docs/images/argument-flow.png)
+![Propagation of the code parameter of applyCoupon: it comes from checkoutTotal's couponCode, which comes from placeOrder's coupon (READ10 from main.ts, or omitted), and it goes into findCoupon](docs/images/argument-flow.gif)
 
 1. Put the cursor on a parameter, a destructured prop, or an argument in a call (to explore the callee's parameter). In the demo, use `code` in `applyCoupon` (`src/pricing.ts`).
 2. Run **Argument Propagation Explorer**, or choose **Trace values of parameter 'code'** in the lightbulb's refactor menu on the parameter. The first row shows the parameter's type, and whether it is optional or has a default.
@@ -710,7 +710,7 @@ Press F5 to open the `sample` project. In `src/impactSource.ts`, place the curso
 npm install
 npm test                  # compile and run the analyzer tests
 VSCODE_EXECUTABLE="/path/to/Code.exe" npm run test:integration   # run inside a real VS Code
-VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots        # recapture docs/images from docs/demo
+VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots        # record the docs/images GIFs from docs/demo
 ```
 
 - The engine has no `vscode` dependency and is unit-tested directly:

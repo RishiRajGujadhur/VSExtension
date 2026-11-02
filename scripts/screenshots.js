@@ -1,4 +1,4 @@
-// Captures the README screenshots: drives a real VS Code over the demo project and saves PNGs to docs/images.
+// Records the README animations: drives a real VS Code over the demo project and saves GIFs to docs/images.
 // Usage: VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots [-- sceneName ...]
 const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');

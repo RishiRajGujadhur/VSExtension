@@ -76,6 +76,12 @@ export class Cdp {
     await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(box.left + width + 300), y: Math.round(box.bottom) + 10 });
   }
 
+  /** The whole window as a PNG, scaled down by `scale`, for a frame of a recording. */
+  async frame(width: number, height: number, scale: number): Promise<Buffer> {
+    const { data } = await this.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale } });
+    return Buffer.from(data, 'base64');
+  }
+
   /** Saves the window, or only the `clip` rectangle of it, as a PNG. */
   async capture(file: string, clip?: Clip): Promise<void> {
     const { data } = await this.send('Page.captureScreenshot', { format: 'png', ...(clip ? { clip: { ...clip, scale: 1 } } : {}) });
