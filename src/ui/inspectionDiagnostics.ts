@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import * as path from 'path';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
@@ -81,7 +82,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       }),
       vscode.languages.registerCodeActionsProvider(languageSelector, this, { providedCodeActionKinds: InspectionDiagnostics.kinds }),
       // From the Explorer the arguments are the clicked file or folder and every selected one.
-      registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project' | vscode.Uri, selected?: vscode.Uri[]) =>
+      registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project' | 'changed' | vscode.Uri, selected?: vscode.Uri[]) =>
         this.inspectCode(view, scope instanceof vscode.Uri ? (selected?.length ? selected : [scope]) : scope),
       ),
       registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
@@ -195,7 +196,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   }
 
   /** Inspect Code: every inspection over the current file or the whole project, as a report. */
-  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project' | vscode.Uri[]): Promise<Report | undefined> {
+  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project' | 'changed' | vscode.Uri[]): Promise<Report | undefined> {
     if (Array.isArray(scopeArg)) {
       return this.inspectPaths(view, scopeArg);
     }
@@ -210,6 +211,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         await vscode.window.showQuickPick(
           [
             { label: 'Whole Project', description: 'Every source file in the compiler project', scope: 'project' as const },
+            { label: 'Changed Files', description: 'Files changed or added since the last commit', scope: 'changed' as const },
             { label: 'Current File', scope: 'file' as const },
           ],
           { title: 'Inspect Code' },
@@ -217,6 +219,18 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       )?.scope;
     if (!scope) {
       return;
+    }
+    if (scope === 'changed') {
+      const changed = changedFiles(editor.document.uri.fsPath);
+      if (!changed) {
+        void vscode.window.showErrorMessage('Inspecting changed files needs Git, and this file is not in a Git repository.');
+        return;
+      }
+      if (changed.size === 0) {
+        void vscode.window.showInformationMessage('No files have changed since the last commit.');
+        return;
+      }
+      return this.runInspectCode(view, editor.document.uri, (f) => changed.has(pathKey(f)), 'changed files');
     }
     return this.runInspectCode(view, editor.document.uri, scope === 'file' ? (f) => pathKey(f) === pathKey(editor.document.uri.fsPath) : undefined);
   }
@@ -241,7 +255,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   }
 
   /** Runs every inspection over the anchor file's project, or the files of it that `include` accepts. */
-  private async runInspectCode(view: StructureView, anchor: vscode.Uri, include?: (fileName: string) => boolean): Promise<Report | undefined> {
+  private async runInspectCode(view: StructureView, anchor: vscode.Uri, include?: (fileName: string) => boolean, what?: string): Promise<Report | undefined> {
     const fileName = anchor.fsPath;
     const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
     const run = () =>
@@ -267,6 +281,9 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
           await new Promise((resolve) => setImmediate(resolve));
         }
         const report = withNote(inspectionReport(inspected, inspections, folder), scoped.note);
+        if (what) {
+          report.title = `${report.title} (${what})`;
+        }
         report.durationMs = Date.now() - started;
         return report;
       });
@@ -429,6 +446,30 @@ async function applyReportFix(node: ReportNode): Promise<void> {
 /** `type` inspects while editing; `save` only when the file is saved, for big projects. */
 function runOn(uri: vscode.Uri): 'type' | 'save' {
   return vscode.workspace.getConfiguration('tsStructure', uri).get('inspections.run', 'type');
+}
+
+/** Files changed, staged or added since the last commit in the file's Git repository, by path key; undefined outside Git. */
+function changedFiles(fileName: string): Set<string> | undefined {
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: path.dirname(fileName), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  try {
+    const top = git('rev-parse', '--show-toplevel').trim();
+    // A repository without commits yet has nothing to diff against; then every file is new.
+    let tracked = '';
+    try {
+      tracked = git('diff', '--name-only', 'HEAD');
+    } catch {
+      tracked = git('ls-files');
+    }
+    const untracked = git('ls-files', '--others', '--exclude-standard');
+    return new Set(
+      `${tracked}\n${untracked}`
+        .split('\n')
+        .filter(Boolean)
+        .map((f) => pathKey(path.join(top, f))),
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 function inspectionOptions(uri: vscode.Uri): InspectionOptions {
