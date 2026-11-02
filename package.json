@@ -486,6 +486,11 @@
         "command": "tsStructure.findDuplicatesInFolder",
         "title": "Find Duplicates in Folder",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.inspectionsMenu",
+        "title": "Inspections Menu…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1029,6 +1034,10 @@
         {
           "command": "tsStructure.findDuplicatesInFolder",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.inspectionsMenu",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "view/title": [

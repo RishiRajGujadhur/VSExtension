@@ -53,7 +53,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     private readonly extra: () => readonly Inspection[] = () => [],
   ) {
     this.status.name = 'TypeScript Structure Inspections';
-    this.status.command = { command: 'tsStructure.inspectCode', title: 'Inspect Current File', arguments: ['file'] };
+    this.status.command = { command: 'tsStructure.inspectionsMenu', title: 'Inspections' };
   }
 
   register(context: vscode.ExtensionContext, view: StructureView): void {
@@ -88,6 +88,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.configureInspections', () => this.configureInspections()),
+      registerCommand('tsStructure.inspectionsMenu', () => this.menu()),
       registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
@@ -181,6 +182,26 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     return findings;
   }
 
+  /** The status bar item's menu: inspect at three sizes, configure, or pause live inspections. */
+  private async menu(): Promise<void> {
+    const document = vscode.window.activeTextEditor?.document;
+    const findings = document ? this.findingsFor(document) : undefined;
+    const items: (vscode.QuickPickItem & { run: () => Thenable<unknown> })[] = [
+      { label: '$(list-flat) Show Problems in This File', description: findings ? `${findings.length}` : undefined, run: () => vscode.commands.executeCommand('workbench.actions.view.problems') },
+      { label: '$(file-code) Inspect Current File', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'file') },
+      { label: '$(git-compare) Inspect Changed Files', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed') },
+      { label: '$(project) Inspect Whole Project', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'project') },
+      { label: '$(settings) Configure Inspections…', run: () => vscode.commands.executeCommand('tsStructure.configureInspections') },
+      {
+        label: '$(debug-pause) Pause Live Inspections',
+        detail: 'Stops inspecting while you type, for this workspace. Turn back on in the settings or from this menu.',
+        run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
+      },
+    ];
+    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections' });
+    await picked?.run();
+  }
+
   /** Lists every inspection with its severity; picking one asks for a new severity, until the list is closed. */
   private async configureInspections(): Promise<void> {
     const uri = vscode.window.activeTextEditor?.document.uri;
@@ -234,7 +255,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     const count = (severity: Severity) => result.findings.filter((f) => f.severity === severity).length;
     const problems = result.findings.filter((f) => f.severity !== 'hint').length;
     this.status.text = problems ? `$(checklist) ${problems}` : '$(pass) TS Structure';
-    this.status.tooltip = `TypeScript Structure inspections in this file: ${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints. Click to list them.`;
+    this.status.tooltip = `TypeScript Structure inspections in this file: ${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints. Click to inspect more or configure.`;
     this.status.show();
   }
 
