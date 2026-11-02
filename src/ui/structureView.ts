@@ -129,6 +129,29 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
   }
 
+  /** Lists every report in the history, newest first, and shows the one picked. */
+  async pickHistory(): Promise<void> {
+    if (this.history.length === 0) {
+      void vscode.window.showInformationMessage('No analyses have run yet.');
+      return;
+    }
+    const items = this.history
+      .map((entry, index) => {
+        const { heading, subject } = titleParts(entry.report);
+        return {
+          label: `${index === this.position ? '$(arrow-right) ' : ''}${heading}`,
+          description: subject,
+          detail: [entry.report.description, entry.rerun ? undefined : 'from an earlier session'].filter(Boolean).join(' · ') || undefined,
+          index,
+        };
+      })
+      .reverse();
+    const picked = await vscode.window.showQuickPick(items, { title: 'Analysis History', placeHolder: 'Show an earlier report', matchOnDescription: true, matchOnDetail: true });
+    if (picked) {
+      this.go(picked.index - this.position);
+    }
+  }
+
   async rerun(): Promise<void> {
     const entry = this.history[this.position];
     if (!entry?.rerun) {

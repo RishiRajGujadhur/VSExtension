@@ -112,6 +112,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
     registerCommand('tsStructure.report.next', () => view.step(1)),
     registerCommand('tsStructure.report.expandAll', () => view.expandAll()),
+    registerCommand('tsStructure.report.history', () => view.pickHistory()),
     registerCommand('tsStructure.report.copyRow', async (node: ReportNode, selected?: ReportNode[]) => {
       const rows = selected?.length ? selected : node ? [node] : [];
       if (rows.length) {

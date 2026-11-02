@@ -269,7 +269,7 @@ To run a search from a key, click **Copy as Keybinding** in the builder and past
 ## Working with results
 
 The TypeScript Structure view keeps every analysis's report:
-- **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
+- **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), or jump to any of them with **Show Analysis History…** in the **⋯** menu, and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
 - **Filter** rows by text, **Show Groups…** to hide whole groups, **Expand All** (next to Collapse All), and **go to the next or previous result**.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, **Copy Location**, and **Copy** on a row, which copies it with everything under it as indented text.
