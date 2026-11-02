@@ -270,7 +270,7 @@ To run a search from a key, click **Copy as Keybinding** in the builder and past
 
 The TypeScript Structure view keeps every analysis's report:
 - **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
-- **Filter** rows by text, **Show Groups…** to hide whole groups, and **go to the next or previous result**.
+- **Filter** rows by text, **Show Groups…** to hide whole groups, **Expand All** (next to Collapse All), and **go to the next or previous result**.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
 - The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
@@ -346,7 +346,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
    Each function's row summarizes what happens there, for example *3 writes, 1 check*. Each step shows its line. A type is shown where it differs from the declared type, so narrowing stands out. The step under the cursor is selected and marked *at cursor*.
 4. Click a step to jump to it, or use the up and down arrows in the view's title bar to walk through them. The editor shades writes and reads of the value while the report is open.
-5. To keep tracing into a called function, click the arrow button (**Follow Into Call**) on a hand-off row. It runs Data Flow on the parameter there.
+5. To keep tracing into a called function, click **Trace This Value** (the step-into button) on a hand-off row. It runs Data Flow on the parameter there.
 6. **Flows in**, at the top, lists every value the variable is given: its initial value, each assignment and each loop item. Under each one are the variables, properties and calls it is computed from, such as *from subtotal* or *returned by applyCoupon(…)*. On a parameter, **Incoming values from call sites** lists what every caller passes, including omitted arguments and defaults.
 7. **Flows out** lists where the value goes: the variables it is copied into (`→ shipping`), the calls it is passed to (`→ applyTax(…) as amount`) and the functions that return it. Under a return are the callers and what they do with the result: *received as total*, *returned again from checkout* or *passed to formatPrice(…)*. Click **Trace This Value** (the step-into button) on a row to trace that variable or parameter next.
 

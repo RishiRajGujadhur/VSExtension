@@ -111,6 +111,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.filter', () => view.setFilter()),
     registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
     registerCommand('tsStructure.report.next', () => view.step(1)),
+    registerCommand('tsStructure.report.expandAll', () => view.expandAll()),
     registerCommand('tsStructure.report.previous', () => view.step(-1)),
     registerCommand('tsStructure.report.copyMarkdown', async () => {
       const markdown = view.markdown();

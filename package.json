@@ -437,6 +437,12 @@
         "title": "Trace This Value",
         "category": "TypeScript Structure",
         "icon": "$(debug-step-into)"
+      },
+      {
+        "command": "tsStructure.report.expandAll",
+        "title": "Expand All",
+        "category": "TypeScript Structure",
+        "icon": "$(expand-all)"
       }
     ],
     "viewsContainers": {
@@ -903,6 +909,10 @@
         {
           "command": "tsStructure.report.traceValue",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.expandAll",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -995,6 +1005,11 @@
           "command": "tsStructure.guideMe",
           "when": "view == tsStructure.report",
           "group": "navigation@10"
+        },
+        {
+          "command": "tsStructure.report.expandAll",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
