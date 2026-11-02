@@ -248,6 +248,28 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return withNote(duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, target.folder), scoped.note);
       });
     }),
+    // From the Explorer: copies among the files in the folders picked.
+    registerCommand('tsStructure.findDuplicatesInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
+      const folders = selected?.length ? selected : uri ? [uri] : [];
+      const anchor = (await Promise.all(folders.map((f) => vscode.workspace.findFiles(new vscode.RelativePattern(f, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1)))).flat()[0];
+      if (!anchor) {
+        void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
+        return;
+      }
+      const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
+      const roots = folders.map((f) => pathKey(f.fsPath));
+      const config = vscode.workspace.getConfiguration('tsStructure.duplicates', anchor);
+      return runAnalysis(view, 'Finding duplicates', () => {
+        const program = projects.createVirtualProject(anchor.fsPath, folder).program();
+        const inside = projectSourceFiles(program).filter((sf) => roots.some((root) => pathKey(sf.fileName).startsWith(`${root}/`)));
+        const scoped = scopedFiles(inside);
+        const ignoreTests = config.get('ignoreTestFiles', true);
+        const files = scoped.files.filter((sf) => !ignoreTests || !discoverTests(sf).isTestFile);
+        const report = withNote(duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, folder), scoped.note);
+        report.title = `${report.title} in ${folders.map((f) => vscode.workspace.asRelativePath(f)).join(', ')}`;
+        return report;
+      });
+    }),
     editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),

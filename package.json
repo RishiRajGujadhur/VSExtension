@@ -481,6 +481,11 @@
         "command": "tsStructure.deadExportsInFolder",
         "title": "Find Dead Exports in Folder",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.findDuplicatesInFolder",
+        "title": "Find Duplicates in Folder",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -717,6 +722,11 @@
           "command": "tsStructure.deadExportsInFolder",
           "when": "config.tsStructure.features.deadExports && explorerResourceIsFolder",
           "group": "7_modification@93"
+        },
+        {
+          "command": "tsStructure.findDuplicatesInFolder",
+          "when": "config.tsStructure.features.duplicates && explorerResourceIsFolder",
+          "group": "7_modification@94"
         }
       ],
       "commandPalette": [
@@ -1014,6 +1024,10 @@
         },
         {
           "command": "tsStructure.deadExportsInFolder",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.findDuplicatesInFolder",
           "when": "false"
         }
       ],

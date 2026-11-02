@@ -455,7 +455,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
 
-1. Open a file in the project and run **Find Structural Duplicates…**.
+1. Open a file in the project and run **Find Structural Duplicates…**. To compare only the files of one area, right-click folders in the Explorer and choose **Find Duplicates in Folder**.
 2. Choose **Whole Project** or **Active File**. With statements selected, **Copies of the Selection** instead lists every place in the project with the same structure as the selected code.
 3. Each **Duplicate** group is a run of statements with the same structure. It shows the number of lines, the number of copies, and how many lines are repeated, which is what consolidating would remove. The biggest payoff is listed first. Copies count even when variables are renamed or literal values differ. In the demo, `revenue` in `reports.ts` is a copy of `calculateSubtotal` in `pricing.ts`.
 4. Expand a group to see each copy and the function it's in. The last row says what differs between them, such as *total ↔ sum, item ↔ line*. Those are the parameters a shared function would need.

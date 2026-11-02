@@ -80,7 +80,7 @@ export const features: Feature[] = [
     id: 'duplicates',
     title: 'Structural Duplicates',
     description: 'Find code copied with renamed variables or changed values.',
-    commands: ['tsStructure.findDuplicates', 'tsStructure.report.compareDuplicates'],
+    commands: ['tsStructure.findDuplicates', 'tsStructure.report.compareDuplicates', 'tsStructure.findDuplicatesInFolder'],
   },
   {
     id: 'usages',
