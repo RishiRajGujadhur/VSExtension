@@ -335,7 +335,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 
 ### Data Flow Path Explorer
 
-![Data flow of total in checkoutTotal: its definition, the discount update, the coupon, and the hand-off to applyTax](docs/images/data-flow.png)
+![Data flow of total in checkoutTotal: three values flow in (the subtotal, the discount and the coupon) and it flows out to applyCoupon and applyTax, above the step-by-step timeline](docs/images/data-flow.png)
 
 1. Put the cursor on a variable, parameter or property. In the demo, use `total` in `checkoutTotal` (`src/cart.ts`).
 2. Run **Data Flow Path Explorer**.
