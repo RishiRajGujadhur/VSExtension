@@ -88,6 +88,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     return [
       vscode.window.onDidChangeVisibleTextEditors(() => this.highlight()),
       vscode.workspace.onDidChangeTextDocument((e) => this.checkStale(e.document)),
+      vscode.workspace.onDidSaveTextDocument((document) => this.rerunOnSave(document)),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('tsStructure.highlightResults')) {
           this.highlight();
@@ -142,6 +143,18 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       this.render();
       this.persist();
     }
+  }
+
+  private rerunTimer: NodeJS.Timeout | undefined;
+
+  /** With `tsStructure.results.rerunOnSave`, saving a file the report covers refreshes it, once per burst of saves. */
+  private rerunOnSave(document: vscode.TextDocument): void {
+    const entry = this.history[this.position];
+    if (!entry?.rerun || !this.stale || !this.findHash(document.uri.fsPath) || !vscode.workspace.getConfiguration('tsStructure.results').get('rerunOnSave', false)) {
+      return;
+    }
+    clearTimeout(this.rerunTimer);
+    this.rerunTimer = setTimeout(() => void this.rerun(), 300);
   }
 
   /** Lists every report in the history, newest first, and shows the one picked. */

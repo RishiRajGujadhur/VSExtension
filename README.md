@@ -274,7 +274,7 @@ The TypeScript Structure view keeps every analysis's report:
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
 - **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, **Copy Location**, and **Copy** on a row, which copies it with everything under it as indented text.
 - The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
-- A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
+- A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first. With `tsStructure.results.rerunOnSave`, saving such a file re-runs the report instead.
 
 ## Configuration
 

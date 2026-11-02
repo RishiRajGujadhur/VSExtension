@@ -1354,6 +1354,11 @@
             "minimum": 1,
             "maximum": 200,
             "markdownDescription": "How many reports **Previous Analysis** and **Next Analysis** keep."
+          },
+          "tsStructure.results.rerunOnSave": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Re-run the report in the TypeScript Structure view when you save a file it covers, instead of showing the *Files changed* banner."
           }
         }
       },
