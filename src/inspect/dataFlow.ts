@@ -201,17 +201,216 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       })),
     });
   }
+  // Where the value comes from and where it goes, before the step-by-step timeline.
+  const inflows = flowsIn(project, steps, name, builder);
   if (declaration && ts.isParameter(declaration) && isFunctionWithBody(declaration.parent)) {
     const incoming = incomingValues(project, declaration, builder);
     if (incoming.length > 0) {
-      roots.unshift({ label: 'Incoming values from call sites', icon: 'call-incoming', expanded: true, children: incoming });
+      inflows.unshift({ label: 'Incoming values from call sites', icon: 'call-incoming', expanded: true, children: incoming });
     }
   }
+  const outflows = flowsOut(project, steps, builder);
+  roots.unshift(
+    { label: 'Flows in', description: inflows.length ? `${plural(inflows.length, 'source')} of the value` : 'no values assigned', icon: 'arrow-circle-right', expanded: true, children: inflows },
+    { label: 'Flows out', description: outflows.length ? `${plural(outflows.length, 'place')} the value goes` : 'the value stays here', icon: 'arrow-circle-left', expanded: true, children: outflows },
+  );
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;
   return builder.finish(
     roots,
     `${plural(count(['write', 'update', 'declaration']), 'definition')}, ${plural(count(['mutation']), 'mutation')}, ${plural(count(['condition']), 'check')}, ${plural(count(['argument']), 'hand-off')}`,
   );
+}
+
+type Follow = { kind: 'follow'; command: string; file: string; offset: number };
+
+/** A row action that opens the data flow of another variable or property. */
+function followFlow(name: ts.Node): Follow | undefined {
+  const target = ts.isPropertyAccessExpression(name) ? name.name : name;
+  return ts.isIdentifier(target) || ts.isPrivateIdentifier(target)
+    ? { kind: 'follow', command: 'tsStructure.dataFlow', file: target.getSourceFile().fileName, offset: target.getStart() }
+    : undefined;
+}
+
+/** The values assigned to the variable, each with the variables and calls it is computed from. */
+function flowsIn(project: VirtualProject, steps: FlowStep[], name: string, builder: ReportBuilder): ReportNode[] {
+  const checker = project.program().getTypeChecker();
+  const rows: ReportNode[] = [];
+  for (const step of steps) {
+    const value = assignedValue(step);
+    if (!value) {
+      continue;
+    }
+    const forOf = ts.isForOfStatement(value.parent) && value.parent.expression === value;
+    rows.push({
+      label: forOf ? `each item of ${nodeText(value)}` : step.kind === 'update' ? step.label : `= ${nodeText(value)}`,
+      description: `line ${lineOf(step.node)} · ${functionLabel(enclosingFunction(step.node))}`,
+      icon: step.kind === 'declaration' ? 'symbol-variable' : 'edit',
+      role: 'write',
+      location: builder.at(step.node),
+      children: sourcesOf(checker, value, name, builder),
+    });
+  }
+  return rows;
+}
+
+/** The expression a declaration, assignment or loop gives the variable. */
+function assignedValue(step: FlowStep): ts.Expression | undefined {
+  const parent = step.node.parent;
+  if (step.kind === 'declaration' && (ts.isVariableDeclaration(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertyAssignment(parent) || ts.isParameter(parent)) && parent.name === step.node) {
+    return parent.initializer;
+  }
+  if (step.kind === 'write' && ts.isVariableDeclaration(parent) && ts.isForOfStatement(parent.parent.parent)) {
+    return parent.parent.parent.expression;
+  }
+  if (step.kind === 'write' || step.kind === 'update') {
+    const write = writeOf(accessExpression(step.node));
+    return write && ts.isBinaryExpression(write) ? write.right : undefined;
+  }
+  return undefined;
+}
+
+/** Variables, properties and calls an expression reads: what a value is computed from. */
+function sourcesOf(checker: ts.TypeChecker, expression: ts.Expression, name: string, builder: ReportBuilder): ReportNode[] {
+  const rows = new Map<string, ReportNode>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const callee = nodeText(node.expression);
+      rows.set(`call:${callee}`, { label: `returned by ${ts.isNewExpression(node) ? 'new ' : ''}${callee}(…)`, icon: 'symbol-method', location: builder.at(node) });
+      node.arguments?.forEach(visit);
+      return;
+    }
+    if (ts.isPropertyAccessExpression(node)) {
+      const symbol = checker.getSymbolAtLocation(node.name);
+      if (symbol && symbol.flags & (ts.SymbolFlags.Property | ts.SymbolFlags.Accessor)) {
+        rows.set(`read:${node.getText()}`, { label: `from ${nodeText(node)}`, icon: 'symbol-property', location: builder.at(node), action: followFlow(node) });
+        return;
+      }
+    }
+    if (ts.isIdentifier(node)) {
+      const symbol = checker.getSymbolAtLocation(node);
+      if (symbol && symbol.flags & ts.SymbolFlags.Variable) {
+        const self = node.text === name;
+        rows.set(`read:${node.text}`, { label: self ? `from ${node.text} (its previous value)` : `from ${node.text}`, icon: 'symbol-variable', location: builder.at(node), action: self ? undefined : followFlow(node) });
+      }
+      return;
+    }
+    if (isFunctionWithBody(node)) {
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(expression);
+  return [...rows.values()];
+}
+
+type Outflow =
+  | { kind: 'into'; target: ts.Node }
+  | { kind: 'argument'; call: ts.CallExpression | ts.NewExpression; index: number }
+  | { kind: 'return'; fn: ts.Node | undefined };
+
+function isAssignment(node: ts.Node): node is ts.BinaryExpression {
+  return ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
+}
+
+/** Where an expression's value ends up: a variable it is stored in, a call it is passed to, or a return. */
+function outflowOf(node: ts.Node): Outflow | undefined {
+  let current = node;
+  while (current.parent) {
+    const parent = current.parent;
+    if ((ts.isVariableDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.initializer === current) {
+      return { kind: 'into', target: parent.name };
+    }
+    if (isAssignment(parent)) {
+      return parent.right === current ? { kind: 'into', target: parent.left } : undefined;
+    }
+    if ((ts.isCallExpression(parent) || ts.isNewExpression(parent)) && parent.arguments?.includes(current as ts.Expression)) {
+      return { kind: 'argument', call: parent, index: parent.arguments.indexOf(current as ts.Expression) };
+    }
+    if (ts.isReturnStatement(parent)) {
+      return { kind: 'return', fn: enclosingFunction(parent) };
+    }
+    if (ts.isArrowFunction(parent) && parent.body === current) {
+      return { kind: 'return', fn: parent };
+    }
+    // Operators, templates, object literals and `await` pass the value on to whatever encloses them.
+    const passesThrough =
+      ((ts.isCallExpression(parent) || ts.isNewExpression(parent)) && parent.expression === current) ||
+      (ts.isExpression(parent) && !ts.isCallExpression(parent) && !ts.isNewExpression(parent) && !isFunctionWithBody(parent)) ||
+      ts.isTemplateSpan(parent) ||
+      ts.isPropertyAssignment(parent) ||
+      ts.isShorthandPropertyAssignment(parent) ||
+      ts.isSpreadAssignment(parent);
+    if (!passesThrough) {
+      return undefined;
+    }
+    current = parent;
+  }
+  return undefined;
+}
+
+/** Where the variable's value goes: other variables, calls, returns and, through returns, the callers that receive it. */
+function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBuilder): ReportNode[] {
+  const checker = project.program().getTypeChecker();
+  const rows: ReportNode[] = [];
+  for (const step of steps) {
+    if (['declaration', 'write', 'update', 'import', 'mutation', 'call', 'condition'].includes(step.kind)) {
+      continue;
+    }
+    const flow = outflowOf(accessExpression(step.node));
+    if (!flow) {
+      continue;
+    }
+    const description = `line ${lineOf(step.node)} · ${functionLabel(enclosingFunction(step.node))}`;
+    if (flow.kind === 'into' && flow.target.getText() === accessExpression(step.node).getText()) {
+      // `total = total * 0.9` updates the variable itself; that is a flow in.
+      continue;
+    }
+    if (flow.kind === 'into') {
+      rows.push({ label: `→ ${nodeText(flow.target)}`, description, tooltip: nodeSnippet(flow.target.parent, 80), icon: 'arrow-right', role: 'read', location: builder.at(step.node), action: followFlow(flow.target) });
+    } else if (flow.kind === 'argument') {
+      const callee = calledFunction(checker, flow.call);
+      const parameter = callee?.parameters[Math.min(flow.index, callee.parameters.length - 1)];
+      rows.push({
+        label: `→ ${nodeText(flow.call.expression)}(…)${parameter ? ` as ${parameter.name.getText()}` : ''}`,
+        description,
+        icon: 'arrow-right',
+        role: 'read',
+        location: builder.at(step.node),
+        action: parameter && ts.isIdentifier(parameter.name) ? followFlow(parameter.name) : undefined,
+      });
+    } else {
+      rows.push({
+        label: `returned from ${functionLabel(flow.fn)}`,
+        description,
+        icon: 'reply',
+        role: 'read',
+        location: builder.at(step.node),
+        expanded: true,
+        children: flow.fn && isFunctionWithBody(flow.fn) ? receivers(project, flow.fn, builder) : [],
+      });
+    }
+  }
+  return rows;
+}
+
+/** What callers do with a function's result: the variables that receive it, or where it goes next. */
+function receivers(project: VirtualProject, fn: Parameters<typeof callSitesOf>[1], builder: ReportBuilder): ReportNode[] {
+  const { calls } = callSitesOf(project.service, fn);
+  return calls.map(({ call }): ReportNode => {
+    const flow = outflowOf(call);
+    const where = `${functionLabel(enclosingFunction(call))} · ${baseName(call.getSourceFile().fileName)}`;
+    const row = { description: where, role: 'read' as const, location: builder.at(call) };
+    if (flow?.kind === 'into') {
+      return { ...row, label: `received as ${nodeText(flow.target)}`, icon: 'arrow-left', action: followFlow(flow.target) };
+    }
+    if (flow?.kind === 'return') {
+      return { ...row, label: `returned again from ${functionLabel(flow.fn)}`, icon: 'reply' };
+    }
+    if (flow?.kind === 'argument') {
+      return { ...row, label: `passed to ${nodeText(flow.call.expression)}(…)`, icon: 'arrow-right' };
+    }
+    return { ...row, label: `used in ${nodeSnippet(call.parent, 50)}`, icon: 'eye' };
+  });
 }
 
 function incomingValues(project: VirtualProject, parameter: ts.ParameterDeclaration, builder: ReportBuilder): ReportNode[] {

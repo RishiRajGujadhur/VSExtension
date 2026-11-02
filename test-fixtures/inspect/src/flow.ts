@@ -17,3 +17,11 @@ export function checkout(items: number[], coupon?: string): number {
 export function run(): number {
   return checkout([1, 2], 'SAVE') + applyTax(5, 0.1);
 }
+
+export function receipt(): string {
+  const sum = checkout([3], 'X');
+  let label = '';
+  label = `total ${sum}`;
+  const copy = sum;
+  return label + copy;
+}
