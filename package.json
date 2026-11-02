@@ -1791,6 +1791,12 @@
             "default": true,
             "markdownDescription": "Show the side-effect lens on pure functions too. Turn off to keep lenses only where a function has effects.",
             "scope": "resource"
+          },
+          "tsStructure.codeLens.sideEffectsIgnoreTestFiles": {
+            "type": "boolean",
+            "default": false,
+            "scope": "resource",
+            "markdownDescription": "Leave the side-effect lens out of test files, where mocks and setup make most functions impure."
           }
         }
       }

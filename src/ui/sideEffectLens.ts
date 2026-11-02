@@ -5,6 +5,8 @@ import { normalizePath } from '../analysis/paths';
 import { EffectAnalyzer, EffectKind, lensTargets, mutationKinds } from '../inspect/effects';
 import { isFunctionWithBody } from '../structure/util';
 import { languageSelector } from './refactorCommands';
+import { isExcluded } from './exclude';
+import { discoverTests } from '../analysis/testDiscovery';
 import { isFeatureEnabled, registerCommand } from './features';
 
 const shortLabels: Record<EffectKind, string> = {
@@ -34,7 +36,7 @@ export class SideEffectLens implements vscode.CodeLensProvider {
     context.subscriptions.push(
       vscode.languages.registerCodeLensProvider(languageSelector, this),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('tsStructure.codeLens') || e.affectsConfiguration('tsStructure.features.sideEffects')) {
+        if (['codeLens', 'features.sideEffects', 'include', 'exclude'].some((key) => e.affectsConfiguration(`tsStructure.${key}`))) {
           this.cache.clear();
           this.changed.fire();
         }
@@ -69,7 +71,10 @@ export class SideEffectLens implements vscode.CodeLensProvider {
       const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
       const project = this.projects.load(document.uri.fsPath, folder);
       const sourceFile = project.program.getSourceFile(normalizePath(document.uri.fsPath));
-      if (!sourceFile || sourceFile.text !== document.getText()) {
+      if (!sourceFile || sourceFile.text !== document.getText() || isExcluded(document.uri.fsPath)) {
+        return [];
+      }
+      if (vscode.workspace.getConfiguration('tsStructure', document.uri).get('codeLens.sideEffectsIgnoreTestFiles', false) && discoverTests(sourceFile).isTestFile) {
         return [];
       }
       const analyzer = new EffectAnalyzer(project.checker);
