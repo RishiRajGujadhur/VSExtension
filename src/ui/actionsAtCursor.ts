@@ -54,23 +54,30 @@ const groups: { title: string; actions: Action[] }[] = [
   },
 ];
 
-/** "Analyze or Refactor This": every refactoring and analysis for the cursor in one searchable list. */
-export async function showActionsAtCursor(): Promise<void> {
+const recentKey = 'tsStructure.recentActions';
+const maxRecent = 3;
+
+/** "Analyze or Refactor This": every refactoring and analysis for the cursor in one searchable list, the last ones used first. */
+export async function showActionsAtCursor(memento?: vscode.Memento): Promise<void> {
   const editor = sourceEditor();
   if (!editor) {
     return;
   }
   type Item = vscode.QuickPickItem & { command?: string };
-  const items: Item[] = [];
+  const available = (action: Action) => {
+    const feature = featureOf(action.command);
+    return !(action.needsSelection && editor.selection.isEmpty) && !(feature && !isFeatureEnabled(feature.id));
+  };
+  const item = (action: Action): Item => ({ label: `$(${action.icon}) ${action.label}`, detail: action.detail, command: action.command });
+  const all = groups.flatMap((g) => g.actions);
+  const recent = (memento?.get<string[]>(recentKey) ?? [])
+    .map((command) => all.find((a) => a.command === command))
+    .filter((a): a is Action => !!a && available(a));
+  const items: Item[] = recent.length ? [{ label: 'Recently used', kind: vscode.QuickPickItemKind.Separator }, ...recent.map(item)] : [];
   for (const group of groups) {
     items.push({ label: group.title, kind: vscode.QuickPickItemKind.Separator });
-    for (const action of group.actions) {
-      const feature = featureOf(action.command);
-      if ((action.needsSelection && editor.selection.isEmpty) || (feature && !isFeatureEnabled(feature.id))) {
-        continue;
-      }
-      items.push({ label: `$(${action.icon}) ${action.label}`, detail: action.detail, command: action.command });
-    }
+    // A recent action is listed once, at the top.
+    items.push(...group.actions.filter((a) => available(a) && !recent.includes(a)).map(item));
   }
   const hidden = features.filter((f) => !isFeatureEnabled(f.id)).length;
   if (hidden > 0) {
@@ -78,6 +85,10 @@ export async function showActionsAtCursor(): Promise<void> {
   }
   const picked = await vscode.window.showQuickPick(items, { title: 'Analyze or Refactor This', placeHolder: 'Type to filter refactorings, inspections and navigation', matchOnDetail: true });
   if (picked?.command) {
+    if (all.some((a) => a.command === picked.command)) {
+      const previous = memento?.get<string[]>(recentKey) ?? [];
+      await memento?.update(recentKey, [picked.command, ...previous.filter((c) => c !== picked.command)].slice(0, maxRecent));
+    }
     await vscode.commands.executeCommand(picked.command);
   }
 }
