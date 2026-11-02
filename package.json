@@ -499,6 +499,27 @@
         "key": "ctrl+alt+shift+t",
         "mac": "cmd+alt+shift+t",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "command": "tsStructure.report.next",
+        "key": "f4",
+        "when": "tsStructure.hasReport && !referenceSearchVisible && !hasSearchResult"
+      },
+      {
+        "command": "tsStructure.report.previous",
+        "key": "shift+f4",
+        "when": "tsStructure.hasReport && !referenceSearchVisible && !hasSearchResult"
+      },
+      {
+        "command": "tsStructure.rerunAnalysis",
+        "key": "f5",
+        "when": "focusedView == tsStructure.report && tsStructure.hasReport"
+      },
+      {
+        "command": "tsStructure.report.filter",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == tsStructure.report && tsStructure.hasReport"
       }
     ],
     "menus": {
