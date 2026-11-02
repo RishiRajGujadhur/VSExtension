@@ -4,6 +4,7 @@ import { hashText, pathKey } from '../analysis/paths';
 import { filterReport, reportMarkdown } from '../structure/markdown';
 import { Report, ReportLocation, ReportNode, Tone, forEachReportNode, titleParts } from '../structure/report';
 import { currentHash } from '../resultsView';
+import { countResults, limitReport } from '../structure/scope';
 
 const toneColors: Record<Tone, string> = {
   error: 'problemsErrorIcon.foreground',
@@ -45,6 +46,10 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private history: Entry[] = [];
   private position = -1;
   private filter = '';
+  /** Limit Results to Scope: only rows in some folders, files or lines. */
+  private limit: { label: string; inside: (location: ReportLocation) => boolean } | undefined;
+  /** The current report's file hashes by path key, for the checks on every edit. */
+  private hashIndex: { report?: Report; byKey: Map<string, string> } = { byKey: new Map() };
   /** Top-level groups hidden with Show Groups…, by label. */
   private hidden = new Set<string>();
   private roots: ReportNode[] = [];
@@ -110,6 +115,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.history = [...this.history.slice(0, this.position + 1), { report, rerun }].slice(-historySize);
     this.position = this.history.length - 1;
     this.filter = '';
+    this.limit = undefined;
     this.hidden.clear();
     this.render();
     this.persist();
@@ -130,6 +136,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.history = [];
     this.position = -1;
     this.filter = '';
+    this.limit = undefined;
     this.render();
     this.persist();
   }
@@ -139,6 +146,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     if (next >= 0 && next < this.history.length) {
       this.position = next;
       this.filter = '';
+      this.limit = undefined;
       this.hidden.clear();
       this.render();
       this.persist();
@@ -203,6 +211,12 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
   }
 
+  /** Shows only the rows inside a scope, or all of them again without one. Kept when the report is re-run. */
+  limitTo(limit: { label: string; inside: (location: ReportLocation) => boolean } | undefined): void {
+    this.limit = limit;
+    this.render(true);
+  }
+
   /** Chooses which top-level groups to show, such as only Calls and Writes of a usage search. */
   async chooseGroups(labels?: string[]): Promise<void> {
     const groups = (this.report?.roots ?? []).filter((r) => r.children?.length).map((r) => r.label);
@@ -226,7 +240,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   /** Shows the current report; `kept` is for a new filter or set of groups on the same report, which keeps its banners. */
   private render(kept = false): void {
     const report = this.report;
-    this.roots = report ? filterReport(report.roots, this.filter).filter((r) => !this.hidden.has(r.label)) : [];
+    const limited = report && this.limit ? limitReport(report.roots, this.limit.inside) : report?.roots;
+    this.roots = limited ? filterReport(limited, this.filter).filter((r) => !this.hidden.has(r.label)) : [];
     this.parents.clear();
     this.located = [];
     this.cursor = -1;
@@ -250,7 +265,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     // VS Code capitalizes every word of a view title, which mangles names like cart.ts, so the subject goes in the message.
     this.view.title = titleParts(report).heading;
-    this.view.description = [this.filter ? `filtered: “${this.filter}”` : '', this.hidden.size ? `${this.hidden.size} hidden` : ''].filter(Boolean).join(' · ') || undefined;
+    this.view.description = [this.limit ? `in ${this.limit.label}` : '', this.filter ? `filtered: “${this.filter}”` : '', this.hidden.size ? `${this.hidden.size} hidden` : ''].filter(Boolean).join(' · ') || undefined;
     this.updateMessage();
     let problems = 0;
     forEachReportNode(report?.roots ?? [], (node) => {
@@ -263,6 +278,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     void vscode.commands.executeCommand('setContext', 'tsStructure.canGoBack', this.position > 0);
     void vscode.commands.executeCommand('setContext', 'tsStructure.canGoForward', this.position < this.history.length - 1);
     void vscode.commands.executeCommand('setContext', 'tsStructure.filtered', !!this.filter);
+    void vscode.commands.executeCommand('setContext', 'tsStructure.limited', !!this.limit);
     this.changed.fire();
     this.highlight();
   }
@@ -273,14 +289,15 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       ...(report ? [summaryLine(report)] : []),
       ...(this.stale ? ['Files changed since this analysis ran; re-run it to refresh the results.'] : []),
       ...(this.settingsChanged && !this.stale ? ['Settings changed since this analysis ran; re-run it to apply them.'] : []),
+      ...(report && this.limit ? [`Showing ${countResults(this.roots)} of ${countResults(report.roots)} results, those in ${this.limit.label}.`] : []),
       ...(report?.warnings ?? []),
-      ...(report && this.roots.length === 0 ? [this.filter ? `No rows match “${this.filter}”.` : 'Nothing found.'] : []),
+      ...(report && this.roots.length === 0 ? [this.filter ? `No rows match “${this.filter}”.` : this.limit ? `Nothing in ${this.limit.label}.` : 'Nothing found.'] : []),
     ];
     this.view.message = messages.length ? messages.join('\n') : undefined;
   }
 
   private checkStale(document: vscode.TextDocument): void {
-    const expected = this.report?.fileHashes[document.uri.fsPath.replace(/\\/g, '/')] ?? this.findHash(document.uri.fsPath);
+    const expected = this.findHash(document.uri.fsPath);
     if (!this.stale && expected && expected !== hashText(document.getText())) {
       this.stale = true;
       this.updateMessage();
@@ -288,9 +305,11 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   private findHash(fileName: string): string | undefined {
-    const key = pathKey(fileName);
-    const entry = Object.entries(this.report?.fileHashes ?? {}).find(([file]) => pathKey(file) === key);
-    return entry?.[1];
+    const report = this.report;
+    if (this.hashIndex.report !== report) {
+      this.hashIndex = { report, byKey: new Map(Object.entries(report?.fileHashes ?? {}).map(([file, hash]) => [pathKey(file), hash])) };
+    }
+    return this.hashIndex.byKey.get(pathKey(fileName));
   }
 
   /** Marks the report's locations in visible editors, colored by how each one uses the analyzed value. */

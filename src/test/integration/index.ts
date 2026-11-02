@@ -278,8 +278,13 @@ async function analysisCommandsFlow(): Promise<void> {
     ['tsStructure.nullability', 'coupon);'],
     ['tsStructure.promiseRejections', 'calculateTotal'],
     ['tsStructure.exceptionFlow', 'calculateTotal'],
-    ['tsStructure.deadExports', 'calculateTotal'],
+    ['tsStructure.deadExports', 'calculateTotal', ['project']],
+    ['tsStructure.deadExports', 'calculateTotal', ['file']],
     ['tsStructure.findDuplicates', 'calculateTotal', ['project']],
+    ['tsStructure.findDuplicates', 'calculateTotal', ['open']],
+    ['tsStructure.auditTypeAssertions', 'calculateTotal', ['folder']],
+    ['tsStructure.mutationTrackingProject', 'calculateTotal', ['open']],
+    ['tsStructure.inspectCode', 'calculateTotal', ['function']],
     ['tsStructure.semanticUsages', 'calculateSubtotal('],
     ['tsStructure.reexportChain', 'calculateDiscount,'],
     ['tsStructure.typeHierarchy', 'LineItem {'],
@@ -317,6 +322,18 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.match(shown, /Calls/);
   assert.doesNotMatch(shown, /Definitions/);
   console.log('show groups ok');
+
+  // Limit Results to Scope keeps the rows in the current file, and Show All Results brings the rest back.
+  await vscode.commands.executeCommand('tsStructure.report.chooseGroups', ['Definitions', 'Calls', 'Imports', 'Reads', 'Writes', 'Exports', 'Type References', 'Other']);
+  await vscode.commands.executeCommand('tsStructure.report.limitScope', 'file');
+  await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+  const limited = await vscode.env.clipboard.readText();
+  assert.match(limited, /cart\.ts:\d+/);
+  assert.doesNotMatch(limited, /checkout\.ts:\d+|cart\.test\.ts:\d+/, limited);
+  await vscode.commands.executeCommand('tsStructure.report.clearLimit');
+  await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+  assert.match(await vscode.env.clipboard.readText(), /(checkout|cart\.test)\.ts:\d+/);
+  console.log('limit results to scope ok');
 
   // Side-effect CodeLens, off by default.
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', true, vscode.ConfigurationTarget.Global);

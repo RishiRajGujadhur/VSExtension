@@ -19,6 +19,7 @@ import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
 import { registerGuide } from './ui/guide';
 import { registerScope } from './ui/exclude';
+import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
@@ -48,6 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // Before anything that reads the scope, so its cache is cleared first when the settings change.
   registerScope(context);
   registerScopeCommands(context);
+  rememberScopesIn(context.workspaceState);
   const run = (tests: TestCase[]) => void runTests(tests);
   registerRefactorings(context, projects);
   const structureView = new StructureView(context.workspaceState);

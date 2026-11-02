@@ -70,7 +70,7 @@ export const scenes: Scene[] = [
   analysis('promise-rejections', 'src/orders.ts', 'saveOrder(id: string', 'tsStructure.promiseRejections'),
   { ...inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'), walkthrough: { x: 532, y: 60, width: 908, height: 560 } },
   inspection('type-assertions', 'src/api.ts', 'as Book;\n}\n\nexport function firstItem'),
-  analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports'),
+  analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports', 'project'),
   analysis('exception-flow', 'src/config.ts', 'parseConfig(text: string)', 'tsStructure.exceptionFlow'),
   analysis('duplicates', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.findDuplicates', 'project'),
   {
@@ -242,6 +242,25 @@ export const scenes: Scene[] = [
       await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
       await settings().update('exclude', undefined, vscode.ConfigurationTarget.Workspace);
       await settings().update('include', undefined, vscode.ConfigurationTarget.Workspace);
+    },
+  },
+  {
+    name: 'scope-picker',
+    async run({ open }) {
+      await open('src/cart.ts', 'addToCart(');
+      await open('src/pricing.ts', 'Math.round');
+      void vscode.commands.executeCommand('tsStructure.inspectCode');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+  },
+  {
+    name: 'limit-results',
+    async run({ open }) {
+      await open('src/cart.ts', 'calculateSubtotal(items);');
+      await vscode.commands.executeCommand('tsStructure.semanticUsages');
+      await vscode.commands.executeCommand('tsStructure.report.limitScope', 'file');
     },
   },
   {

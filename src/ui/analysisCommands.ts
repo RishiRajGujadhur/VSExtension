@@ -24,6 +24,8 @@ import { projectSourceFiles } from '../analysis/referenceIndex';
 import { normalizePath, pathKey } from '../analysis/paths';
 import { registerReportActions } from './reportActions';
 import { isExcluded, scopedFiles, withNote } from './exclude';
+import { ChosenScope, ScopeKind, ScopeRequest, chooseScope } from './analysisScope';
+import { limitReport, locationFilter, scopeFilter } from '../structure/scope';
 import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
@@ -74,7 +76,7 @@ export function editorTarget(projects: ProjectService, editor: vscode.TextEditor
     offset: document.offsetAt(editor.selection.active),
     end: document.offsetAt(editor.selection.end),
     folder,
-    project: () => projects.createVirtualProject(document.uri.fsPath, folder),
+    project: () => projects.analysisProject(document.uri.fsPath, folder),
   };
 }
 
@@ -94,6 +96,30 @@ async function deadExports(t: AnalysisTarget, inside?: (fileName: string) => boo
   const excluded = inside ? (file: string) => isExcluded(file) || !inside(file) : isExcluded;
   return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded: excluded }, root);
 }
+
+/** The scope's name in the title, and only the rows inside its lines when it is a function or selection. */
+function inScope(report: Report | undefined, scope: ChosenScope): Report | undefined {
+  if (report && scope.label) {
+    // "Type assertions in the project" becomes "Type assertions in src/cart".
+    report.title = report.title.includes(' in the project') ? report.title.replace(' in the project', ` in ${scope.label}`) : `${report.title} in ${scope.label}`;
+  }
+  if (report && scope.spec.lines) {
+    report.roots = limitReport(report.roots, locationFilter(scope.spec));
+  }
+  return report;
+}
+
+/** The project's source files inside the scope and the analysis scope settings. */
+function filesIn(program: ts.Program, scope: ChosenScope): { files: ts.SourceFile[]; note?: string } {
+  const inside = scopeFilter(scope.spec);
+  const candidates = projectSourceFiles(program).filter((sf) => inside(sf.fileName));
+  // A single file asked for by name is analyzed even when the scope settings leave it out.
+  return scope.kind === 'file' || scope.spec.lines ? { files: candidates } : scopedFiles(candidates);
+}
+
+/** Scopes for analyses that look at every file. */
+const projectScopes: readonly ScopeKind[] = ['project', 'folder', 'pickFolder', 'open', 'changed', 'file'];
+const fineScopes: readonly ScopeKind[] = [...projectScopes, 'function', 'selection'];
 
 /** The same target after the file was edited: the cursor follows the symbol it was on. */
 function followEdits(target: AnalysisTarget, before: string | undefined): AnalysisTarget {
@@ -119,6 +145,22 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     });
 
+  /** An analysis over many files that first asks where to look; re-running it keeps that scope. */
+  const scopedCommand = (id: string, title: string, request: Omit<ScopeRequest, 'editor' | 'title'>, compute: (t: AnalysisTarget, scope: ChosenScope) => Report | Promise<Report | undefined> | undefined) =>
+    registerCommand(id, async (arg?: unknown) => {
+      const editor = sourceEditor();
+      if (!editor) {
+        return;
+      }
+      const scope = await chooseScope({ ...request, title, editor }, arg);
+      if (!scope) {
+        return;
+      }
+      const target = editorTarget(projects, editor);
+      const text = editor.document.getText();
+      return runAnalysis(view, title, async () => inScope(await compute(followEdits(target, text), scope), scope));
+    });
+
   registerReportActions(context, view);
   context.subscriptions.push(
     view.view,
@@ -131,6 +173,29 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.next', () => view.step(1)),
     registerCommand('tsStructure.report.expandAll', () => view.expandAll()),
     registerCommand('tsStructure.report.history', () => view.pickHistory()),
+    // Any report: only the rows in a folder, the changed files, the current function and so on.
+    registerCommand('tsStructure.report.limitScope', async (arg?: unknown) => {
+      if (!view.report) {
+        return;
+      }
+      const active = vscode.window.activeTextEditor;
+      const editor = active?.document.uri.scheme === 'file' ? active : undefined;
+      const scope = await chooseScope(
+        {
+          id: 'limitResults',
+          title: 'Limit Results to Scope',
+          alwaysAsk: true,
+          kinds: [...fineScopes],
+          editor,
+          labels: { project: { label: '$(clear-all) All Results', description: 'Show every row again' } },
+        },
+        arg,
+      );
+      if (scope) {
+        view.limitTo(scope.kind === 'project' ? undefined : { label: scope.label ?? scope.kind, inside: locationFilter(scope.spec) });
+      }
+    }),
+    registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.toggleHighlights', async () => {
       const config = vscode.workspace.getConfiguration('tsStructure');
       const on = !config.get('highlightResults', true);
@@ -198,14 +263,15 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
-    editorCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', (t) => {
+    scopedCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', { id: 'mutations', kinds: projectScopes.filter((k) => k !== 'file') }, (t, scope) => {
       const program = t.project().program();
-      const { files, note } = scopedFiles(projectSourceFiles(program));
+      const { files, note } = filesIn(program, scope);
       return withNote(mutationReport(program, t.fileName, t.offset, files), note);
     }),
     editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.deadExports', 'Dead Export Analysis', (t) => deadExports(t)),
+    // The whole project still decides what is used; the scope only limits which exports are reported.
+    scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: projectScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
     // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
     registerCommand('tsStructure.deadExportsInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
       const folders = selected?.length ? selected : uri ? [uri] : [];
@@ -217,7 +283,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
       const roots = folders.map((f) => pathKey(f.fsPath));
       const inside = (file: string) => roots.some((root) => pathKey(file).startsWith(`${root}/`));
-      const target: AnalysisTarget = { fileName: anchor.fsPath, offset: 0, end: 0, folder, project: () => projects.createVirtualProject(anchor.fsPath, folder) };
+      const target: AnalysisTarget = { fileName: anchor.fsPath, offset: 0, end: 0, folder, project: () => projects.analysisProject(anchor.fsPath, folder) };
       return runAnalysis(view, 'Dead Export Analysis', async () => {
         const report = await deadExports(target, inside);
         if (report) {
@@ -227,48 +293,48 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       });
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', (t) => {
+    scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {
       const program = t.project().program();
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('typeAssertion.ignoreTestFiles', false);
-      const { files, note } = scopedFiles(projectSourceFiles(program));
+      const { files, note } = filesIn(program, scope);
       return withNote(assertionAuditReport(program, files, { typeAssertionIgnoreTests: ignoreTests }, t.folder), note);
     }),
-    registerCommand('tsStructure.findDuplicates', async (scopeArg?: 'file' | 'project' | 'selection') => {
+    registerCommand('tsStructure.findDuplicates', async (scopeArg?: unknown) => {
       const editor = sourceEditor();
       if (!editor) {
         return;
       }
-      const scope =
-        scopeArg ??
-        (
-          await vscode.window.showQuickPick(
-            [
-              ...(editor.selection.isEmpty ? [] : [{ label: 'Copies of the Selection', description: 'Every place with the same structure as the selected statements', scope: 'selection' as const }]),
-              { label: 'Whole Project', description: 'Compare every source file in the compiler project', scope: 'project' as const },
-              { label: 'Active File', description: 'Only look inside the current file', scope: 'file' as const },
-            ],
-            { title: 'Find Structural Duplicates' },
-          )
-        )?.scope;
+      const scope = await chooseScope(
+        {
+          id: 'duplicates',
+          title: 'Find Structural Duplicates',
+          kinds: ['selection', ...projectScopes],
+          editor,
+          labels: { selection: { label: '$(selection) Copies of the Selection', description: 'Every place with the same structure as the selected statements' } },
+        },
+        scopeArg,
+      );
       if (!scope) {
         return;
       }
       const target = editorTarget(projects, editor);
       const config = vscode.workspace.getConfiguration('tsStructure.duplicates', editor.document.uri);
-      if (scope === 'selection') {
+      if (scope.kind === 'selection') {
+        const { start, end } = editor.selection;
+        const [from, to] = [editor.document.offsetAt(start), editor.document.offsetAt(end)];
         return runAnalysis(view, 'Finding copies', () => {
           const program = target.project().program();
           const { files, note } = scopedFiles(projectSourceFiles(program));
-          const { start, end } = editor.selection;
-          return withNote(copiesReport(files, program.getSourceFile(normalizePath(target.fileName))!, editor.document.offsetAt(start), editor.document.offsetAt(end), target.folder), note);
+          return withNote(copiesReport(files, program.getSourceFile(normalizePath(target.fileName))!, from, to, target.folder), note);
         });
       }
       return runAnalysis(view, 'Finding duplicates', () => {
         const program = target.project().program();
         const ignoreTests = config.get('ignoreTestFiles', true);
-        const scoped = scope === 'file' ? { files: [program.getSourceFile(normalizePath(target.fileName))!] } : scopedFiles(projectSourceFiles(program));
-        const files = scoped.files.filter((sf) => scope === 'file' || !ignoreTests || !discoverTests(sf).isTestFile);
-        return withNote(duplicatesReport(files, { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) }, target.folder), scoped.note);
+        const scoped = filesIn(program, scope);
+        const files = scoped.files.filter((sf) => scope.kind === 'file' || !ignoreTests || !discoverTests(sf).isTestFile);
+        const options = { minStatements: config.get('minStatements', 3), minTokens: config.get('minTokens', 40), matchRenamedProperties: config.get('matchRenamedProperties', false) };
+        return inScope(withNote(duplicatesReport(files, options, target.folder), scoped.note), scope);
       });
     }),
     // From the Explorer: copies among the files in the folders picked.
@@ -283,7 +349,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const roots = folders.map((f) => pathKey(f.fsPath));
       const config = vscode.workspace.getConfiguration('tsStructure.duplicates', anchor);
       return runAnalysis(view, 'Finding duplicates', () => {
-        const program = projects.createVirtualProject(anchor.fsPath, folder).program();
+        const program = projects.analysisProject(anchor.fsPath, folder).program();
         const inside = projectSourceFiles(program).filter((sf) => roots.some((root) => pathKey(sf.fileName).startsWith(`${root}/`)));
         const scoped = scopedFiles(inside);
         const ignoreTests = config.get('ignoreTestFiles', true);
@@ -318,7 +384,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       // The picker's program is reused for the analysis instead of building the project twice.
       let program: ts.Program | undefined;
       if (!to) {
-        program = projects.createVirtualProject(from, folder).program();
+        program = projects.analysisProject(from, folder).program();
         // Modules it depends on come first, nearest first; the rest follow for checking the reverse direction.
         const distance = distancesFrom(programGraph(program), from);
         const files = projectSourceFiles(program)
@@ -347,7 +413,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return;
       }
       const target = to;
-      return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.createVirtualProject(from, folder).program(), from, target, folder));
+      return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.analysisProject(from, folder).program(), from, target, folder));
     }),
     registerCommand('tsStructure.argumentFlow', () => {
       const editor = sourceEditor();

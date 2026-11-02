@@ -1,4 +1,3 @@
-import { execFileSync } from 'child_process';
 import * as path from 'path';
 import * as ts from 'typescript';
 import * as vscode from 'vscode';
@@ -13,6 +12,8 @@ import { Report, ReportNode } from '../structure/report';
 import { languageSelector } from './refactorCommands';
 import { StructureView } from './structureView';
 import { isExcluded, scopedFiles, withNote } from './exclude';
+import { ScopeKind, chooseScope } from './analysisScope';
+import { ScopeSpec, scopeFilter } from '../structure/scope';
 import { registerCommand } from './features';
 import { isFeatureEnabled } from './features';
 
@@ -260,7 +261,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   }
 
   /** Inspect Code: every inspection over the current file or the whole project, as a report. */
-  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project' | 'changed' | vscode.Uri[]): Promise<Report | undefined> {
+  private async inspectCode(view: StructureView, scopeArg?: ScopeKind | vscode.Uri[]): Promise<Report | undefined> {
     if (Array.isArray(scopeArg)) {
       return this.inspectPaths(view, scopeArg);
     }
@@ -269,34 +270,11 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file in the project to inspect.');
       return;
     }
-    const scope =
-      scopeArg ??
-      (
-        await vscode.window.showQuickPick(
-          [
-            { label: 'Whole Project', description: 'Every source file in the compiler project', scope: 'project' as const },
-            { label: 'Changed Files', description: 'Files changed or added since the last commit', scope: 'changed' as const },
-            { label: 'Current File', scope: 'file' as const },
-          ],
-          { title: 'Inspect Code' },
-        )
-      )?.scope;
+    const scope = await chooseScope({ id: 'inspectCode', title: 'Inspect Code', kinds: ['project', 'folder', 'pickFolder', 'open', 'changed', 'file', 'function', 'selection'], editor }, scopeArg);
     if (!scope) {
       return;
     }
-    if (scope === 'changed') {
-      const changed = changedFiles(editor.document.uri.fsPath);
-      if (!changed) {
-        void vscode.window.showErrorMessage('Inspecting changed files needs Git, and this file is not in a Git repository.');
-        return;
-      }
-      if (changed.size === 0) {
-        void vscode.window.showInformationMessage('No files have changed since the last commit.');
-        return;
-      }
-      return this.runInspectCode(view, editor.document.uri, (f) => changed.has(pathKey(f)), 'changed files');
-    }
-    return this.runInspectCode(view, editor.document.uri, scope === 'file' ? (f) => pathKey(f) === pathKey(editor.document.uri.fsPath) : undefined);
+    return this.runInspectCode(view, editor.document.uri, scope.kind === 'project' ? undefined : scopeFilter(scope.spec), scope.label, scope.spec.lines);
   }
 
   /** Inspect Code on files and folders picked in the Explorer: every source file in or below them. */
@@ -318,8 +296,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     return this.runInspectCode(view, anchor, (f) => roots.some((root) => pathKey(f) === root || pathKey(f).startsWith(`${root}/`)));
   }
 
-  /** Runs every inspection over the anchor file's project, or the files of it that `include` accepts. */
-  private async runInspectCode(view: StructureView, anchor: vscode.Uri, include?: (fileName: string) => boolean, what?: string): Promise<Report | undefined> {
+  /** Runs every inspection over the anchor file's project, or the files of it that `include` accepts, or only `lines` of one file. */
+  private async runInspectCode(view: StructureView, anchor: vscode.Uri, include?: (fileName: string) => boolean, what?: string, lines?: ScopeSpec['lines']): Promise<Report | undefined> {
     const fileName = anchor.fsPath;
     const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
     const run = () =>
@@ -340,13 +318,14 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
             return undefined;
           }
           progress.report({ message: `${i + 1}/${files.length} ${path.basename(sourceFile.fileName)}`, increment: 100 / files.length });
-          inspected.push({ sourceFile, findings: runInspections(inspections, { sourceFile, program: project.program, checker: project.checker, options }, severityOf) });
+          const findings = runInspections(inspections, { sourceFile, program: project.program, checker: project.checker, options }, severityOf);
+          inspected.push({ sourceFile, findings: lines ? findings.filter((f) => overlaps(sourceFile, f, lines)) : findings });
           // Yield so the progress updates and cancellation can arrive.
           await new Promise((resolve) => setImmediate(resolve));
         }
         const report = withNote(inspectionReport(inspected, inspections, folder), scoped.note);
         if (what) {
-          report.title = `${report.title} (${what})`;
+          report.title = `${report.title} in ${what}`;
         }
         report.durationMs = Date.now() - started;
         return report;
@@ -512,28 +491,9 @@ function runOn(uri: vscode.Uri): 'type' | 'save' {
   return vscode.workspace.getConfiguration('tsStructure', uri).get('inspections.run', 'type');
 }
 
-/** Files changed, staged or added since the last commit in the file's Git repository, by path key; undefined outside Git. */
-function changedFiles(fileName: string): Set<string> | undefined {
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: path.dirname(fileName), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-  try {
-    const top = git('rev-parse', '--show-toplevel').trim();
-    // A repository without commits yet has nothing to diff against; then every file is new.
-    let tracked = '';
-    try {
-      tracked = git('diff', '--name-only', 'HEAD');
-    } catch {
-      tracked = git('ls-files');
-    }
-    const untracked = git('ls-files', '--others', '--exclude-standard');
-    return new Set(
-      `${tracked}\n${untracked}`
-        .split('\n')
-        .filter(Boolean)
-        .map((f) => pathKey(path.join(top, f))),
-    );
-  } catch {
-    return undefined;
-  }
+/** Whether a finding is on the lines of a function or selection. */
+function overlaps(sourceFile: ts.SourceFile, finding: Finding, lines: NonNullable<ScopeSpec['lines']>): boolean {
+  return sourceFile.getLineAndCharacterOfPosition(finding.end).line >= lines.start && sourceFile.getLineAndCharacterOfPosition(finding.start).line <= lines.end;
 }
 
 function inspectionOptions(uri: vscode.Uri): InspectionOptions {

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "TypeScript Structure: Refactoring & Test Impact",
   "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -513,6 +513,18 @@
         "title": "Copy Impacted Tests…",
         "category": "TypeScript Structure",
         "icon": "$(copy)"
+      },
+      {
+        "command": "tsStructure.report.limitScope",
+        "title": "Limit Results to Scope…",
+        "category": "TypeScript Structure",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "tsStructure.report.clearLimit",
+        "title": "Show All Results",
+        "category": "TypeScript Structure",
+        "icon": "$(clear-all)"
       }
     ],
     "viewsContainers": {
@@ -1081,6 +1093,14 @@
         {
           "command": "tsImpact.copyTests",
           "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsStructure.report.limitScope",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.clearLimit",
+          "when": "tsStructure.limited"
         }
       ],
       "view/title": [
@@ -1198,6 +1218,16 @@
           "command": "tsImpact.copyTests",
           "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@3"
+        },
+        {
+          "command": "tsStructure.report.limitScope",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.report.clearLimit",
+          "when": "view == tsStructure.report && tsStructure.limited",
+          "group": "0_view@3"
         }
       ],
       "view/item/context": [
@@ -1379,6 +1409,11 @@
             "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results (for example `**/generated/**` or `src/legacy/*.ts`). A folder such as `src/legacy` excludes everything below it. Right-click files or folders in the Explorer and choose **Exclude from TypeScript Structure Analysis** to add them.",
             "scope": "resource",
             "order": 1
+          },
+          "tsStructure.askForScope": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Ask where to look (whole project, a folder, open editors, changed files, the current file, function or selection) before analyses that cover many files: Inspect Code, Find Duplicates, Dead Exports, Audit Type Assertions and Mutation Tracking in Project. The last choice is offered first. Turn off to always analyze the whole project."
           }
         }
       },

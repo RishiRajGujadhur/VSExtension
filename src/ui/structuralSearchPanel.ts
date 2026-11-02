@@ -12,8 +12,9 @@ import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
 import { registerCommand } from './features';
 import { pathKey } from '../analysis/paths';
+import { changedFiles, openSourceFiles } from './analysisScope';
 
-export type Scope = 'project' | 'file' | 'selection' | 'folder';
+export type Scope = 'project' | 'file' | 'selection' | 'folder' | 'open' | 'changed';
 
 const historyKey = 'tsStructure.searchHistory';
 const maxHistory = 15;
@@ -26,6 +27,7 @@ type Message =
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replaceOne'; index: number }
+  | { type: 'pickFolder'; previous: Scope }
   | { type: 'saveInspection'; spec: SearchSpec; template: string; message: string; severity: Severity; include: string; editing?: string };
 
 /** Structural Search Builder: a pattern editor with typed placeholder constraints and live results. */
@@ -104,7 +106,7 @@ export class StructuralSearchPanel {
     await this.postHistory();
   }
 
-  protected scopeOf(scope: Scope): SearchScope {
+  protected async scopeOf(scope: Scope): Promise<SearchScope> {
     if (scope === 'selection') {
       // The selection in the editor the builder was opened from, as it is now.
       const editor = vscode.window.visibleTextEditors.find((e) => normalizePath(e.document.uri.fsPath) === normalizePath(this.anchor));
@@ -117,6 +119,23 @@ export class StructuralSearchPanel {
       const root = pathKey(this.folderRoot);
       return { isExcluded: (f) => isExcluded(f) || !pathKey(f).startsWith(`${root}/`) };
     }
+    if (scope === 'open') {
+      const files = openSourceFiles();
+      if (files.length === 0) {
+        throw new Error('No TypeScript or JavaScript files are open.');
+      }
+      return { files, isExcluded };
+    }
+    if (scope === 'changed') {
+      const files = await changedFiles(this.anchor);
+      if (!files) {
+        throw new Error('Searching changed files needs Git, and this project is not in a Git repository.');
+      }
+      if (files.length === 0) {
+        throw new Error('No files have changed since the last commit.');
+      }
+      return { files, isExcluded };
+    }
     return scope === 'file' ? { files: [this.anchor] } : { isExcluded };
   }
 
@@ -125,6 +144,16 @@ export class StructuralSearchPanel {
   }
 
   protected async receive(message: Message): Promise<void> {
+    if (message.type === 'pickFolder') {
+      const start = this.folderRoot ?? this.folder();
+      const picked = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, defaultUri: start ? vscode.Uri.file(start) : undefined, openLabel: 'Search Here', title: 'Folder to search' });
+      if (picked?.[0]) {
+        this.folderRoot = picked[0].fsPath;
+      }
+      const preset = picked?.[0] ? { scope: 'folder', folderLabel: vscode.workspace.asRelativePath(picked[0]) } : { scope: message.previous };
+      void this.panel.webview.postMessage({ type: 'preset', preset });
+      return;
+    }
     if (message.type === 'open') {
       const match = this.matches[message.index];
       if (match) {
@@ -179,7 +208,7 @@ export class StructuralSearchPanel {
         await saveCustomInspections(existing ? configs.map((c) => (c === existing ? config : c)) : [...configs, config]);
         // How much it will flag right away, so an overly broad pattern is noticed before it fills the Problems panel.
         const include = config.include ? includePattern(config.include) : undefined;
-        const program = this.projects.createVirtualProject(this.anchor, this.folder()).program();
+        const program = this.projects.analysisProject(this.anchor, this.folder()).program();
         const count = structuralSearch(program, spec, { isExcluded: (f) => isExcluded(f) || (!!include && !include.test(f.replace(/\\/g, '/'))) }).length;
         void this.panel.webview.postMessage({
           type: 'status',
@@ -213,7 +242,7 @@ export class StructuralSearchPanel {
       // Computed in a copy of the project, so nothing is written.
       try {
         const project = this.projects.createVirtualProject(this.anchor, this.folder());
-        const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        const result = structuralReplace(project, clean(message.spec), message.template, await this.scopeOf(message.scope));
         this.preview = { spec: clean(message.spec), template: message.template, replacements: result.replacements };
         void this.panel.webview.postMessage({
           type: 'preview',
@@ -233,7 +262,7 @@ export class StructuralSearchPanel {
     if (message.type === 'replace') {
       try {
         const project = this.projects.createVirtualProject(this.anchor, this.folder());
-        const result = structuralReplace(project, clean(message.spec), message.template, this.scopeOf(message.scope));
+        const result = structuralReplace(project, clean(message.spec), message.template, await this.scopeOf(message.scope));
         void this.remember(clean(message.spec), message.template);
         if (result.matches === 0) {
           void this.panel.webview.postMessage({ type: 'status', text: 'No matches to replace.' });
@@ -252,8 +281,8 @@ export class StructuralSearchPanel {
     }
     if (message.type === 'search') {
       try {
-        const program = this.projects.createVirtualProject(this.anchor, this.folder()).program();
-        this.matches = structuralSearch(program, clean(message.spec), this.scopeOf(message.scope));
+        const program = this.projects.analysisProject(this.anchor, this.folder()).program();
+        this.matches = structuralSearch(program, clean(message.spec), await this.scopeOf(message.scope));
         void this.remember(clean(message.spec));
         void this.panel.webview.postMessage({
           type: 'results',
@@ -266,8 +295,8 @@ export class StructuralSearchPanel {
           })),
         });
         await this.view.show(searchReport(this.matches, message.spec, this.folder()), async () => {
-          const again = this.projects.createVirtualProject(this.anchor, this.folder()).program();
-          return searchReport(structuralSearch(again, clean(message.spec), this.scopeOf(message.scope)), message.spec, this.folder());
+          const again = this.projects.analysisProject(this.anchor, this.folder()).program();
+          return searchReport(structuralSearch(again, clean(message.spec), await this.scopeOf(message.scope)), message.spec, this.folder());
         });
       } catch (error) {
         void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -439,7 +468,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
-    <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option></select></label>
+    <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option><option value="open">Open editors</option><option value="changed">Changed files</option><option value="pickFolder">Choose folder…</option></select></label>
     <button id="search" title="Ctrl+Enter in the pattern">Search</button>
     <span id="count" class="hint"></span>
     <button id="copyKeybinding" class="secondary" title="Copy this search as a keybindings.json entry that runs it">Copy as Keybinding</button>
@@ -471,6 +500,8 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   $('pattern').value = state.pattern || '';
   $('template').value = state.template || '';
   $('scope').value = state.scope || 'project';
+  // A folder from an earlier session is not in the list any more.
+  if (!$('scope').value) $('scope').value = 'project';
 
   const templates = ${JSON.stringify(searchTemplates)};
   let recent = [];
@@ -555,7 +586,17 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   });
   onSubmit('pattern', 'search');
   onSubmit('template', 'replace');
-  $('scope').addEventListener('change', save);
+  // Choosing a folder happens in a dialog; the list shows the previous scope until a folder is picked.
+  let lastScope = $('scope').value;
+  $('scope').addEventListener('change', () => {
+    if ($('scope').value === 'pickFolder') {
+      $('scope').value = lastScope;
+      vscode.postMessage({ type: 'pickFolder', previous: lastScope });
+      return;
+    }
+    lastScope = $('scope').value;
+    save();
+  });
   // Placeholders in the replacement must come from the pattern; a typo would otherwise be inserted literally.
   function checkTemplate() {
     const known = placeholders($('pattern').value);
@@ -668,7 +709,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
       option.textContent = 'Folder ' + p.folderLabel;
     }
     if (p.pattern) loadPreset(p);
-    if (p.scope) { $('scope').value = p.scope; save(); }
+    if (p.scope) { $('scope').value = p.scope; lastScope = $('scope').value; save(); }
     if (p.preview) $('previewReplace').click();
     else if (p.run) $('search').click();
   }
