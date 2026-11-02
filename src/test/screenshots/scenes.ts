@@ -2,8 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 import * as vscode from 'vscode';
-import type { Cdp } from './cdp';
+import type { Cdp, Clip } from './cdp';
 import type { Open } from './index';
+import { features } from '../../structure/features';
 
 export interface SceneContext {
   open: Open;
@@ -18,6 +19,8 @@ export interface Scene {
   cleanup?(): Promise<void>;
   /** How long to wait before the capture, in milliseconds. */
   settle?: number;
+  /** The part of the window shown in the Getting Started walkthrough, saved to media/walkthrough. */
+  walkthrough?: Clip;
 }
 
 const root = () => vscode.workspace.workspaceFolders![0].uri.fsPath;
@@ -65,7 +68,7 @@ export const scenes: Scene[] = [
   analysis('mutation-tracking', 'src/cart.ts', 'addToCart(', 'tsStructure.mutationTracking'),
   analysis('nullability', 'src/pricing.ts', 'coupon = findCoupon', 'tsStructure.nullability'),
   analysis('promise-rejections', 'src/orders.ts', 'saveOrder(id: string', 'tsStructure.promiseRejections'),
-  inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'),
+  { ...inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'), walkthrough: { x: 532, y: 60, width: 908, height: 560 } },
   inspection('type-assertions', 'src/api.ts', 'as Book;\n}\n\nexport function firstItem'),
   analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports'),
   analysis('exception-flow', 'src/config.ts', 'parseConfig(text: string)', 'tsStructure.exceptionFlow'),
@@ -83,7 +86,7 @@ export const scenes: Scene[] = [
     settle: 3000,
   },
   // Navigation and search
-  analysis('semantic-usages', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.semanticUsages'),
+  { ...analysis('semantic-usages', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.semanticUsages'), walkthrough: { x: 48, y: 30, width: 860, height: 330 } },
   analysis('reexport-chain', 'src/main.ts', 'subtotal }', 'tsStructure.reexportChain'),
   {
     name: 'structural-search',
@@ -162,21 +165,73 @@ export const scenes: Scene[] = [
     },
   },
   analysis('argument-flow', 'src/pricing.ts', 'code?: string): number', 'tsStructure.argumentFlow'),
-  // Configuration. The pickers wait for an answer, so they are opened without awaiting them.
+  // Configuration and the walkthrough. Pickers wait for an answer, so they are opened without awaiting them.
   {
     name: 'choose-features',
+    walkthrough: { x: 420, y: 30, width: 602, height: 390 },
     async run({ open }) {
-      await vscode.workspace.getConfiguration('tsStructure.features').update('testImpact', false, vscode.ConfigurationTarget.Workspace);
+      // As a new user sees it: the optional features off.
+      for (const feature of features.filter((f) => !f.core)) {
+        await vscode.workspace.getConfiguration('tsStructure.features').update(feature.id, false, vscode.ConfigurationTarget.Workspace);
+      }
       await open('src/cart.ts', 'addToCart(');
       void vscode.commands.executeCommand('tsStructure.configureFeatures');
     },
     async cleanup() {
       await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
-      await vscode.workspace.getConfiguration('tsStructure.features').update('testImpact', undefined, vscode.ConfigurationTarget.Workspace);
+      for (const feature of features) {
+        await vscode.workspace.getConfiguration('tsStructure.features').update(feature.id, undefined, vscode.ConfigurationTarget.Workspace);
+      }
     },
   },
   {
+    name: 'actions-at-cursor',
+    walkthrough: { x: 420, y: 30, width: 602, height: 390 },
+    async run({ open }) {
+      await open('src/pricing.ts', 'applyCoupon(amount');
+      void vscode.commands.executeCommand('tsStructure.actionsAtCursor');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+  },
+  {
+    name: 'change-signature',
+    walkthrough: { x: 984, y: 30, width: 456, height: 440 },
+    async run({ open }) {
+      await open('src/pricing.ts', 'applyCoupon(amount');
+      void vscode.commands.executeCommand('tsStructure.changeSignature');
+    },
+    settle: 3000,
+  },
+  {
+    name: 'test-impact',
+    walkthrough: { x: 420, y: 30, width: 602, height: 280 },
+    async run({ open }) {
+      await open('src/pricing.ts', 'calculateSubtotal(items');
+      void vscode.commands.executeCommand('tsImpact.analyze', 'symbol');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+    settle: 3000,
+  },
+  {
+    name: 'walkthrough',
+    async run() {
+      // Without the side bar the page is wide enough to show each step's picture.
+      await vscode.commands.executeCommand('workbench.action.closeSidebar');
+      await vscode.commands.executeCommand('tsStructure.guideMe');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      await vscode.commands.executeCommand('tsStructure.report.focus');
+    },
+    settle: 2500,
+  },
+  {
     name: 'analysis-scope',
+    walkthrough: { x: 420, y: 30, width: 602, height: 232 },
     async run({ open }) {
       await settings().update('exclude', ['**/generated/**', 'src/legacy.ts'], vscode.ConfigurationTarget.Workspace);
       await settings().update('include', ['src'], vscode.ConfigurationTarget.Workspace);

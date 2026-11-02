@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Cdp } from './cdp';
 import { scenes } from './scenes';
+import { features } from '../../structure/features';
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -11,6 +12,10 @@ export async function run(): Promise<void> {
   const outDir = process.env.SCREENSHOT_DIR!;
   const only = (process.env.SCREENSHOT_ONLY ?? '').split(',').filter(Boolean);
   try {
+    // The guides show every feature, including the ones that start off.
+    for (const feature of features) {
+      await vscode.workspace.getConfiguration('tsStructure.features').update(feature.id, true, vscode.ConfigurationTarget.Global);
+    }
     await cdp.resize(1440, 860);
     await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
     await vscode.commands.executeCommand('workbench.action.closePanel');
@@ -28,6 +33,9 @@ export async function run(): Promise<void> {
       await scene.run({ open, cdp, delay });
       await delay(scene.settle ?? 1200);
       await cdp.capture(path.join(outDir, `${scene.name}.png`));
+      if (scene.walkthrough) {
+        await cdp.capture(path.join(outDir, '..', '..', 'media', 'walkthrough', `${scene.name}.png`), scene.walkthrough);
+      }
       await scene.cleanup?.();
       console.log(`captured ${scene.name}`);
     }

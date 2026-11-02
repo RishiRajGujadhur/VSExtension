@@ -17,6 +17,7 @@ import { showActionsAtCursor } from './ui/actionsAtCursor';
 import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
+import { registerGuide } from './ui/guide';
 import { registerScope } from './ui/exclude';
 import { registerScopeCommands } from './ui/scopeCommands';
 
@@ -55,6 +56,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerGraphDiff(context, projects, structureView);
   new SideEffectLens(projects).register(context);
   new CompilerErrorActions().register(context);
+  registerGuide(context);
   context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', showActionsAtCursor), registerCommand('tsStructure.configureFeatures', configureFeatures),
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
   );

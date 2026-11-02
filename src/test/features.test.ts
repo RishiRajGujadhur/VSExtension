@@ -2,16 +2,17 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as path from 'path';
-import { featureOf, featureWhen, features } from '../structure/features';
+import { enabledByDefault, featureOf, featureWhen, features } from '../structure/features';
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
 const contributes = pkg.contributes;
 const settings = Object.assign({}, ...contributes.configuration.map((section: { properties: object }) => section.properties));
 
-test('every feature has a switch in the settings, on by default', () => {
+test('every feature has a switch in the settings; only the core ones are on by default', () => {
   for (const feature of features) {
-    assert.equal(settings[`tsStructure.features.${feature.id}`]?.default, true, feature.id);
+    assert.equal(settings[`tsStructure.features.${feature.id}`]?.default, enabledByDefault(feature), feature.id);
   }
+  assert.ok(features.filter(enabledByDefault).length < features.length / 2 + 1, 'most features start off');
 });
 
 test('every feature command is contributed and belongs to one feature', () => {

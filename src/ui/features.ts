@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { Feature, featureOf, features } from '../structure/features';
+import { Feature, enabledByDefault, featureOf, features } from '../structure/features';
 
 export function isFeatureEnabled(id: string): boolean {
-  return vscode.workspace.getConfiguration('tsStructure.features').get(id, true);
+  const feature = features.find((f) => f.id === id);
+  return vscode.workspace.getConfiguration('tsStructure.features').get(id, !feature || enabledByDefault(feature));
 }
 
 /**
@@ -21,7 +22,8 @@ export function registerCommand(id: string, handler: (...args: any[]) => unknown
 }
 
 async function offerToEnable(feature: Feature): Promise<void> {
-  const choice = await vscode.window.showInformationMessage(`${feature.title} is turned off in the TypeScript Structure settings.`, 'Turn On', 'Choose Features…');
+  const off = enabledByDefault(feature) ? 'is turned off' : 'is an optional feature, off by default,';
+  const choice = await vscode.window.showInformationMessage(`${feature.title} ${off} in the TypeScript Structure settings.`, 'Turn On', 'Choose Features…');
   if (choice === 'Turn On') {
     await setFeature(feature.id, true);
   } else if (choice) {
@@ -39,24 +41,30 @@ async function setFeature(id: string, enabled: boolean): Promise<void> {
       : inspected?.workspaceValue !== undefined
         ? vscode.ConfigurationTarget.Workspace
         : vscode.ConfigurationTarget.Global;
-  // A feature that is on by default is turned back on by removing the override.
-  await config.update(id, enabled && inspected?.defaultValue === true ? undefined : enabled, target);
+  // Going back to the default removes the override instead of writing it out.
+  await config.update(id, enabled === inspected?.defaultValue ? undefined : enabled, target);
 }
 
 /** A checklist of every feature; unticking one hides its commands, menus, lenses and lightbulb entries. */
 export async function configureFeatures(): Promise<void> {
-  type Item = vscode.QuickPickItem & { feature: Feature };
-  const items: Item[] = features.map((feature) => ({ label: feature.title, detail: feature.description, picked: isFeatureEnabled(feature.id), feature }));
+  type Item = vscode.QuickPickItem & { feature?: Feature };
+  const item = (feature: Feature): Item => ({ label: feature.title, detail: feature.description, picked: isFeatureEnabled(feature.id), feature });
+  const items: Item[] = [
+    { label: 'Core', kind: vscode.QuickPickItemKind.Separator },
+    ...features.filter(enabledByDefault).map(item),
+    { label: 'More features (off by default)', kind: vscode.QuickPickItemKind.Separator },
+    ...features.filter((f) => !enabledByDefault(f)).map(item),
+  ];
   const picked = await vscode.window.showQuickPick(items, {
     title: 'TypeScript Structure Features',
-    placeHolder: 'Untick the features you don’t use',
+    placeHolder: 'Tick the features you want; the rest stay out of your menus',
     canPickMany: true,
     matchOnDetail: true,
   });
   if (!picked) {
     return;
   }
-  const on = new Set(picked.map((p) => p.feature.id));
+  const on = new Set(picked.flatMap((p) => (p.feature ? [p.feature.id] : [])));
   const changed = features.filter((f) => on.has(f.id) !== isFeatureEnabled(f.id));
   for (const feature of changed) {
     await setFeature(feature.id, on.has(feature.id));

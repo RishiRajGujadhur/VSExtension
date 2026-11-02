@@ -10,6 +10,7 @@ import { planFileDelete } from '../../refactor/safeDelete';
 import { introduceParameter } from '../../refactor/introduceParameter';
 import { moveMembers } from '../../refactor/moveMembers';
 import { applyRefactor } from '../../ui/applyRefactor';
+import { features } from '../../structure/features';
 
 // Refactorings write to files, so the tests work on a throwaway copy of the sample project.
 const sample = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-structure-sample-'));
@@ -17,6 +18,10 @@ fs.cpSync(path.resolve(__dirname, '../../../sample'), sample, { recursive: true 
 
 /** Runs inside VS Code via --extensionTestsPath; started by scripts/integration.js. */
 export async function run(): Promise<void> {
+  // Most features start off; every one of them is exercised here.
+  for (const feature of features) {
+    await vscode.workspace.getConfiguration('tsStructure.features').update(feature.id, true, vscode.ConfigurationTarget.Global);
+  }
   try {
     await testImpact();
     // Before the refactorings, which edit the sample files.
@@ -324,7 +329,7 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.equal(hidden.filter((l) => l.command?.command === 'tsStructure.explainFinding').length, 0);
   at('calculateSubtotal(');
   assert.equal(await vscode.commands.executeCommand('tsStructure.sideEffects'), undefined);
-  await vscode.workspace.getConfiguration('tsStructure.features').update('sideEffects', undefined, vscode.ConfigurationTarget.Global);
+  await vscode.workspace.getConfiguration('tsStructure.features').update('sideEffects', true, vscode.ConfigurationTarget.Global);
   const report = await vscode.commands.executeCommand<{ kind: string }>('tsStructure.sideEffects');
   assert.equal(report?.kind, 'sideEffects');
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', undefined, vscode.ConfigurationTarget.Global);

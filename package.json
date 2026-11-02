@@ -425,6 +425,12 @@
         "command": "tsStructure.toggleSideEffectLens",
         "title": "Toggle Side-Effect CodeLens",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.guideMe",
+        "title": "Guide Me",
+        "category": "TypeScript Structure",
+        "icon": "$(question)"
       }
     ],
     "viewsContainers": {
@@ -604,6 +610,10 @@
           "command": "tsStructure.auditTypeAssertions",
           "group": "2_inspect@2",
           "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.guideMe",
+          "group": "9_help@1"
         }
       ],
       "explorer/context": [
@@ -970,6 +980,11 @@
           "command": "tsStructure.editAnalysisScope",
           "when": "view == tsStructure.report",
           "group": "9_settings@0"
+        },
+        {
+          "command": "tsStructure.guideMe",
+          "when": "view == tsStructure.report",
+          "group": "navigation@10"
         }
       ],
       "view/item/context": [
@@ -1093,7 +1108,7 @@
     "viewsWelcome": [
       {
         "view": "tsStructure.report",
-        "contents": "Inspections and navigation results appear here. Place the cursor on a symbol and run one of the analyses from the editor's context menu under TypeScript Structure.\n[Data Flow Path Explorer](command:tsStructure.dataFlow)"
+        "contents": "Results of analyses appear here. Place the cursor on a symbol and press Ctrl+Alt+Shift+T, or right-click and choose TypeScript Structure.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\nNew here? [Guide Me](command:tsStructure.guideMe) walks through the main features, and [Choose Features…](command:tsStructure.configureFeatures) turns on more of them."
       },
       {
         "view": "tsImpact.results",
@@ -1148,109 +1163,109 @@
             "type": "boolean",
             "default": true,
             "order": 0,
-            "markdownDescription": "**Test Impact Analysis**: Find and run the tests that depend on a symbol or file, and the Impacted Tests view. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Test Impact Analysis**: Find and run the tests that depend on a symbol or file, and the Impacted Tests view. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.refactorings": {
             "type": "boolean",
             "default": true,
             "order": 1,
-            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.intentions": {
             "type": "boolean",
             "default": true,
             "order": 2,
-            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.inspections": {
             "type": "boolean",
             "default": true,
             "order": 3,
-            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.dataFlow": {
             "type": "boolean",
             "default": true,
             "order": 4,
-            "markdownDescription": "**Data Flow and Mutation Tracking**: Data Flow Path Explorer and Mutation Tracking. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
-          },
-          "tsStructure.features.sideEffects": {
-            "type": "boolean",
-            "default": true,
-            "order": 5,
-            "markdownDescription": "**Side-Effect Analyzer**: Side-Effect Analyzer and its CodeLens. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Data Flow and Mutation Tracking**: Data Flow Path Explorer and Mutation Tracking. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.nullability": {
             "type": "boolean",
             "default": true,
-            "order": 6,
-            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
-          },
-          "tsStructure.features.promiseRejections": {
-            "type": "boolean",
-            "default": true,
-            "order": 7,
-            "markdownDescription": "**Promise Rejection Analyzer**: Where a function’s promise rejections are handled or lost. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
-          },
-          "tsStructure.features.deadExports": {
-            "type": "boolean",
-            "default": true,
-            "order": 8,
-            "markdownDescription": "**Dead Export Analyzer**: Exports and files nothing reachable from the entry points uses. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
-          },
-          "tsStructure.features.exceptionFlow": {
-            "type": "boolean",
-            "default": true,
-            "order": 9,
-            "markdownDescription": "**Exception Flow Visualizer**: Where errors are thrown, caught, transformed or swallowed. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
-          },
-          "tsStructure.features.duplicates": {
-            "type": "boolean",
-            "default": true,
-            "order": 10,
-            "markdownDescription": "**Structural Duplicates**: Find code copied with renamed variables or changed values. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "order": 5,
+            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.usages": {
             "type": "boolean",
             "default": true,
+            "order": 6,
+            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.sideEffects": {
+            "type": "boolean",
+            "default": false,
+            "order": 7,
+            "markdownDescription": "**Side-Effect Analyzer**: Side-Effect Analyzer and its CodeLens. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.promiseRejections": {
+            "type": "boolean",
+            "default": false,
+            "order": 8,
+            "markdownDescription": "**Promise Rejection Analyzer**: Where a function’s promise rejections are handled or lost. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.deadExports": {
+            "type": "boolean",
+            "default": false,
+            "order": 9,
+            "markdownDescription": "**Dead Export Analyzer**: Exports and files nothing reachable from the entry points uses. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.exceptionFlow": {
+            "type": "boolean",
+            "default": false,
+            "order": 10,
+            "markdownDescription": "**Exception Flow Visualizer**: Where errors are thrown, caught, transformed or swallowed. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.duplicates": {
+            "type": "boolean",
+            "default": false,
             "order": 11,
-            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Structural Duplicates**: Find code copied with renamed variables or changed values. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.reexports": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 12,
-            "markdownDescription": "**Re-export Chain Navigator**: Follow a name through aliases and barrel files. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Re-export Chain Navigator**: Follow a name through aliases and barrel files. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.structuralSearch": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 13,
-            "markdownDescription": "**Structural Search and Replace**: Search and replace code by shape, and build custom inspections. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Structural Search and Replace**: Search and replace code by shape, and build custom inspections. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.hierarchy": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 14,
-            "markdownDescription": "**Inheritance Hierarchy and Override Impact**: Supertypes, subtypes and overrides, and what a change to a member reaches. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Inheritance Hierarchy and Override Impact**: Supertypes, subtypes and overrides, and what a change to a member reaches. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.dependencyPath": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 15,
-            "markdownDescription": "**Dependency Path Finder**: Why one module depends on another. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Dependency Path Finder**: Why one module depends on another. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.graphDiff": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 16,
-            "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           },
           "tsStructure.features.argumentFlow": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 17,
-            "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Turn off to hide its commands and menus. Use **TypeScript Structure: Choose Features…** to change several at once."
+            "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
           }
         }
       },
@@ -1603,6 +1618,100 @@
             "scope": "resource"
           }
         }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "gettingStarted",
+        "title": "Get Started with TypeScript Structure",
+        "description": "Refactor, inspect and navigate TypeScript and JavaScript across files, in seven short steps.",
+        "when": "true",
+        "steps": [
+          {
+            "id": "actions",
+            "title": "One shortcut for everything",
+            "description": "Put the cursor on a function, variable or class in a TypeScript file and press **Ctrl+Alt+Shift+T** (**Analyze or Refactor This…**). Every refactoring and analysis that fits is listed, and you can type to filter. The same list is in the editor's right-click menu under **TypeScript Structure**.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)",
+            "media": {
+              "image": "media/walkthrough/actions-at-cursor.png",
+              "altText": "The Analyze or Refactor This list at the cursor"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.actionsAtCursor"
+            ]
+          },
+          {
+            "id": "refactor",
+            "title": "Refactor across files",
+            "description": "With the cursor on a function name, **Change Signature…** (**Ctrl+F6**) renames, adds, removes or reorders parameters and updates every call. **Safe Delete** (**Alt+Delete**) checks every usage first. VS Code's Refactor Preview lets you review each change before it is applied.\n[Change Signature…](command:tsStructure.changeSignature)",
+            "media": {
+              "image": "media/walkthrough/change-signature.png",
+              "altText": "The Change Signature dialog"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.changeSignature"
+            ]
+          },
+          {
+            "id": "inspections",
+            "title": "Catch problems as you type",
+            "description": "Live inspections find what single-file linters miss, such as a promise dropped through a helper function. Findings appear in the Problems panel; press **Ctrl+.** on one for its fixes. **Inspect Code…** checks a whole file or project.\n[Inspect Code…](command:tsStructure.inspectCode)",
+            "media": {
+              "image": "media/walkthrough/missing-await.png",
+              "altText": "A missing-await finding with its explanation"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.inspectCode"
+            ]
+          },
+          {
+            "id": "understand",
+            "title": "Understand code before changing it",
+            "description": "**Semantic Find Usages** (**Alt+F7**) groups references into reads, writes, calls and imports. **Data Flow** shows how a value changes, and **Nullability** shows which paths make it undefined. Results open in the TypeScript Structure view, where you can filter, go back and forward, and re-run them.\n[Semantic Find Usages](command:tsStructure.semanticUsages)",
+            "media": {
+              "image": "media/walkthrough/semantic-usages.png",
+              "altText": "Semantic Find Usages grouped by kind"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.semanticUsages"
+            ]
+          },
+          {
+            "id": "tests",
+            "title": "Run only the tests a change affects",
+            "description": "With the cursor on a function, **Test Impact Analysis** finds the tests that reach it, through other functions too, and runs just those.\n[Test Impact Analysis](command:tsImpact.analyze)",
+            "media": {
+              "image": "media/walkthrough/test-impact.png",
+              "altText": "Tests that depend on the selected function"
+            },
+            "completionEvents": [
+              "onCommand:tsImpact.analyze"
+            ]
+          },
+          {
+            "id": "features",
+            "title": "Turn on more features",
+            "description": "To keep things simple, eleven more analyses start off: side effects, dead exports, duplicates, structural search and replace, exception flow, dependency paths and more. Tick the ones you want; they then appear in the menus.\n[Choose Features…](command:tsStructure.configureFeatures)",
+            "media": {
+              "image": "media/walkthrough/choose-features.png",
+              "altText": "The Choose Features list"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.configureFeatures"
+            ]
+          },
+          {
+            "id": "scope",
+            "title": "Leave files out",
+            "description": "Generated or vendored code can be left out of inspections and project-wide searches: right-click a file or folder in the Explorer and choose **Exclude from TypeScript Structure Analysis**, or edit the whole scope here. Every option is in the settings.\n[Edit Analysis Scope…](command:tsStructure.editAnalysisScope)\n[Open Settings](command:tsStructure.openSettings)",
+            "media": {
+              "image": "media/walkthrough/analysis-scope.png",
+              "altText": "The analysis scope with include and exclude patterns"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.editAnalysisScope"
+            ]
+          }
+        ]
       }
     ]
   },

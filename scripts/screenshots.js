@@ -11,6 +11,7 @@ if (!executable) {
   process.exit(1);
 }
 const root = path.resolve(__dirname, '..');
+fs.mkdirSync(path.join(root, 'media', 'walkthrough'), { recursive: true });
 
 // A throwaway Git repository holding the demo project, so the graph diff has a revision to compare with.
 const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'bookshop-demo-'));

@@ -1,5 +1,12 @@
 import * as fs from 'fs';
 
+export interface Clip {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** A minimal Chrome DevTools Protocol client for the workbench window, used to capture screenshots. */
 export class Cdp {
   private nextId = 1;
@@ -69,8 +76,9 @@ export class Cdp {
     await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(box.left + width + 300), y: Math.round(box.bottom) + 10 });
   }
 
-  async capture(file: string): Promise<void> {
-    const { data } = await this.send('Page.captureScreenshot', { format: 'png' });
+  /** Saves the window, or only the `clip` rectangle of it, as a PNG. */
+  async capture(file: string, clip?: Clip): Promise<void> {
+    const { data } = await this.send('Page.captureScreenshot', { format: 'png', ...(clip ? { clip: { ...clip, scale: 1 } } : {}) });
     fs.writeFileSync(file, Buffer.from(data, 'base64'));
   }
 

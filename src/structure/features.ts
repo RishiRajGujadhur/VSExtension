@@ -5,35 +5,42 @@ export interface Feature {
   description: string;
   /** Commands that belong to the feature: hidden from menus and refused while it is off. */
   commands: string[];
+  /** On by default. The rest are turned on in the settings or with Choose Features, so a first look isn't overwhelming. */
+  core?: boolean;
 }
 
 export const features: Feature[] = [
   {
     id: 'testImpact',
+    core: true,
     title: 'Test Impact Analysis',
     description: 'Find and run the tests that depend on a symbol or file, and the Impacted Tests view.',
     commands: ['tsImpact.analyze', 'tsImpact.showLastResults', 'tsImpact.runImpactedTests', 'tsImpact.runTest', 'tsImpact.clear', 'tsStructure.report.runTests'],
   },
   {
     id: 'refactorings',
+    core: true,
     title: 'Refactorings',
     description: 'Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries.',
     commands: ['tsStructure.changeSignature', 'tsStructure.safeDelete', 'tsStructure.safeDeleteFile', 'tsStructure.introduceParameter', 'tsStructure.moveMembers', 'tsStructure.report.safeDelete', 'tsStructure.report.safeDeleteFile'],
   },
   {
     id: 'intentions',
+    core: true,
     title: 'Intention Actions',
     description: 'Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string.',
     commands: [],
   },
   {
     id: 'inspections',
+    core: true,
     title: 'Inspections',
     description: 'Live inspections in the Problems panel, Inspect Code and Audit Type Assertions.',
     commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix'],
   },
   {
     id: 'dataFlow',
+    core: true,
     title: 'Data Flow and Mutation Tracking',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
     commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject'],
@@ -46,6 +53,7 @@ export const features: Feature[] = [
   },
   {
     id: 'nullability',
+    core: true,
     title: 'Nullability Path Explorer',
     description: 'Nullability Path Explorer and the "Explain why this may be undefined" action on TypeScript errors.',
     commands: ['tsStructure.nullability'],
@@ -76,6 +84,7 @@ export const features: Feature[] = [
   },
   {
     id: 'usages',
+    core: true,
     title: 'Semantic Find Usages',
     description: 'References grouped by reads, writes, calls, imports, types and JSX.',
     commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages'],
@@ -128,4 +137,9 @@ export function featureOf(command: string): Feature | undefined {
 /** The when-clause key that is true while the feature is on. */
 export function featureWhen(feature: Feature): string {
   return `config.tsStructure.features.${feature.id}`;
+}
+
+/** Whether the feature is on when the settings don't say. */
+export function enabledByDefault(feature: Feature): boolean {
+  return feature.core === true;
 }

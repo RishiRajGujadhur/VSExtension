@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { sourceEditor } from './refactorCommands';
-import { featureOf } from '../structure/features';
+import { featureOf, features } from '../structure/features';
 import { isFeatureEnabled } from './features';
 
 interface Action {
@@ -71,6 +71,10 @@ export async function showActionsAtCursor(): Promise<void> {
       }
       items.push({ label: `$(${action.icon}) ${action.label}`, detail: action.detail, command: action.command });
     }
+  }
+  const hidden = features.filter((f) => !isFeatureEnabled(f.id)).length;
+  if (hidden > 0) {
+    items.push({ label: '', kind: vscode.QuickPickItemKind.Separator }, { label: '$(add) More Features…', detail: `${hidden} more analyses and tools are turned off; choose which to turn on`, command: 'tsStructure.configureFeatures' });
   }
   const picked = await vscode.window.showQuickPick(items, { title: 'Analyze or Refactor This', placeHolder: 'Type to filter refactorings, inspections and navigation', matchOnDetail: true });
   if (picked?.command) {

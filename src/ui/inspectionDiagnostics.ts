@@ -24,7 +24,7 @@ const severities: Record<Severity, vscode.DiagnosticSeverity> = {
 
 const docsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#inspections';
 /** Custom inspections are documented together, in the builder's guide. */
-const customDocsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#custom-inspection-builder';
+const customDocsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#custom-inspection-builder-optional-feature';
 const fixAllKind = vscode.CodeActionKind.SourceFixAll.append('tsStructure');
 
 /** Analyses that explain a finding in depth, offered from its lightbulb. */
