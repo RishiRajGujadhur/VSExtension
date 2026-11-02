@@ -13,6 +13,24 @@ All commands are in the Command Palette under **TypeScript Structure**, and in t
 
 Analyses show their results in the **TypeScript Structure** view in the Activity Bar; live inspections report to the Problems panel. See [Working with results](#working-with-results) for what the view offers.
 
+## Getting started
+
+The first time the extension starts, it opens a short **Get Started with TypeScript Structure** walkthrough. Open it again any time with the **?** (**Guide Me**) button in the TypeScript Structure view, **TypeScript Structure: Guide Me** in the Command Palette, or **Help → Welcome → Walkthroughs**.
+
+![The Get Started walkthrough](docs/images/walkthrough.png)
+
+Its seven steps each have a button that runs the feature on the file you have open, and a step is ticked off when you use it:
+
+1. **One shortcut for everything**: Analyze or Refactor This… (`Ctrl+Alt+Shift+T`).
+2. **Refactor across files**: Change Signature and Safe Delete.
+3. **Catch problems as you type**: live inspections and Inspect Code.
+4. **Understand code before changing it**: Semantic Find Usages, Data Flow and Nullability.
+5. **Run only the tests a change affects**: Test Impact Analysis.
+6. **Turn on more features**: Choose Features….
+7. **Leave files out**: the analysis scope and the settings.
+
+To keep a first look simple, only the core features are on at first: Test Impact Analysis, the refactorings, intention actions, inspections, Data Flow and Mutation Tracking, Nullability and Semantic Find Usages. The other eleven (Side Effects, Promise Rejections, Dead Exports, Exception Flow, Structural Duplicates, Re-export Chains, Structural Search and Replace, Inheritance Hierarchy and Override Impact, Dependency Paths, Dependency Graph Diff and Argument Propagation) are turned on with [Choose Features…](#turning-features-on-and-off) or in the settings. The guides below describe every feature; turn one on before following its guide.
+
 ## Refactorings
 
 ### How refactorings are applied
@@ -286,31 +304,34 @@ The scope is stored in two settings, with globs relative to the workspace folder
 
 ### Turning features on and off
 
-Every feature can be switched off on its own, for example when another extension already covers it:
+Seven core features are on at first and eleven more are optional, so the menus start short. To change which ones you see:
 
-1. Run **TypeScript Structure: Choose Features…** from the Command Palette, or from the **⋯** menu of the TypeScript Structure view.
-2. Untick the features you don't use and press `Enter`.
+1. Run **TypeScript Structure: Choose Features…** from the Command Palette, from the **⋯** menu of the TypeScript Structure view, or from **More Features…** at the bottom of **Analyze or Refactor This…**.
+2. Tick the features you want, untick the ones you don't use, and press `Enter`.
 
-![Choose Features with Test Impact Analysis turned off](docs/images/choose-features.png)
+![Choose Features, with the core features on and the optional ones off](docs/images/choose-features.png)
 
-A feature that is off disappears from the editor's right-click menu, the Command Palette, **Analyze or Refactor This…**, its keybindings, lightbulb entries and CodeLens. Running one of its commands anyway, from a keybinding or another extension, offers to turn it back on.
+A feature that is off is left out of the editor's right-click menu, the Command Palette, **Analyze or Refactor This…**, its keybindings, lightbulb entries and CodeLens. Running one of its commands anyway, from a keybinding or another extension, offers to turn it on.
 
-Each switch is also a setting, `tsStructure.features.<name>`, so a workspace can turn features off for everyone in `.vscode/settings.json`:
+Each switch is also a setting, `tsStructure.features.<name>`, so a workspace can choose features for everyone in `.vscode/settings.json`:
 
 ```json
 {
-  "tsStructure.features.testImpact": false,
+  "tsStructure.features.deadExports": true,
+  "tsStructure.features.structuralSearch": true,
   "tsStructure.features.intentions": false
 }
 ```
 
-The names are `testImpact`, `refactorings`, `intentions`, `inspections`, `dataFlow`, `sideEffects`, `nullability`, `promiseRejections`, `deadExports`, `exceptionFlow`, `duplicates`, `usages`, `reexports`, `structuralSearch`, `hierarchy`, `dependencyPath`, `graphDiff` and `argumentFlow`.
+| On by default | Off by default |
+| --- | --- |
+| `testImpact`, `refactorings`, `intentions`, `inspections`, `dataFlow`, `nullability`, `usages` | `sideEffects`, `promiseRejections`, `deadExports`, `exceptionFlow`, `duplicates`, `reexports`, `structuralSearch`, `hierarchy`, `dependencyPath`, `graphDiff`, `argumentFlow` |
 
 ## Step-by-step guides
 
 Each guide uses the small bookshop project in [`docs/demo`](docs/demo). Open that folder in VS Code to follow along. The screenshots are captured from a real VS Code session with `npm run screenshots`.
 
-Every analysis can be started three ways: from the editor's right-click menu under **TypeScript Structure**, from the Command Palette (`Ctrl+Shift+P`, then type its name), or from **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`). Results open in the **TypeScript Structure** view in the Activity Bar.
+Every analysis can be started three ways: from the editor's right-click menu under **TypeScript Structure**, from the Command Palette (`Ctrl+Shift+P`, then type its name), or from **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`). Results open in the **TypeScript Structure** view in the Activity Bar. Guides marked *(optional feature)* need the feature turned on first with **Choose Features…**.
 
 ### Data Flow Path Explorer
 
@@ -351,7 +372,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. **Uses** lists every read of the variable and what it is at that point: *safe* (narrowed), *check* (a test such as `!coupon` or `coupon?.code`), or *may be undefined*. A use that may still be null is one that needs a guard.
 7. You can also start from a TypeScript error. On *Object is possibly 'undefined'* or *'user' is possibly 'null'*, open the lightbulb (`Ctrl+.`) and choose **Explain why 'user' may be null or undefined**.
 
-### Promise Rejection Analyzer
+### Promise Rejection Analyzer *(optional feature)*
 
 ![Rejections of saveOrder: it throws OrderError, and the rejection is caught in submitSafely, unhandled in quickReorder and fails main.ts at the top level](docs/images/promise-rejections.png)
 
@@ -405,7 +426,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Change how loud each inspection is with `tsStructure.inspections.severity`, for example `{ "typeAssertion": "info" }`, or `"off"` to disable it.
 6. Tests often need assertions for mocks and fixtures. Turn on `tsStructure.typeAssertion.ignoreTestFiles` to skip test files, such as `*.test.ts` or files that import a test framework.
 
-### Dead Export Analyzer
+### Dead Export Analyzer *(optional feature)*
 
 ![Dead exports in the demo: legacy.ts and reports.ts are unreachable, and unused exports are listed per file with their kind and the barrel that still re-exports them](docs/images/dead-exports.png)
 
@@ -417,7 +438,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. Exports reached through `export *` barrels, renamed re-exports, `import * as ns` and dynamic `import()` count as used. Turn off `tsStructure.deadExports.testFilesAreEntryPoints` to also find exports that only tests use.
 7. To keep an export that is public API on purpose, such as a library function no code in the repository calls, document it with `/** @public */` or `/** @api */`. It is no longer reported.
 
-### Exception Flow Visualizer
+### Exception Flow Visualizer *(optional feature)*
 
 ![Exception flow of parseConfig: it throws ConfigError and JSON.parse can throw SyntaxError; loadConfig catches and rethrows, readSetting passes errors on, and currencyOrDefault swallows them](docs/images/exception-flow.png)
 
@@ -429,7 +450,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. **Escaping errors reach callers** follows what escapes up through every caller, until it is caught, or reaches code with no callers (*errors are uncaught*). When it enters an async function it becomes a rejection, and the report keeps following that promise through awaits, `.catch()` and dropped calls. In the demo, `currencyOrDefault` swallows `parseConfig`'s errors through `readSetting`, which is worth a look.
 7. When some path ends uncaught, an **Uncaught** group at the top lists each one with the callers it passes through.
 
-### Structural Duplicate Finder
+### Structural Duplicate Finder *(optional feature)*
 
 ![Structural duplicates: calculateSubtotal in pricing.ts and revenue in reports.ts are the same five lines with total, item and items renamed](docs/images/duplicates.png)
 
@@ -441,7 +462,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Click the diff button on a group (**Compare Copies**) to open the first two copies side by side. Common indentation is removed so they line up.
 6. Tune sensitivity with `tsStructure.duplicates.minStatements` (default 3) and `minTokens` (default 40). Turn on `tsStructure.duplicates.matchRenamedProperties` to also match copies that use other property names. For example, `parcelWeight` in `shipping.ts` sums `.weight` the way `calculateSubtotal` sums `.price`. Test files are skipped unless `tsStructure.duplicates.ignoreTestFiles` is off.
 
-### Side-Effect Analyzer
+### Side-Effect Analyzer *(optional feature)*
 
 ![Side effects of addToCart: it mutates its items argument, reassigns lastUpdated, changes analytics events through track(), writes to the console and reads the current time; CodeLenses above each function summarize the same](docs/images/side-effects.png)
 
@@ -474,7 +495,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. If nothing actually uses the symbol, because it is only declared, imported or re-exported, the view says so. Its definition then gets a trash button (**Safe Delete…**).
 7. To rename the symbol after reviewing its usages, click the pencil button (**Rename Symbol**) on its definition.
 
-### Re-export Chain Navigator
+### Re-export Chain Navigator *(optional feature)*
 
 ![Re-export chain of subtotal: main.ts imports it from index.ts, which renames calculateSubtotal from pricing.ts](docs/images/reexport-chain.png)
 
@@ -485,7 +506,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Imported through** groups the project's imports of the symbol by the module path they use, here `'./pricing'` and `'./index'`. Mixed paths to the same declaration are a common source of circular-import trouble, so the view warns when there is more than one.
 6. An importer that goes through a barrel has an **Apply Fix** button. It imports the symbol straight from the module that declares it, keeping any local name: `import { calculateSubtotal as subtotal } from './pricing';`.
 
-### Structural Search Builder
+### Structural Search Builder *(optional feature)*
 
 ![Structural Search for $list$.find($callback$) where $list$ must be a LineItem array: two matches, in api.ts and cart.ts, in the builder and the TypeScript Structure view](docs/images/structural-search.png)
 
@@ -496,7 +517,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. Matches appear in the builder and in the TypeScript Structure view, grouped by file. Each shows what every placeholder matched, such as *$list$ = items*. Click one to open it.
 6. **Recent searches…** brings back any of your last 15 searches with their constraints.
 
-### Type-Safe Structural Replace
+### Type-Safe Structural Replace *(optional feature)*
 
 ![Replacing Math.round($value$ * 100) / 100 with Number($value$.toFixed(2)): the preview shows both rewrites, in pricing.ts and reports.ts, and that the result type-checks cleanly](docs/images/structural-replace.png)
 
@@ -506,7 +527,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 4. Click **Replace All…**, or press `Ctrl+Enter` in the replacement. The changes open in VS Code's Refactor Preview, where you can untick individual files or changes before applying them. Turn off `tsStructure.previewRefactorings` to apply directly.
 5. A replacement that doesn't parse is refused before anything is written, with the file and line where it breaks. Use **Undo** (`Ctrl+Z`) in the edited files to revert an applied replacement.
 
-### Custom Inspection Builder
+### Custom Inspection Builder *(optional feature)*
 
 ![A saved no-console-log inspection underlines console.log in orders.ts with "Use track() instead of console.log", in the hover, the Problems panel and the Inspect Code report](docs/images/custom-inspections.png)
 
@@ -517,7 +538,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Inspect Code…** includes custom inspections, so the whole project can be checked at once.
 6. Run **Manage Custom Inspections…** to see them all. Press `Enter` to edit one in the builder, where **Update Inspection** saves over it. Use the buttons on each row to disable, enable or delete it, or pick **New inspection…** to start another. From a finding, the lightbulb offers **Edit custom inspection…** and **Disable custom inspection** directly.
 
-### Inheritance Hierarchy Explorer
+### Inheritance Hierarchy Explorer *(optional feature)*
 
 ![Hierarchy of PaymentMethod: CardPayment and GiftCardPayment extend it, StoreCredit extends GiftCardPayment, and each member lists the subtypes that override it](docs/images/type-hierarchy.png)
 
@@ -529,7 +550,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Members** lists the type's own members. Each one says whether it is abstract, which supertype it comes from, and how many subtypes override it. Expand a member to see each override and whether it *calls super*. Run it with the cursor on a member's name, and that member opens selected. The button on a member (**Override Impact of This Member**) shows what changing it would affect.
 6. **Inherited members** lists what the type gets from its supertypes without redeclaring it, each with the type it comes from. That's the full API of a subclass in one place.
 
-### Override Impact Analyzer
+### Override Impact Analyzer *(optional feature)*
 
 ![Impact of changing PaymentMethod.charge: three overrides, StoreCredit calls super, and the call sites that go through PaymentMethod](docs/images/override-impact.png)
 
@@ -540,7 +561,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Subtypes that inherit it unchanged** are affected by any change to its body. The buttons on rows re-run the analysis on an override, or show the hierarchy of an inheriting type.
 6. **Call sites** are split by the static type they call through. Calls through the base type may run any implementation, so they are the riskiest. **Impacted tests** lists the tests that reach the member. Its play button (**Run These Tests**) runs them.
 
-### Dependency Path Finder
+### Dependency Path Finder *(optional feature)*
 
 ![main.ts depends on analytics.ts three imports deep, through index.ts and cart.ts, orders.ts and cart.ts, or orders.ts and notifications.ts](docs/images/dependency-path.png)
 
@@ -552,7 +573,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 6. If there is no dependency, the report says so, and shows the reverse direction if there is one.
 7. If the two modules depend on each other at runtime, the report warns about the cycle and lists the paths back under **Circular**.
 
-### Dependency Graph Diff
+### Dependency Graph Diff *(optional feature)*
 
 ![Dependency changes since HEAD: analytics.ts now imports cart.ts, creating a new cycle, and orders.ts no longer imports notifications.ts](docs/images/graph-diff.png)
 
@@ -568,7 +589,7 @@ Every analysis can be started three ways: from the editor's right-click menu und
 5. **Modules** lists added and removed files. **Biggest changes in importers** shows modules whose number of importers changed most, which hints at new hubs or modules being phased out. Expand one to see which modules started or stopped importing it.
 6. The working tree includes unsaved editor changes, so you can check an edit before saving.
 
-### Argument Propagation Explorer
+### Argument Propagation Explorer *(optional feature)*
 
 ![Propagation of the code parameter of applyCoupon: it comes from checkoutTotal's couponCode, which comes from placeOrder's coupon (READ10 from main.ts, or omitted), and it goes into findCoupon](docs/images/argument-flow.png)
 
