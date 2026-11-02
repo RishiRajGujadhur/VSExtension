@@ -166,6 +166,28 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         await vscode.window.showTextDocument(uri);
       }
     }),
+    // For scripts and CI: the report's rows with workspace-relative locations, without view-only details.
+    registerCommand('tsStructure.report.exportJson', async () => {
+      const report = view.report;
+      if (!report) {
+        return;
+      }
+      const row = (node: ReportNode): object => ({
+        label: node.label,
+        description: node.description,
+        tone: node.tone,
+        location: node.location ? { file: vscode.workspace.asRelativePath(node.location.file), line: node.location.line + 1, character: node.location.character + 1 } : undefined,
+        children: node.children?.length ? node.children.map(row) : undefined,
+      });
+      const json = JSON.stringify({ kind: report.kind, title: report.title, description: report.description, warnings: report.warnings, durationMs: report.durationMs, rows: report.roots.map(row) }, null, 2);
+      const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+      const name = `${report.title.replace(/[^\w.-]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'analysis'}.json`;
+      const uri = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { JSON: ['json'] } });
+      if (uri) {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(json, 'utf8'));
+        void vscode.window.setStatusBarMessage(`Analysis exported to ${vscode.workspace.asRelativePath(uri)}`, 4000);
+      }
+    }),
     registerCommand('tsStructure.report.openToSide', (node: ReportNode) => node?.location && view.open(node.location, true)),
     registerCommand('tsStructure.report.copyLocation', async (node: ReportNode) => {
       if (node?.location) {
