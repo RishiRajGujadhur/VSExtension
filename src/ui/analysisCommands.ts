@@ -78,6 +78,23 @@ export function editorTarget(projects: ProjectService, editor: vscode.TextEditor
   };
 }
 
+/** Dead exports of the target's project; `inside` limits the results (not what counts as used) to some files. */
+async function deadExports(t: AnalysisTarget, inside?: (fileName: string) => boolean): Promise<Report> {
+  const program = t.project().program();
+  const config = vscode.workspace.getConfiguration('tsStructure.deadExports', vscode.Uri.file(t.fileName));
+  const root = t.folder ?? path.dirname(t.fileName);
+  const globs = config.get<string[]>('entryPoints', []);
+  let entryPoints: string[] = [];
+  if (globs.length > 0 && t.folder) {
+    const found = await Promise.all(globs.map((g) => vscode.workspace.findFiles(new vscode.RelativePattern(t.folder!, g), '**/node_modules/**')));
+    entryPoints = found.flat().map((u) => u.fsPath);
+  } else {
+    entryPoints = defaultEntryPoints(root, new Set(projectSourceFiles(program).map((f) => normalizePath(f.fileName))));
+  }
+  const excluded = inside ? (file: string) => isExcluded(file) || !inside(file) : isExcluded;
+  return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded: excluded }, root);
+}
+
 /** The same target after the file was edited: the cursor follows the symbol it was on. */
 function followEdits(target: AnalysisTarget, before: string | undefined): AnalysisTarget {
   const document = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(target.fileName));
@@ -165,19 +182,26 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.deadExports', 'Dead Export Analysis', async (t) => {
-      const program = t.project().program();
-      const config = vscode.workspace.getConfiguration('tsStructure.deadExports', vscode.Uri.file(t.fileName));
-      const root = t.folder ?? path.dirname(t.fileName);
-      const globs = config.get<string[]>('entryPoints', []);
-      let entryPoints: string[] = [];
-      if (globs.length > 0 && t.folder) {
-        const found = await Promise.all(globs.map((g) => vscode.workspace.findFiles(new vscode.RelativePattern(t.folder!, g), '**/node_modules/**')));
-        entryPoints = found.flat().map((u) => u.fsPath);
-      } else {
-        entryPoints = defaultEntryPoints(root, new Set(projectSourceFiles(program).map((f) => normalizePath(f.fileName))));
+    editorCommand('tsStructure.deadExports', 'Dead Export Analysis', (t) => deadExports(t)),
+    // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
+    registerCommand('tsStructure.deadExportsInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
+      const folders = selected?.length ? selected : uri ? [uri] : [];
+      const anchor = (await Promise.all(folders.map((f) => vscode.workspace.findFiles(new vscode.RelativePattern(f, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1)))).flat()[0];
+      if (!anchor) {
+        void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
+        return;
       }
-      return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded }, root);
+      const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
+      const roots = folders.map((f) => pathKey(f.fsPath));
+      const inside = (file: string) => roots.some((root) => pathKey(file).startsWith(`${root}/`));
+      const target: AnalysisTarget = { fileName: anchor.fsPath, offset: 0, end: 0, folder, project: () => projects.createVirtualProject(anchor.fsPath, folder) };
+      return runAnalysis(view, 'Dead Export Analysis', async () => {
+        const report = await deadExports(target, inside);
+        if (report) {
+          report.title = `${report.title} in ${folders.map((f) => vscode.workspace.asRelativePath(f)).join(', ')}`;
+        }
+        return report;
+      });
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', (t) => {

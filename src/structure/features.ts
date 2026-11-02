@@ -68,7 +68,7 @@ export const features: Feature[] = [
     id: 'deadExports',
     title: 'Dead Export Analyzer',
     description: 'Exports and files nothing reachable from the entry points uses.',
-    commands: ['tsStructure.deadExports', 'tsStructure.report.unexport', 'tsStructure.report.unexportAll'],
+    commands: ['tsStructure.deadExports', 'tsStructure.report.unexport', 'tsStructure.report.unexportAll', 'tsStructure.deadExportsInFolder'],
   },
   {
     id: 'exceptionFlow',

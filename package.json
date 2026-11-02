@@ -476,6 +476,11 @@
         "command": "tsImpact.analyzeFile",
         "title": "Find Impacted Tests",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.deadExportsInFolder",
+        "title": "Find Dead Exports in Folder",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -707,6 +712,11 @@
           "command": "tsImpact.analyzeFile",
           "when": "config.tsStructure.features.testImpact && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
           "group": "7_modification@88"
+        },
+        {
+          "command": "tsStructure.deadExportsInFolder",
+          "when": "config.tsStructure.features.deadExports && explorerResourceIsFolder",
+          "group": "7_modification@93"
         }
       ],
       "commandPalette": [
@@ -1000,6 +1010,10 @@
         },
         {
           "command": "tsImpact.analyzeFile",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.deadExportsInFolder",
           "when": "false"
         }
       ],
