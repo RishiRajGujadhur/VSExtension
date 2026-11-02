@@ -675,6 +675,11 @@
           "command": "tsStructure.excludeFromAnalysis",
           "when": "explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "7_modification@92"
+        },
+        {
+          "command": "tsStructure.inspectCode",
+          "when": "config.tsStructure.features.inspections && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
+          "group": "7_modification@89"
         }
       ],
       "commandPalette": [

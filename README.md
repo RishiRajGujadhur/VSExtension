@@ -187,7 +187,7 @@ Findings appear in the Problems panel with quick fixes in the lightbulb, plus:
 - **Severity** per inspection in `tsStructure.inspections.severity` (`off` disables one, as does **Turn off '…' inspection** in the lightbulb, with Undo); `tsStructure.inspections.enabled` turns them all off.
 - **Timing**: `tsStructure.inspections.run` is `type` (after a pause in typing, `tsStructure.inspections.delay` milliseconds) or `save`, which inspects only when the file is saved, for big projects.
 
-**Inspect Code…** runs every inspection, including custom ones, over the current file or the whole project, with cancellable progress. Results are grouped by inspection and file, and fixable rows have an **Apply Fix** button. The status bar shows the count for the active file; click it to inspect the file.
+**Inspect Code…** runs every inspection, including custom ones, over the current file or the whole project, with cancellable progress. In the Explorer, right-click files or folders and choose **Inspect Code** to inspect only those. Results are grouped by inspection and file, and fixable rows have an **Apply Fix** button. The status bar shows the count for the active file; click it to inspect the file.
 
 #### Inspections: missingAwait
 

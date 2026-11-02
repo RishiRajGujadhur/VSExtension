@@ -80,7 +80,10 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         }
       }),
       vscode.languages.registerCodeActionsProvider(languageSelector, this, { providedCodeActionKinds: InspectionDiagnostics.kinds }),
-      registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project') => this.inspectCode(view, scope)),
+      // From the Explorer the arguments are the clicked file or folder and every selected one.
+      registerCommand('tsStructure.inspectCode', (scope?: 'file' | 'project' | vscode.Uri, selected?: vscode.Uri[]) =>
+        this.inspectCode(view, scope instanceof vscode.Uri ? (selected?.length ? selected : [scope]) : scope),
+      ),
       registerCommand('tsStructure.report.applyFix', (node: ReportNode) => applyReportFix(node)),
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
@@ -192,7 +195,10 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   }
 
   /** Inspect Code: every inspection over the current file or the whole project, as a report. */
-  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project'): Promise<Report | undefined> {
+  private async inspectCode(view: StructureView, scopeArg?: 'file' | 'project' | vscode.Uri[]): Promise<Report | undefined> {
+    if (Array.isArray(scopeArg)) {
+      return this.inspectPaths(view, scopeArg);
+    }
     const editor = vscode.window.activeTextEditor;
     if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
       void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file in the project to inspect.');
@@ -212,18 +218,45 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     if (!scope) {
       return;
     }
-    const fileName = editor.document.uri.fsPath;
-    const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath;
+    return this.runInspectCode(view, editor.document.uri, scope === 'file' ? (f) => pathKey(f) === pathKey(editor.document.uri.fsPath) : undefined);
+  }
+
+  /** Inspect Code on files and folders picked in the Explorer: every source file in or below them. */
+  private async inspectPaths(view: StructureView, uris: vscode.Uri[]): Promise<Report | undefined> {
+    const sourceGlob = '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}';
+    let anchor: vscode.Uri | undefined;
+    for (const uri of uris) {
+      const isFile = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.File;
+      anchor = isFile ? uri : (await vscode.workspace.findFiles(new vscode.RelativePattern(uri, sourceGlob), '**/node_modules/**', 1))[0];
+      if (anchor) {
+        break;
+      }
+    }
+    if (!anchor) {
+      void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there to inspect.');
+      return;
+    }
+    const roots = uris.map((u) => pathKey(u.fsPath));
+    return this.runInspectCode(view, anchor, (f) => roots.some((root) => pathKey(f) === root || pathKey(f).startsWith(`${root}/`)));
+  }
+
+  /** Runs every inspection over the anchor file's project, or the files of it that `include` accepts. */
+  private async runInspectCode(view: StructureView, anchor: vscode.Uri, include?: (fileName: string) => boolean): Promise<Report | undefined> {
+    const fileName = anchor.fsPath;
+    const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
     const run = () =>
       vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Inspecting code', cancellable: true }, async (progress, token) => {
         const started = Date.now();
         const project = this.projects.load(fileName, folder);
-        const scoped = scope === 'file' ? { files: [project.program.getSourceFile(normalizePath(fileName))!], note: undefined } : scopedFiles(projectSourceFiles(project.program));
+        const candidates = projectSourceFiles(project.program).filter((sf) => !include || include(sf.fileName));
+        const single = candidates.length === 1 && pathKey(candidates[0].fileName) === pathKey(fileName);
+        // A single file asked for by name is inspected even when the scope settings leave it out.
+        const scoped = single ? { files: candidates, note: undefined } : scopedFiles(candidates);
         const files = scoped.files;
         const inspected: InspectedFile[] = [];
         const inspections = this.inspections();
-        const severityOf = this.severityOf(editor.document.uri);
-        const options = inspectionOptions(editor.document.uri);
+        const severityOf = this.severityOf(anchor);
+        const options = inspectionOptions(anchor);
         for (const [i, sourceFile] of files.entries()) {
           if (token.isCancellationRequested) {
             return undefined;
