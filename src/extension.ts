@@ -67,18 +67,27 @@ export function activate(context: vscode.ExtensionContext): void {
     configWatcher,
     sourceWatcher,
     // Returns the result so other extensions and integration tests can use it.
-    registerCommand('tsImpact.analyze', async (scopeArg?: AnalysisScope): Promise<ImpactResult | undefined> => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor || !supportedLanguages.has(editor.document.languageId) || editor.document.uri.scheme !== 'file') {
-        void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file and place the cursor on a symbol.');
-        return;
+    // From the Explorer the argument is the file: the tests that depend on anything in it.
+    registerCommand('tsImpact.analyze', async (scopeArg?: AnalysisScope | vscode.Uri): Promise<ImpactResult | undefined> => {
+      let document: vscode.TextDocument;
+      let offset = 0;
+      let scope: AnalysisScope | undefined;
+      if (scopeArg instanceof vscode.Uri) {
+        document = await vscode.workspace.openTextDocument(scopeArg);
+        scope = 'module';
+      } else {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || !supportedLanguages.has(editor.document.languageId) || editor.document.uri.scheme !== 'file') {
+          void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file and place the cursor on a symbol.');
+          return;
+        }
+        scope = scopeArg ?? (await pickScope());
+        document = editor.document;
+        offset = document.offsetAt(editor.selection.active);
       }
-      const scope = scopeArg ?? (await pickScope());
       if (!scope) {
         return;
       }
-      const document = editor.document;
-      const offset = document.offsetAt(editor.selection.active);
       const folder = vscode.workspace.getWorkspaceFolder(document.uri);
       const config = vscode.workspace.getConfiguration('tsImpact', document.uri);
 
@@ -110,6 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showErrorMessage(message);
       }
     }),
+    registerCommand('tsImpact.analyzeFile', (uri?: vscode.Uri) => vscode.commands.executeCommand('tsImpact.analyze', uri ?? vscode.window.activeTextEditor?.document.uri)),
     registerCommand('tsImpact.showLastResults', async () => {
       if (results.result) {
         await showResultsPicker(results.result, run);

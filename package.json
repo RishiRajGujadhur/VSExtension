@@ -471,6 +471,11 @@
         "title": "Toggle Result Highlights",
         "category": "TypeScript Structure",
         "icon": "$(symbol-color)"
+      },
+      {
+        "command": "tsImpact.analyzeFile",
+        "title": "Find Impacted Tests",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -697,6 +702,11 @@
           "command": "tsStructure.inspectCode",
           "when": "config.tsStructure.features.inspections && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
           "group": "7_modification@89"
+        },
+        {
+          "command": "tsImpact.analyzeFile",
+          "when": "config.tsStructure.features.testImpact && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
+          "group": "7_modification@88"
         }
       ],
       "commandPalette": [
@@ -987,6 +997,10 @@
         {
           "command": "tsStructure.toggleHighlights",
           "when": "true"
+        },
+        {
+          "command": "tsImpact.analyzeFile",
+          "when": "false"
         }
       ],
       "view/title": [
