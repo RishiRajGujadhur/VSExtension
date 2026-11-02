@@ -369,7 +369,12 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const node = this.located[this.cursor];
     await this.view.reveal(node, { select: true, focus: false, expand: true });
     await this.open(node.location!);
+    // Where you are in the results, since the view may be hidden while stepping from the editor.
+    this.stepStatus?.dispose();
+    this.stepStatus = vscode.window.setStatusBarMessage(`$(list-tree) Result ${this.cursor + 1} of ${this.located.length}: ${node.label}`, 4000);
   }
+
+  private stepStatus: vscode.Disposable | undefined;
 
   markdown(): string | undefined {
     const report = this.report;
