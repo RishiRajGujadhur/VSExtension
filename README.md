@@ -272,7 +272,7 @@ The TypeScript Structure view keeps every analysis's report:
 - **Back and forward** through the last 20 reports (`tsStructure.results.historySize`), and **re-run** the current one. Re-running follows the symbol through edits, and the last report is restored after a reload.
 - **Filter** rows by text, **Show Groups…** to hide whole groups, **Expand All** (next to Collapse All), and **go to the next or previous result**.
 - **Highlights** of the result's locations in open editors: definitions outlined, writes and reads shaded (`tsStructure.highlightResults`).
-- **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, and **Copy Location** on a row.
+- **Copy as Markdown** or **Export to Markdown…**, **Open to the Side**, **Copy Location**, and **Copy** on a row, which copies it with everything under it as indented text.
 - The view opens when an analysis finishes; set `tsStructure.results.focusView` to `false` to stay where you are and get a status bar message instead.
 - A badge with the number of rows that need attention, how long the analysis took, and a banner when files change after the analysis. Opening a result in a changed file asks first.
 

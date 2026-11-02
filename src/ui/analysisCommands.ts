@@ -112,6 +112,13 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.chooseGroups', (labels?: string[]) => view.chooseGroups(labels)),
     registerCommand('tsStructure.report.next', () => view.step(1)),
     registerCommand('tsStructure.report.expandAll', () => view.expandAll()),
+    registerCommand('tsStructure.report.copyRow', async (node: ReportNode, selected?: ReportNode[]) => {
+      const rows = selected?.length ? selected : node ? [node] : [];
+      if (rows.length) {
+        await vscode.env.clipboard.writeText(rows.map((r) => view.rowText(r)).join('\n'));
+        void vscode.window.setStatusBarMessage(`Copied ${rows.length === 1 ? 'the row' : `${rows.length} rows`}`, 3000);
+      }
+    }),
     registerCommand('tsStructure.report.previous', () => view.step(-1)),
     registerCommand('tsStructure.report.copyMarkdown', async () => {
       const markdown = view.markdown();

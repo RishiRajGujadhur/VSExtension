@@ -443,6 +443,11 @@
         "title": "Expand All",
         "category": "TypeScript Structure",
         "icon": "$(expand-all)"
+      },
+      {
+        "command": "tsStructure.report.copyRow",
+        "title": "Copy",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -913,6 +918,10 @@
         {
           "command": "tsStructure.report.expandAll",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.copyRow",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1117,6 +1126,11 @@
           "command": "tsStructure.report.traceValue",
           "when": "config.tsStructure.features.dataFlow && view == tsStructure.report && viewItem =~ /action:traceValue/",
           "group": "inline@1"
+        },
+        {
+          "command": "tsStructure.report.copyRow",
+          "when": "view == tsStructure.report",
+          "group": "9_cutcopypaste@1"
         }
       ]
     },

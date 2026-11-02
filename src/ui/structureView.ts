@@ -56,7 +56,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   };
 
   constructor(private readonly memento?: vscode.Memento) {
-    this.view = vscode.window.createTreeView('tsStructure.report', { treeDataProvider: this, showCollapseAll: true });
+    this.view = vscode.window.createTreeView('tsStructure.report', { treeDataProvider: this, showCollapseAll: true, canSelectMany: true });
     const saved = memento?.get<Report>(stateKey);
     if (saved) {
       this.history = [{ report: saved }];
@@ -289,21 +289,24 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     return item;
   }
 
-  /** Expands every row, three levels deep at a time (the most a tree view reveals at once). */
+  /** Expands every row that has children. */
   async expandAll(): Promise<void> {
-    const expand = async (nodes: readonly ReportNode[], depth: number): Promise<void> => {
+    const expand = async (nodes: readonly ReportNode[]): Promise<void> => {
       for (const node of nodes) {
         if (node.children?.length) {
-          await Promise.resolve(this.view.reveal(node, { expand: 3, select: false, focus: false })).catch(() => undefined);
-          if (depth % 3 === 2) {
-            await expand(node.children, depth + 1);
-          } else {
-            await expand(node.children.filter((c) => c.children?.length), depth + 1);
-          }
+          await Promise.resolve(this.view.reveal(node, { expand: true, select: false, focus: false })).catch(() => undefined);
+          await expand(node.children);
         }
       }
     };
-    await expand(this.roots, 0);
+    await expand(this.roots);
+  }
+
+  /** A row as text: its label, description and location, with its children indented below it. */
+  rowText(node: ReportNode, indent = ''): string {
+    const where = node.location ? ` (${vscode.workspace.asRelativePath(node.location.file)}:${node.location.line + 1})` : '';
+    const line = `${indent}${node.label}${node.description ? ` — ${node.description}` : ''}${where}`;
+    return [line, ...(node.children ?? []).map((c) => this.rowText(c, `${indent}  `))].join('\n');
   }
 
   /** Opens the next (or previous) row with a location, revealing it in the tree. */
