@@ -465,6 +465,12 @@
         "command": "tsStructure.chooseIntentions",
         "title": "Choose Intention Actions…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.toggleHighlights",
+        "title": "Toggle Result Highlights",
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-color)"
       }
     ],
     "viewsContainers": {
@@ -977,6 +983,10 @@
         {
           "command": "tsStructure.chooseIntentions",
           "when": "config.tsStructure.features.intentions"
+        },
+        {
+          "command": "tsStructure.toggleHighlights",
+          "when": "true"
         }
       ],
       "view/title": [
@@ -1079,6 +1089,11 @@
           "command": "tsStructure.report.history",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "0_view@0"
+        },
+        {
+          "command": "tsStructure.toggleHighlights",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "0_view@2"
         }
       ],
       "view/item/context": [

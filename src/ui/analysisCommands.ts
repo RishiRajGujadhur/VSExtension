@@ -113,6 +113,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.next', () => view.step(1)),
     registerCommand('tsStructure.report.expandAll', () => view.expandAll()),
     registerCommand('tsStructure.report.history', () => view.pickHistory()),
+    registerCommand('tsStructure.toggleHighlights', async () => {
+      const config = vscode.workspace.getConfiguration('tsStructure');
+      const on = !config.get('highlightResults', true);
+      await config.update('highlightResults', on, vscode.ConfigurationTarget.Global);
+      void vscode.window.setStatusBarMessage(`Result highlights ${on ? 'on' : 'off'}`, 3000);
+    }),
     registerCommand('tsStructure.report.copyRow', async (node: ReportNode, selected?: ReportNode[]) => {
       const rows = selected?.length ? selected : node ? [node] : [];
       if (rows.length) {
