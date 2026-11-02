@@ -460,6 +460,11 @@
         "title": "Configure Inspections…",
         "category": "TypeScript Structure",
         "icon": "$(settings)"
+      },
+      {
+        "command": "tsStructure.chooseIntentions",
+        "title": "Choose Intention Actions…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -968,6 +973,10 @@
         {
           "command": "tsStructure.configureInspections",
           "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.chooseIntentions",
+          "when": "config.tsStructure.features.intentions"
         }
       ],
       "view/title": [
@@ -1582,7 +1591,6 @@
           "tsStructure.intentions.disabled": {
             "type": "array",
             "default": [],
-            "description": "Intention actions to hide from the lightbulb menu.",
             "items": {
               "type": "string",
               "enum": [
@@ -1606,7 +1614,8 @@
                 "splitDeclarations",
                 "splitInitializer"
               ]
-            }
+            },
+            "markdownDescription": "Intention actions to hide from the lightbulb menu. **TypeScript Structure: Choose Intention Actions…** sets this from a checklist."
           }
         }
       },

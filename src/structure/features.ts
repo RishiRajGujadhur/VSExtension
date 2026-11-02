@@ -29,7 +29,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Intention Actions',
     description: 'Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string.',
-    commands: [],
+    commands: ['tsStructure.chooseIntentions'],
   },
   {
     id: 'inspections',

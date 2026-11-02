@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { openChangeSignature } from './changeSignaturePanel';
 import { RefactorCommandProvider } from './codeActions';
-import { IntentionProvider } from './intentionProvider';
+import { IntentionProvider, chooseIntentions } from './intentionProvider';
 import { runIntroduceParameter } from './introduceParameterUi';
 import { runMoveMembers } from './moveMembersUi';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
@@ -41,6 +41,7 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
         return safeDeleteSymbol(projects, editor);
       }
     }),
+    registerCommand('tsStructure.chooseIntentions', chooseIntentions),
     registerCommand('tsStructure.safeDeleteFile', (uri?: vscode.Uri) => safeDeleteFile(projects, uri)),
     registerCommand('tsStructure.moveMembers', () => {
       const editor = sourceEditor();

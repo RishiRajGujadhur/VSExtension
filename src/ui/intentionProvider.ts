@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { intentionsAt } from '../intentions/intentions';
+import { intentionList, intentionsAt } from '../intentions/intentions';
 import { parse } from './codeActions';
 import { isFeatureEnabled } from './features';
 
@@ -24,6 +24,25 @@ export class IntentionProvider implements vscode.CodeActionProvider {
       return codeAction;
     });
   }
+}
+
+/** A checklist of the intention actions; unticked ones are left out of the lightbulb menu. */
+export async function chooseIntentions(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('tsStructure');
+  const disabled = new Set(config.get<string[]>('intentions.disabled', []));
+  const picked = await vscode.window.showQuickPick(
+    intentionList.map((intention) => ({ label: intention.title, description: intention.id, picked: !disabled.has(intention.id), id: intention.id })),
+    { title: 'Intention Actions', placeHolder: 'Tick the rewrites to offer in the lightbulb menu', canPickMany: true, matchOnDescription: true },
+  );
+  if (!picked) {
+    return;
+  }
+  const on = new Set(picked.map((p) => p.id));
+  const off = intentionList.map((i) => i.id).filter((id) => !on.has(id));
+  const inspected = config.inspect<string[]>('intentions.disabled');
+  const target = inspected?.workspaceValue !== undefined ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+  await config.update('intentions.disabled', off.length ? off : undefined, target);
+  void vscode.window.setStatusBarMessage(`${on.size} of ${intentionList.length} intention actions on`, 3000);
 }
 
 /** One level of indentation as the editor showing the document is configured. */

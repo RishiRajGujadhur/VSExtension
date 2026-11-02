@@ -172,7 +172,7 @@ Negation is smart throughout: `!x` becomes `x`, comparisons flip (`===` ↔ `!==
 - Braces are not removed around `let`/`const` declarations, or where a dangling `else` would re-bind.
 - Nothing is rewritten when that would drop comments.
 
-Indentation follows the editor's tab settings. To hide individual intentions, list their ids in `tsStructure.intentions.disabled`.
+Indentation follows the editor's tab settings. To hide individual intentions, untick them in **TypeScript Structure: Choose Intention Actions…**, which writes their ids to `tsStructure.intentions.disabled`.
 
 ## Inspections
 
