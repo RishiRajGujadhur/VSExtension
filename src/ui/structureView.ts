@@ -189,10 +189,35 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
         };
       })
       .reverse();
-    const picked = await vscode.window.showQuickPick(items, { title: 'Analysis History', placeHolder: 'Show an earlier report', matchOnDescription: true, matchOnDetail: true });
-    if (picked) {
-      this.go(picked.index - this.position);
-    }
+    // Each entry's trash button removes it from the history.
+    const remove: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Remove from History' };
+    const picker = vscode.window.createQuickPick<(typeof items)[number]>();
+    picker.title = 'Analysis History';
+    picker.placeholder = 'Show an earlier report';
+    picker.matchOnDescription = picker.matchOnDetail = true;
+    picker.items = items.map((i) => ({ ...i, buttons: [remove] }));
+    picker.onDidTriggerItemButton((e) => {
+      this.removeFromHistory(e.item.index);
+      picker.items = picker.items.filter((i) => i !== e.item).map((i) => ({ ...i, index: i.index > e.item.index ? i.index - 1 : i.index }));
+      if (picker.items.length === 0) picker.hide();
+    });
+    picker.onDidAccept(() => {
+      const picked = picker.selectedItems[0];
+      picker.hide();
+      if (picked) this.go(picked.index - this.position);
+    });
+    picker.onDidHide(() => picker.dispose());
+    picker.show();
+  }
+
+  /** Drops one report from the history, keeping the one on screen when it is another. */
+  removeFromHistory(index: number): void {
+    if (index < 0 || index >= this.history.length) return;
+    this.history.splice(index, 1);
+    if (index < this.position || this.position >= this.history.length) this.position = Math.max(-1, this.position - 1);
+    if (this.position < 0 && this.history.length) this.position = 0;
+    this.render();
+    this.persist();
   }
 
   async rerun(): Promise<void> {
