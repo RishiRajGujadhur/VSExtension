@@ -50,6 +50,7 @@ export const mutationKinds: ReadonlySet<EffectKind> = new Set(['mutates-paramete
 
 const mutatingMethods: Record<string, readonly string[]> = {
   Array: ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', 'fill', 'copyWithin'],
+  Date: ['setFullYear', 'setMonth', 'setDate', 'setHours', 'setMinutes', 'setSeconds', 'setMilliseconds', 'setTime', 'setUTCFullYear', 'setUTCMonth', 'setUTCDate', 'setUTCHours', 'setUTCMinutes', 'setUTCSeconds', 'setUTCMilliseconds'],
   Map: ['set', 'delete', 'clear'],
   Set: ['add', 'delete', 'clear'],
   WeakMap: ['set', 'delete'],

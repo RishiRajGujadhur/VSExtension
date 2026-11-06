@@ -72,3 +72,8 @@ test('Side effects: random IDs from uuid and nanoid', () => {
 test('Side effects: Node\'s crypto random functions', () => {
   assert.deepEqual(effects('import { randomBytes, createHash } from "crypto"; function f() { createHash("sha256"); return randomBytes(8); }'), ['nondeterministic: produces random values']);
 });
+
+test('Mutation tracking: Date setters', () => {
+  assert.ok(effects('function f(d: Date) { d.setFullYear(2020); }').some((e) => e.startsWith('mutates-parameter')));
+  assert.deepEqual(effects('function f(d: Date) { return d.getFullYear(); }'), []);
+});
