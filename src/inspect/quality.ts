@@ -623,3 +623,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'negatedInOrInstanceof',
+  title: '\'!\' before \'in\' or \'instanceof\'',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isBinaryExpression(node) && (node.operatorToken.kind === ts.SyntaxKind.InKeyword || node.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword) && ts.isPrefixUnaryExpression(node.left) && node.left.operator === ts.SyntaxKind.ExclamationToken) {
+        const op = node.operatorToken.getText();
+        out.push(at(ctx.sourceFile, 'negatedInOrInstanceof', node, `!${node.left.operand.getText()} ${op} … negates ${node.left.operand.getText()} first; wrap the whole test in !( … ).`, 'warning', [{ title: `Use !(… ${op} …)`, edits: [replace(ctx.sourceFile, node, `!(${node.left.operand.getText()} ${op} ${node.right.getText()})`)], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

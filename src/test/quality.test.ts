@@ -178,3 +178,7 @@ test('Inspection: Loop counting the wrong way', () => {
   assert.equal(messages('for (let i = 0; i < 10; i--) {}', 'wrongDirectionLoop').length, 1);
   assert.equal(messages('for (let i = 10; i > 0; i--) {}', 'wrongDirectionLoop').length, 0);
 });
+
+test('Inspection: \'!\' before \'in\' or \'instanceof\'', () => {
+  assert.equal(fixed('declare const o: object; if (!"a" in o) {}', 'negatedInOrInstanceof'), 'declare const o: object; if (!("a" in o)) {}');
+});
