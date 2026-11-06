@@ -315,3 +315,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'parseIntRadix',
+  title: 'parseInt without a radix',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isCallExpression(node) && /^(Number\.)?parseInt$/.test(node.expression.getText()) && node.arguments.length === 1) {
+        out.push(at(ctx.sourceFile, 'parseIntRadix', node, 'Pass the radix: without it, "0x10" parses as hexadecimal.', 'info', [{ title: 'Add radix 10', edits: [{ start: node.arguments[0].end, end: node.arguments[0].end, text: ', 10' }], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

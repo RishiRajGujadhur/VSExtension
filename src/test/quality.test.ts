@@ -99,3 +99,7 @@ test('debugger statement', () => {
 test('console.log left in code', () => {
   assert.equal(fixed('const a = 1;\nconsole.log(a);\n', 'consoleLog'), 'const a = 1;\n');
 });
+
+test('parseInt without a radix', () => {
+  assert.equal(fixed("const n = parseInt('12');", 'parseIntRadix'), "const n = parseInt('12', 10);");
+});
