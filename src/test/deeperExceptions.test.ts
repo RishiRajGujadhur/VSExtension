@@ -36,3 +36,8 @@ test('Exception flow: Node\'s assert', () => {
 test('Exception flow: YAML and TOML parsers', () => {
   assert.deepEqual(raised('declare const YAML: { parse(s: string): unknown }; function f(s: string) { return YAML.parse(s); }'), ['YAML.parse(): YAMLParseError on invalid YAML']);
 });
+
+test('Exception flow: methods that throw, starting with reduce on an empty array', () => {
+  assert.deepEqual(raised('function f(xs: number[]) { return xs.reduce((a, b) => a + b); }'), ['xs.reduce(): TypeError on an empty array without an initial value']);
+  assert.deepEqual(raised('function f(xs: number[]) { return xs.reduce((a, b) => a + b, 0); }'), []);
+});

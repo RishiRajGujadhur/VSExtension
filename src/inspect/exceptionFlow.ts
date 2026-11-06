@@ -69,6 +69,36 @@ for (const call of ['execSync', 'execFileSync']) {
   throwingCalls[`child_process.${call}`] = throwingCalls[call];
 }
 
+/**
+ * Methods that throw on bad input, recognized by the receiver's type: `Array` (arrays), `string`,
+ * `number`, or the name of a library type such as `Date` or `Storage`.
+ */
+const throwingMethods: { receiver: string | RegExp; method: string | RegExp; note: string; when?: (call: ts.CallExpression) => boolean }[] = [];
+
+/** The receiver type of a method call, in the terms throwingMethods uses. */
+function receiverKinds(checker: ts.TypeChecker, receiver: ts.Expression): string[] {
+  const type = checker.getNonNullableType(checker.getTypeAtLocation(receiver));
+  const kinds = [checker.isArrayType(type) || checker.isTupleType(type) ? 'Array' : '', type.flags & ts.TypeFlags.StringLike ? 'string' : '', type.flags & ts.TypeFlags.NumberLike ? 'number' : ''];
+  const symbol = type.getSymbol() ?? type.aliasSymbol;
+  if (symbol) kinds.push(symbol.getName());
+  for (const base of type.getBaseTypes?.() ?? []) kinds.push(base.getSymbol()?.getName() ?? '');
+  return kinds.filter(Boolean);
+}
+
+/** The note for a method call that can throw, or undefined. */
+function throwingMethod(checker: ts.TypeChecker, call: ts.CallExpression): string | undefined {
+  if (!ts.isPropertyAccessExpression(call.expression)) return undefined;
+  const name = call.expression.name.text;
+  const candidates = throwingMethods.filter((m) => (typeof m.method === 'string' ? m.method === name : m.method.test(name)) && (!m.when || m.when(call)));
+  if (candidates.length === 0) return undefined;
+  const kinds = receiverKinds(checker, call.expression.expression);
+  const found = candidates.find((m) => kinds.some((k) => (typeof m.receiver === 'string' ? m.receiver === k : m.receiver.test(k))));
+  return found && `${call.expression.expression.getText()}.${name}(): ${found.note}`;
+}
+
+throwingMethods.push({ receiver: 'Array', method: 'reduce', note: 'TypeError on an empty array without an initial value', when: (c) => c.arguments.length === 1 });
+throwingMethods.push({ receiver: 'Array', method: 'reduceRight', note: 'TypeError on an empty array without an initial value', when: (c) => c.arguments.length === 1 });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */
@@ -109,6 +139,11 @@ export class ThrowAnalyzer {
         const name = `${ts.isNewExpression(node) ? 'new ' : ''}${node.expression.getText()}`;
         if (throwingCalls[name]) {
           paths.push({ origin: node, description: `${name}(): ${throwingCalls[name]}`, chain: [] });
+          return;
+        }
+        const method = ts.isCallExpression(node) ? throwingMethod(this.checker, node) : undefined;
+        if (method) {
+          paths.push({ origin: node, description: method, chain: [] });
           return;
         }
         const callee = calledFunction(this.checker, node);
