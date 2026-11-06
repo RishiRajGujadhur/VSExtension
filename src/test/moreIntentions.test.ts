@@ -66,3 +66,7 @@ test('Use property shorthand', () => {
   assert.equal(apply('const o = { a¦: a, b: 1 };', 'objectShorthand'), 'const o = { a, b: 1 };');
   assert.equal(apply('const o = { a¦: b };', 'objectShorthand'), undefined);
 });
+
+test('Expand property shorthand', () => {
+  assert.equal(apply('const o = { ¦a };', 'expandShorthand'), 'const o = { a: a };');
+});

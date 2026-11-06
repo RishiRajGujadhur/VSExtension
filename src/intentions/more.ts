@@ -224,3 +224,9 @@ function objectShorthand(ctx: IntentionContext): IntentionAction | undefined {
   return property && { id: 'objectShorthand', title: `Use shorthand '${ctx.text(property.name)}'`, edits: [ctx.replace(property, ctx.text(property.name))] };
 }
 moreIntentions.push({ id: 'objectShorthand', title: 'Use property shorthand', run: objectShorthand });
+
+function expandShorthand(ctx: IntentionContext): IntentionAction | undefined {
+  const property = ctx.nearest(ts.isShorthandPropertyAssignment, (p) => !p.objectAssignmentInitializer && ts.isObjectLiteralExpression(p.parent));
+  return property && { id: 'expandShorthand', title: `Expand to '${property.name.text}: ${property.name.text}'`, edits: [ctx.replace(property, `${property.name.text}: ${property.name.text}`)] };
+}
+moreIntentions.push({ id: 'expandShorthand', title: 'Expand property shorthand', run: expandShorthand });
