@@ -630,3 +630,9 @@ function functionPropertyToMethod(ctx: IntentionContext): IntentionAction | unde
   return { id: 'functionPropertyToMethod', title: 'Use method shorthand', edits: [ctx.replace(property, `${isAsync}${star}${ctx.text(property.name)}${typeParameters}(${fn.parameters.map((p) => ctx.text(p)).join(', ')})${returnType} ${ctx.text(fn.body)}`)] };
 }
 moreIntentions.push({ id: 'functionPropertyToMethod', title: 'Use method shorthand', run: functionPropertyToMethod });
+
+function unaryPlusToNumber(ctx: IntentionContext): IntentionAction | undefined {
+  const plus = ctx.nearest(ts.isPrefixUnaryExpression, (p) => p.operator === ts.SyntaxKind.PlusToken && !ts.isNumericLiteral(p.operand));
+  return plus && { id: 'unaryPlusToNumber', title: "Replace with 'Number()'", edits: [ctx.replace(plus, `Number(${ctx.text(unparen(plus.operand))})`)] };
+}
+moreIntentions.push({ id: 'unaryPlusToNumber', title: 'Replace unary \'+\' with \'Number()\'', run: unaryPlusToNumber });

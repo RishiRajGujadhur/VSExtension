@@ -243,3 +243,7 @@ test('Intention: Replace \'.then()\' with \'await\'', () => {
 test('Intention: Use method shorthand', () => {
   assert.equal(apply('const o = { sa¦ve: function (x: number) { return x; } };', 'functionPropertyToMethod'), 'const o = { save(x: number) { return x; } };');
 });
+
+test('Intention: Replace unary \'+\' with \'Number()\'', () => {
+  assert.equal(apply('const n = ¦+input.value;', 'unaryPlusToNumber'), 'const n = Number(input.value);');
+});
