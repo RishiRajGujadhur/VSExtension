@@ -61,6 +61,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerGuide(context);
   context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState, context.extension.packageJSON.contributes?.keybindings)), registerCommand('tsStructure.configureFeatures', configureFeatures),
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
+    // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
+    registerCommand('tsStructure.editKeybindings', (command?: string) => vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', command ? `"${command}"` : `@ext:${context.extension.id}`)),
   );
   new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);
 

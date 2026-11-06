@@ -71,7 +71,9 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
     return !(action.needsSelection && editor.selection.isEmpty) && !(feature && !isFeatureEnabled(feature.id));
   };
   const keys = shortcuts(keybindings);
-  const item = (action: Action): Item => ({ label: `$(${commandIcons[action.command] ?? 'symbol-misc'}) ${action.label}`, description: keys.get(action.command), detail: action.detail, command: action.command });
+  // Each entry's keyboard button opens its shortcut for remapping.
+  const remap: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Change Keyboard Shortcut' };
+  const item = (action: Action): Item => ({ label: `$(${commandIcons[action.command] ?? 'symbol-misc'}) ${action.label}`, description: keys.get(action.command), detail: action.detail, command: action.command, buttons: [remap] });
   const all = groups.flatMap((g) => g.actions);
   const recent = (memento?.get<string[]>(recentKey) ?? [])
     .map((command) => all.find((a) => a.command === command))
@@ -92,7 +94,27 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
   if (hidden > 0) {
     items.push({ label: '', kind: vscode.QuickPickItemKind.Separator }, { label: '$(add) More Features…', detail: `${hidden} more analyses and tools are turned off; choose which to turn on`, command: 'tsStructure.configureFeatures' });
   }
-  const picked = await vscode.window.showQuickPick(items, { title: 'Analyze or Refactor This', placeHolder: 'Type to filter refactorings, inspections and navigation', matchOnDetail: true });
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = 'Analyze or Refactor This';
+  picker.placeholder = 'Type to filter refactorings, inspections and navigation';
+  picker.matchOnDetail = true;
+  picker.items = items;
+  const allShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Keyboard Shortcuts for TypeScript Structure' };
+  picker.buttons = [allShortcuts];
+  const picked = await new Promise<Item | undefined>((resolve) => {
+    picker.onDidAccept(() => resolve(picker.selectedItems[0]));
+    picker.onDidTriggerButton(() => {
+      resolve(undefined);
+      void vscode.commands.executeCommand('tsStructure.editKeybindings');
+    });
+    picker.onDidTriggerItemButton((e) => {
+      resolve(undefined);
+      void vscode.commands.executeCommand('tsStructure.editKeybindings', e.item.command);
+    });
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
   if (picked?.rewrite) {
     const edit = new vscode.WorkspaceEdit();
     for (const e of picked.rewrite.edits) {
