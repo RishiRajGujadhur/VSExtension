@@ -102,6 +102,9 @@ throwingMethods.push({ receiver: 'Array', method: 'reduceRight', note: 'TypeErro
 throwingMethods.push({ receiver: 'Date', method: 'toISOString', note: 'RangeError on an invalid date' });
 throwingMethods.push({ receiver: 'Date', method: 'toJSON', note: 'RangeError on an invalid date' });
 
+throwingMethods.push({ receiver: 'number', method: /^(toFixed|toPrecision|toExponential)$/, note: 'RangeError when the digits are out of range', when: (c) => c.arguments.length > 0 });
+throwingMethods.push({ receiver: 'number', method: 'toString', note: 'RangeError when the radix is not 2 to 36', when: (c) => c.arguments.length > 0 });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */

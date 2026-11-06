@@ -45,3 +45,7 @@ test('Exception flow: methods that throw, starting with reduce on an empty array
 test('Exception flow: toISOString on an invalid date', () => {
   assert.deepEqual(raised('function f(d: Date) { return d.toISOString(); }'), ['d.toISOString(): RangeError on an invalid date']);
 });
+
+test('Exception flow: number formatting out of range', () => {
+  assert.deepEqual(raised('function f(n: number, d: number) { return n.toFixed(d); }'), ['n.toFixed(): RangeError when the digits are out of range']);
+});
