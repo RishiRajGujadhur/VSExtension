@@ -155,3 +155,14 @@ catalog.push({
       return inner && wraps ? [{ node: cls, evidence: `${className(cls)} wraps another ${inner.type} and adds to its calls`, subject: inner.type }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Template method',
+  meaning: 'A base class fixes the steps of an algorithm and subclasses fill in the abstract ones.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const abstract = cls.members.filter((m) => ts.isMethodDeclaration(m) && hasModifier(m, ts.SyntaxKind.AbstractKeyword)).map(nameOf);
+      const template = methodsOf(cls).find((m) => abstract.some((a) => text(m.body).includes(`this.${a}(`)));
+      return template ? [{ node: template, evidence: `${className(cls)}.${nameOf(template)}() calls the abstract ${abstract.filter((a) => text(template.body).includes(`this.${a}(`)).join(', ')}`, subject: className(cls) }] : [];
+    }),
+});

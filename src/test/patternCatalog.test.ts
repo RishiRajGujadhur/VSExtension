@@ -23,3 +23,7 @@ test('Decorator is recognized', () => {
   has('interface Store { get(k: string): string } class CachingStore implements Store { constructor(private inner: Store) {} get(k: string) { return this.inner.get(k); } }', 'Decorator');
   lacks('interface Store { get(k: string): string } class CachingStore implements Store { constructor(private inner: Store) {} get(k: string) { return this.inner.get(k); } }', 'Adapter');
 });
+
+test('Template method is recognized', () => {
+  has('abstract class Report { abstract body(): string; render() { return "<h1>" + this.body(); } }', 'Template method');
+});
