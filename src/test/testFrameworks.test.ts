@@ -28,3 +28,9 @@ test('Test impact: detect the framework from its config file', () => {
   assert.equal(detectFramework(pkg({ 'package.json': '{}', '.mocharc.json': '{}' })), 'mocha');
   assert.equal(detectFramework(pkg({ 'package.json': '{}' })), undefined);
 });
+
+test('Test impact: Bun test', () => {
+  const found = discover("import { test, expect } from 'bun:test';\ntest('adds', () => expect(1).toBe(1));");
+  assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['bun adds']);
+  assert.equal(line(testCommand('bun', ['a.test.ts'], 'adds', pkg({}))), 'bun test a.test.ts -t adds');
+});

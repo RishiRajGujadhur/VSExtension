@@ -17,6 +17,7 @@ export interface DiscoveredTestFile {
 }
 
 const testModules: Record<string, Framework> = {
+  'bun:test': 'bun',
   vitest: 'vitest',
   '@jest/globals': 'jest',
   '@playwright/test': 'playwright',

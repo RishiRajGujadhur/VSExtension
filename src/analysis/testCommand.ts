@@ -19,6 +19,8 @@ export function testCommand(framework: RunnableFramework, files: readonly string
   const exec = packageRunner(cwd);
   const run = (...args: string[]) => ({ command: exec.command, args: [...exec.prefix, ...args] });
   switch (framework) {
+    case 'bun':
+      return { command: 'bun', args: ['test', ...files, ...(pattern ? ['-t', pattern] : [])] };
     case 'vitest':
       return run('vitest', 'run', ...files, ...(pattern ? ['-t', pattern] : []));
     case 'jest':
@@ -44,6 +46,7 @@ export function detectFramework(packageDir: string | undefined): RunnableFramewo
     if (deps.jest || deps['ts-jest']) return 'jest';
     if (deps['@playwright/test']) return 'playwright';
     if (deps.mocha) return 'mocha';
+    if (deps['@types/bun'] || deps['bun-types']) return 'bun';
   } catch {
     // Unreadable package.json: fall through.
   }
