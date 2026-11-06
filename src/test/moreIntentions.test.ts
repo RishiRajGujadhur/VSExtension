@@ -26,3 +26,10 @@ test('Replace \'&&\' check with \'?.\'', () => {
   assert.equal(apply('const n = user ¦&& user.name;', 'optionalChain'), undefined);
   assert.equal(apply('if (user ¦&& user.age > 1) go();', 'optionalChain'), undefined);
 });
+
+test('Replace \'indexOf\' check with \'includes\'', () => {
+  assert.equal(apply('if (list.indexOf(x) ¦!== -1) {}', 'indexOfToIncludes'), 'if (list.includes(x)) {}');
+  assert.equal(apply('const missing = list.indexOf(x) ¦=== -1;', 'indexOfToIncludes'), 'const missing = !list.includes(x);');
+  assert.equal(apply('if (s.indexOf("a") ¦>= 0) {}', 'indexOfToIncludes'), 'if (s.includes("a")) {}');
+  assert.equal(apply('if (list.indexOf(x) ¦> 0) {}', 'indexOfToIncludes'), undefined);
+});

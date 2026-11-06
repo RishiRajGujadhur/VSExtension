@@ -126,3 +126,20 @@ function optionalChain(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'optionalChain', title: `Replace '${left} && …' with '${left}?.'`, edits: [ctx.replace(binary, `${left}?.${tail}`)] };
 }
 moreIntentions.push({ id: 'optionalChain', title: 'Replace \'&&\' check with \'?.\'', run: optionalChain });
+
+function indexOfToIncludes(ctx: IntentionContext): IntentionAction | undefined {
+  const binary = ctx.nearest(ts.isBinaryExpression, (b) => {
+    const call = unparen(b.left);
+    return ts.isCallExpression(call) && ts.isPropertyAccessExpression(call.expression) && call.expression.name.text === 'indexOf' && call.arguments.length === 1;
+  });
+  if (!binary) return undefined;
+  const call = unparen(binary.left) as ts.CallExpression;
+  const right = ctx.text(binary.right).replace(/\s/g, '');
+  const op = ctx.text(binary.operatorToken);
+  const present = (['!==', '!=', '>'].includes(op) && right === '-1') || (op === '>=' && right === '0');
+  const absent = (['===', '=='].includes(op) && right === '-1') || (op === '<' && right === '0');
+  if (!present && !absent) return undefined;
+  const includes = `${ctx.text((call.expression as ts.PropertyAccessExpression).expression)}.includes(${ctx.text(call.arguments[0])})`;
+  return { id: 'indexOfToIncludes', title: "Replace 'indexOf' check with 'includes'", edits: [ctx.replace(binary, present ? includes : `!${includes}`)] };
+}
+moreIntentions.push({ id: 'indexOfToIncludes', title: 'Replace \'indexOf\' check with \'includes\'', run: indexOfToIncludes });
