@@ -127,7 +127,8 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
   }
 
   const picker = vscode.window.createQuickPick<PickItem>();
-  picker.title = `Tests impacted by ${result.target.name}: ${countLabel(result.tests.length)}`;
+  const confirmed = result.tests.filter((t) => t.confidence === 'confirmed').length;
+  picker.title = `Tests impacted by ${result.target.name}: ${countLabel(result.tests.length)} (${confirmed} confirmed, ${result.tests.length - confirmed} possible)`;
   picker.placeholder = 'Search by test name, file or dependency chain. Select a test to open its registration.';
   picker.matchOnDescription = true;
   picker.matchOnDetail = true;
