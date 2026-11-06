@@ -1,0 +1,78 @@
+import * as path from 'path';
+import * as ts from 'typescript';
+import { ModuleGraph, programGraph } from './moduleGraph';
+import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
+
+const relative = (file: string, root?: string) => (root ? path.relative(root, file) : path.basename(file)).replace(/\\/g, '/');
+const fileLocation = (file: string) => ({ file, line: 0, character: 0, endLine: 0, endCharacter: 0 });
+
+/** Groups of modules that import each other at run time, directly or through others: each a cycle. */
+export function importCycles(graph: ModuleGraph, includeTypeOnly = false): string[][] {
+  const next = (file: string) => (graph.edges.get(file) ?? []).filter((e) => includeTypeOnly || !e.typeOnly).map((e) => e.to);
+  // Tarjan's strongly connected components, iteratively so deep graphs don't overflow the stack.
+  let counter = 0;
+  const index = new Map<string, number>();
+  const low = new Map<string, number>();
+  const onStack = new Set<string>();
+  const stack: string[] = [];
+  const groups: string[][] = [];
+  for (const start of graph.files) {
+    if (index.has(start)) continue;
+    const work: { file: string; children: string[]; i: number }[] = [];
+    const enter = (file: string) => {
+      index.set(file, counter);
+      low.set(file, counter++);
+      stack.push(file);
+      onStack.add(file);
+      work.push({ file, children: next(file), i: 0 });
+    };
+    enter(start);
+    while (work.length) {
+      const frame = work[work.length - 1];
+      if (frame.i < frame.children.length) {
+        const child = frame.children[frame.i++];
+        if (!index.has(child)) {
+          enter(child);
+        } else if (onStack.has(child)) {
+          low.set(frame.file, Math.min(low.get(frame.file)!, index.get(child)!));
+        }
+        continue;
+      }
+      work.pop();
+      const parent = work[work.length - 1];
+      if (parent) low.set(parent.file, Math.min(low.get(parent.file)!, low.get(frame.file)!));
+      if (low.get(frame.file) === index.get(frame.file)) {
+        const group: string[] = [];
+        let member: string;
+        do {
+          member = stack.pop()!;
+          onStack.delete(member);
+          group.push(member);
+        } while (member !== frame.file);
+        if (group.length > 1 || next(group[0]).includes(group[0])) groups.push(group.reverse());
+      }
+    }
+  }
+  return groups.sort((a, b) => b.length - a.length);
+}
+
+/** Find Import Cycles: every group of modules that import each other at run time. */
+export function cyclesReport(program: ts.Program, root?: string): Report {
+  const graph = programGraph(program);
+  const builder = new ReportBuilder('cycles', 'Import cycles');
+  const cycles = importCycles(graph);
+  const roots: ReportNode[] = cycles.map((group) => ({
+    label: group.map((f) => path.basename(f)).join(' ⇄ '),
+    description: plural(group.length, 'module'),
+    icon: 'sync',
+    tone: 'warning' as const,
+    expanded: cycles.length <= 5,
+    children: group.flatMap((file) =>
+      (graph.edges.get(file) ?? [])
+        .filter((e) => !e.typeOnly && group.includes(e.to))
+        .map((e) => ({ label: `${path.basename(e.from)} imports ${path.basename(e.to)}`, description: `${relative(e.from, root)}:${e.line + 1}`, icon: 'arrow-right', location: { file: e.from, line: e.line, character: 0, endLine: e.line, endCharacter: 0 } })),
+    ),
+  }));
+  if (roots.length === 0) builder.warnings.push('No modules import each other at run time.');
+  return builder.finish(roots, `${plural(cycles.length, 'cycle')} in ${plural(graph.files.size, 'module')}`);
+}

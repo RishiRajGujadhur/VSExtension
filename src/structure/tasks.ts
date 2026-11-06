@@ -22,6 +22,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'What extends or implements this class?', command: 'tsStructure.typeHierarchy', key: 'H' },
   { question: 'What breaks if I change this method?', command: 'tsStructure.overrideImpact', key: 'O' },
   { question: 'Why does this file import that one?', command: 'tsStructure.dependencyPath', key: 'P' },
+  { question: 'Are there import cycles?', command: 'tsStructure.findImportCycles' },
   { question: 'How did imports change on my branch?', command: 'tsStructure.dependencyGraphDiff', key: 'G' },
   { question: 'Where is this name really declared?', command: 'tsStructure.reexportChain', key: 'C' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },

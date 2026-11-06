@@ -111,7 +111,7 @@ export const features: Feature[] = [
     id: 'dependencyPath',
     title: 'Dependency Path Finder',
     description: 'Why one module depends on another.',
-    commands: ['tsStructure.dependencyPath', 'tsStructure.report.swapDependency'],
+    commands: ['tsStructure.dependencyPath', 'tsStructure.report.swapDependency', 'tsStructure.findImportCycles'],
   },
   {
     id: 'graphDiff',

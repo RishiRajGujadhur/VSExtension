@@ -53,6 +53,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.typeHierarchy', label: 'Inheritance Hierarchy', detail: 'Supertypes, subtypes and overrides' },
       { command: 'tsStructure.overrideImpact', label: 'Override Impact', detail: 'What a change to this member reaches through overrides' },
       { command: 'tsStructure.dependencyPath', label: 'Dependency Path…', detail: 'Why this module depends on another one' },
+      { command: 'tsStructure.findImportCycles', label: 'Find Import Cycles', detail: 'Modules that import each other at run time' },
       { command: 'tsStructure.dependencyGraphDiff', label: 'Dependency Graph Diff…', detail: 'How imports changed since a Git revision' },
       { command: 'tsStructure.structuralSearch', label: 'Structural Search…', detail: 'Find and replace code by shape, with typed placeholders' },
     ],

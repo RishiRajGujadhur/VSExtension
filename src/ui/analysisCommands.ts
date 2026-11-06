@@ -7,6 +7,7 @@ import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { patternMeaning, patternsReport } from '../inspect/patterns';
+import { cyclesReport } from '../navigate/moduleUsers';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { assertionAuditReport } from '../inspect/assertionAudit';
 import { nullabilityReport } from '../inspect/nullability';
@@ -446,6 +447,13 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     scopedCommand('tsStructure.detectPatterns', 'Detecting design patterns', { id: 'patterns', kinds: ['file', 'folder', 'pickFolder', 'open', 'changed', 'project'] }, (t, scope) => {
       const { files, note } = filesIn(t.project().program(), scope);
       return withNote(patternsReport(files, t.folder), note);
+    }),
+    registerCommand('tsStructure.findImportCycles', () => {
+      const editor = sourceEditor();
+      if (editor) {
+        const target = editorTarget(projects, editor);
+        return runAnalysis(view, 'Finding import cycles', () => cyclesReport(target.project().program(), target.folder));
+      }
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {

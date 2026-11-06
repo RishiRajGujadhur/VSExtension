@@ -86,6 +86,11 @@ export const explanations: Record<string, Explanation> = {
     text: 'Why one module depends on another: the shortest chains of imports between them, with what each import brings in. Type-only imports are erased at runtime.',
     anchor: 'types-modules-and-tests',
   },
+  cycles: {
+    title: 'What is an import cycle?',
+    text: 'Modules that import each other, directly or through others. At run time one of them sees the other half-loaded, which causes undefined imports and order-dependent bugs. Type-only imports are erased and do not count.',
+    anchor: 'types-modules-and-tests',
+  },
   graphDiff: {
     title: 'Dependency Graph Diff',
     text: 'How the import graph changed since a Git revision: new and removed import cycles, added, removed and changed imports, and modules whose number of importers changed most.',
