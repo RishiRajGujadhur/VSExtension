@@ -956,3 +956,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'selfImport',
+  title: 'Module imports itself',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const own = ctx.sourceFile.fileName.replace(/\.[cm]?[jt]sx?$/, '').split(/[\\/]/).pop();
+    for (const statement of ctx.sourceFile.statements) {
+      if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && new RegExp(`^\\./${own}(\\.[cm]?[jt]sx?)?$`).test(statement.moduleSpecifier.text)) {
+        out.push(at(ctx.sourceFile, 'selfImport', statement.moduleSpecifier, 'This file imports itself.', 'warning', [{ title: 'Remove the import', edits: [removeStatement(ctx.sourceFile, statement)] }]));
+      }
+    }
+    return out;
+  },
+});

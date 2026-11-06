@@ -260,3 +260,7 @@ test('Inspection: !x.indexOf() is only true at index 0', () => {
 test('Inspection: \'|| true\' or \'&& false\' in a condition', () => {
   assert.equal(messages('declare const a: boolean; if (a || true) {}', 'constantLogicalOperand').length, 1);
 });
+
+test('Inspection: Module imports itself', () => {
+  assert.equal(messages("import { x } from './test';\nexport const y = 1;", 'selfImport').length, 1);
+});
