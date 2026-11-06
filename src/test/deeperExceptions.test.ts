@@ -73,3 +73,7 @@ test('Exception flow: decoding text strictly', () => {
 test('Exception flow: reading a consumed Response body', () => {
   assert.deepEqual(raised('function f(r: Response) { return r.json(); }'), ['r.json(): TypeError when the body was already read; rejects on invalid JSON']);
 });
+
+test('Exception flow: new Intl.Locale', () => {
+  assert.deepEqual(raised('function f(t: string) { return new Intl.Locale(t); }'), ['new Intl.Locale(): RangeError on an invalid language tag']);
+});

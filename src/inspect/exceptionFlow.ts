@@ -60,6 +60,8 @@ throwingCalls['jsyaml.load'] = 'YAMLException on invalid YAML';
 throwingCalls['toml.parse'] = 'Error on invalid TOML';
 throwingCalls['JSON5.parse'] = 'SyntaxError on invalid JSON5';
 
+throwingCalls['new Intl.Locale'] = 'RangeError on an invalid language tag';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {
