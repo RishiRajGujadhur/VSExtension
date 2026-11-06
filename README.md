@@ -47,7 +47,13 @@ Where a variable, parameter or property comes from, every place it changes, and 
 
 ### Detect Design Patterns
 
-The design patterns and architecture of a file, folder or the whole project: Singleton, Factory, Builder, Observer, Strategy, Command, Repository, Reducer, Memoization, Pipeline, Dependency injection, shared module state, higher-order functions, React components with hooks, and layered folders.
+The design patterns and architecture of a file, folder or the whole project, 55 in all, each recognized from the shape of the code rather than its names:
+
+- **Creating objects:** Singleton, module-level singleton, Factory, Abstract factory, Builder, Prototype, Object pool, Lazy initialization, Dependency injection, Service locator.
+- **Structure:** Adapter, Facade, Proxy, Decorator, Composite, Barrel module, Module pattern, Mixin, Value object, Null object, Fluent interface, layered folders.
+- **Behavior:** Observer, Event bus, Strategy, Strategy map, Command, State, State machine, Template method, Chain of responsibility, Visitor, Iterator, Specification, Plugin registry, Middleware.
+- **Data and async:** Repository, Unit of work, API client, Reducer, Store, Result type, Memoization, Pipeline, Promise chain, Retry, Debounce or throttle, Circuit breaker, shared module state.
+- **React:** components with hooks, Custom hook, Context provider, Higher-order component, Render props, plus higher-order functions.
 
 ![Design patterns in the demo project](docs/images/design-patterns.gif)
 
@@ -78,8 +84,10 @@ The **ⓘ** button in the results view explains the analysis on screen and the t
 
 - **Inheritance Hierarchy** and **Override Impact**: supertypes, subtypes and overrides, and what a change to a member reaches.
 - **Re-export Chain**: follow a name through barrel files to its declaration.
-- **Dependency Path Finder**: why one module imports another. **Dependency Graph Diff**: how imports changed since a Git revision, including new cycles.
-- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many.
+- **Dependency Path Finder**: why one module imports another. **Who Imports This File**: every module that imports it, directly or through others, nearest first. **Find Import Cycles**: every group of modules that import each other at run time. **Dependency Graph Diff**: how imports changed since a Git revision, including new cycles.
+- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many. It understands Jest, Vitest, Mocha, Playwright, `node:test`, Bun, AVA, tape, Deno, Cypress and Jasmine, and runs tests with pnpm, yarn or bun when the project uses them.
+
+**What the analyses recognize.** Side Effects knows browser APIs (storage, workers, notifications, messaging), Node modules, and packages for HTTP, databases, cloud SDKs, email, logging, telemetry, queues and payments. Exception Flow knows which library calls throw, including methods judged by their receiver's type, such as `reduce()` on an empty array or `toISOString()` on an invalid date. Nullability says why a library call can be empty, such as *undefined when nothing matches* for `find()`. Dead Exports treats framework entry points as used: Next.js pages and app routes, Remix, SvelteKit and Nuxt routes, Storybook stories, config files, test setup files and workers.
 
 ![Tests impacted by calculateSubtotal](docs/images/test-impact.gif)
 ![Dependency changes since HEAD with a new import cycle](docs/images/graph-diff.gif)
@@ -90,7 +98,11 @@ The **ⓘ** button in the results view explains the analysis on screen and the t
 - **Safe Delete** (`Alt+Delete`): deletes after checking every usage, or lists what still uses it.
 - **Introduce Parameter** (`Ctrl+Alt+P`): turns the selected expression into a parameter.
 - **Move Members to Module**: moves declarations to another file and fixes imports.
-- **Intention actions** in the lightbulb (`Ctrl+.`): 19 rewrites, such as flipping an `if` or converting to a template string.
+- **Intention actions** in the lightbulb (`Ctrl+.`): 70 rewrites, each offered only where it keeps the behavior. Some examples:
+  - `a != null ? a : b` to `a ?? b`, and `user && user.name` to `user?.name` in conditions.
+  - `indexOf(x) !== -1` to `includes(x)`, and `let` to `const`.
+  - `switch` to an `if` chain and back, early returns, and two independent `await`s into `Promise.all`.
+  - JSX: self-closing tags, `&&` and `?: null`, and string attributes.
 
 Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorings`); `Ctrl+Z` undoes them.
 
@@ -98,7 +110,13 @@ Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorin
 
 ## Find problems
 
-- **Live inspections** report missing `await`s and risky type assertions in the Problems panel, with quick fixes. Click the status bar count for the file's problems and a menu.
+- **Live inspections** report problems in the Problems panel, with quick fixes. Besides missing `await`s and risky type assertions, 55 smaller checks catch slips, such as:
+  - `x === NaN`, `typeof x === 'strng'`, `if (x = 1)`, a repeated `else if` condition;
+  - a loop counting the wrong way, `replaceAll(/a/)` without `g`, numbers sorted without a compare function;
+  - a `map()` callback that never returns, a list item without a `key`, an async `useEffect`;
+  - `JSON.stringify` of a Map, `throw 'text'`, `delete` on an array.
+
+  Style checks such as `console.log`, `==` and `await` in loops are off until you turn them on in **Configure Inspections…**. Click the status bar count for the file's problems and a menu.
 - **Inspect Code…** runs every inspection over a scope you choose; **Apply All Fixes** fixes a whole group.
 - **Dead Exports**, **Structural Duplicates** and **Audit Type Assertions** clean up a project or folder.
 - **Structural Search and Replace** finds code by shape with `$placeholders$`, and can save a pattern as your own inspection.
@@ -112,10 +130,10 @@ Analyses over many files ask where to look: the whole project, a folder, the ope
 ## Working with results
 
 - **Back and forward** through earlier reports, **re-run** (`F5`, or `Ctrl+Alt+S L` from anywhere; the button turns into a warning when files changed).
-- **Filter** rows (`Ctrl+F`; `file:cart` keeps rows in matching files), **Limit Results to Scope…**, **Show Groups…**; `Escape` shows every row again.
+- **Filter** rows (`Ctrl+F`): text, `file:cart` for rows in matching files, `is:warning` (or `is:error`, `is:info`) by tone, `-test` to drop matches. Also **Limit Results to Scope…** and **Show Groups…**; `Escape` shows every row again.
 - `F4` / `Shift+F4` walk through the results; the selected row follows your cursor.
 - `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here** and more.
-- Copy or export a report as Markdown or JSON, or **Copy All Locations**.
+- Copy or export a report as Markdown, CSV or JSON, open it as a Markdown preview, or **Copy All Locations**. Remove reports from **Show Analysis History…** with their trash button.
 
 ![Usages limited to cart.ts](docs/images/limit-results.gif)
 
