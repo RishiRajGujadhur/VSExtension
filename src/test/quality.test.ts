@@ -122,3 +122,7 @@ test('Hole in an array literal', () => {
 test('instanceof Array', () => {
   assert.equal(fixed('declare const v: unknown; const a = v instanceof Array;', 'instanceofArray'), 'declare const v: unknown; const a = Array.isArray(v);');
 });
+
+test('eval or new Function', () => {
+  assert.equal(messages("eval('1'); const f = new Function('return 1');", 'evalUse').length, 2);
+});

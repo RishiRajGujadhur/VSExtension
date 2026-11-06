@@ -398,3 +398,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'evalUse',
+  title: 'eval or new Function',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if ((ts.isCallExpression(node) && node.expression.getText() === 'eval') || (ts.isNewExpression(node) && node.expression.getText() === 'Function')) {
+        out.push(at(ctx.sourceFile, 'evalUse', node, 'Running a string as code is unsafe with any outside input and slow; avoid it.', 'warning'));
+      }
+    });
+    return out;
+  },
+});
