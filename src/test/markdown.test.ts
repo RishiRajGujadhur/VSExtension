@@ -95,3 +95,8 @@ test('report titles split into the analysis and its subject', () => {
   assert.deepEqual(parts('deadExports', 'Dead exports'), { heading: 'Dead exports' });
   assert.deepEqual(titleParts(undefined), { heading: 'Analysis' });
 });
+
+test('Results view: filter rows by tone with is:error, is:warning or is:info', () => {
+  const roots = [{ label: 'g', children: [{ label: 'bad', tone: 'warning' as const }, { label: 'fine', tone: 'ok' as const }] }];
+  assert.deepEqual(filterReport(roots, 'is:warning').map((r) => r.children?.map((c) => c.label)), [['bad']]);
+});

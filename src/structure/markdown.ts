@@ -7,6 +7,11 @@ export function filterReport(nodes: readonly ReportNode[], filter: string): Repo
   if (!needle) {
     return [...nodes];
   }
+  // `is:warning` keeps rows of that tone: error, warning, info or ok.
+  const tone = /^is:(error|warning|info|ok)$/.exec(needle)?.[1];
+  if (tone) {
+    return filterBy(nodes, (node) => node.tone === tone);
+  }
   // `file:cart` keeps rows whose file path contains "cart", whatever their text.
   const byFile = needle.startsWith('file:') ? needle.slice('file:'.length).trim().replace(/\\/g, '/') : undefined;
   const result: ReportNode[] = [];
@@ -42,4 +47,16 @@ export function reportMarkdown(report: Report, root?: string, nodes: readonly Re
 
 function escape(text: string): string {
   return text.replace(/([\\`*_[\]<>])/g, '\\$1');
+}
+
+/** The rows the test accepts, with the groups that lead to them, expanded. */
+function filterBy(nodes: readonly ReportNode[], accept: (node: ReportNode) => boolean): ReportNode[] {
+  const result: ReportNode[] = [];
+  for (const node of nodes) {
+    const children = accept(node) ? (node.children ?? []) : filterBy(node.children ?? [], accept);
+    if (accept(node) || children.length > 0) {
+      result.push({ ...node, children: children.length ? children : undefined, expanded: true });
+    }
+  }
+  return result;
 }
