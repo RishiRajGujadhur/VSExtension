@@ -68,6 +68,8 @@ const effectfulGlobals: Record<string, { kind: EffectKind; note: string }> = {
   alert: { kind: 'io', note: 'shows a dialog' },
   confirm: { kind: 'io', note: 'shows a dialog' },
   prompt: { kind: 'io', note: 'shows a dialog' },
+  BroadcastChannel: { kind: 'io', note: 'sends messages to other tabs' },
+  postMessage: { kind: 'io', note: 'sends a message to another window' },
   document: { kind: 'global', note: 'uses the DOM' },
   window: { kind: 'global', note: 'uses the window object' },
   globalThis: { kind: 'global', note: 'uses the global object' },
