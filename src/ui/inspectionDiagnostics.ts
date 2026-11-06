@@ -208,11 +208,28 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       }));
     const items: Item[] = [
       ...(problems.length ? [{ label: 'In this file', kind: vscode.QuickPickItemKind.Separator }, ...problems, { label: 'Inspections', kind: vscode.QuickPickItemKind.Separator }] : []),
+      ...(document && findings && fixAllEdits(findings).length
+        ? [
+            {
+              label: '$(check-all) Fix All in This File',
+              description: `${fixAllEdits(findings).length} fix${fixAllEdits(findings).length === 1 ? '' : 'es'}`,
+              run: async () => {
+                const edit = new vscode.WorkspaceEdit();
+                for (const e of fixAllEdits(findings)) {
+                  edit.replace(document.uri, new vscode.Range(document.positionAt(e.start), document.positionAt(e.end)), e.text);
+                }
+                return vscode.workspace.applyEdit(edit);
+              },
+            },
+          ]
+        : []),
       { label: '$(list-flat) Show Problems in This File', description: findings ? `${findings.length}` : undefined, run: () => vscode.commands.executeCommand('workbench.actions.view.problems') },
       { label: '$(file-code) Inspect Current File', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'file') },
       { label: '$(git-compare) Inspect Changed Files', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed') },
       { label: '$(project) Inspect Whole Project', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'project') },
       { label: '$(settings) Configure Inspections…', run: () => vscode.commands.executeCommand('tsStructure.configureInspections') },
+      { label: '$(comment-discussion) How Do I…?', run: () => vscode.commands.executeCommand('tsStructure.howDoI') },
+      { label: '$(list-tree) Analyze or Refactor This…', run: () => vscode.commands.executeCommand('tsStructure.actionsAtCursor') },
       paused
         ? {
             label: '$(debug-start) Resume Live Inspections',
