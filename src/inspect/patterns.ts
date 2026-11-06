@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as ts from 'typescript';
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
+import { catalog } from './patternCatalog';
 
 /** A design pattern or architectural style recognized from the shape of the code, never guessed from names alone. */
 export interface DetectedPattern {
@@ -233,6 +234,10 @@ export function detectPatterns(sourceFile: ts.SourceFile): DetectedPattern[] {
       found.push(describe(classes[0], execute ? 'Command' : 'Strategy', `${classes.map((c) => c.name?.text ?? 'class').join(', ')} are interchangeable ${base}s`, base));
     }
   }
+  // Every further pattern of the catalog, each with its own detector.
+  for (const entry of catalog) {
+    found.push(...entry.detect(sourceFile).map((f) => ({ name: entry.name, meaning: entry.meaning, ...f })));
+  }
   return found;
 }
 
@@ -258,7 +263,7 @@ export function detectLayers(fileNames: readonly string[], root?: string): strin
 }
 
 export function patternMeaning(name: string): string {
-  return meanings[name] ?? '';
+  return meanings[name] ?? catalog.find((e) => e.name === name)?.meaning ?? '';
 }
 
 /** Detect Design Patterns: every pattern in the files, grouped by pattern, with what each means. */
