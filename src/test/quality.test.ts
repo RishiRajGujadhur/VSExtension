@@ -256,3 +256,7 @@ test('Inspection: List item without a key', () => {
 test('Inspection: !x.indexOf() is only true at index 0', () => {
   assert.equal(fixed('declare const xs: string[]; if (!xs.indexOf("a")) {}', 'negatedIndexOf'), 'declare const xs: string[]; if (!xs.includes("a")) {}');
 });
+
+test('Inspection: \'|| true\' or \'&& false\' in a condition', () => {
+  assert.equal(messages('declare const a: boolean; if (a || true) {}', 'constantLogicalOperand').length, 1);
+});

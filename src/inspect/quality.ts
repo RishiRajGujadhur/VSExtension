@@ -937,3 +937,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'constantLogicalOperand',
+  title: '\'|| true\' or \'&& false\' in a condition',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node)) return;
+      const k = node.operatorToken.kind;
+      const right = unparen(node.right).kind;
+      const always = (k === ts.SyntaxKind.BarBarToken && right === ts.SyntaxKind.TrueKeyword) ? 'true' : (k === ts.SyntaxKind.AmpersandAmpersandToken && right === ts.SyntaxKind.FalseKeyword) ? 'false' : undefined;
+      if (always) {
+        out.push(at(ctx.sourceFile, 'constantLogicalOperand', node, `This is always ${always}; the left side does not matter. Left over from debugging?`, 'warning'));
+      }
+    });
+    return out;
+  },
+});
