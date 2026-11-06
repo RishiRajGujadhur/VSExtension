@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { FileSymbol, SymbolKind, fileSymbols, symbolAt } from '../structure/symbols';
 import { parse, refactorKind } from './codeActions';
 import { isFeatureEnabled } from './features';
+import { commandIcons } from '../structure/icons';
 
 /** An analysis that starts from a named thing at the cursor, and the things it can start from. */
 interface CursorAnalysis {
@@ -90,15 +91,66 @@ export async function offerSymbols(command: string, message: string, editor: vsc
   if (!choice) {
     return;
   }
-  const picked = await vscode.window.showQuickPick(
-    symbols.map((s) => ({ label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`].filter(Boolean).join(' · '), symbol: s })),
-    { title: `Start from…`, placeHolder: `Declarations in ${vscode.workspace.asRelativePath(editor.document.uri)}`, matchOnDescription: true },
-  );
-  if (!picked) {
-    return;
+  const picked = await pickSymbol(editor, symbols);
+  if (picked) {
+    await runOn(editor, picked, command);
   }
-  const position = editor.document.positionAt(picked.symbol.offset);
+}
+
+/** A list of declarations with the one nearest the cursor selected, so Enter takes the obvious one. */
+async function pickSymbol(editor: vscode.TextEditor, symbols: readonly FileSymbol[], title = 'Start from…'): Promise<FileSymbol | undefined> {
+  type Item = vscode.QuickPickItem & { symbol: FileSymbol };
+  const line = editor.selection.active.line;
+  const items: Item[] = symbols.map((s) => ({ label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`].filter(Boolean).join(' · '), symbol: s }));
+  const nearest = [...items].sort((a, b) => Math.abs(a.symbol.line - line) - Math.abs(b.symbol.line - line))[0];
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = title;
+  picker.placeholder = `Declarations in ${vscode.workspace.asRelativePath(editor.document.uri)}`;
+  picker.matchOnDescription = true;
+  picker.items = items;
+  picker.activeItems = nearest ? [nearest] : [];
+  const picked = await new Promise<Item | undefined>((resolve) => {
+    picker.onDidAccept(() => resolve(picker.selectedItems[0] ?? picker.activeItems[0]));
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
+  return picked?.symbol;
+}
+
+async function runOn(editor: vscode.TextEditor, symbol: FileSymbol, command: string): Promise<unknown> {
+  const position = editor.document.positionAt(symbol.offset);
   const shown = await vscode.window.showTextDocument(editor.document, { selection: new vscode.Range(position, position) });
   shown.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-  await vscode.commands.executeCommand(command);
+  return vscode.commands.executeCommand(command);
+}
+
+const titles: Record<string, string> = {
+  'tsStructure.dataFlow': 'Data Flow',
+  'tsStructure.nullability': 'Nullability',
+  'tsStructure.argumentFlow': 'Argument Propagation',
+  'tsStructure.sideEffects': 'Side Effects',
+  'tsStructure.exceptionFlow': 'Exception Flow',
+  'tsStructure.promiseRejections': 'Promise Rejections',
+  'tsStructure.typeHierarchy': 'Inheritance Hierarchy',
+  'tsStructure.overrideImpact': 'Override Impact',
+  'tsStructure.reexportChain': 'Re-export Chain',
+  'tsStructure.semanticUsages': 'Find Usages',
+  'tsStructure.semanticUsagesInFile': 'Find Usages in This File',
+};
+
+/** Analyze a Symbol…: pick a declaration of the file, then one of the analyses that fit it, without moving the cursor first. */
+export async function analyzeSymbol(editor: vscode.TextEditor): Promise<void> {
+  const symbol = await pickSymbol(editor, fileSymbols(parse(editor.document)), 'Analyze a Symbol');
+  if (!symbol) {
+    return;
+  }
+  const fitting = analyses.filter((a) => isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async));
+  const picked = await vscode.window.showQuickPick(
+    fitting.map((a) => ({ label: `$(${commandIcons[a.command] ?? 'symbol-misc'}) ${titles[a.command] ?? a.command}`, command: a.command })),
+    { title: `Analyze ${symbol.name}`, placeHolder: 'Choose an analysis' },
+  );
+  if (picked) {
+    await runOn(editor, symbol, picked.command);
+  }
 }

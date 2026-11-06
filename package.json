@@ -635,6 +635,12 @@
         "title": "Shortcut Cheat Sheet",
         "category": "TypeScript Structure",
         "icon": "$(keyboard)"
+      },
+      {
+        "command": "tsStructure.analyzeSymbol",
+        "title": "Analyze a Symbol…",
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-class)"
       }
     ],
     "viewsContainers": {
@@ -858,6 +864,12 @@
         "mac": "cmd+ctrl+s space",
         "command": "tsStructure.actionsAtCursor",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s ctrl+alt+s",
+        "mac": "cmd+ctrl+s cmd+ctrl+s",
+        "command": "tsStructure.analyzeSymbol",
+        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1025,6 +1037,10 @@
         {
           "command": "tsStructure.howDoI",
           "group": "9_help@0"
+        },
+        {
+          "command": "tsStructure.analyzeSymbol",
+          "group": "0_all@2"
         }
       ],
       "explorer/context": [
@@ -1453,6 +1469,10 @@
         {
           "command": "tsStructure.shortcutSheet",
           "when": "true"
+        },
+        {
+          "command": "tsStructure.analyzeSymbol",
+          "when": "editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
         }
       ],
       "view/title": [

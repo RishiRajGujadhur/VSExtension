@@ -32,7 +32,7 @@ import { StructureView } from './structureView';
 import { registerCommand } from './features';
 import { explanations, guideUrl } from '../structure/explanations';
 import { AnalysisError } from '../analysis/types';
-import { offerSymbols } from './analysisActions';
+import { analyzeSymbol, offerSymbols } from './analysisActions';
 
 /** The file, cursor and project an analysis runs against, captured so it can be re-run later. */
 export interface AnalysisTarget {
@@ -238,6 +238,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
+    registerCommand('tsStructure.analyzeSymbol', () => {
+      const editor = sourceEditor();
+      return editor && analyzeSymbol(editor);
+    }),
     registerCommand('tsStructure.report.rerunOutdated', () => view.rerun()),
     registerCommand('tsStructure.report.copyLocations', async () => {
       const lines = view.locations();
