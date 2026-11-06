@@ -69,3 +69,7 @@ test('Exception flow: schema validation with Zod, Yup and others', () => {
 test('Exception flow: decoding text strictly', () => {
   assert.deepEqual(raised('function f(b: Uint8Array) { return new TextDecoder("utf-8", { fatal: true }).decode(b); }'), ['new TextDecoder("utf-8", { fatal: true }).decode(): TypeError on invalid bytes when fatal is set']);
 });
+
+test('Exception flow: reading a consumed Response body', () => {
+  assert.deepEqual(raised('function f(r: Response) { return r.json(); }'), ['r.json(): TypeError when the body was already read; rejects on invalid JSON']);
+});

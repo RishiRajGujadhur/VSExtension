@@ -116,6 +116,8 @@ throwingMethods.push({ receiver: /^(Zod\w*|ObjectSchema|Schema|StringSchema|Numb
 
 throwingMethods.push({ receiver: 'TextDecoder', method: 'decode', note: 'TypeError on invalid bytes when fatal is set' });
 
+throwingMethods.push({ receiver: /^(Response|Request|Body)$/, method: /^(json|text|arrayBuffer|blob|formData)$/, note: 'TypeError when the body was already read; rejects on invalid JSON' });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */
