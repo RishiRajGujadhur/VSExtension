@@ -22,6 +22,7 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.exceptionFlow': 'flame',
   'tsStructure.findDuplicates': 'files',
   'tsStructure.semanticUsages': 'references',
+  'tsStructure.semanticUsagesInFile': 'go-to-file',
   'tsStructure.reexportChain': 'link',
   'tsStructure.structuralSearch': 'symbol-structure',
   'tsStructure.manageCustomInspections': 'symbol-ruler',

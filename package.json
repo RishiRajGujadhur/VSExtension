@@ -569,7 +569,8 @@
       {
         "command": "tsStructure.semanticUsagesInFile",
         "title": "Find Usages in Current File",
-        "category": "TypeScript Structure"
+        "category": "TypeScript Structure",
+        "icon": "$(go-to-file)"
       },
       {
         "command": "tsStructure.editKeybindings",

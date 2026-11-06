@@ -28,9 +28,16 @@ const analyses: readonly CursorAnalysis[] = [
   { command: 'tsStructure.overrideImpact', feature: 'hierarchy', kinds: ['member'], lightbulb: (s) => `Show impact of changing ${qualified(s)}` },
   { command: 'tsStructure.reexportChain', feature: 'reexports', kinds: ['import'], lightbulb: (s) => `Follow the re-exports of '${s.name}'` },
   { command: 'tsStructure.semanticUsages', feature: 'usages', kinds: ['variable', 'function', 'class', 'interface', 'member', 'parameter', 'import'] },
+  { command: 'tsStructure.semanticUsagesInFile', feature: 'usages', kinds: ['variable', 'function', 'class', 'interface', 'member', 'import'], lightbulb: (s) => `Find usages of '${s.name}' in this file` },
 ];
 
 const analyzeKind = refactorKind.append('analyze');
+
+/** The analyses that fit the declaration at the cursor, for Analyze or Refactor This's Suggested section. */
+export function suggestedAt(document: vscode.TextDocument, offset: number): string[] {
+  const symbol = symbolAt(parse(document), offset);
+  return symbol ? analyses.filter((a) => a.lightbulb && isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async)).map((a) => a.command) : [];
+}
 
 /** Lightbulb entries that run an analysis on the declaration under the cursor, such as "Show data flow of 'total'". */
 export class AnalysisActionProvider implements vscode.CodeActionProvider {

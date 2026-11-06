@@ -5,6 +5,7 @@ import { featureOf, features } from '../structure/features';
 import { isFeatureEnabled } from './features';
 import { commandIcons } from '../structure/icons';
 import { intentionsAtCursor } from './intentionProvider';
+import { suggestedAt } from './analysisActions';
 
 interface Action {
   command: string;
@@ -44,6 +45,7 @@ const groups: { title: string; actions: Action[] }[] = [
   {
     title: 'Navigate',
     actions: [
+      { command: 'tsStructure.semanticUsagesInFile', label: 'Find Usages in Current File', detail: 'The same search, limited to this file' },
       { command: 'tsStructure.semanticUsages', label: 'Semantic Find Usages', detail: 'References grouped by reads, writes, calls, imports, types and JSX' },
       { command: 'tsStructure.argumentFlow', label: 'Argument Propagation', detail: 'Where a parameter’s values come from and where they go' },
       { command: 'tsStructure.reexportChain', label: 'Re-export Chain', detail: 'Follow this name through aliases and barrel files' },
@@ -57,7 +59,7 @@ const groups: { title: string; actions: Action[] }[] = [
 ];
 
 const recentKey = 'tsStructure.recentActions';
-const maxRecent = 3;
+const maxRecent = 5;
 
 /** "Analyze or Refactor This": every refactoring and analysis for the cursor in one searchable list, the last ones used first. */
 export async function showActionsAtCursor(memento?: vscode.Memento, keybindings: readonly Keybinding[] = []): Promise<void> {
@@ -78,11 +80,18 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
   const recent = (memento?.get<string[]>(recentKey) ?? [])
     .map((command) => all.find((a) => a.command === command))
     .filter((a): a is Action => !!a && available(a));
-  const items: Item[] = recent.length ? [{ label: 'Recently used', kind: vscode.QuickPickItemKind.Separator }, ...recent.map(item)] : [];
+  // What fits the declaration under the cursor comes first, such as Side Effects on a function name.
+  const suggested = suggestedAt(editor.document, editor.document.offsetAt(editor.selection.active))
+    .map((command) => all.find((a) => a.command === command))
+    .filter((a): a is Action => !!a && available(a) && !recent.includes(a));
+  const items: Item[] = [
+    ...(suggested.length ? [{ label: 'Suggested here', kind: vscode.QuickPickItemKind.Separator }, ...suggested.map(item)] : []),
+    ...(recent.length ? [{ label: 'Recently used', kind: vscode.QuickPickItemKind.Separator }, ...recent.map(item)] : []),
+  ];
   for (const group of groups) {
     items.push({ label: group.title, kind: vscode.QuickPickItemKind.Separator });
-    // A recent action is listed once, at the top.
-    items.push(...group.actions.filter((a) => available(a) && !recent.includes(a)).map(item));
+    // A suggested or recent action is listed once, at the top.
+    items.push(...group.actions.filter((a) => available(a) && !recent.includes(a) && !suggested.includes(a)).map(item));
   }
   // The lightbulb's rewrites that apply here, so one list holds everything that can be done at the cursor.
   const disabled = new Set(vscode.workspace.getConfiguration('tsStructure').get<string[]>('intentions.disabled', []));
