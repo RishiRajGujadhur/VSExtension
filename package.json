@@ -649,6 +649,26 @@
           "submenu": "tsStructure.editorMenu",
           "when": "editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
           "group": "1_modification@90"
+        },
+        {
+          "command": "tsStructure.semanticUsagesInFile",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@90"
+        },
+        {
+          "command": "tsStructure.semanticUsages",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@91"
+        },
+        {
+          "command": "tsStructure.dataFlow",
+          "when": "config.tsStructure.features.dataFlow && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@92"
+        },
+        {
+          "command": "tsStructure.actionsAtCursor",
+          "when": "config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "navigation@93"
         }
       ],
       "tsStructure.editorMenu": [
@@ -1664,6 +1684,11 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show the TypeScript Structure button in the editor title bar of TypeScript and JavaScript files. It opens **Analyze or Refactor This…**."
+          },
+          "tsStructure.contextMenu.topLevel": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show **Find Usages in Current File**, **Semantic Find Usages**, **Data Flow Path Explorer** and **Analyze or Refactor This…** directly in the editor's right-click menu, next to Go to Definition. Everything else stays under **TypeScript Structure**."
           }
         }
       },
