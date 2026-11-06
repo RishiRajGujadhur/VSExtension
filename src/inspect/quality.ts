@@ -823,3 +823,26 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'missingCallbackReturn',
+  title: 'Callback that never returns a value',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const needsValue = /^(map|filter|find|findIndex|findLast|findLastIndex|some|every|reduce|reduceRight|flatMap|sort|toSorted)$/;
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression) || !needsValue.test(node.expression.name.text)) return;
+      const callback = node.arguments[0];
+      if (!callback || !(ts.isArrowFunction(callback) || ts.isFunctionExpression(callback)) || !ts.isBlock(callback.body) || callback.body.statements.length === 0) return;
+      let returns = false;
+      walkInScope(callback.body, (inner) => {
+        if (ts.isReturnStatement(inner) && inner.expression) returns = true;
+      });
+      if (!returns && !callback.body.statements.some((s) => ts.isThrowStatement(s))) {
+        out.push(at(ctx.sourceFile, 'missingCallbackReturn', callback, `This ${node.expression.name.text}() callback never returns a value, so every result is undefined. Add return, or use an expression body.`, 'warning'));
+      }
+    });
+    return out;
+  },
+});

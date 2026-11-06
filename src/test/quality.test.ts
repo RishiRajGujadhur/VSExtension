@@ -229,3 +229,8 @@ test('Inspection: Exact comparison of decimal arithmetic', () => {
 test('Inspection: Unused catch variable', () => {
   assert.equal(fixed('try { f(); } catch (e) { g(); } declare function f(): void; declare function g(): void;', 'unusedCatchBinding'), 'try { f(); } catch { g(); } declare function f(): void; declare function g(): void;');
 });
+
+test('Inspection: Callback that never returns a value', () => {
+  assert.equal(messages('declare const xs: number[]; const ys = xs.map((x) => { x * 2; });', 'missingCallbackReturn').length, 1);
+  assert.equal(messages('declare const xs: number[]; xs.forEach((x) => { x * 2; });', 'missingCallbackReturn').length, 0);
+});
