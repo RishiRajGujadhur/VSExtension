@@ -93,3 +93,8 @@ test('Mutation tracking: DOM tree and attribute changes, through element subtype
 test('Mutation tracking: typed arrays', () => {
   assert.ok(effects('function f(b: Uint8Array) { b.fill(0); }').some((e) => e.startsWith('mutates-parameter')));
 });
+
+test('Mutation tracking: Object.freeze, seal and Reflect writes', () => {
+  assert.ok(effects('function f(o: object) { Object.freeze(o); }').some((e) => e.startsWith('mutates-parameter')));
+  assert.ok(effects('function f(o: object) { Reflect.set(o, "a", 1); }').some((e) => e.startsWith('mutates-parameter')));
+});

@@ -184,8 +184,10 @@ export class EffectAnalyzer {
           effects.push(effect);
         }
       }
-      if (ts.isIdentifier(callee.expression) && callee.expression.text === 'Object' && ['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf'].includes(callee.name.text) && call.arguments[0]) {
-        const effect = this.classifyWrite(fn, call.arguments[0], `Object.${callee.name.text}()`, call);
+      const objectWrites = ['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf', 'freeze', 'seal', 'preventExtensions'];
+      const reflectWrites = ['set', 'defineProperty', 'deleteProperty', 'setPrototypeOf', 'preventExtensions'];
+      if (ts.isIdentifier(callee.expression) && ((callee.expression.text === 'Object' && objectWrites.includes(callee.name.text)) || (callee.expression.text === 'Reflect' && reflectWrites.includes(callee.name.text))) && call.arguments[0]) {
+        const effect = this.classifyWrite(fn, call.arguments[0], `${callee.expression.text}.${callee.name.text}()`, call);
         if (effect) {
           effects.push(effect);
         }
@@ -277,7 +279,7 @@ export class EffectAnalyzer {
       return { kind: 'writes-global', target: access, description: `writes global ${access}${suffix(how)}`, node: at, declaration };
     }
     const owner = ts.isParameter(declaration) || ts.isBindingElement(declaration) ? ownerFunction(declaration) : enclosingFunction(declaration);
-    const rebinding = !path && !how.startsWith('.') && !how.startsWith('Object.') && !how.startsWith('via ');
+    const rebinding = !path && !how.startsWith('.') && !how.startsWith('Object.') && !how.startsWith('Reflect.') && !how.startsWith('via ');
     if (owner === fn) {
       const parameter = parameterOf(declaration, fn);
       if (parameter) {
