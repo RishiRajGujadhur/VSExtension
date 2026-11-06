@@ -321,3 +321,5 @@ export function isConventionalEntry(fileName: string): string | undefined {
 }
 
 entryConventions.push({ pattern: /\/pages\/(?!(.*\/)?(components?|lib|utils?)\/)[^]*\.[cm]?[jt]sx?$/, what: 'Next.js page' });
+
+entryConventions.push({ pattern: /(\/app\/([^]*\/)?(page|layout|template|loading|error|not-found|global-error|default|route|opengraph-image|twitter-image|icon|apple-icon|sitemap|robots|manifest)|(^|\/)(src\/)?(middleware|instrumentation))\.[cm]?[jt]sx?$/, what: 'Next.js app route' });
