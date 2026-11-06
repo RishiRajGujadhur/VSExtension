@@ -269,3 +269,7 @@ test('Intention: Await independent calls together', () => {
 test('Intention: Sort imported names', () => {
   assert.equal(apply("import { c, ¦a, type B } from './x';", 'sortImportSpecifiers'), "import { a, type B, c } from './x';");
 });
+
+test('Intention: Convert \'a.b\' to \'a["b"]\'', () => {
+  assert.equal(apply('const n = user.na¦me;', 'propertyToElementAccess'), "const n = user['name'];");
+});

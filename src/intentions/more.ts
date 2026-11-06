@@ -695,3 +695,10 @@ function sortImportSpecifiers(ctx: IntentionContext): IntentionAction | undefine
   return { id: 'sortImportSpecifiers', title: 'Sort imported names', edits: [ctx.replace(named, `{ ${sorted.join(', ')} }`)] };
 }
 moreIntentions.push({ id: 'sortImportSpecifiers', title: 'Sort imported names', run: sortImportSpecifiers });
+
+function propertyToElementAccess(ctx: IntentionContext): IntentionAction | undefined {
+  const access = ctx.nearest(ts.isPropertyAccessExpression, (p) => ts.isIdentifier(p.name) && ctx.position >= p.name.getStart(ctx.sourceFile));
+  if (!access) return undefined;
+  return { id: 'propertyToElementAccess', title: `Use ['${access.name.text}']`, edits: [ctx.replace(access, `${ctx.text(access.expression)}${access.questionDotToken ? '?.' : ''}['${access.name.text}']`)] };
+}
+moreIntentions.push({ id: 'propertyToElementAccess', title: 'Convert \'a.b\' to \'a["b"]\'', run: propertyToElementAccess });
