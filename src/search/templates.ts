@@ -27,4 +27,5 @@ export const searchTemplates: SearchPreset[] = [
   { title: 'Object.assign into a new object', pattern: 'Object.assign({}, $a$, $b$)', replacement: '({ ...$a$, ...$b$ })', message: 'Use object spread' },
   { title: 'React effect without dependencies', pattern: 'useEffect($effect$)', message: 'This effect runs after every render; add a dependency array' },
   { title: 'console.log calls', pattern: 'console.log($args*$)', message: 'Remove console.log before committing' },
+  { title: "'indexOf' check instead of 'includes'", pattern: '$list$.indexOf($x$) !== -1', replacement: '$list$.includes($x$)', message: 'Use $list$.includes($x$)' },
 ];
