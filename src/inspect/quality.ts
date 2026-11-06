@@ -734,3 +734,24 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'unnecessaryOptionalChain',
+  title: 'Unnecessary optional chain',
+  defaultSeverity: 'hint',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const options = ctx.program.getCompilerOptions();
+    if (!(options.strictNullChecks ?? options.strict)) return out;
+    walk(ctx.sourceFile, (node) => {
+      if (!(ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node) || ts.isCallExpression(node)) || !node.questionDotToken) return;
+      const type = ctx.checker.getTypeAtLocation(node.expression);
+      const nullable = (t: ts.Type): boolean => !!(t.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined | ts.TypeFlags.Void | ts.TypeFlags.Any | ts.TypeFlags.Unknown)) || (t.isUnion() && t.types.some(nullable));
+      if (nullable(type)) return;
+      const token = node.questionDotToken;
+      const text = ts.isPropertyAccessExpression(node) ? '.' : '';
+      out.push(at(ctx.sourceFile, 'unnecessaryOptionalChain', token, `${node.expression.getText()} is never null or undefined here, so ?. is not needed.`, 'hint', [{ title: "Remove '?'", edits: [{ start: token.getStart(ctx.sourceFile), end: token.end, text }] }]));
+    });
+    return out;
+  },
+});

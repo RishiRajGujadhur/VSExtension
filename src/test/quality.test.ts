@@ -205,3 +205,8 @@ test('Inspection: Sorting numbers without a compare function', () => {
 test('Inspection: Duplicate case label', () => {
   assert.equal(messages('declare const k: number; switch (k) { case 1: break; case 1: break; }', 'duplicateCaseLabel').length, 1);
 });
+
+test('Inspection: Unnecessary optional chain', () => {
+  assert.equal(fixed('declare const user: { name: string }; const n = user?.name;', 'unnecessaryOptionalChain'), 'declare const user: { name: string }; const n = user.name;');
+  assert.equal(messages('declare const user: { name: string } | undefined; const n = user?.name;', 'unnecessaryOptionalChain').length, 0);
+});
