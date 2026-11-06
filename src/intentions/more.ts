@@ -468,3 +468,11 @@ function mathPowToExponent(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'mathPowToExponent', title: "Replace with '**'", edits: [ctx.replace(call, wrap(result, requiredPrecedence(call)))] };
 }
 moreIntentions.push({ id: 'mathPowToExponent', title: 'Replace \'Math.pow\' with \'**\'', run: mathPowToExponent });
+
+function addNumericSeparators(ctx: IntentionContext): IntentionAction | undefined {
+  const literal = ctx.nearest(ts.isNumericLiteral);
+  const raw = literal && ctx.text(literal);
+  if (!literal || !raw || !/^\d{5,}$/.test(raw)) return undefined;
+  return { id: 'addNumericSeparators', title: 'Add numeric separators (1_000_000)', edits: [ctx.replace(literal, raw.replace(/\B(?=(\d{3})+$)/g, '_'))] };
+}
+moreIntentions.push({ id: 'addNumericSeparators', title: 'Add numeric separators', run: addNumericSeparators });

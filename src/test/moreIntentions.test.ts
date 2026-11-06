@@ -157,3 +157,8 @@ test('Replace \'Math.pow\' with \'**\'', () => {
   assert.equal(apply('const x = Math.¦pow(-a, 2);', 'mathPowToExponent'), 'const x = (-a) ** 2;');
   assert.equal(apply('const x = Math.¦pow(a, b).toFixed();', 'mathPowToExponent'), 'const x = (a ** b).toFixed();');
 });
+
+test('Add numeric separators', () => {
+  assert.equal(apply('const n = 1000¦000;', 'addNumericSeparators'), 'const n = 1_000_000;');
+  assert.equal(apply('const n = 12¦34;', 'addNumericSeparators'), undefined);
+});
