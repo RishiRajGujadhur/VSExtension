@@ -98,3 +98,7 @@ test('Mutation tracking: Object.freeze, seal and Reflect writes', () => {
   assert.ok(effects('function f(o: object) { Object.freeze(o); }').some((e) => e.startsWith('mutates-parameter')));
   assert.ok(effects('function f(o: object) { Reflect.set(o, "a", 1); }').some((e) => e.startsWith('mutates-parameter')));
 });
+
+test('Side effects: opening windows and printing', () => {
+  assert.deepEqual(effects('function f() { print(); }'), ['io: opens the print dialog']);
+});
