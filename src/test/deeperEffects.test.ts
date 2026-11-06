@@ -48,3 +48,7 @@ test('Side effects: packages that do I/O, starting with HTTP clients', () => {
 test('Side effects: database clients', () => {
   assert.deepEqual(effects('import { Pool } from "pg"; function f() { return new Pool(); }'), ['io: uses a database']);
 });
+
+test('Side effects: AWS, Google Cloud and Azure SDKs', () => {
+  assert.deepEqual(effects('import { S3Client } from "@aws-sdk/client-s3"; function f() { return new S3Client({}); }'), ['io: calls a cloud service']);
+});
