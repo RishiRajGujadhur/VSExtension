@@ -196,3 +196,8 @@ test('Inspection: Month 12 or more in new Date()', () => {
 test('Inspection: JSON.stringify of a Map or Set', () => {
   assert.equal(messages('const m = new Map<string, number>(); JSON.stringify(m);', 'jsonStringifyCollection').length, 1);
 });
+
+test('Inspection: Sorting numbers without a compare function', () => {
+  assert.equal(fixed('declare const xs: number[]; xs.sort();', 'sortWithoutCompare'), 'declare const xs: number[]; xs.sort((a, b) => a - b);');
+  assert.equal(messages('declare const xs: string[]; xs.sort();', 'sortWithoutCompare').length, 0);
+});

@@ -692,3 +692,23 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'sortWithoutCompare',
+  title: 'Sorting numbers without a compare function',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isCallExpression(node) || node.arguments.length !== 0 || !ts.isPropertyAccessExpression(node.expression) || !['sort', 'toSorted'].includes(node.expression.name.text)) return;
+      const type = ctx.checker.getTypeAtLocation(node.expression.expression);
+      if (!ctx.checker.isArrayType(type)) return;
+      const element = ctx.checker.getTypeArguments(type as ts.TypeReference)[0];
+      if (element && element.flags & (ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike)) {
+        const open = node.end - 1;
+        out.push(at(ctx.sourceFile, 'sortWithoutCompare', node.expression.name, `${node.expression.name.text}() without a compare function sorts numbers as text: [10, 9, 1] becomes [1, 10, 9].`, 'warning', [{ title: 'Sort numerically', edits: [{ start: open, end: open, text: '(a, b) => a - b' }], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});
