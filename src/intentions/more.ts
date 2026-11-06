@@ -143,3 +143,17 @@ function indexOfToIncludes(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'indexOfToIncludes', title: "Replace 'indexOf' check with 'includes'", edits: [ctx.replace(binary, present ? includes : `!${includes}`)] };
 }
 moreIntentions.push({ id: 'indexOfToIncludes', title: 'Replace \'indexOf\' check with \'includes\'', run: indexOfToIncludes });
+
+function removeElseAfterReturn(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isIfStatement, (s) => ctx.onHeader(s));
+  if (!statement?.elseStatement || !endsWithJump(ts.isBlock(statement.thenStatement) ? statement.thenStatement.statements : [statement.thenStatement])) return undefined;
+  const parent = statement.parent;
+  if (!(ts.isBlock(parent) || ts.isSourceFile(parent) || ts.isCaseClause(parent) || ts.isDefaultClause(parent))) return undefined;
+  const lines = statementLines(statement.elseStatement, ctx.sourceFile);
+  return {
+    id: 'removeElseAfterReturn',
+    title: "Remove redundant 'else'",
+    edits: [{ start: statement.thenStatement.end, end: statement.end, text: `\n${indentLines(lines, ctx.indentOf(statement))}` }],
+  };
+}
+moreIntentions.push({ id: 'removeElseAfterReturn', title: 'Remove \'else\' after \'return\'', run: removeElseAfterReturn });

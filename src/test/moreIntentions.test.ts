@@ -33,3 +33,11 @@ test('Replace \'indexOf\' check with \'includes\'', () => {
   assert.equal(apply('if (s.indexOf("a") ¦>= 0) {}', 'indexOfToIncludes'), 'if (s.includes("a")) {}');
   assert.equal(apply('if (list.indexOf(x) ¦> 0) {}', 'indexOfToIncludes'), undefined);
 });
+
+test('Remove \'else\' after \'return\'', () => {
+  assert.equal(
+    apply(lines('function f(a) {', '  i¦f (a) {', '    return 1;', '  } else {', '    go();', '    return 2;', '  }', '}'), 'removeElseAfterReturn'),
+    lines('function f(a) {', '  if (a) {', '    return 1;', '  }', '  go();', '  return 2;', '}'),
+  );
+  assert.equal(apply(lines('function f(a) {', '  i¦f (a) {', '    go();', '  } else {', '    stop();', '  }', '}'), 'removeElseAfterReturn'), undefined);
+});
