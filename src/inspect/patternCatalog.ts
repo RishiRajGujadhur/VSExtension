@@ -318,3 +318,18 @@ catalog.push({
       return /['"]open['"]/.test(body) && /['"](closed|half-open)['"]/.test(body) && /fail\w*/i.test(body) ? [{ node: cls, evidence: `${className(cls)} opens after failures and refuses calls while open`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Context provider',
+  meaning: 'A React context provides a value to every component below it without passing props.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /(^|\.)createContext$/.test(text(node.expression))) {
+        const context = ts.isVariableDeclaration(node.parent) ? nameOf(node.parent) : undefined;
+        found.push({ node, evidence: `${context ?? 'a context'} provides a value to the components below its Provider`, subject: context });
+      }
+    });
+    return found;
+  },
+});

@@ -80,3 +80,7 @@ test('Debounce or throttle is recognized', () => {
 test('Circuit breaker is recognized', () => {
   has("class Breaker { private state: 'open' | 'closed' | 'half-open' = 'closed'; private failures = 0; call() { if (this.state === 'open') throw new Error(); } }", 'Circuit breaker');
 });
+
+test('Context provider is recognized', () => {
+  has('const Theme = createContext("light"); export function App() { return <Theme.Provider value="dark"><div /></Theme.Provider>; }', 'Context provider');
+});
