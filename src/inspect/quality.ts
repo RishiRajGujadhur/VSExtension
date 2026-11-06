@@ -770,3 +770,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'arrayConstructorLength',
+  title: 'new Array(n) makes empty slots',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if ((ts.isNewExpression(node) || ts.isCallExpression(node)) && node.expression.getText() === 'Array' && node.arguments?.length === 1 && ctx.checker.getTypeAtLocation(node.arguments[0]).flags & ts.TypeFlags.NumberLike && ts.isPropertyAccessExpression(node.parent) && ['map', 'forEach', 'filter', 'reduce'].includes(node.parent.name.text)) {
+        out.push(at(ctx.sourceFile, 'arrayConstructorLength', node, `Array(n) has empty slots that ${node.parent.name.text}() skips; use Array.from({ length: n }, …).`, 'info'));
+      }
+    });
+    return out;
+  },
+});

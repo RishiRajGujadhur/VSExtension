@@ -215,3 +215,8 @@ test('Inspection: replace() with a string changes only the first match', () => {
   assert.equal(fixed('declare const s: string; const t = s.replace("-", " ");', 'replaceFirstOnly'), 'declare const s: string; const t = s.replaceAll("-", " ");');
   assert.equal(messages('declare const s: string; const t = s.replace(/-/g, " ");', 'replaceFirstOnly').length, 0);
 });
+
+test('Inspection: new Array(n) makes empty slots', () => {
+  assert.equal(messages('const xs = new Array(3).map((_, i) => i);', 'arrayConstructorLength').length, 1);
+  assert.equal(messages('const xs = new Array(3).fill(0);', 'arrayConstructorLength').length, 0);
+});
