@@ -56,3 +56,7 @@ test('Side effects: AWS, Google Cloud and Azure SDKs', () => {
 test('Side effects: sending email', () => {
   assert.deepEqual(effects('import nodemailer from "nodemailer"; function f() { return nodemailer.createTransport({}); }'), ['io: sends email']);
 });
+
+test('Side effects: file system packages', () => {
+  assert.deepEqual(effects('import fse from "fs-extra"; function f() { return fse.readJson("a.json"); }'), ['io: uses the file system']);
+});
