@@ -54,3 +54,10 @@ test('Replace \'var\' with \'let\'', () => {
   assert.equal(apply('function f(x) { if (x) { v¦ar a = 1; } return a; }', 'varToLet'), undefined);
   assert.equal(apply('function f() { use(a); v¦ar a = 1; }', 'varToLet'), undefined);
 });
+
+test('Convert arrow function to function declaration', () => {
+  assert.equal(apply('c¦onst add = (a: number, b: number) => a + b;', 'arrowToFunction'), lines('function add(a: number, b: number) {', '  return a + b;', '}'));
+  assert.equal(apply('export c¦onst load = async (): Promise<void> => { await go(); };', 'arrowToFunction'), 'export async function load(): Promise<void> { await go(); }');
+  assert.equal(apply('c¦onst f = () => this.x;', 'arrowToFunction'), undefined);
+  assert.equal(apply('c¦onst f: Handler = () => 1;', 'arrowToFunction'), undefined);
+});

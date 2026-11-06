@@ -192,3 +192,29 @@ function varToLet(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'varToLet', title: "Replace 'var' with 'let'", edits: [{ start: keyword.getStart(ctx.sourceFile), end: keyword.end, text: 'let' }] };
 }
 moreIntentions.push({ id: 'varToLet', title: 'Replace \'var\' with \'let\'', run: varToLet });
+
+function arrowToFunction(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isVariableStatement);
+  const list = statement?.declarationList;
+  const declaration = list?.declarations.length === 1 ? list.declarations[0] : undefined;
+  const arrow = declaration?.initializer && ts.isArrowFunction(declaration.initializer) ? declaration.initializer : undefined;
+  if (!statement || !declaration || !arrow || !ts.isIdentifier(declaration.name) || declaration.type || !(list!.flags & ts.NodeFlags.Const) || ctx.position > declaration.name.end) return undefined;
+  if (!(ts.isBlock(statement.parent) || ts.isSourceFile(statement.parent))) return undefined;
+  // An arrow shares `this` and `arguments` with its surroundings, a function does not.
+  let usesThis = false;
+  const check = (node: ts.Node): void => {
+    if (node.kind === ts.SyntaxKind.ThisKeyword || node.kind === ts.SyntaxKind.SuperKeyword || (ts.isIdentifier(node) && node.text === 'arguments') || ts.isMetaProperty(node)) usesThis = true;
+    if (!ts.isFunctionDeclaration(node) && !ts.isFunctionExpression(node) && !ts.isClassLike(node)) ts.forEachChild(node, check);
+  };
+  check(arrow.body);
+  if (usesThis) return undefined;
+  const indent = ctx.indentOf(statement);
+  const exported = statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ? 'export ' : '';
+  const isAsync = arrow.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) ? 'async ' : '';
+  const typeParameters = arrow.typeParameters ? `<${arrow.typeParameters.map((t) => ctx.text(t)).join(', ')}>` : '';
+  const returnType = arrow.type ? `: ${ctx.text(arrow.type)}` : '';
+  const body = ts.isBlock(arrow.body) ? ctx.text(arrow.body) : `{\n${indent}${ctx.indentUnit}return ${ctx.text(unparen(arrow.body))};\n${indent}}`;
+  const text = `${exported}${isAsync}function ${declaration.name.text}${typeParameters}(${arrow.parameters.map((p) => ctx.text(p)).join(', ')})${returnType} ${body}`;
+  return { id: 'arrowToFunction', title: 'Convert to function declaration', edits: [ctx.replace(statement, text)] };
+}
+moreIntentions.push({ id: 'arrowToFunction', title: 'Convert arrow function to function declaration', run: arrowToFunction });
