@@ -691,6 +691,11 @@
         "title": "Open Analysis as Markdown Preview",
         "category": "TypeScript Structure",
         "icon": "$(open-preview)"
+      },
+      {
+        "command": "tsStructure.report.toggleRerunOnSave",
+        "title": "Toggle Re-run on Save",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1585,6 +1590,10 @@
         {
           "command": "tsStructure.report.preview",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.toggleRerunOnSave",
+          "when": "true"
         }
       ],
       "view/title": [
@@ -1757,6 +1766,11 @@
           "command": "tsStructure.report.preview",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "1_export@5"
+        },
+        {
+          "command": "tsStructure.report.toggleRerunOnSave",
+          "when": "view == tsStructure.report",
+          "group": "0_view@5"
         }
       ],
       "view/item/context": [

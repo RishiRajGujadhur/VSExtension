@@ -318,6 +318,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         await vscode.commands.executeCommand('markdown.showPreviewToSide', document.uri);
       }
     }),
+    registerCommand('tsStructure.report.toggleRerunOnSave', async () => {
+      const config = vscode.workspace.getConfiguration('tsStructure.results');
+      const on = !config.get('rerunOnSave', false);
+      await config.update('rerunOnSave', on, vscode.ConfigurationTarget.Global);
+      void vscode.window.setStatusBarMessage(`Re-run on save ${on ? 'on: saving a file the report covers refreshes it' : 'off'}`, 4000);
+    }),
     registerCommand('tsStructure.report.copyLocations', async () => {
       const lines = view.locations();
       await vscode.env.clipboard.writeText(lines.join('\n'));
