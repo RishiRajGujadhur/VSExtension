@@ -171,3 +171,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'constantCondition',
+  title: 'Constant condition',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const condition = ts.isIfStatement(node) || ts.isDoStatement(node) ? node.expression : ts.isWhileStatement(node) ? node.expression : ts.isConditionalExpression(node) ? node.condition : undefined;
+      const c = condition && unparen(condition);
+      if (!c) return;
+      const value = c.kind === ts.SyntaxKind.TrueKeyword ? true : c.kind === ts.SyntaxKind.FalseKeyword ? false : ts.isNumericLiteral(c) ? c.text !== '0' : ts.isStringLiteral(c) ? c.text !== '' : undefined;
+      // `while (true)` is the usual endless loop.
+      if (value === undefined || (value && ts.isWhileStatement(node))) return;
+      out.push(at(ctx.sourceFile, 'constantCondition', c, `The condition is always ${value}.`, 'info'));
+    });
+    return out;
+  },
+});
