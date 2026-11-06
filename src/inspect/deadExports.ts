@@ -325,3 +325,5 @@ entryConventions.push({ pattern: /\/pages\/(?!(.*\/)?(components?|lib|utils?)\/)
 entryConventions.push({ pattern: /(\/app\/([^]*\/)?(page|layout|template|loading|error|not-found|global-error|default|route|opengraph-image|twitter-image|icon|apple-icon|sitemap|robots|manifest)|(^|\/)(src\/)?(middleware|instrumentation))\.[cm]?[jt]sx?$/, what: 'Next.js app route' });
 
 entryConventions.push({ pattern: /(\.(stories|story)\.[cm]?[jt]sx?$)|(\/\.storybook\/)/, what: 'Storybook story' });
+
+entryConventions.push({ pattern: /(^|\/)([\w-]+\.config|\.?(eslintrc|prettierrc|babelrc|commitlintrc|lintstagedrc))\.[cm]?[jt]s$/, what: 'tool config file' });

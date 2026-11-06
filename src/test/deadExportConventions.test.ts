@@ -18,3 +18,9 @@ test('Dead exports: Next.js app router files and middleware are entry points', (
 test('Dead exports: Storybook stories are entry points', () => {
   assert.equal(isConventionalEntry('/repo/src/Button.stories.tsx'), 'Storybook story');
 });
+
+test('Dead exports: tool config files are entry points', () => {
+  assert.equal(isConventionalEntry('/repo/vite.config.ts'), 'tool config file');
+  assert.equal(isConventionalEntry('/repo/tailwind.config.mjs'), 'tool config file');
+  assert.equal(isConventionalEntry('/repo/src/config.ts'), undefined);
+});
