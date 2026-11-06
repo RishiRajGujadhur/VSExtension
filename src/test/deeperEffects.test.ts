@@ -44,3 +44,7 @@ test('Side effects: system information and DNS in Node', () => {
 test('Side effects: packages that do I/O, starting with HTTP clients', () => {
   assert.deepEqual(effects('import axios from "axios"; function f() { return axios.get("/x"); }'), ['io: makes a network request']);
 });
+
+test('Side effects: database clients', () => {
+  assert.deepEqual(effects('import { Pool } from "pg"; function f() { return new Pool(); }'), ['io: uses a database']);
+});
