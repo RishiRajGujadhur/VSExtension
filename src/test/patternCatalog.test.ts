@@ -72,3 +72,7 @@ test('Middleware is recognized', () => {
 test('Retry is recognized', () => {
   has('async function fetchWithRetry() { for (let i = 0; i < 3; i++) { try { return await get(); } catch { await sleep(100 * 2 ** i); } } }', 'Retry');
 });
+
+test('Debounce or throttle is recognized', () => {
+  has('function debounce(fn: () => void, ms: number) { let t: any; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }', 'Debounce or throttle');
+});

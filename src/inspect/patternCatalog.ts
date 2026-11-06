@@ -296,3 +296,15 @@ catalog.push({
       return found ? [{ node: fn, evidence: `${name}() tries again in a loop when the awaited call fails` }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Debounce or throttle',
+  meaning: 'Calls are delayed or dropped so a burst of events runs the work once.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      const inner = returnsOf(fn.body).map(unwrap).find((e) => ts.isArrowFunction(e) || ts.isFunctionExpression(e));
+      const body = text(inner);
+      const kind = /clearTimeout/.test(body) && /setTimeout/.test(body) ? 'debounces' : /Date\.now\(\)|performance\.now\(\)/.test(body) && /return;|return\s*$/m.test(body) ? 'throttles' : undefined;
+      return inner && kind ? [{ node: fn, evidence: `${name}() ${kind} the function it wraps` }] : [];
+    }),
+});
