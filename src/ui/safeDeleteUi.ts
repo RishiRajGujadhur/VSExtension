@@ -55,7 +55,9 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     const preview = previewEnabled();
     const choice = await vscode.window.showWarningMessage(`Delete ${what}?`, { modal: true, detail: details.join('\n') }, 'Delete', ...(preview ? [] : ['Preview…']));
     if (choice) {
-      await applyRefactor(plan.result, preview || choice === 'Preview…');
+      if (await applyRefactor(plan.result, preview || choice === 'Preview…')) {
+        deleted(what);
+      }
     }
     return;
   }
@@ -78,7 +80,9 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     matchOnDescription: true,
   });
   if (picked?.action === 'delete') {
-    await applyRefactor(plan.result, previewEnabled());
+    if (await applyRefactor(plan.result, previewEnabled())) {
+      deleted(what);
+    }
   } else if (picked?.action === 'usages') {
     await showUsages?.();
   } else if (picked?.usage) {
@@ -102,4 +106,9 @@ function impactedTestCount(projects: ProjectService, fileName: string, offset: n
   } catch {
     return 0;
   }
+}
+
+/** Says what went, and how to bring it back. */
+function deleted(what: string): void {
+  void vscode.window.setStatusBarMessage(`$(trash) Deleted ${what}. ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Z in each file undoes it.`, 6000);
 }

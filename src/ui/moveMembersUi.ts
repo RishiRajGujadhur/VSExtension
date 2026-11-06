@@ -58,7 +58,13 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
       return;
     }
     const result = moveMembers(projects.createVirtualProject(source, root), source, picked.map((p) => p.member.name), target, { keepReExport });
-    await applyRefactor(result, previewEnabled());
+    if (await applyRefactor(result, previewEnabled())) {
+      const names = picked.map((p) => p.member.name);
+      const open = await vscode.window.showInformationMessage(`Moved ${names.length === 1 ? names[0] : `${names.length} declarations`} to ${path.basename(target)}.`, `Open ${path.basename(target)}`);
+      if (open) {
+        await vscode.window.showTextDocument(vscode.Uri.file(target));
+      }
+    }
   } catch (error) {
     reportError(error, 'Move Members');
   }
