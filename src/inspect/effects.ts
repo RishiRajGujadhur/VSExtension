@@ -139,6 +139,8 @@ ioPackages.push({ pattern: /^(kafkajs|amqplib|bullmq|bull|bee-queue|nats|mqtt|@g
 
 ioPackages.push({ pattern: /^(graphql-request|@apollo\/client|urql|@urql\/.+|graphql-ws|relay-runtime)$/, kind: 'io', note: 'makes a network request' });
 
+ioPackages.push({ pattern: /^(stripe|twilio|@slack\/.+|openai|@anthropic-ai\/sdk|firebase|firebase-admin|@supabase\/.+)$/, kind: 'io', note: 'calls an online service' });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();

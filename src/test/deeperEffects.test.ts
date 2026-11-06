@@ -122,3 +122,7 @@ test('Side effects: message queues', () => {
 test('Side effects: GraphQL clients', () => {
   assert.deepEqual(effects('import { request } from "graphql-request"; function f() { return request("/q", "{ a }"); }'), ['io: makes a network request']);
 });
+
+test('Side effects: payment, messaging and AI service SDKs', () => {
+  assert.deepEqual(effects('import Stripe from "stripe"; function f() { return new Stripe("k"); }'), ['io: calls an online service']);
+});
