@@ -482,6 +482,8 @@ export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): str
 
 libraryReasons.push({ receiver: 'Array', method: 'find', reason: 'undefined when nothing matches' });
 
+libraryReasons.push({ receiver: 'WeakRef', method: 'deref', reason: 'undefined once the object was garbage collected' });
+
 export function nullabilityReport(project: VirtualProject, fileName: string, offset: number): Report {
   const sourceFile = project.sourceFile(fileName);
   const identifier = identifierAt(sourceFile, offset, 'Place the cursor on a variable, property access or call.');

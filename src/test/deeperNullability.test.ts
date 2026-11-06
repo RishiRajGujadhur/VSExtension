@@ -60,3 +60,7 @@ test('Nullability: getContext and computed lookups', () => {
 test('Nullability: process.env variables', () => {
   assert.ok(true, 'covered by the report wording');
 });
+
+test('Nullability: WeakRef.deref', () => {
+  assert.equal(reason('function f(r: WeakRef<object>) { return r.deref(); }'), 'undefined once the object was garbage collected');
+});
