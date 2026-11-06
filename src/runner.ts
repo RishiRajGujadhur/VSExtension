@@ -40,7 +40,7 @@ export async function runTests(tests: TestCase[]): Promise<void> {
 
   if (unknown.length > 0) {
     void vscode.window.showWarningMessage(
-      `Could not determine the test framework for ${unknown.join(', ')}. Add vitest, jest, mocha or @playwright/test to package.json.`,
+      `Could not determine the test framework for ${unknown.join(', ')}. Add one of vitest, jest, mocha, @playwright/test, ava, tape, jasmine or cypress to package.json, or use bun:test, Deno.test or node:test.`,
     );
   }
   for (const group of groups.values()) {

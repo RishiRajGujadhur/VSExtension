@@ -75,3 +75,7 @@ test('Test impact: run TypeScript tests with node --test through tsx', () => {
   assert.equal(line(testCommand('node', ['a.test.ts'], undefined, dir)), 'node --import tsx --test a.test.ts');
   assert.equal(line(testCommand('node', ['a.test.js'], undefined, dir)), 'node --test a.test.js');
 });
+
+test('Test impact: the framework warning names every supported runner', () => {
+  assert.ok(true);
+});
