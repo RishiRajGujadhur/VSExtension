@@ -44,7 +44,7 @@ export function dataFlowSteps(project: VirtualProject, fileName: string, offset:
   const identifier = identifierAt(sourceFile, offset, 'Place the cursor on a variable, parameter or property.');
   const symbol = symbolAt(checker, identifier);
   if (!symbol || !(symbol.flags & (ts.SymbolFlags.Variable | ts.SymbolFlags.Property | ts.SymbolFlags.Accessor))) {
-    throw new AnalysisError(`'${identifier.text}' is not a variable, parameter or property, so it has no data flow to show.`);
+    throw new AnalysisError(`'${identifier.text}' isn't a variable, parameter or property.`);
   }
   const steps: FlowStep[] = [];
   for (const reference of referencesAt(project.service, fileName, identifier.getStart())) {

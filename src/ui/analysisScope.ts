@@ -128,7 +128,7 @@ export async function resolveScope(kind: ScopeKind, editor?: vscode.TextEditor):
       const anchor = file ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       const changed = anchor ? await changedFiles(anchor) : undefined;
       if (!changed) {
-        void vscode.window.showErrorMessage('Analyzing changed files needs Git, and this workspace is not in a Git repository.');
+        void vscode.window.showErrorMessage('Changed files need a Git repository.');
         return undefined;
       }
       if (changed.length === 0) {

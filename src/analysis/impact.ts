@@ -36,7 +36,7 @@ export function analyzeImpact(project: LoadedProject, request: ImpactRequest, op
   const { program, checker } = project;
   const sourceFile = program.getSourceFiles().find((sf) => pathKey(sf.fileName) === pathKey(request.fileName));
   if (!sourceFile) {
-    throw new AnalysisError(`${path.basename(request.fileName)} is not part of the compiler project.`);
+    throw new AnalysisError(`${path.basename(request.fileName)} isn't in the compiler project.`);
   }
   if (!project.index) {
     project.index = new ReferenceIndex(program, checker);
@@ -299,7 +299,7 @@ function symbolSeeds(checker: ts.TypeChecker, sourceFile: ts.SourceFile, offset:
       if (declarations.length > 0) {
         return { declarations, directTests: [] };
       }
-      throw new AnalysisError(`'${resolved.getName()}' is declared outside the project (a library or type declaration), so its callers cannot be traced.`);
+      throw new AnalysisError(`'${resolved.getName()}' is declared in a library, so its callers can't be traced.`);
     }
   }
   // Not on a name: use the enclosing function, method, class or variable.
@@ -314,7 +314,7 @@ function symbolSeeds(checker: ts.TypeChecker, sourceFile: ts.SourceFile, offset:
       return { declarations: [container], directTests: [] };
     }
   }
-  throw new AnalysisError('Place the cursor on a function, class, method or other symbol.');
+  throw new AnalysisError('Place the cursor on a symbol.');
 }
 
 function moduleSeeds(sourceFile: ts.SourceFile): { declarations: ts.Node[]; directTests: TestCase[] } {

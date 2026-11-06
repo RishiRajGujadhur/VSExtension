@@ -16,7 +16,7 @@ test('saved patterns report matches with filled-in messages and offer replacemen
     { id: 'disabled', pattern: 'console.log($a$)', message: 'off', enabled: false },
   ]);
   assert.equal(inspections.length, 1);
-  assert.match(errors[0], /broken.*not valid TypeScript/);
+  assert.match(errors[0], /broken.*Invalid pattern/);
 
   const program = virtualProject('search', 'src/code.ts').program();
   const sourceFile = program.getSourceFile(file)!;

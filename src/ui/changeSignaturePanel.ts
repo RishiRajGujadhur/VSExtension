@@ -42,7 +42,7 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
         return;
       }
       if (document.version !== version) {
-        void vscode.window.showWarningMessage(`${vscode.workspace.asRelativePath(document.uri)} changed after the dialog opened. Close it and run Change Signature again.`);
+        void vscode.window.showWarningMessage(`${vscode.workspace.asRelativePath(document.uri)} changed. Run Change Signature again.`);
         return;
       }
       const spec: SignatureSpec = {

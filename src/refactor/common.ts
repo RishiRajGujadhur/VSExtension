@@ -35,10 +35,10 @@ export function functionAt(project: VirtualProject, fileName: string, offset: nu
       const implementation = targets.find((t) => 'body' in t.fn && t.fn.body) ?? targets[0];
       if (implementation) {
         if (targets.filter((t) => ts.isFunctionDeclaration(t.fn) || ts.isMethodDeclaration(t.fn)).length > 1) {
-          throw new RefactorError(`'${implementation.name}' has overload signatures, which are not supported yet.`);
+          throw new RefactorError(`Overloaded '${implementation.name}' isn't supported yet.`);
         }
         if (implementation.fn.getSourceFile().isDeclarationFile) {
-          throw new RefactorError(`'${implementation.name}' is declared in a library and cannot be changed.`);
+          throw new RefactorError(`'${implementation.name}' is in a library and can't be changed.`);
         }
         return implementation;
       }
@@ -50,7 +50,7 @@ export function functionAt(project: VirtualProject, fileName: string, offset: nu
       return target;
     }
   }
-  throw new RefactorError('Place the cursor on a named function, method or function-valued variable.');
+  throw new RefactorError('Place the cursor on a function or method name.');
 }
 
 function isFunctionValued(node: ts.Node): boolean {

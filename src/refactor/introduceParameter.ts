@@ -122,7 +122,7 @@ function select(project: VirtualProject, fileName: string, start: number, end: n
             ? owner.name
             : undefined;
       if (!nameNode) {
-        throw new RefactorError('The expression must be inside a named function, method or function-valued variable.');
+        throw new RefactorError('Select an expression inside a named function or method.');
       }
       if (!('body' in node) || !node.body || !isWithin(expression, node.body)) {
         throw new RefactorError('Select an expression in the function body.');
@@ -158,7 +158,7 @@ function checkMovable(project: VirtualProject, selection: Selection, mode: Intro
       throw new RefactorError("The expression uses 'arguments', which has no meaning outside the function.");
     }
     if (ts.isAwaitExpression(node) || ts.isYieldExpression(node)) {
-      throw new RefactorError(`The expression uses '${ts.isAwaitExpression(node) ? 'await' : 'yield'}', which cannot move to a parameter.`);
+      throw new RefactorError(`Expressions with '${ts.isAwaitExpression(node) ? 'await' : 'yield'}' can't become a parameter.`);
     }
     if (node.kind === ts.SyntaxKind.ThisKeyword) {
       if (ts.isArrowFunction(fn) && mode === 'required') {
@@ -172,7 +172,7 @@ function checkMovable(project: VirtualProject, selection: Selection, mode: Intro
       if (declaration && ts.isParameter(declaration) && declaration.parent === fn) {
         substitutions.push({ node, kind: 'parameter', index: fn.parameters.indexOf(declaration) });
       } else if (declaration && isWithin(declaration, fn) && !isWithin(declaration, expression)) {
-        throw new RefactorError(`The expression uses '${node.text}', which is declared inside ${selection.functionName}.`);
+        throw new RefactorError(`Uses '${node.text}', a local of ${selection.functionName}.`);
       } else if (symbol && mode === 'required') {
         substitutions.push({ node, kind: 'free', symbol: resolveAlias(checker, symbol) });
       }

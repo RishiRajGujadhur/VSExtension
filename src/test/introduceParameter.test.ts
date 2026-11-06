@@ -73,7 +73,7 @@ test('an empty selection uses the expression at the cursor', () => {
 });
 
 test('expressions using locals, or names already taken, are rejected', () => {
-  assert.throws(() => introduceParameter(project(), pricing, ...range('local', 1), { name: 'x', mode: 'required', replaceAll: false }), /declared inside tax/);
+  assert.throws(() => introduceParameter(project(), pricing, ...range('local', 1), { name: 'x', mode: 'required', replaceAll: false }), /a local of tax/);
   assert.throws(() => introduceParameter(project(), pricing, ...range('(1 + 0.2)'), { name: 'qty', mode: 'optional', replaceAll: false }), RefactorError);
   assert.throws(() => introduceParameter(project(), pricing, ...range('ty: n'), { name: 'x', mode: 'optional', replaceAll: false }), RefactorError);
 });

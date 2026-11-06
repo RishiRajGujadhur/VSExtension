@@ -44,8 +44,8 @@ test('statement patterns match single statements and consecutive sequences', () 
 });
 
 test('invalid and overly general patterns are explained', () => {
-  assert.throws(() => compilePattern({ pattern: '$x$' }), /matches every expression/);
-  assert.throws(() => compilePattern({ pattern: 'if ($c$ {' }), /not valid TypeScript/);
+  assert.throws(() => compilePattern({ pattern: '$x$' }), /matches everything/);
+  assert.throws(() => compilePattern({ pattern: 'if ($c$ {' }), /Invalid pattern/);
 });
 
 test('replace rewrites matches and reports type errors it would introduce', () => {
@@ -73,7 +73,7 @@ test('replace rewrites matches and reports type errors it would introduce', () =
   // A replacement that is not valid code is refused before anything is written.
   assert.throws(
     () => structuralReplace(virtualProject('search', 'src/code.ts'), { pattern: '$x$ === $x$' }, '($x$'),
-    /^Error: The replacement is not valid code at code\.ts:\d+: '\)' expected\.|The replacement is not valid code at code\.ts:\d+/,
+    /Invalid replacement at code\.ts:\d+/,
   );
 });
 

@@ -85,7 +85,7 @@ export function compilePattern(spec: SearchSpec): CompiledPattern {
     if (parseDiagnostics(asExpression).length === 0 && asExpression.statements.length === 1 && ts.isExpressionStatement(statement) && ts.isParenthesizedExpression(statement.expression)) {
       const expression = statement.expression.expression;
       if (placeholderOf(expression)) {
-        throw new RefactorError('The pattern is a single placeholder, which matches every expression. Add some structure around it.');
+        throw new RefactorError('A lone placeholder matches everything. Add code around it.');
       }
       return { nodes: [expression], kind: 'expression', placeholders, constraints };
     }
@@ -93,7 +93,7 @@ export function compilePattern(spec: SearchSpec): CompiledPattern {
   const asStatements = ts.createSourceFile('pattern.tsx', replaced, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const errors = parseDiagnostics(asStatements);
   if (errors.length > 0) {
-    throw new RefactorError(`The pattern is not valid TypeScript: ${ts.flattenDiagnosticMessageText(errors[0].messageText, ' ')}`);
+    throw new RefactorError(`Invalid pattern: ${ts.flattenDiagnosticMessageText(errors[0].messageText, ' ')}`);
   }
   if (asStatements.statements.length === 0) {
     throw new RefactorError('The pattern is empty.');
@@ -428,7 +428,7 @@ export function structuralReplace(project: VirtualProject, spec: SearchSpec, tem
     if (after.length > before.get(file)!) {
       const first = after[0];
       const line = first.file && first.start !== undefined ? first.file.getLineAndCharacterOfPosition(first.start).line + 1 : 0;
-      throw new RefactorError(`The replacement is not valid code at ${path.basename(file)}:${line}: ${ts.flattenDiagnosticMessageText(first.messageText, ' ')}`);
+      throw new RefactorError(`Invalid replacement at ${path.basename(file)}:${line}: ${ts.flattenDiagnosticMessageText(first.messageText, ' ')}`);
     }
   }
   const replacements = matches.map((m) => ({

@@ -37,7 +37,7 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
 
   const stale = result.changes.find((c) => c.before !== undefined && currentText(c.file) !== c.before);
   if (stale) {
-    void vscode.window.showWarningMessage(`${path.basename(stale.file)} changed while the refactoring was computed. Run it again.`);
+    void vscode.window.showWarningMessage(`${path.basename(stale.file)} changed. Run the refactoring again.`);
     return false;
   }
 
@@ -88,8 +88,17 @@ export function reportError(error: unknown, label: string): void {
   const message = error instanceof Error ? error.message : String(error);
   // Expected failures explain themselves; anything else is a bug worth a stack trace.
   const expected = error instanceof RefactorError || error instanceof AnalysisError;
-  void vscode.window.showErrorMessage(expected ? message : `${label} failed: ${message}`);
-  if (!expected) {
-    output.appendLine(`${label} failed: ${error instanceof Error ? error.stack : message}`);
+  if (expected) {
+    void vscode.window.showErrorMessage(message);
+    return;
   }
+  // One short line in the notification; the whole message and stack are in the log.
+  output.appendLine(`${label} failed: ${error instanceof Error ? error.stack : message}`);
+  void vscode.window.showErrorMessage(`${label} failed: ${shortMessage(message)}`, 'Show Log').then((choice) => choice && output.show(true));
+}
+
+/** The first line of a message, cut to a length that fits a notification. */
+export function shortMessage(message: string, max = 100): string {
+  const line = message.split(/\r?\n/)[0].trim();
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }

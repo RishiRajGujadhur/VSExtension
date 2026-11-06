@@ -120,7 +120,7 @@ function planParameterDelete(project: VirtualProject, parameter: ts.ParameterDec
     : [];
   const fnName = 'name' in fn && fn.name ? fn.name : ts.isVariableDeclaration(fn.parent) || ts.isPropertyAssignment(fn.parent) ? fn.parent.name : undefined;
   if (!fnName) {
-    throw new RefactorError('Parameters can only be safely deleted from named functions, methods and function-valued variables.');
+    throw new RefactorError('Only parameters of named functions and methods can be deleted.');
   }
   // Read the uses before Change Signature edits the project.
   const usages: SafeDeleteUsage[] = usedInBody.map((r) => {
@@ -151,11 +151,11 @@ function declarationAt(project: VirtualProject, sourceFile: ts.SourceFile, offse
     const resolved = resolveAlias(checker, symbol);
     const declarations = (resolved.declarations ?? []).filter(isDeletable);
     if (declarations.length > 1) {
-      throw new RefactorError(`'${resolved.getName()}' has ${declarations.length} declarations (overloads or merged declarations), which are not supported yet.`);
+      throw new RefactorError(`'${resolved.getName()}' has overloads or merged declarations, which aren't supported yet.`);
     }
     if (declarations.length === 1) {
       if (declarations[0].getSourceFile().isDeclarationFile) {
-        throw new RefactorError(`'${resolved.getName()}' is declared in a library and cannot be deleted.`);
+        throw new RefactorError(`'${resolved.getName()}' is in a library and can't be deleted.`);
       }
       return declarations[0];
     }
@@ -165,7 +165,7 @@ function declarationAt(project: VirtualProject, sourceFile: ts.SourceFile, offse
       return node;
     }
   }
-  throw new RefactorError('Place the cursor on a declaration or a usage of the symbol to delete.');
+  throw new RefactorError('Place the cursor on the symbol to delete.');
 }
 
 function isDeletable(node: ts.Node): node is Deletable {

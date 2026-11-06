@@ -54,7 +54,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     }
 
     if (document.version !== version) {
-      void vscode.window.showWarningMessage('The file changed while Move was open. Run it again.');
+      void vscode.window.showWarningMessage('The file changed. Run Move again.');
       return;
     }
     const result = moveMembers(projects.createVirtualProject(source, root), source, picked.map((p) => p.member.name), target, { keepReExport });

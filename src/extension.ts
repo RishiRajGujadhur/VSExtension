@@ -82,7 +82,7 @@ export function activate(context: vscode.ExtensionContext): void {
       } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor || !supportedLanguages.has(editor.document.languageId) || editor.document.uri.scheme !== 'file') {
-          void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file and place the cursor on a symbol.');
+          void vscode.window.showErrorMessage('Place the cursor on a symbol in a TypeScript or JavaScript file.');
           return;
         }
         scope = scopeArg ?? (await pickScope(context.workspaceState));

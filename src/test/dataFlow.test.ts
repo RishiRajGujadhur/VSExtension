@@ -75,7 +75,7 @@ test('data flow shows types where narrowing changes them', () => {
 
 test('data flow rejects symbols that are not values', () => {
   const project = virtualProject('inspect', 'src/flow.ts');
-  assert.throws(() => dataFlowSteps(project, flow, offsetIn(flow, 'export function check|out')), /not a variable/);
+  assert.throws(() => dataFlowSteps(project, flow, offsetIn(flow, 'export function check|out')), /isn't a variable/);
 });
 
 test('flows in lists each value assigned and what it is computed from', () => {

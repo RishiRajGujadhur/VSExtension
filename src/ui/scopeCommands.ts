@@ -27,7 +27,7 @@ async function excludeFromAnalysis(uri?: vscode.Uri, selected?: vscode.Uri[]): P
     }
     const relative = path.relative(folder.uri.fsPath, target.fsPath).replace(/\\/g, '/');
     if (!relative) {
-      void vscode.window.showWarningMessage('Excluding a whole workspace folder would leave nothing to analyze. Turn off the features you don’t want instead.');
+      void vscode.window.showWarningMessage('Can’t exclude a whole workspace folder. Turn off features instead.');
       continue;
     }
     const exclude = scopeOf(folder, 'exclude');

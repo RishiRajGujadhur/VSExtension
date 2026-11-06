@@ -322,7 +322,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     const editor = vscode.window.activeTextEditor;
     if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
-      void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file in the project to inspect.');
+      void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file first.');
       return;
     }
     const scope = await chooseScope({ id: 'inspectCode', title: 'Inspect Code', kinds: ['project', 'folder', 'pickFolder', 'open', 'changed', 'file', 'function', 'selection'], editor }, scopeArg);
@@ -556,7 +556,7 @@ async function applyReportFixes(view: StructureView, node: ReportNode, fixes: Ro
     void vscode.window.setStatusBarMessage(`Applied: ${applied.length === 1 ? applied[0].fix.title : `fixes in ${applied.length} files`}`, 3000);
   }
   if (stale.length) {
-    void vscode.window.showWarningMessage(`${stale.join(', ')} changed since the analysis ran, so ${stale.length === 1 ? 'its fixes were' : 'their fixes were'} not applied. Re-run the analysis to refresh them.`);
+    void vscode.window.showWarningMessage(`${stale.join(', ')} changed since the analysis. Re-run it to fix.`);
   }
 }
 

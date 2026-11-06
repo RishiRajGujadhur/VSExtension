@@ -51,7 +51,7 @@ export function moveMembers(project: VirtualProject, fileName: string, names: st
   const available = new Set(listMovableMembers(project, source).map((m) => m.name));
   const missing = names.filter((n) => !available.has(n));
   if (missing.length > 0) {
-    throw new RefactorError(`${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a top-level declaration of ${path.basename(source)}.`);
+    throw new RefactorError(`${missing.join(', ')}: not top-level in ${path.basename(source)}.`);
   }
   const targetText = project.text(target);
   if (targetText !== undefined) {
@@ -80,7 +80,7 @@ export function moveMembers(project: VirtualProject, fileName: string, names: st
     const run = statements.slice(first, last + 1);
     const unwanted = run.flatMap(namesOf).filter((n) => !remaining.has(n));
     if (unwanted.length > 0) {
-      throw new RefactorError(`${unwanted.join(', ')} is declared in the same statement as ${namesOf(run[0]).filter((n) => remaining.has(n)).join(', ')}; select them together.`);
+      throw new RefactorError(`Move ${unwanted.join(', ')} together with ${namesOf(run[0]).filter((n) => remaining.has(n)).join(', ')} (same statement).`);
     }
     const range = { pos: run[0].getStart(sourceFile), end: run[run.length - 1].end };
     const edits = project.service.getEditsForRefactor(source, formatOptions, range, 'Move to file', 'Move to file', { ...preferences, quotePreference: quote }, { targetFile: target });

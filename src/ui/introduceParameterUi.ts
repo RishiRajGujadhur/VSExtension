@@ -57,7 +57,7 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     }
 
     if (document.version !== version) {
-      void vscode.window.showWarningMessage('The file changed while Introduce Parameter was open. Run it again.');
+      void vscode.window.showWarningMessage('The file changed. Run Introduce Parameter again.');
       return;
     }
     const options: IntroduceParameterOptions = { name: name.trim(), mode: mode.mode, replaceAll };

@@ -46,7 +46,7 @@ test('copies of selected statements are found, with the selection first', () => 
   // Each copy can be selected for Extract to function.
   assert.ok(report.roots[0].children?.slice(0, 2).every((c) => c.action?.kind === 'refactor'));
   assert.deepEqual(report.roots[0].children?.map((c) => c.label).slice(0, 2), ['totalWeight · duplicates.ts:11', 'totalPrice · duplicates.ts:3']);
-  assert.throws(() => copiesReport([sourceFile], sourceFile, text.indexOf('let total') + 2, text.indexOf('let total') + 5), /Select one or more whole statements/);
+  assert.throws(() => copiesReport([sourceFile], sourceFile, text.indexOf('let total') + 2, text.indexOf('let total') + 5), /Select whole statements/);
 });
 
 test('groups are ordered by how many repeated lines they would remove', () => {

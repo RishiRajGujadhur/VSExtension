@@ -283,7 +283,7 @@ function inputAt(project: VirtualProject, fileName: string, offset: number): Inp
       return parameter;
     }
   }
-  throw new AnalysisError(`'${identifier.text}' is not a parameter or an argument passed to a project function.`);
+  throw new AnalysisError(`'${identifier.text}' isn't a parameter or an argument.`);
 }
 
 /** "string · optional" or "number · default 0.2": what the input accepts before tracing where values come from. */

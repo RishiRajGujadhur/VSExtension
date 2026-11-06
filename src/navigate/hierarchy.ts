@@ -131,7 +131,7 @@ export function typeAt(program: ts.Program, sourceFile: ts.SourceFile, offset: n
   if (enclosing) {
     return enclosing;
   }
-  throw new AnalysisError(`'${identifier.text}' is not a class or interface in this project.`);
+  throw new AnalysisError(`'${identifier.text}' isn't a class or interface.`);
 }
 
 /** Inheritance Hierarchy Explorer: supertypes, subtypes and how members are overridden. */
@@ -263,7 +263,7 @@ export function overrideImpactReport(project: VirtualProject, fileName: string, 
     (d): d is Member => (ts.isClassElement(d) || ts.isTypeElement(d)) && isTypeDeclaration(d.parent) && !d.getSourceFile().isDeclarationFile,
   );
   if (!member) {
-    throw new AnalysisError(`'${identifier.text}' is not a member of a class or interface in this project.`);
+    throw new AnalysisError(`'${identifier.text}' isn't a class or interface member.`);
   }
   const owner = member.parent as TypeDeclaration;
   const name = memberName(member)!;

@@ -53,7 +53,7 @@ export function functionAtOffset(sourceFile: ts.SourceFile, offset: number, chec
   const node = findNode(sourceFile, offset);
   const containing = isFunctionWithBody(node) ? node : enclosingFunction(node);
   if (!containing) {
-    throw new AnalysisError('Place the cursor on a function, method or call, or inside a function body.');
+    throw new AnalysisError('Place the cursor in a function or on a call.');
   }
   return containing;
 }
@@ -442,7 +442,7 @@ export function enclosingCondition(node: ts.Node): ts.Expression | undefined {
 export function sourceFileOf(program: ts.Program, fileName: string): ts.SourceFile {
   const sourceFile = program.getSourceFile(fileName);
   if (!sourceFile) {
-    throw new AnalysisError(`${fileName} is not part of the compiler project.`);
+    throw new AnalysisError(`${fileName} isn't in the compiler project.`);
   }
   return sourceFile;
 }
