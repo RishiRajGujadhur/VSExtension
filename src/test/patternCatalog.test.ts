@@ -122,3 +122,7 @@ test('Fluent interface is recognized', () => {
   has('class Query { where() { return this; } order() { return this; } limit() { return this; } }', 'Fluent interface');
   lacks('class QueryBuilder { where() { return this; } limit() { return this; } build() { return 1; } }', 'Fluent interface');
 });
+
+test('Promise chain is recognized', () => {
+  has('function load() { return fetch("/x").then((r) => r.json()).then((d) => d.items); }', 'Promise chain');
+});

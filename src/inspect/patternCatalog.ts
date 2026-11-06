@@ -449,3 +449,17 @@ catalog.push({
       return fluent.length >= 3 && !build ? [{ node: cls, evidence: `${className(cls)}: ${fluent.map((m) => `${nameOf(m)}()`).slice(0, 4).join(', ')} return this for chaining`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Promise chain',
+  meaning: 'Asynchronous steps are linked with .then(), each receiving the previous result.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'then' && ts.isCallExpression(node.expression.expression) && ts.isPropertyAccessExpression(node.expression.expression.expression) && node.expression.expression.expression.name.text === 'then' && !(ts.isPropertyAccessExpression(node.parent) && node.parent.name.text === 'then')) {
+        found.push({ node, evidence: `${(text(node).match(/\.then\(/g) ?? []).length} steps linked with .then()` });
+      }
+    });
+    return found;
+  },
+});
