@@ -444,6 +444,10 @@ libraryReasons.push({ receiver: 'Array', method: 'shift', reason: 'undefined whe
 libraryReasons.push({ receiver: 'Array', method: 'at', reason: 'undefined when the index is past either end' });
 libraryReasons.push({ receiver: 'String', method: 'at', reason: 'undefined when the index is past either end' });
 
+libraryReasons.push({ receiver: 'Map', method: 'get', reason: 'undefined when the key is missing' });
+libraryReasons.push({ receiver: 'WeakMap', method: 'get', reason: 'undefined when the key is missing' });
+libraryReasons.push({ receiver: 'ReadonlyMap', method: 'get', reason: 'undefined when the key is missing' });
+
 /** Why a library call can give null or undefined, such as Array.find when nothing matches. */
 export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): string | undefined {
   if (!ts.isCallExpression(call) || !ts.isPropertyAccessExpression(call.expression)) return undefined;

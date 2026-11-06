@@ -27,3 +27,7 @@ test('Nullability: pop and shift on empty arrays', () => {
 test('Nullability: at() past the end', () => {
   assert.equal(reason('function f(xs: number[]) { return xs.at(-1); }'), 'undefined when the index is past either end');
 });
+
+test('Nullability: Map.get and WeakMap.get', () => {
+  assert.equal(reason('function f(m: Map<string, number>) { return m.get("a"); }'), 'undefined when the key is missing');
+});
