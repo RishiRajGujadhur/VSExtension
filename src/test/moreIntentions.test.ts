@@ -139,3 +139,9 @@ test('Replace \'===\' chain with \'includes\'', () => {
   assert.equal(apply("if (k === 'a' ¦|| j === 'b') {}", 'equalityChainToIncludes'), undefined);
   assert.equal(apply("if (k == 'a' ¦|| k == 'b') {}", 'equalityChainToIncludes'), undefined);
 });
+
+test('Replace \'Object.assign\' with spread', () => {
+  assert.equal(apply('const o = Object.¦assign({}, a, { b: 1 });', 'objectAssignToSpread'), 'const o = { ...a, b: 1 };');
+  assert.equal(apply('Object.¦assign({}, a);', 'objectAssignToSpread'), undefined);
+  assert.equal(apply('Object.¦assign(target, a);', 'objectAssignToSpread'), undefined);
+});

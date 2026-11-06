@@ -435,3 +435,13 @@ function equalityChainToIncludes(ctx: IntentionContext): IntentionAction | undef
   return { id: 'equalityChainToIncludes', title: "Replace '===' chain with 'includes'", edits: [ctx.replace(top, `[${values.join(', ')}].includes(${subject})`)] };
 }
 moreIntentions.push({ id: 'equalityChainToIncludes', title: 'Replace \'===\' chain with \'includes\'', run: equalityChainToIncludes });
+
+function objectAssignToSpread(ctx: IntentionContext): IntentionAction | undefined {
+  const call = ctx.nearest(ts.isCallExpression, (c) => ctx.text(c.expression).replace(/\s/g, '') === 'Object.assign' && c.arguments.length >= 2 && ts.isObjectLiteralExpression(c.arguments[0]));
+  if (!call || ts.isExpressionStatement(call.parent) || call.arguments.some((a) => ts.isSpreadElement(a))) return undefined;
+  const parts = call.arguments.flatMap((a) => (ts.isObjectLiteralExpression(a) ? a.properties.map((p) => ctx.text(p)) : [`...${ctx.text(a)}`]));
+  const literal = parts.length ? `{ ${parts.join(', ')} }` : '{}';
+  const arrowBody = ts.isArrowFunction(call.parent) && call.parent.body === call;
+  return { id: 'objectAssignToSpread', title: 'Replace with object spread', edits: [ctx.replace(call, arrowBody ? `(${literal})` : literal)] };
+}
+moreIntentions.push({ id: 'objectAssignToSpread', title: 'Replace \'Object.assign\' with spread', run: objectAssignToSpread });
