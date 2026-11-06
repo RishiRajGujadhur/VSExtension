@@ -195,3 +195,16 @@ test('Intention: Replace \'.apply()\' with spread', () => {
 test('Intention: Replace \'slice.call\' with \'Array.from\'', () => {
   assert.equal(apply('const a = Array.prototype.slice.ca¦ll(arguments);', 'sliceCallToArrayFrom'), 'const a = Array.from(arguments);');
 });
+
+/** Like apply, in a .tsx file. */
+function applyTsx(code: string, id: string): string | undefined {
+  const position = code.indexOf('¦');
+  const text = code.replace('¦', '');
+  const action = intentionsAt(ts.createSourceFile('test.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX), position).find((a) => a.id === id);
+  return action && applyTextEdits(text, action.edits);
+}
+
+test('Intention: Replace JSX \'?: null\' with \'&&\'', () => {
+  assert.equal(applyTsx('const a = <div>{open ¦=== true ? <Menu /> : null}</div>;', 'jsxTernaryToAnd'), 'const a = <div>{open === true && <Menu />}</div>;');
+  assert.equal(applyTsx('const a = <div>{count ¦? <Menu /> : null}</div>;', 'jsxTernaryToAnd'), undefined);
+});

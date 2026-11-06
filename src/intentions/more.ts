@@ -542,3 +542,11 @@ function sliceCallToArrayFrom(ctx: IntentionContext): IntentionAction | undefine
   return call && { id: 'sliceCallToArrayFrom', title: "Replace with 'Array.from'", edits: [ctx.replace(call, `Array.from(${ctx.text(call.arguments[0])})`)] };
 }
 moreIntentions.push({ id: 'sliceCallToArrayFrom', title: 'Replace \'slice.call\' with \'Array.from\'', run: sliceCallToArrayFrom });
+
+function jsxTernaryToAnd(ctx: IntentionContext): IntentionAction | undefined {
+  const t = ctx.nearest(ts.isConditionalExpression, (c) => ts.isJsxExpression(c.parent) && unparen(c.whenFalse).kind === ts.SyntaxKind.NullKeyword);
+  // Only for true/false conditions: `{count && <X />}` renders 0 when count is 0.
+  if (!t || !isBooleanish(t.condition)) return undefined;
+  return { id: 'jsxTernaryToAnd', title: "Replace with '&&'", edits: [ctx.replace(t, `${wrap(ctx.text(t.condition), binaryPrecedence(ts.SyntaxKind.AmpersandAmpersandToken))} && ${ctx.text(t.whenTrue)}`)] };
+}
+moreIntentions.push({ id: 'jsxTernaryToAnd', title: 'Replace JSX \'?: null\' with \'&&\'', run: jsxTernaryToAnd });
