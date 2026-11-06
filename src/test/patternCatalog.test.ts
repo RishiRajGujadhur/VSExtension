@@ -64,3 +64,7 @@ test('Object pool is recognized', () => {
 test('Lazy initialization is recognized', () => {
   has('class Db { private conn?: Conn; get connection() { this.conn ??= new Conn(); return this.conn; } }', 'Lazy initialization');
 });
+
+test('Middleware is recognized', () => {
+  has('function auth(req: Req, res: Res, next: () => void) { if (req.user) next(); }', 'Middleware');
+});

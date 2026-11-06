@@ -272,3 +272,12 @@ catalog.push({
         .map((m) => ({ node: m, evidence: `${className(cls)}.${nameOf(m)} creates its value on first use`, subject: className(cls) })),
     ),
 });
+
+catalog.push({
+  name: 'Middleware',
+  meaning: 'Each function handles a request and calls next() to pass it on, forming a pipeline (Express, Koa, Redux).',
+  detect: (sf) =>
+    functionsIn(sf)
+      .filter(({ fn }) => fn.parameters.length >= 2 && text(fn.parameters[fn.parameters.length - 1].name) === 'next' && text(fn.body).includes('next('))
+      .map(({ name, fn }) => ({ node: fn, evidence: `${name}(…, next) handles the request and passes it on with next()` })),
+});
