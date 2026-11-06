@@ -162,3 +162,7 @@ test('Add numeric separators', () => {
   assert.equal(apply('const n = 1000¦000;', 'addNumericSeparators'), 'const n = 1_000_000;');
   assert.equal(apply('const n = 12¦34;', 'addNumericSeparators'), undefined);
 });
+
+test('Remove numeric separators', () => {
+  assert.equal(apply('const n = 1_0¦00;', 'removeNumericSeparators'), 'const n = 1000;');
+});

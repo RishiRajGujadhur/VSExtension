@@ -476,3 +476,10 @@ function addNumericSeparators(ctx: IntentionContext): IntentionAction | undefine
   return { id: 'addNumericSeparators', title: 'Add numeric separators (1_000_000)', edits: [ctx.replace(literal, raw.replace(/\B(?=(\d{3})+$)/g, '_'))] };
 }
 moreIntentions.push({ id: 'addNumericSeparators', title: 'Add numeric separators', run: addNumericSeparators });
+
+function removeNumericSeparators(ctx: IntentionContext): IntentionAction | undefined {
+  const literal = ctx.nearest(ts.isNumericLiteral);
+  const raw = literal && ctx.text(literal);
+  return literal && raw?.includes('_') ? { id: 'removeNumericSeparators', title: 'Remove numeric separators', edits: [ctx.replace(literal, raw.replace(/_/g, ''))] } : undefined;
+}
+moreIntentions.push({ id: 'removeNumericSeparators', title: 'Remove numeric separators', run: removeNumericSeparators });
