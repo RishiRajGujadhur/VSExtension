@@ -40,3 +40,8 @@ test('Comparison with NaN', () => {
   assert.deepEqual(messages('declare const x: number; if (x === NaN) {}', 'nanComparison'), ['Comparing with NaN is always false; use Number.isNaN().']);
   assert.equal(fixed('declare const x: number; const b = x !== NaN;', 'nanComparison'), 'declare const x: number; const b = !Number.isNaN(x);');
 });
+
+test('Async Promise executor', () => {
+  assert.equal(messages('const p = new Promise(async (resolve) => { resolve(await f()); }); declare function f(): Promise<number>;', 'asyncPromiseExecutor').length, 1);
+  assert.equal(messages('const p = new Promise((resolve) => resolve(1));', 'asyncPromiseExecutor').length, 0);
+});

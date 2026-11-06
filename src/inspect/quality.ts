@@ -80,3 +80,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'asyncPromiseExecutor',
+  title: 'Async Promise executor',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const executor = ts.isNewExpression(node) && node.expression.getText() === 'Promise' ? node.arguments?.[0] : undefined;
+      if (executor && (ts.isArrowFunction(executor) || ts.isFunctionExpression(executor)) && executor.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)) {
+        out.push(at(ctx.sourceFile, 'asyncPromiseExecutor', executor, 'An async executor swallows errors it throws, and the promise never settles. Make the outer function async instead.', 'warning'));
+      }
+    });
+    return out;
+  },
+});
