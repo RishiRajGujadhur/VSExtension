@@ -85,3 +85,7 @@ test('Mutation tracking: URLSearchParams, Headers and FormData', () => {
 test('Mutation tracking: classList changes', () => {
   assert.ok(effects('function f(e: Element) { e.classList.add("on"); }').some((e) => e.startsWith('mutates-parameter')));
 });
+
+test('Mutation tracking: DOM tree and attribute changes, through element subtypes', () => {
+  assert.ok(effects('function f(e: HTMLDivElement) { e.setAttribute("x", "1"); }').some((e) => e.startsWith('mutates-parameter')));
+});

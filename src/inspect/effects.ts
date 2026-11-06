@@ -55,6 +55,7 @@ const mutatingMethods: Record<string, readonly string[]> = {
   Headers: ['append', 'set', 'delete'],
   FormData: ['append', 'set', 'delete'],
   DOMTokenList: ['add', 'remove', 'toggle', 'replace'],
+  Element: ['append', 'prepend', 'after', 'before', 'remove', 'replaceWith', 'replaceChildren', 'appendChild', 'removeChild', 'insertBefore', 'replaceChild', 'setAttribute', 'removeAttribute', 'toggleAttribute', 'insertAdjacentHTML', 'insertAdjacentElement', 'insertAdjacentText'],
   Map: ['set', 'delete', 'clear'],
   Set: ['add', 'delete', 'clear'],
   WeakMap: ['set', 'delete'],
@@ -368,8 +369,16 @@ export class EffectAnalyzer {
     if (this.checker.isArrayType(type)) {
       return 'Array';
     }
-    const name = (type.aliasSymbol ?? type.getSymbol())?.getName();
-    return name && name in mutatingMethods ? name : undefined;
+    // HTMLDivElement counts as Element, through its base types.
+    const queue: ts.Type[] = [type];
+    for (let i = 0; i < queue.length && i < 20; i++) {
+      const name = (queue[i].aliasSymbol ?? queue[i].getSymbol())?.getName();
+      if (name && name in mutatingMethods) {
+        return name;
+      }
+      queue.push(...(queue[i].getBaseTypes?.() ?? []));
+    }
+    return undefined;
   }
 }
 
