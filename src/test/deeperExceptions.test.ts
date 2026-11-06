@@ -16,3 +16,7 @@ test('Exception flow: more Intl constructors', () => {
 test('Exception flow: new Function and eval', () => {
   assert.deepEqual(raised('function f(s: string) { return new Function(s); }'), ['new Function(): SyntaxError on invalid code']);
 });
+
+test('Exception flow: new WebSocket and new Worker', () => {
+  assert.deepEqual(raised('function f(u: string) { return new WebSocket(u); }'), ['new WebSocket(): SyntaxError on an invalid URL']);
+});

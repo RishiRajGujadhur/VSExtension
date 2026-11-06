@@ -35,6 +35,9 @@ throwingCalls['new Intl.DisplayNames'] = 'RangeError on an invalid locale or opt
 throwingCalls['new Function'] = 'SyntaxError on invalid code';
 throwingCalls['eval'] = 'SyntaxError on invalid code, or whatever the code throws';
 
+throwingCalls['new WebSocket'] = 'SyntaxError on an invalid URL';
+throwingCalls['new Worker'] = 'SyntaxError on an invalid script URL';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {
