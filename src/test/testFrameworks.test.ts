@@ -68,3 +68,10 @@ test('Test impact: NestJS e2e specs and spec folders count as tests', () => {
   assert.equal(discover('export {};', 'src/spec/helpers.ts').isTestFile, true);
   assert.equal(discover('export {};', 'src/specification.ts').isTestFile, false);
 });
+
+test('Test impact: run TypeScript tests with node --test through tsx', () => {
+  const dir = pkg({});
+  fs.mkdirSync(path.join(dir, 'node_modules', 'tsx'), { recursive: true });
+  assert.equal(line(testCommand('node', ['a.test.ts'], undefined, dir)), 'node --import tsx --test a.test.ts');
+  assert.equal(line(testCommand('node', ['a.test.js'], undefined, dir)), 'node --test a.test.js');
+});

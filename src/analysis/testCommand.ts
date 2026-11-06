@@ -40,7 +40,8 @@ export function testCommand(framework: RunnableFramework, files: readonly string
     case 'mocha':
       return run('mocha', ...files, ...(pattern ? ['-g', pattern] : []));
     case 'node':
-      return { command: 'node', args: ['--test', ...(pattern ? [`--test-name-pattern=${pattern}`] : []), ...files] };
+      // Node runs .ts files through tsx when the project has it.
+      return { command: 'node', args: [...(files.some((f) => /\.[cm]?tsx?$/.test(f)) && fs.existsSync(path.join(cwd, 'node_modules', 'tsx')) ? ['--import', 'tsx'] : []), '--test', ...(pattern ? [`--test-name-pattern=${pattern}`] : []), ...files] };
   }
 }
 
