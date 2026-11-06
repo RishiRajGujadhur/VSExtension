@@ -333,3 +333,5 @@ entryConventions.push({ pattern: /\/app\/(routes\/[^]*|root|entry\.client|entry\
 entryConventions.push({ pattern: /(\/\+(page|layout|server|error)(\.server)?\.[cm]?[jt]s$)|(\/hooks\.(server|client)\.[cm]?[jt]s$)|(\/server\/(api|routes|middleware)\/[^]*\.[cm]?[jt]s$)|(\/src\/(pages|middleware)\/[^]*\.[cm]?[jt]s$)/, what: 'framework route' });
 
 entryConventions.push({ pattern: /(^|\/)(setupTests|setup-tests|test-setup|testSetup|vitest\.setup|jest\.setup|global-setup|globalSetup)\.[cm]?[jt]sx?$/, what: 'test setup file' });
+
+entryConventions.push({ pattern: /((^|\/)(sw|service-worker|[\w-]+\.worker)\.[cm]?[jt]s$)|((^|\/)scripts\/[^/]+\.[cm]?[jt]s$)/, what: 'worker or script' });

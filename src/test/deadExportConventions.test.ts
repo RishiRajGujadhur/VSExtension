@@ -39,3 +39,8 @@ test('Dead exports: test setup files are entry points', () => {
   assert.equal(isConventionalEntry('/repo/src/setupTests.ts'), 'test setup file');
   assert.equal(isConventionalEntry('/repo/vitest.setup.ts'), 'test setup file');
 });
+
+test('Dead exports: workers and scripts are entry points', () => {
+  assert.equal(isConventionalEntry('/repo/src/image.worker.ts'), 'worker or script');
+  assert.equal(isConventionalEntry('/repo/scripts/release.ts'), 'worker or script');
+});
