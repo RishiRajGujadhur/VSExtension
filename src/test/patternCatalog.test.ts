@@ -126,3 +126,7 @@ test('Fluent interface is recognized', () => {
 test('Promise chain is recognized', () => {
   has('function load() { return fetch("/x").then((r) => r.json()).then((d) => d.items); }', 'Promise chain');
 });
+
+test('Mixin is recognized', () => {
+  has('function Timestamped<T extends new (...a: any[]) => object>(Base: T) { return class extends Base { at = Date.now(); }; }', 'Mixin');
+});

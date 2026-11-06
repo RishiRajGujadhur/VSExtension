@@ -463,3 +463,14 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Mixin',
+  meaning: 'A function adds methods to any class by returning a subclass of the class it is given.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      const base = fn.parameters[0] && text(fn.parameters[0].name);
+      const mixed = base && returnsOf(fn.body).map(unwrap).find((e) => ts.isClassExpression(e) && heritage(e, ts.SyntaxKind.ExtendsKeyword).includes(base));
+      return mixed ? [{ node: fn, evidence: `${name}() adds members to any class passed as ${base}` }] : [];
+    }),
+});
