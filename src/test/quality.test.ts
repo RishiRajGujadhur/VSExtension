@@ -157,3 +157,8 @@ test('Loose equality (== and !=)', () => {
 test('await inside a loop', () => {
   assert.equal(messages('async function f(xs: string[]) { for (const x of xs) { await g(x); } } declare function g(x: string): Promise<void>;', 'awaitInLoop').length, 1);
 });
+
+test('return await outside try', () => {
+  assert.equal(fixed('async function f() { return await g(); } declare function g(): Promise<1>;', 'redundantReturnAwait'), 'async function f() { return g(); } declare function g(): Promise<1>;');
+  assert.equal(messages('async function f() { try { return await g(); } catch { return 0; } } declare function g(): Promise<1>;', 'redundantReturnAwait').length, 0);
+});

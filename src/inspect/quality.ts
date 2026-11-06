@@ -544,3 +544,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'redundantReturnAwait',
+  title: 'return await outside try',
+  defaultSeverity: 'hint',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isReturnStatement(node) || !node.expression || !ts.isAwaitExpression(node.expression)) return;
+      for (let p: ts.Node = node.parent; p && !ts.isFunctionLike(p); p = p.parent) {
+        if (ts.isTryStatement(p)) return;
+      }
+      const awaitKeyword = node.expression.getFirstToken(ctx.sourceFile)!;
+      out.push(at(ctx.sourceFile, 'redundantReturnAwait', awaitKeyword, 'Outside try, returning the promise directly behaves the same.', 'hint', [{ title: "Remove 'await'", edits: [{ start: awaitKeyword.getStart(ctx.sourceFile), end: node.expression.expression.getStart(ctx.sourceFile), text: '' }] }]));
+    });
+    return out;
+  },
+});
