@@ -207,3 +207,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'typeofTypo',
+  title: 'Misspelled typeof result',
+  defaultSeverity: 'error',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const valid = new Set(['string', 'number', 'bigint', 'boolean', 'symbol', 'undefined', 'object', 'function']);
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || !comparisons.has(node.operatorToken.kind)) return;
+      const literal = ts.isTypeOfExpression(unparen(node.left)) ? unparen(node.right) : ts.isTypeOfExpression(unparen(node.right)) ? unparen(node.left) : undefined;
+      if (literal && (ts.isStringLiteral(literal) || ts.isNoSubstitutionTemplateLiteral(literal)) && !valid.has(literal.text)) {
+        const guess = [...valid].find((v) => v.startsWith(literal.text.slice(0, 2)));
+        out.push(at(ctx.sourceFile, 'typeofTypo', literal, `typeof never returns '${literal.text}'${guess ? `; did you mean '${guess}'?` : '.'}`, 'error', guess ? [{ title: `Change to '${guess}'`, edits: [replace(ctx.sourceFile, literal, `'${guess}'`)], preferred: true }] : undefined));
+      }
+    });
+    return out;
+  },
+});

@@ -73,3 +73,8 @@ test('Comparison with itself', () => {
   assert.deepEqual(messages('declare const a: number; if (a === a) {}', 'selfComparison'), ['a is compared with itself.']);
   assert.equal(fixed('declare const a: number; const n = a !== a;', 'selfComparison'), 'declare const a: number; const n = Number.isNaN(a);');
 });
+
+test('Misspelled typeof result', () => {
+  assert.deepEqual(messages("declare const x: unknown; if (typeof x === 'strng') {}", 'typeofTypo'), ["typeof never returns 'strng'; did you mean 'string'?"]);
+  assert.deepEqual(messages("declare const x: unknown; if (typeof x === 'string') {}", 'typeofTypo'), []);
+});
