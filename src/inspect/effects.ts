@@ -117,6 +117,8 @@ ioPackages.push({ pattern: /^(execa|cross-spawn|shelljs|zx)$/, kind: 'io', note:
 
 ioPackages.push({ pattern: /^(uuid|nanoid|cuid|@paralleldrive\/cuid2|ulid)$/, kind: 'nondeterministic', note: 'produces random ids' });
 
+ioPackages.push({ pattern: /^crypto$/, kind: 'nondeterministic', note: 'produces random values', names: /^(random\w*|generateKey\w*)$/ });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();

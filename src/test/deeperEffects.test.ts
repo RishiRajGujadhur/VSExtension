@@ -68,3 +68,7 @@ test('Side effects: running processes', () => {
 test('Side effects: random IDs from uuid and nanoid', () => {
   assert.deepEqual(effects('import { v4 } from "uuid"; function f() { return v4(); }'), ['nondeterministic: produces random ids']);
 });
+
+test('Side effects: Node\'s crypto random functions', () => {
+  assert.deepEqual(effects('import { randomBytes, createHash } from "crypto"; function f() { createHash("sha256"); return randomBytes(8); }'), ['nondeterministic: produces random values']);
+});
