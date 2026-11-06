@@ -130,3 +130,7 @@ test('eval or new Function', () => {
 test('String passed to a timer', () => {
   assert.equal(messages("setTimeout('tick()', 10);", 'timerString').length, 1);
 });
+
+test('new String, Number or Boolean', () => {
+  assert.equal(fixed('const s = new String(1);', 'primitiveWrapper'), 'const s = String(1);');
+});

@@ -429,3 +429,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'primitiveWrapper',
+  title: 'new String, Number or Boolean',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isNewExpression(node) && /^(String|Number|Boolean)$/.test(node.expression.getText())) {
+        const start = node.getStart(ctx.sourceFile);
+        out.push(at(ctx.sourceFile, 'primitiveWrapper', node, `new ${node.expression.getText()}() makes an object, which is always truthy and not ===; call it without new to convert.`, 'warning', [{ title: "Remove 'new'", edits: [{ start, end: node.expression.getStart(ctx.sourceFile), text: '' }], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});
