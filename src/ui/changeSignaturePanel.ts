@@ -136,11 +136,13 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   <button class="primary" id="previewBtn" title="Ctrl+Enter">Preview Changes</button>
   <button id="apply" title="Ctrl+Shift+Enter">Refactor</button>
   <span class="spacer"></span>
+  <button id="reset" title="Back to the signature the function has now">Reset</button>
   <button id="cancel">Cancel</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const { info, rows } = ${state};
+  const initialRows = JSON.stringify(rows);
   const $ = (id) => document.getElementById(id);
   $('title').textContent = 'Change signature of ' + info.kind + ' ' + info.name;
   $('name').value = info.name;
@@ -249,6 +251,12 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   $('previewBtn').addEventListener('click', () => submit(true));
   $('apply').addEventListener('click', () => submit(false));
   $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel' }));
+  $('reset').addEventListener('click', () => {
+    rows.splice(0, rows.length, ...JSON.parse(initialRows));
+    $('name').value = info.name;
+    $('returnType').value = info.returnType;
+    render();
+  });
   // Ctrl+Enter previews, Ctrl+Shift+Enter refactors, Escape cancels, Alt+Up/Down moves the parameter being edited.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
