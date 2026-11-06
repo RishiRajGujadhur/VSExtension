@@ -27,6 +27,7 @@ export const searchTemplates: SearchPreset[] = [
   { title: 'Object.assign into a new object', pattern: 'Object.assign({}, $a$, $b$)', replacement: '({ ...$a$, ...$b$ })', message: 'Use object spread' },
   { title: 'React effect without dependencies', pattern: 'useEffect($effect$)', message: 'This effect runs after every render; add a dependency array' },
   { title: 'console.log calls', pattern: 'console.log($args*$)', message: 'Remove console.log before committing' },
+  { title: 'filter().length > 0 instead of some()', pattern: '$list$.filter($fn$).length > 0', replacement: '$list$.some($fn$)', message: 'some() stops at the first match' },
   { title: 'filter()[0] instead of find()', pattern: '$list$.filter($fn$)[0]', replacement: '$list$.find($fn$)', message: 'find() stops at the first match' },
   { title: 'catch that only rethrows', pattern: 'try { $body*$ } catch ($e$) { throw $e$; }', message: 'This catch only rethrows; remove the try' },
   { title: "typeof check for 'undefined'", pattern: "typeof $x$ === 'undefined'", replacement: '$x$ === undefined', message: 'Compare with undefined directly (keep typeof for globals that may not exist)' },
