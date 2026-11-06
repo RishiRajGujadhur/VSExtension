@@ -27,6 +27,7 @@ export const searchTemplates: SearchPreset[] = [
   { title: 'Object.assign into a new object', pattern: 'Object.assign({}, $a$, $b$)', replacement: '({ ...$a$, ...$b$ })', message: 'Use object spread' },
   { title: 'React effect without dependencies', pattern: 'useEffect($effect$)', message: 'This effect runs after every render; add a dependency array' },
   { title: 'console.log calls', pattern: 'console.log($args*$)', message: 'Remove console.log before committing' },
+  { title: 'Array.from().map()', pattern: 'Array.from($x$).map($fn$)', replacement: 'Array.from($x$, $fn$)', message: 'Array.from takes the mapping function directly' },
   { title: 'Double negation', pattern: '!!$x$', replacement: 'Boolean($x$)', message: 'Boolean($x$) says what !! means' },
   { title: 'Math.pow', pattern: 'Math.pow($a$, $b$)', replacement: '$a$ ** $b$', message: 'Use the ** operator' },
   { title: 'Object.keys().forEach', pattern: 'Object.keys($o$).forEach(($k$) => { $body*$ })', replacement: 'for (const $k$ of Object.keys($o$)) { $body*$ }', message: 'A for…of loop can break, continue and await' },
