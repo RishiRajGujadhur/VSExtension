@@ -310,13 +310,14 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.view.title = titleParts(report).heading;
     this.view.description = [this.limit ? `in ${this.limit.label}` : '', this.filter ? `filtered: “${this.filter}”` : '', this.hidden.size ? `${this.hidden.size} hidden` : ''].filter(Boolean).join(' · ') || undefined;
     this.updateMessage();
-    let problems = 0;
+    let errors = 0;
+    let warnings = 0;
     forEachReportNode(report?.roots ?? [], (node) => {
-      if ((node.tone === 'error' || node.tone === 'warning') && !node.children?.length) {
-        problems++;
-      }
+      if (!node.children?.length && node.tone === 'error') errors++;
+      if (!node.children?.length && node.tone === 'warning') warnings++;
     });
-    this.view.badge = problems ? { value: problems, tooltip: `${problems} rows need attention` } : undefined;
+    const problems = errors + warnings;
+    this.view.badge = problems ? { value: problems, tooltip: [errors ? `${errors} error${errors === 1 ? '' : 's'}` : '', warnings ? `${warnings} warning${warnings === 1 ? '' : 's'}` : ''].filter(Boolean).join(', ') + ' in this report' } : undefined;
     void vscode.commands.executeCommand('setContext', 'tsStructure.hasReport', !!report);
     void vscode.commands.executeCommand('setContext', 'tsStructure.canGoBack', this.position > 0);
     void vscode.commands.executeCommand('setContext', 'tsStructure.canGoForward', this.position < this.history.length - 1);
