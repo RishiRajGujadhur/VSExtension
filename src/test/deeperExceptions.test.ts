@@ -41,3 +41,7 @@ test('Exception flow: methods that throw, starting with reduce on an empty array
   assert.deepEqual(raised('function f(xs: number[]) { return xs.reduce((a, b) => a + b); }'), ['xs.reduce(): TypeError on an empty array without an initial value']);
   assert.deepEqual(raised('function f(xs: number[]) { return xs.reduce((a, b) => a + b, 0); }'), []);
 });
+
+test('Exception flow: toISOString on an invalid date', () => {
+  assert.deepEqual(raised('function f(d: Date) { return d.toISOString(); }'), ['d.toISOString(): RangeError on an invalid date']);
+});

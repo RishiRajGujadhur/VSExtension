@@ -99,6 +99,9 @@ function throwingMethod(checker: ts.TypeChecker, call: ts.CallExpression): strin
 throwingMethods.push({ receiver: 'Array', method: 'reduce', note: 'TypeError on an empty array without an initial value', when: (c) => c.arguments.length === 1 });
 throwingMethods.push({ receiver: 'Array', method: 'reduceRight', note: 'TypeError on an empty array without an initial value', when: (c) => c.arguments.length === 1 });
 
+throwingMethods.push({ receiver: 'Date', method: 'toISOString', note: 'RangeError on an invalid date' });
+throwingMethods.push({ receiver: 'Date', method: 'toJSON', note: 'RangeError on an invalid date' });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */
