@@ -7,6 +7,13 @@ export function filterReport(nodes: readonly ReportNode[], filter: string): Repo
   if (!needle) {
     return [...nodes];
   }
+  // `-test` drops rows whose text or file contains "test".
+  if (needle.startsWith('-') && needle.length > 1) {
+    const unwanted = needle.slice(1);
+    const drop = (node: ReportNode) => `${node.label} ${node.description ?? ''} ${node.location?.file ?? ''}`.toLowerCase().includes(unwanted);
+    const keep = (list: readonly ReportNode[]): ReportNode[] => list.filter((n) => !drop(n)).map((n) => (n.children ? { ...n, children: keep(n.children) } : n));
+    return keep(nodes);
+  }
   // `is:warning` keeps rows of that tone: error, warning, info or ok.
   const tone = /^is:(error|warning|info|ok)$/.exec(needle)?.[1];
   if (tone) {

@@ -100,3 +100,8 @@ test('Results view: filter rows by tone with is:error, is:warning or is:info', (
   const roots = [{ label: 'g', children: [{ label: 'bad', tone: 'warning' as const }, { label: 'fine', tone: 'ok' as const }] }];
   assert.deepEqual(filterReport(roots, 'is:warning').map((r) => r.children?.map((c) => c.label)), [['bad']]);
 });
+
+test('Results view: exclude rows with -text in the filter', () => {
+  const roots = [{ label: 'g', children: [{ label: 'in cart.test.ts' }, { label: 'in cart.ts' }] }];
+  assert.deepEqual(filterReport(roots, '-test').map((r) => r.children?.map((c) => c.label)), [['in cart.ts']]);
+});
