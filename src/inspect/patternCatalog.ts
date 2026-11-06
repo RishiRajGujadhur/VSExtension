@@ -281,3 +281,18 @@ catalog.push({
       .filter(({ fn }) => fn.parameters.length >= 2 && text(fn.parameters[fn.parameters.length - 1].name) === 'next' && text(fn.body).includes('next('))
       .map(({ name, fn }) => ({ node: fn, evidence: `${name}(…, next) handles the request and passes it on with next()` })),
 });
+
+catalog.push({
+  name: 'Retry',
+  meaning: 'A failing operation is tried again, usually waiting longer between attempts.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      let found = false;
+      walk(fn.body ?? fn, (node) => {
+        if ((ts.isForStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node)) && /try\s*\{[\s\S]*await[\s\S]*\}\s*catch/.test(text(node.statement))) {
+          found = true;
+        }
+      });
+      return found ? [{ node: fn, evidence: `${name}() tries again in a loop when the awaited call fails` }] : [];
+    }),
+});

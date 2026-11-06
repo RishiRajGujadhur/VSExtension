@@ -68,3 +68,7 @@ test('Lazy initialization is recognized', () => {
 test('Middleware is recognized', () => {
   has('function auth(req: Req, res: Res, next: () => void) { if (req.user) next(); }', 'Middleware');
 });
+
+test('Retry is recognized', () => {
+  has('async function fetchWithRetry() { for (let i = 0; i < 3; i++) { try { return await get(); } catch { await sleep(100 * 2 ** i); } } }', 'Retry');
+});
