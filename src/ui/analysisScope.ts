@@ -61,7 +61,17 @@ export async function chooseScope(request: ScopeRequest, arg?: unknown): Promise
   picker.placeholder = 'Where to analyze';
   picker.items = items;
   picker.activeItems = items.filter((i) => i.scope === last).slice(0, 1);
+  // Stop asking: analyses use the whole project from now on (tsStructure.askForScope).
+  const stopAsking: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('pinned'), tooltip: 'Always Analyze the Whole Project (stop asking)' };
+  if (!request.alwaysAsk && request.kinds.includes('project')) {
+    picker.buttons = [stopAsking];
+  }
   const picked = await new Promise<(typeof items)[number] | undefined>((resolve) => {
+    picker.onDidTriggerButton(() => {
+      void vscode.workspace.getConfiguration('tsStructure').update('askForScope', false, vscode.ConfigurationTarget.Global);
+      void vscode.window.showInformationMessage('Analyses now use the whole project. Turn tsStructure.askForScope back on to choose again.');
+      resolve(items.find((i) => i.scope === 'project'));
+    });
     picker.onDidAccept(() => resolve(picker.selectedItems[0] ?? picker.activeItems[0]));
     picker.onDidHide(() => resolve(undefined));
     picker.show();
