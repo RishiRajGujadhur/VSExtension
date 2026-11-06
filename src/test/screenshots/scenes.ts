@@ -19,6 +19,8 @@ export interface Scene {
   cleanup?(): Promise<void>;
   /** How long to wait before the capture, in milliseconds. */
   settle?: number;
+  /** Only the walkthrough picture is wanted, not a GIF for the README. */
+  still?: boolean;
   /** The part of the window shown in the Getting Started walkthrough, saved to media/walkthrough. */
   walkthrough?: Clip;
 }
@@ -94,16 +96,51 @@ function inspection(name: string, file: string, needle: string): Scene {
 }
 
 export const scenes: Scene[] = [
-  // Inspections
-  analysis('data-flow', 'src/cart.ts', 'total = applyCoupon', 'tsStructure.dataFlow'),
-  analysis('mutation-tracking', 'src/cart.ts', 'addToCart(', 'tsStructure.mutationTracking'),
+  // Getting started
+  {
+    name: 'actions-at-cursor',
+    walkthrough: { x: 420, y: 30, width: 602, height: 390 },
+    async run({ open, delay }) {
+      await open('src/pricing.ts', 'applyCoupon(amount');
+      await delay(700);
+      await typeCommand('tsStructure.actionsAtCursor', delay);
+      void vscode.commands.executeCommand('tsStructure.actionsAtCursor');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+  },
+  {
+    name: 'context-menu',
+    async run({ open, delay }) {
+      await open('src/pricing.ts', 'calculateSubtotal(items');
+      await delay(900);
+      void vscode.commands.executeCommand('editor.action.showContextMenu');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+      await vscode.commands.executeCommand('editor.action.hideContextMenu').then(undefined, () => undefined);
+    },
+    settle: 2000,
+  },
+  {
+    name: 'shortcuts',
+    async run({ open, delay }) {
+      await open('src/cart.ts', 'addToCart(');
+      await delay(700);
+      void vscode.commands.executeCommand('tsStructure.shortcutSheet');
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+    settle: 2000,
+  },
+  // Understand code
+  { ...analysis('data-flow', 'src/orders.ts', 'payment: PaymentMethod, coupon', 'tsStructure.dataFlow'), settle: 3000 },
+  analysis('design-patterns', 'src/cart.ts', 'addToCart(', 'tsStructure.detectPatterns', 'project'),
+  { ...analysis('semantic-usages', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.semanticUsages'), walkthrough: { x: 48, y: 30, width: 860, height: 330 } },
   analysis('nullability', 'src/pricing.ts', 'coupon = findCoupon', 'tsStructure.nullability'),
-  analysis('promise-rejections', 'src/orders.ts', 'saveOrder(id: string', 'tsStructure.promiseRejections'),
-  { ...inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'), walkthrough: { x: 532, y: 60, width: 908, height: 560 } },
-  inspection('type-assertions', 'src/api.ts', 'as Book;\n}\n\nexport function firstItem'),
-  analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports', 'project'),
-  analysis('exception-flow', 'src/config.ts', 'parseConfig(text: string)', 'tsStructure.exceptionFlow'),
-  analysis('duplicates', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.findDuplicates', 'project'),
+  analysis('mutation-tracking', 'src/cart.ts', 'addToCart(', 'tsStructure.mutationTracking'),
   {
     name: 'side-effects',
     async run({ open, delay }) {
@@ -117,66 +154,19 @@ export const scenes: Scene[] = [
     },
     settle: 3000,
   },
-  // Navigation and search
-  { ...analysis('semantic-usages', 'src/pricing.ts', 'calculateSubtotal(items', 'tsStructure.semanticUsages'), walkthrough: { x: 48, y: 30, width: 860, height: 330 } },
-  analysis('reexport-chain', 'src/main.ts', 'subtotal }', 'tsStructure.reexportChain'),
   {
-    name: 'structural-search',
+    name: 'test-impact',
+    walkthrough: { x: 420, y: 30, width: 602, height: 280 },
     async run({ open, delay }) {
-      await open('src/cart.ts', 'items.find');
-      await runTyped('tsStructure.structuralSearch', delay, {
-        pattern: '$list$.find($callback$)',
-        constraints: [{ name: 'list', type: '^LineItem\\[\\]$' }],
-        run: true,
-      });
-    },
-    settle: 2500,
-  },
-  {
-    name: 'structural-replace',
-    async run({ open, delay }) {
-      await open('src/pricing.ts', 'Math.round');
-      await runTyped('tsStructure.structuralSearch', delay, {
-        pattern: 'Math.round($value$ * 100) / 100',
-        replacement: 'Number($value$.toFixed(2))',
-        preview: true,
-      });
-    },
-    settle: 2500,
-  },
-  {
-    name: 'custom-inspections',
-    async run({ open, delay }) {
-      await settings().update(
-        'customInspections',
-        [{ id: 'no-console-log', pattern: 'console.log($args*$)', message: 'Use track() instead of console.log', severity: 'warning', replacement: "track('log', String($args*$))" }],
-        vscode.ConfigurationTarget.Workspace,
-      );
-      await open('src/orders.ts', 'console.log');
-      await diagnostics('src/orders.ts', delay);
-      await delay(300);
-      await vscode.commands.executeCommand('editor.action.showHover');
-      await delay(2000);
-      await runTyped('tsStructure.inspectCode', delay, 'file');
-      await vscode.commands.executeCommand('workbench.actions.view.problems');
-      await open('src/orders.ts', 'console.log');
-      await delay(300);
-      await vscode.commands.executeCommand('editor.action.showHover');
+      await open('src/pricing.ts', 'calculateSubtotal(items');
+      await delay(700);
+      await typeCommand('tsImpact.analyze', delay);
+      void vscode.commands.executeCommand('tsImpact.analyze', 'symbol');
     },
     async cleanup() {
-      await settings().update('customInspections', undefined, vscode.ConfigurationTarget.Workspace);
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     },
-    settle: 1500,
-  },
-  analysis('type-hierarchy', 'src/models.ts', 'PaymentMethod {', 'tsStructure.typeHierarchy'),
-  analysis('override-impact', 'src/models.ts', 'charge(amount: number): Promise<Receipt>;', 'tsStructure.overrideImpact'),
-  {
-    name: 'dependency-path',
-    async run({ open, delay }) {
-      await open('src/main.ts', 'placeOrder');
-      await delay(700);
-      await runTyped('tsStructure.dependencyPath', delay, uri('src/main.ts'), uri('src/analytics.ts'));
-    },
+    settle: 3000,
   },
   {
     name: 'graph-diff',
@@ -201,8 +191,43 @@ export const scenes: Scene[] = [
       execFileSync('git', ['checkout', '--', '.'], { cwd: root() });
     },
   },
-  analysis('argument-flow', 'src/pricing.ts', 'code?: string): number', 'tsStructure.argumentFlow'),
-  // Configuration and the walkthrough. Pickers wait for an answer, so they are opened without awaiting them.
+  // Refactor and find problems
+  {
+    name: 'change-signature',
+    walkthrough: { x: 984, y: 30, width: 456, height: 440 },
+    async run({ open, delay }) {
+      await open('src/pricing.ts', 'applyCoupon(amount');
+      await delay(700);
+      await typeCommand('tsStructure.changeSignature', delay);
+      void vscode.commands.executeCommand('tsStructure.changeSignature');
+    },
+    settle: 3000,
+  },
+  { ...inspection('missing-await', 'src/orders.ts', 'placeOrder(id, items, payment);\n}\n\nexport function onCheckoutClick'), walkthrough: { x: 532, y: 60, width: 908, height: 560 } },
+  analysis('dead-exports', 'src/legacy.ts', 'oldDiscount', 'tsStructure.deadExports', 'project'),
+  {
+    name: 'structural-search',
+    async run({ open, delay }) {
+      await open('src/cart.ts', 'items.find');
+      await runTyped('tsStructure.structuralSearch', delay, {
+        pattern: '$list$.find($callback$)',
+        constraints: [{ name: 'list', type: '^LineItem\\[\\]$' }],
+        run: true,
+      });
+    },
+    settle: 2500,
+  },
+  // Results and settings. Pickers wait for an answer, so they are opened without awaiting them.
+  {
+    name: 'limit-results',
+    async run({ open, delay }) {
+      await open('src/cart.ts', 'calculateSubtotal(items);');
+      await runTyped('tsStructure.semanticUsages', delay);
+      // Every usage first, then only those in this file.
+      await delay(2500);
+      await runTyped('tsStructure.report.limitScope', delay, 'file');
+    },
+  },
   {
     name: 'choose-features',
     walkthrough: { x: 420, y: 30, width: 602, height: 390 },
@@ -223,71 +248,8 @@ export const scenes: Scene[] = [
     },
   },
   {
-    name: 'actions-at-cursor',
-    walkthrough: { x: 420, y: 30, width: 602, height: 390 },
-    async run({ open, delay }) {
-      await open('src/pricing.ts', 'applyCoupon(amount');
-      await delay(700);
-      await typeCommand('tsStructure.actionsAtCursor', delay);
-      void vscode.commands.executeCommand('tsStructure.actionsAtCursor');
-    },
-    async cleanup() {
-      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
-    },
-  },
-  {
-    name: 'analysis-lightbulb',
-    async run({ open, delay }) {
-      await open('src/pricing.ts', 'applyCoupon(amount');
-      await delay(1200);
-      void vscode.commands.executeCommand('editor.action.refactor');
-    },
-    async cleanup() {
-      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
-      await vscode.commands.executeCommand('hideCodeActionWidget');
-    },
-    settle: 2500,
-  },
-  {
-    name: 'change-signature',
-    walkthrough: { x: 984, y: 30, width: 456, height: 440 },
-    async run({ open, delay }) {
-      await open('src/pricing.ts', 'applyCoupon(amount');
-      await delay(700);
-      await typeCommand('tsStructure.changeSignature', delay);
-      void vscode.commands.executeCommand('tsStructure.changeSignature');
-    },
-    settle: 3000,
-  },
-  {
-    name: 'test-impact',
-    walkthrough: { x: 420, y: 30, width: 602, height: 280 },
-    async run({ open, delay }) {
-      await open('src/pricing.ts', 'calculateSubtotal(items');
-      await delay(700);
-      await typeCommand('tsImpact.analyze', delay);
-      void vscode.commands.executeCommand('tsImpact.analyze', 'symbol');
-    },
-    async cleanup() {
-      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
-    },
-    settle: 3000,
-  },
-  {
-    name: 'walkthrough',
-    async run() {
-      // Without the side bar the page is wide enough to show each step's picture.
-      await vscode.commands.executeCommand('workbench.action.closeSidebar');
-      await vscode.commands.executeCommand('tsStructure.guideMe');
-    },
-    async cleanup() {
-      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-      await vscode.commands.executeCommand('tsStructure.report.focus');
-    },
-    settle: 2500,
-  },
-  {
     name: 'analysis-scope',
+    still: true,
     walkthrough: { x: 420, y: 30, width: 602, height: 232 },
     async run({ open, delay }) {
       await settings().update('exclude', ['**/generated/**', 'src/legacy.ts'], vscode.ConfigurationTarget.Workspace);
@@ -301,34 +263,5 @@ export const scenes: Scene[] = [
       await settings().update('exclude', undefined, vscode.ConfigurationTarget.Workspace);
       await settings().update('include', undefined, vscode.ConfigurationTarget.Workspace);
     },
-  },
-  {
-    name: 'scope-picker',
-    async run({ open, delay }) {
-      await open('src/cart.ts', 'addToCart(');
-      await open('src/pricing.ts', 'Math.round');
-      await typeCommand('tsStructure.inspectCode', delay);
-      void vscode.commands.executeCommand('tsStructure.inspectCode');
-    },
-    async cleanup() {
-      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
-    },
-  },
-  {
-    name: 'limit-results',
-    async run({ open, delay }) {
-      await open('src/cart.ts', 'calculateSubtotal(items);');
-      await runTyped('tsStructure.semanticUsages', delay);
-      // Every usage first, then only those in this file.
-      await delay(2500);
-      await runTyped('tsStructure.report.limitScope', delay, 'file');
-    },
-  },
-  {
-    name: 'settings',
-    async run({ delay }) {
-      await runTyped('tsStructure.openSettings', delay);
-    },
-    settle: 2500,
   },
 ];

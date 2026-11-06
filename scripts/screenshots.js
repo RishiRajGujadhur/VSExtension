@@ -34,6 +34,9 @@ fs.writeFileSync(
       'workbench.colorTheme': 'Default Dark Modern',
       'workbench.layoutControl.enabled': false,
       'window.commandCenter': false,
+      // Menus drawn by VS Code itself, so the right-click menu appears in the recordings.
+      'window.menuStyle': 'custom',
+      'window.titleBarStyle': 'custom',
       'window.restoreWindows': 'none',
       'editor.minimap.enabled': false,
       'editor.fontSize': 14,

@@ -90,3 +90,14 @@ test('Detect Design Patterns groups every pattern in the files, most frequent fi
   assert.deepEqual(report.roots.map((r) => `${r.label} ${r.description}`), ['Factory 2 places', 'Repository 1 place', 'Layered architecture services → repositories']);
   assert.equal(report.roots[0].children?.[0].description, 'src/services/a.ts:1');
 });
+
+test('the info button links to headings that exist in the README', async () => {
+  const { explanations } = await import('../structure/explanations');
+  const fs = await import('fs');
+  const path = await import('path');
+  const readme = fs.readFileSync(path.resolve(__dirname, '../../README.md'), 'utf8');
+  const anchors = new Set([...readme.matchAll(/^#+ (.+)$/gm)].map((m) => m[1].toLowerCase().replace(/[^\w\- ]/g, '').trim().replace(/ /g, '-')));
+  for (const [kind, e] of Object.entries(explanations)) {
+    assert.ok(anchors.has(e.anchor), `${kind}: #${e.anchor}`);
+  }
+});

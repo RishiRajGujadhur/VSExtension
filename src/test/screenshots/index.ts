@@ -33,6 +33,11 @@ class Recorder {
     })();
   }
 
+  async discard(): Promise<void> {
+    this.stopped = true;
+    await this.loop;
+  }
+
   /** Stops, adds the final state, and writes the GIF with that state held for `holdMs`. */
   async save(file: string, holdMs: number): Promise<void> {
     this.stopped = true;
@@ -79,7 +84,11 @@ export async function run(): Promise<void> {
       recorder.start();
       await scene.run({ open, cdp, delay });
       await delay(scene.settle ?? 1200);
-      await recorder.save(path.join(outDir, `${scene.name}.gif`), 3500);
+      if (scene.still) {
+        await recorder.discard();
+      } else {
+        await recorder.save(path.join(outDir, `${scene.name}.gif`), 3500);
+      }
       if (scene.walkthrough) {
         await cdp.capture(path.join(outDir, '..', '..', 'media', 'walkthrough', `${scene.name}.png`), scene.walkthrough);
       }
