@@ -110,3 +110,7 @@ test('Side effects: performance marks read the clock', () => {
 test('Side effects: logging libraries', () => {
   assert.deepEqual(effects('import pino from "pino"; function f() { return pino(); }'), ['io: writes logs']);
 });
+
+test('Side effects: error reporting and analytics SDKs', () => {
+  assert.deepEqual(effects('import * as Sentry from "@sentry/node"; function f(e: Error) { Sentry.captureException(e); }'), ['io: sends telemetry']);
+});
