@@ -185,3 +185,9 @@ test('Intention: Remove \'!!\' in a condition', () => {
 test('Intention: Replace \'x ? x : y\' with \'x || y\'', () => {
   assert.equal(apply("const v = name ¦? name : 'anon';", 'ternaryToOr'), "const v = name || 'anon';");
 });
+
+test('Intention: Replace \'.apply()\' with spread', () => {
+  assert.equal(apply('f.ap¦ply(null, args);', 'applyToSpread'), 'f(...args);');
+  assert.equal(apply('obj.m.ap¦ply(obj, args);', 'applyToSpread'), 'obj.m(...args);');
+  assert.equal(apply('obj.m.ap¦ply(null, args);', 'applyToSpread'), undefined);
+});

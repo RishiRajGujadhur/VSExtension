@@ -524,3 +524,15 @@ function ternaryToOr(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'ternaryToOr', title: "Replace with '||'", edits: [ctx.replace(t, wrap(`${ctx.text(unparen(t.condition))} || ${right}`, requiredPrecedence(t)))] };
 }
 moreIntentions.push({ id: 'ternaryToOr', title: 'Replace \'x ? x : y\' with \'x || y\'', run: ternaryToOr });
+
+function applyToSpread(ctx: IntentionContext): IntentionAction | undefined {
+  const call = ctx.nearest(ts.isCallExpression, (c) => ts.isPropertyAccessExpression(c.expression) && c.expression.name.text === 'apply' && c.arguments.length === 2);
+  if (!call) return undefined;
+  const fn = (call.expression as ts.PropertyAccessExpression).expression;
+  const thisArg = unparen(call.arguments[0]);
+  const plain = !ts.isPropertyAccessExpression(fn) && !ts.isElementAccessExpression(fn) && (thisArg.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(thisArg) && thisArg.text === 'undefined'));
+  const method = ts.isPropertyAccessExpression(fn) && ctx.text(fn.expression) === ctx.text(thisArg);
+  if (!plain && !method) return undefined;
+  return { id: 'applyToSpread', title: 'Replace with spread arguments', edits: [ctx.replace(call, `${ctx.text(fn)}(...${ctx.text(call.arguments[1])})`)] };
+}
+moreIntentions.push({ id: 'applyToSpread', title: 'Replace \'.apply()\' with spread', run: applyToSpread });
