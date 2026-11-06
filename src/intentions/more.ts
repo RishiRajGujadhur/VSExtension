@@ -326,3 +326,23 @@ function expandCompoundAssignment(ctx: IntentionContext): IntentionAction | unde
   return { id: 'expandCompoundAssignment', title: `Replace '${op}' with '= … ${binary}'`, edits: [ctx.replace(assignment, `${ctx.text(assignment.left)} = ${ctx.text(assignment.left)} ${binary} ${right}`)] };
 }
 moreIntentions.push({ id: 'expandCompoundAssignment', title: 'Replace \'x += y\' with \'x = x + y\'', run: expandCompoundAssignment });
+
+function removeParentheses(ctx: IntentionContext): IntentionAction | undefined {
+  const paren = ctx.nearest(ts.isParenthesizedExpression);
+  if (!paren) return undefined;
+  const inner = paren.expression;
+  const parent = paren.parent;
+  // Places where the parentheses mean something even though precedence allows dropping them.
+  if (ts.isObjectLiteralExpression(inner) || ts.isFunctionExpression(inner) || ts.isClassExpression(inner) || ts.isArrowFunction(inner)) return undefined;
+  if (ts.isOptionalChain(inner) && (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent) || ts.isCallExpression(parent))) return undefined;
+  if (ts.isBinaryExpression(parent)) {
+    const op = parent.operatorToken.kind;
+    const logic = (k: ts.SyntaxKind) => k === ts.SyntaxKind.AmpersandAmpersandToken || k === ts.SyntaxKind.BarBarToken;
+    if (ts.isBinaryExpression(inner) && ((op === ts.SyntaxKind.QuestionQuestionToken && logic(inner.operatorToken.kind)) || (logic(op) && inner.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken))) return undefined;
+    if (op === ts.SyntaxKind.AsteriskAsteriskToken && parent.left === paren && (ts.isPrefixUnaryExpression(inner) || ts.isAwaitExpression(inner) || ts.isTypeOfExpression(inner) || ts.isVoidExpression(inner))) return undefined;
+  }
+  if (ts.isCallExpression(parent) && parent.expression === paren && !ts.isIdentifier(inner) && !ts.isPropertyAccessExpression(inner) && !ts.isCallExpression(inner)) return undefined;
+  if (precedence(inner) < requiredPrecedence(paren)) return undefined;
+  return { id: 'removeParentheses', title: 'Remove unnecessary parentheses', edits: [ctx.replace(paren, ctx.text(inner))] };
+}
+moreIntentions.push({ id: 'removeParentheses', title: 'Remove unnecessary parentheses', run: removeParentheses });

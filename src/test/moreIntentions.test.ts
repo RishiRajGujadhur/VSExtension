@@ -103,3 +103,10 @@ test('Replace \'x += y\' with \'x = x + y\'', () => {
   assert.equal(apply('a ¦*= b + c;', 'expandCompoundAssignment'), 'a = a * (b + c);');
   assert.equal(apply('f().x ¦+= 1;', 'expandCompoundAssignment'), undefined);
 });
+
+test('Remove unnecessary parentheses', () => {
+  assert.equal(apply('const x = ¦(a * b) + c;', 'removeParentheses'), 'const x = a * b + c;');
+  assert.equal(apply('const y = (¦a + b) * c;', 'removeParentheses'), undefined);
+  assert.equal(apply('const z = (¦a?.b).c;', 'removeParentheses'), undefined);
+  assert.equal(apply('const f = () => (¦{ a: 1 });', 'removeParentheses'), undefined);
+});
