@@ -88,3 +88,7 @@ test('Context provider is recognized', () => {
 test('Higher-order component is recognized', () => {
   has('function withUser(Wrapped: Comp) { return (props: P) => <Wrapped {...props} user={1} />; }', 'Higher-order component');
 });
+
+test('Render props is recognized', () => {
+  has('function A() { return <List render={(x: string) => <b>{x}</b>} />; }', 'Render props');
+});

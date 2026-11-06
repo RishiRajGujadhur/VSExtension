@@ -344,3 +344,17 @@ catalog.push({
       return component && returned && new RegExp(`<${component}[\\s/>]`).test(text(returned)) ? [{ node: fn, evidence: `${name}() wraps ${component} in a new component` }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Render props',
+  meaning: 'A component receives a function that decides what to render, sharing its logic with the caller.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isJsxAttribute(node) && node.initializer && ts.isJsxExpression(node.initializer) && node.initializer.expression && (ts.isArrowFunction(node.initializer.expression) || ts.isFunctionExpression(node.initializer.expression)) && containsJsx(node.initializer.expression)) {
+        found.push({ node, evidence: `the ${text(node.name)} prop is a function that renders` });
+      }
+    });
+    return found;
+  },
+});
