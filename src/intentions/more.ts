@@ -582,3 +582,9 @@ function jsxAttributeUnbrace(ctx: IntentionContext): IntentionAction | undefined
   return q && { id: 'jsxAttributeUnbrace', title: 'Remove braces', edits: [ctx.replace(attribute.initializer!, `${q}${literal.text}${q}`)] };
 }
 moreIntentions.push({ id: 'jsxAttributeUnbrace', title: 'Remove braces around a JSX string', run: jsxAttributeUnbrace });
+
+function jsxAttributeBrace(ctx: IntentionContext): IntentionAction | undefined {
+  const attribute = ctx.nearest(ts.isJsxAttribute, (a) => !!a.initializer && ts.isStringLiteral(a.initializer));
+  return attribute && { id: 'jsxAttributeBrace', title: 'Put in braces', edits: [ctx.replace(attribute.initializer!, `{${quote((attribute.initializer as ts.StringLiteral).text, '"')}}`)] };
+}
+moreIntentions.push({ id: 'jsxAttributeBrace', title: 'Put a JSX string in braces', run: jsxAttributeBrace });

@@ -225,3 +225,7 @@ test('Intention: Expand self-closing JSX element', () => {
 test('Intention: Remove braces around a JSX string', () => {
   assert.equal(applyTsx('const a = <A title=¦{"Hi"} />;', 'jsxAttributeUnbrace'), 'const a = <A title="Hi" />;');
 });
+
+test('Intention: Put a JSX string in braces', () => {
+  assert.equal(applyTsx('const a = <A title=¦"Hi" />;', 'jsxAttributeBrace'), 'const a = <A title={"Hi"} />;');
+});
