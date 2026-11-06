@@ -25,6 +25,13 @@ const throwingCalls: Record<string, string> = {
   execFileSync: 'Error when the command exits with a failure',
 };
 
+throwingCalls['new Intl.Collator'] = 'RangeError on an invalid locale or option';
+throwingCalls['new Intl.PluralRules'] = 'RangeError on an invalid locale or option';
+throwingCalls['new Intl.RelativeTimeFormat'] = 'RangeError on an invalid locale or option';
+throwingCalls['new Intl.ListFormat'] = 'RangeError on an invalid locale or option';
+throwingCalls['new Intl.Segmenter'] = 'RangeError on an invalid locale or option';
+throwingCalls['new Intl.DisplayNames'] = 'RangeError on an invalid locale or option';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {
