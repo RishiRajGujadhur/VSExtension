@@ -247,3 +247,13 @@ function templateToConcat(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'templateToConcat', title: "Replace template literal with '+'", edits: [ctx.replace(template, wrap(joined, requiredPrecedence(template)))] };
 }
 moreIntentions.push({ id: 'templateToConcat', title: 'Replace template literal with \'+\'', run: templateToConcat });
+
+function hasOwn(ctx: IntentionContext): IntentionAction | undefined {
+  const call = ctx.nearest(ts.isCallExpression, (c) => ts.isPropertyAccessExpression(c.expression) && (c.expression.name.text === 'hasOwnProperty' || (c.expression.name.text === 'call' && ctx.text(c.expression.expression).replace(/\s/g, '') === 'Object.prototype.hasOwnProperty')));
+  if (!call) return undefined;
+  const access = call.expression as ts.PropertyAccessExpression;
+  const [object, key] = access.name.text === 'call' ? call.arguments : [access.expression, call.arguments[0]];
+  if (!object || !key || (access.name.text === 'hasOwnProperty' && call.arguments.length !== 1)) return undefined;
+  return { id: 'hasOwn', title: "Replace with 'Object.hasOwn'", edits: [ctx.replace(call, `Object.hasOwn(${ctx.text(object)}, ${ctx.text(key)})`)] };
+}
+moreIntentions.push({ id: 'hasOwn', title: 'Replace \'hasOwnProperty\' with \'Object.hasOwn\'', run: hasOwn });

@@ -77,3 +77,8 @@ test('Replace template literal with \'+\'', () => {
   assert.equal(apply('const n = `x${¦y}`.length;', 'templateToConcat'), "const n = ('x' + y).length;");
   assert.equal(apply('const s = `it\'s ${¦a}`;', 'templateToConcat'), "const s = 'it\\'s ' + a;");
 });
+
+test('Replace \'hasOwnProperty\' with \'Object.hasOwn\'', () => {
+  assert.equal(apply('if (o.hasOwn¦Property(k)) {}', 'hasOwn'), 'if (Object.hasOwn(o, k)) {}');
+  assert.equal(apply('if (Object.prototype.hasOwnProperty.ca¦ll(o, k)) {}', 'hasOwn'), 'if (Object.hasOwn(o, k)) {}');
+});
