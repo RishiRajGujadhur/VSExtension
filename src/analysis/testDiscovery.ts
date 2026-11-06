@@ -16,7 +16,11 @@ export interface DiscoveredTestFile {
   fileEntry: TestCase;
 }
 
+/** Frameworks whose default export is the test function, whatever it is named: `import t from 'ava'`. */
+const defaultExportsTest = new Set<Framework>(['node', 'ava']);
+
 const testModules: Record<string, Framework> = {
+  'ava': 'ava',
   'bun:test': 'bun',
   vitest: 'vitest',
   '@jest/globals': 'jest',
@@ -127,7 +131,7 @@ class Discovery {
       }
       if (clause.name) {
         // node:test and mocha export the test function as the default.
-        this.imported.set(clause.name.text, framework === 'node' ? 'test' : clause.name.text);
+        this.imported.set(clause.name.text, defaultExportsTest.has(framework) ? 'test' : clause.name.text);
         this.namespaces.add(clause.name.text);
       }
       const bindings = clause.namedBindings;

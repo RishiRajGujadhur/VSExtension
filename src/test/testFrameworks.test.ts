@@ -34,3 +34,9 @@ test('Test impact: Bun test', () => {
   assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['bun adds']);
   assert.equal(line(testCommand('bun', ['a.test.ts'], 'adds', pkg({}))), 'bun test a.test.ts -t adds');
 });
+
+test('Test impact: AVA', () => {
+  const found = discover("import t from 'ava';\nt('adds', (x) => x.pass());");
+  assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['ava adds']);
+  assert.equal(line(testCommand('ava', ['a.test.ts'], 'adds', pkg({ 'package-lock.json': '' }))), 'npx ava a.test.ts');
+});
