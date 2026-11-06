@@ -51,3 +51,9 @@ test('Test impact: Deno.test', () => {
   assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['deno adds']);
   assert.equal(line(testCommand('deno', ['a.test.ts'], 'adds', pkg({}))), 'deno test --allow-all a.test.ts --filter /adds/');
 });
+
+test('Test impact: Cypress specs', () => {
+  assert.equal(discover("describe('cart', () => { it('adds', () => {}); });", 'cypress/e2e/cart.cy.ts').isTestFile, true);
+  assert.equal(detectFramework(pkg({ 'package.json': JSON.stringify({ devDependencies: { cypress: '13' } }) })), 'cypress');
+  assert.equal(line(testCommand('cypress', ['a.cy.ts', 'b.cy.ts'], undefined, pkg({ 'package-lock.json': '' }))), 'npx cypress run --spec a.cy.ts,b.cy.ts');
+});

@@ -19,6 +19,8 @@ export function testCommand(framework: RunnableFramework, files: readonly string
   const exec = packageRunner(cwd);
   const run = (...args: string[]) => ({ command: exec.command, args: [...exec.prefix, ...args] });
   switch (framework) {
+    case 'cypress':
+      return run('cypress', 'run', '--spec', files.join(','));
     case 'deno':
       return { command: 'deno', args: ['test', '--allow-all', ...files, ...(pattern ? ['--filter', `/${pattern}/`] : [])] };
     case 'tape':
@@ -52,6 +54,7 @@ export function detectFramework(packageDir: string | undefined): RunnableFramewo
     if (deps.jest || deps['ts-jest']) return 'jest';
     if (deps['@playwright/test']) return 'playwright';
     if (deps.mocha) return 'mocha';
+    if (deps.cypress) return 'cypress';
     if (deps.tape || deps.tap) return 'tape';
     if (deps.ava) return 'ava';
     if (deps['@types/bun'] || deps['bun-types']) return 'bun';
