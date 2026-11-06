@@ -36,3 +36,7 @@ test('Side effects: reading files in the browser', () => {
 test('Side effects: Date() without new reads the clock', () => {
   assert.deepEqual(effects('function f() { return Date(); }'), ['nondeterministic: reads the current time']);
 });
+
+test('Side effects: system information and DNS in Node', () => {
+  assert.deepEqual(effects('import { hostname } from "os"; function f() { return hostname(); }'), ['io: uses os']);
+});

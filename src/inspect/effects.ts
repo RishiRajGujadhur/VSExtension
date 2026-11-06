@@ -98,7 +98,7 @@ const nondeterministicMembers: Record<string, readonly string[]> = {
   crypto: ['randomUUID', 'getRandomValues'],
 };
 
-const ioModules = new Set(['fs', 'fs/promises', 'child_process', 'net', 'http', 'https', 'http2', 'dgram', 'readline', 'cluster', 'worker_threads', 'tls']);
+const ioModules = new Set(['fs', 'fs/promises', 'child_process', 'net', 'http', 'https', 'http2', 'dgram', 'readline', 'cluster', 'worker_threads', 'tls', 'os', 'dns', 'dns/promises', 'v8', 'inspector']);
 
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
