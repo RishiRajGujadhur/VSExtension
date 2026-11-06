@@ -1715,6 +1715,33 @@
           "when": "config.tsStructure.editorTitleButton && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
           "group": "navigation@90"
         }
+      ],
+      "editor/title/context": [
+        {
+          "command": "tsStructure.inspectCode",
+          "when": "config.tsStructure.features.inspections && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "3_tsStructure@0"
+        },
+        {
+          "command": "tsImpact.analyzeFile",
+          "when": "config.tsStructure.features.testImpact && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "3_tsStructure@1"
+        },
+        {
+          "command": "tsStructure.dependencyPath",
+          "when": "config.tsStructure.features.dependencyPath && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "3_tsStructure@2"
+        },
+        {
+          "command": "tsStructure.safeDeleteFile",
+          "when": "config.tsStructure.features.refactorings && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "4_tsStructure@0"
+        },
+        {
+          "command": "tsStructure.excludeFromAnalysis",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "4_tsStructure@1"
+        }
       ]
     },
     "views": {
