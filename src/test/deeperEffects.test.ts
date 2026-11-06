@@ -64,3 +64,7 @@ test('Side effects: file system packages', () => {
 test('Side effects: running processes', () => {
   assert.deepEqual(effects('import { execa } from "execa"; function f() { return execa("ls"); }'), ['io: runs another program']);
 });
+
+test('Side effects: random IDs from uuid and nanoid', () => {
+  assert.deepEqual(effects('import { v4 } from "uuid"; function f() { return v4(); }'), ['nondeterministic: produces random ids']);
+});
