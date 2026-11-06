@@ -39,3 +39,7 @@ test('Nullability: querySelector and getElementById', () => {
 test('Nullability: closest and getAttribute', () => {
   assert.equal(reason('function f(e: Element) { return e.getAttribute("href"); }'), 'null when the attribute is not set');
 });
+
+test('Nullability: localStorage.getItem', () => {
+  assert.equal(reason('function f() { return localStorage.getItem("token"); }'), 'null when nothing is stored under the key');
+});
