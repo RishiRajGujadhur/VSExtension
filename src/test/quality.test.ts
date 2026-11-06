@@ -220,3 +220,8 @@ test('Inspection: new Array(n) makes empty slots', () => {
   assert.equal(messages('const xs = new Array(3).map((_, i) => i);', 'arrayConstructorLength').length, 1);
   assert.equal(messages('const xs = new Array(3).fill(0);', 'arrayConstructorLength').length, 0);
 });
+
+test('Inspection: Exact comparison of decimal arithmetic', () => {
+  assert.equal(messages('const ok = 0.1 + 0.2 === 0.3;', 'floatEquality').length, 1);
+  assert.equal(messages('declare const n: number; const ok = n + 1 === 2;', 'floatEquality').length, 0);
+});

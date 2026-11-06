@@ -785,3 +785,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'floatEquality',
+  title: 'Exact comparison of decimal arithmetic',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const decimalArithmetic = (e: ts.Expression): boolean => {
+      const u = unparen(e);
+      return ts.isBinaryExpression(u) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken].includes(u.operatorToken.kind) && /\d\.\d/.test(u.getText());
+    };
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isBinaryExpression(node) && comparisons.has(node.operatorToken.kind) && (decimalArithmetic(node.left) || decimalArithmetic(node.right))) {
+        out.push(at(ctx.sourceFile, 'floatEquality', node, 'Decimal arithmetic is rarely exact (0.1 + 0.2 !== 0.3); compare with a tolerance such as Number.EPSILON.', 'info'));
+      }
+    });
+    return out;
+  },
+});
