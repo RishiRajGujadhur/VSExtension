@@ -222,3 +222,17 @@ catalog.push({
       return accept ? [{ node: accept, evidence: `${className(cls)}.accept() hands itself to the visitor`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Iterator',
+  meaning: 'Values are produced one at a time on demand, by a generator or a [Symbol.iterator] method.',
+  detect: (sf) =>
+    functionsIn(sf)
+      .filter(({ fn }) => !!fn.asteriskToken)
+      .map(({ name, fn }): Found => ({ node: fn, evidence: `${name}() is a generator that yields values on demand` }))
+      .concat(
+        classesIn(sf).flatMap((cls) =>
+          cls.members.filter((m) => ts.isMethodDeclaration(m) && text(m.name).includes('Symbol.iterator')).map((m) => ({ node: m, evidence: `${className(cls)} can be iterated with for…of`, subject: className(cls) })),
+        ),
+      ),
+});

@@ -47,3 +47,8 @@ test('Composite is recognized', () => {
 test('Visitor is recognized', () => {
   has('class Num { accept(v: Visitor) { return v.visitNum(this); } }', 'Visitor');
 });
+
+test('Iterator is recognized', () => {
+  has('class Range { *[Symbol.iterator]() { yield 1; } }', 'Iterator');
+  has('function* ids() { yield 1; }', 'Iterator');
+});
