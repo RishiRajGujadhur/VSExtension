@@ -57,3 +57,8 @@ test('Test impact: Cypress specs', () => {
   assert.equal(detectFramework(pkg({ 'package.json': JSON.stringify({ devDependencies: { cypress: '13' } }) })), 'cypress');
   assert.equal(line(testCommand('cypress', ['a.cy.ts', 'b.cy.ts'], undefined, pkg({ 'package-lock.json': '' }))), 'npx cypress run --spec a.cy.ts,b.cy.ts');
 });
+
+test('Test impact: Jasmine', () => {
+  assert.equal(detectFramework(pkg({ 'package.json': JSON.stringify({ devDependencies: { jasmine: '5' } }) })), 'jasmine');
+  assert.equal(line(testCommand('jasmine', ['a.spec.ts'], 'adds', pkg({ 'package-lock.json': '' }))), 'npx jasmine a.spec.ts --filter=adds');
+});
