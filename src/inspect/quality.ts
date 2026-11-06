@@ -368,3 +368,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'sparseArray',
+  title: 'Hole in an array literal',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isArrayLiteralExpression(node) && node.elements.some(ts.isOmittedExpression) && !ts.isBinaryExpression(node.parent)) {
+        out.push(at(ctx.sourceFile, 'sparseArray', node, 'A double comma leaves a hole, which map and forEach skip; was a value left out?', 'warning'));
+      }
+    });
+    return out;
+  },
+});

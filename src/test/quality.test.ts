@@ -113,3 +113,8 @@ test('for…in over an array', () => {
   assert.equal(messages('declare const xs: number[]; for (const i in xs) {}', 'forInArray').length, 1);
   assert.equal(messages('declare const o: Record<string, number>; for (const k in o) {}', 'forInArray').length, 0);
 });
+
+test('Hole in an array literal', () => {
+  assert.equal(messages('const a = [1, , 2];', 'sparseArray').length, 1);
+  assert.equal(messages('let x, y; [x, , y] = [1, 2, 3];', 'sparseArray').length, 0);
+});
