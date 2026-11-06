@@ -264,3 +264,8 @@ test('Inspection: \'|| true\' or \'&& false\' in a condition', () => {
 test('Inspection: Module imports itself', () => {
   assert.equal(messages("import { x } from './test';\nexport const y = 1;", 'selfImport').length, 1);
 });
+
+test('Inspection: Number literal beyond safe precision', () => {
+  assert.equal(messages('const id = 9007199254740993;', 'unsafeNumberLiteral').length, 1);
+  assert.equal(messages('const id = 9007199254740991;', 'unsafeNumberLiteral').length, 0);
+});

@@ -972,3 +972,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'unsafeNumberLiteral',
+  title: 'Number literal beyond safe precision',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isNumericLiteral(node) && /^\d[\d_]*$/.test(node.getText()) && Number(node.text) > Number.MAX_SAFE_INTEGER) {
+        out.push(at(ctx.sourceFile, 'unsafeNumberLiteral', node, `${node.getText()} is too big to store exactly; it becomes ${Number(node.text)}. Use a BigInt (${node.getText()}n) or a string.`, 'warning', [{ title: 'Make it a BigInt', edits: [{ start: node.end, end: node.end, text: 'n' }] }]));
+      }
+    });
+    return out;
+  },
+});
