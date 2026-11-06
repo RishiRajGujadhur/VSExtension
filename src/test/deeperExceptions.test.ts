@@ -53,3 +53,7 @@ test('Exception flow: number formatting out of range', () => {
 test('Exception flow: string repeat and normalize', () => {
   assert.deepEqual(raised('function f(s: string, n: number) { return s.repeat(n); }'), ['s.repeat(): RangeError on a negative or infinite count']);
 });
+
+test('Exception flow: invalid CSS selectors', () => {
+  assert.deepEqual(raised('function f(s: string) { return document.querySelector(s); }'), ['document.querySelector(): SyntaxError on an invalid selector']);
+});

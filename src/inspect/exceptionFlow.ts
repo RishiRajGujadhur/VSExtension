@@ -108,6 +108,8 @@ throwingMethods.push({ receiver: 'number', method: 'toString', note: 'RangeError
 throwingMethods.push({ receiver: 'string', method: 'repeat', note: 'RangeError on a negative or infinite count' });
 throwingMethods.push({ receiver: 'string', method: 'normalize', note: 'RangeError on an unknown form', when: (c) => c.arguments.length > 0 });
 
+throwingMethods.push({ receiver: /^(Document|Element|HTMLElement|DocumentFragment|ParentNode|ShadowRoot)$/, method: /^(querySelector|querySelectorAll|matches|closest)$/, note: 'SyntaxError on an invalid selector' });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */
