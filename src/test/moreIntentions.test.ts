@@ -97,3 +97,9 @@ test('Replace \'x = x + y\' with \'x += y\'', () => {
   assert.equal(apply('this.n = this.n ¦* 2;', 'compoundAssignment'), 'this.n *= 2;');
   assert.equal(apply('x = x - y ¦+ z;', 'compoundAssignment'), undefined);
 });
+
+test('Replace \'x += y\' with \'x = x + y\'', () => {
+  assert.equal(apply('total ¦+= price * 2;', 'expandCompoundAssignment'), 'total = total + price * 2;');
+  assert.equal(apply('a ¦*= b + c;', 'expandCompoundAssignment'), 'a = a * (b + c);');
+  assert.equal(apply('f().x ¦+= 1;', 'expandCompoundAssignment'), undefined);
+});

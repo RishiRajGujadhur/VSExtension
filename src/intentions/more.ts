@@ -315,3 +315,14 @@ function compoundAssignment(ctx: IntentionContext): IntentionAction | undefined 
   return { id: 'compoundAssignment', title: `Replace with '${op}'`, edits: [ctx.replace(assignment, `${ctx.text(assignment.left)} ${op} ${ctx.text(right.right)}`)] };
 }
 moreIntentions.push({ id: 'compoundAssignment', title: 'Replace \'x = x + y\' with \'x += y\'', run: compoundAssignment });
+
+function expandCompoundAssignment(ctx: IntentionContext): IntentionAction | undefined {
+  const assignment = ctx.nearest(ts.isBinaryExpression, (b) => [...compoundOperators.values()].includes(ctx.text(b.operatorToken)));
+  if (!assignment || !isSimple(assignment.left)) return undefined;
+  const op = ctx.text(assignment.operatorToken);
+  const kind = [...compoundOperators].find(([, o]) => o === op)![0];
+  const binary = op.slice(0, -1);
+  const right = wrap(ctx.text(assignment.right), binaryPrecedence(kind) + 1);
+  return { id: 'expandCompoundAssignment', title: `Replace '${op}' with '= … ${binary}'`, edits: [ctx.replace(assignment, `${ctx.text(assignment.left)} = ${ctx.text(assignment.left)} ${binary} ${right}`)] };
+}
+moreIntentions.push({ id: 'expandCompoundAssignment', title: 'Replace \'x += y\' with \'x = x + y\'', run: expandCompoundAssignment });
