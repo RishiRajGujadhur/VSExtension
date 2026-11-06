@@ -300,6 +300,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
 
   private updateMessage(): void {
     const report = this.report;
+    // The title's Re-run button turns into a warning while the results are out of date.
+    void vscode.commands.executeCommand('setContext', 'tsStructure.stale', this.stale || this.settingsChanged);
     const messages = [
       ...(report ? [summaryLine(report)] : []),
       ...(this.stale ? ['Files changed since this analysis ran; re-run it to refresh the results.'] : []),
@@ -441,6 +443,11 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   private stepStatus: vscode.Disposable | undefined;
+
+  /** Every shown row's location as `file:line`, one per line, for a ticket or another tool. */
+  locations(): string[] {
+    return [...new Set(this.located.map((n) => `${vscode.workspace.asRelativePath(n.location!.file)}:${n.location!.line + 1}`))];
+  }
 
   markdown(): string | undefined {
     const report = this.report;

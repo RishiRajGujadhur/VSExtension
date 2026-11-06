@@ -233,6 +233,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
+    registerCommand('tsStructure.report.rerunOutdated', () => view.rerun()),
+    registerCommand('tsStructure.report.copyLocations', async () => {
+      const lines = view.locations();
+      await vscode.env.clipboard.writeText(lines.join('\n'));
+      void vscode.window.setStatusBarMessage(`Copied ${lines.length} location${lines.length === 1 ? '' : 's'}`, 3000);
+    }),
     // Right-click on a row: start from where it points.
     registerCommand('tsStructure.report.revealInExplorer', (node: ReportNode) => node?.location && vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(node.location.file))),
     registerCommand('tsStructure.report.excludeFile', (node: ReportNode) => node?.location && vscode.commands.executeCommand('tsStructure.excludeFromAnalysis', vscode.Uri.file(node.location.file))),

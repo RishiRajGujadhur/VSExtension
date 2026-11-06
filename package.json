@@ -610,6 +610,18 @@
         "command": "tsStructure.report.excludeFile",
         "title": "Exclude File from Analysis",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.copyLocations",
+        "title": "Copy All Locations",
+        "category": "TypeScript Structure",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "tsStructure.report.rerunOutdated",
+        "title": "Re-run Analysis (Results Out of Date)",
+        "category": "TypeScript Structure",
+        "icon": "$(warning)"
       }
     ],
     "viewsContainers": {
@@ -1386,6 +1398,14 @@
         {
           "command": "tsStructure.report.excludeFile",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.copyLocations",
+          "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.rerunOutdated",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1411,7 +1431,7 @@
         },
         {
           "command": "tsStructure.rerunAnalysis",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport && !tsStructure.stale",
           "group": "navigation@1"
         },
         {
@@ -1523,6 +1543,16 @@
           "command": "tsStructure.report.about",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "navigation@9"
+        },
+        {
+          "command": "tsStructure.report.copyLocations",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "1_export@0"
+        },
+        {
+          "command": "tsStructure.report.rerunOutdated",
+          "when": "view == tsStructure.report && tsStructure.hasReport && tsStructure.stale",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
