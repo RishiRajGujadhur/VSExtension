@@ -52,3 +52,7 @@ test('Nullability: regular expression matches', () => {
 test('Nullability: URL parameters, headers and form data', () => {
   assert.equal(reason('function f(p: URLSearchParams) { return p.get("q"); }'), 'null when the parameter is missing');
 });
+
+test('Nullability: getContext and computed lookups', () => {
+  assert.equal(reason('function f(c: HTMLCanvasElement) { return c.getContext("2d"); }'), 'null when the context type is not supported');
+});

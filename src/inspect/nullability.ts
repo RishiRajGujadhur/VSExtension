@@ -467,6 +467,11 @@ libraryReasons.push({ receiver: 'URLSearchParams', method: 'get', reason: 'null 
 libraryReasons.push({ receiver: 'Headers', method: 'get', reason: 'null when the header is missing' });
 libraryReasons.push({ receiver: 'FormData', method: 'get', reason: 'null when the field is missing' });
 
+libraryReasons.push({ receiver: 'HTMLCanvasElement', method: 'getContext', reason: 'null when the context type is not supported' });
+libraryReasons.push({ receiver: 'CSSStyleDeclaration', method: 'getPropertyValue', reason: 'empty when the property is not set' });
+libraryReasons.push({ receiver: 'DOMTokenList', method: 'item', reason: 'null when the index is out of range' });
+libraryReasons.push({ receiver: 'NodeList', method: 'item', reason: 'null when the index is out of range' });
+
 /** Why a library call can give null or undefined, such as Array.find when nothing matches. */
 export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): string | undefined {
   if (!ts.isCallExpression(call) || !ts.isPropertyAccessExpression(call.expression)) return undefined;
