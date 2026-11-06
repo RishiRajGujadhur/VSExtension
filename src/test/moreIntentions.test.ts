@@ -234,3 +234,8 @@ test('Intention: Surround with try/catch', () => {
   assert.equal(apply('l¦oad();', 'wrapInTryCatch'), lines('try {', '  load();', '} catch (error) {', '  throw error;', '}'));
   assert.equal(apply('const x = l¦oad();', 'wrapInTryCatch'), undefined);
 });
+
+test('Intention: Replace \'.then()\' with \'await\'', () => {
+  assert.equal(apply(lines('async function f() {', '  ¦return load().then((d) => d.items);', '}'), 'thenToAwait'), lines('async function f() {', '  const d = await load();', '  return d.items;', '}'));
+  assert.equal(apply(lines('function f() {', '  ¦return load().then((d) => d.items);', '}'), 'thenToAwait'), undefined);
+});

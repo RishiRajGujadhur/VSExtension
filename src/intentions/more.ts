@@ -599,3 +599,22 @@ function wrapInTryCatch(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'wrapInTryCatch', title: 'Surround with try/catch', edits: [ctx.replace(statement, `try {\n${body}\n${indent}} catch (error) {\n${indent}${unit}throw error;\n${indent}}`)] };
 }
 moreIntentions.push({ id: 'wrapInTryCatch', title: 'Surround with try/catch', run: wrapInTryCatch });
+
+function thenToAwait(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isReturnStatement, (r) => !!r.expression && ts.isCallExpression(unparen(r.expression)));
+  const call = statement && (unparen(statement.expression!) as ts.CallExpression);
+  if (!statement || !call || !ts.isPropertyAccessExpression(call.expression) || call.expression.name.text !== 'then' || call.arguments.length !== 1) return undefined;
+  const callback = call.arguments[0];
+  if (!ts.isArrowFunction(callback) || ts.isBlock(callback.body) || callback.parameters.length > 1 || (callback.parameters[0] && !ts.isIdentifier(callback.parameters[0].name))) return undefined;
+  let fn: ts.Node = statement.parent;
+  while (fn && !ts.isFunctionLike(fn)) fn = fn.parent;
+  if (!fn || !(ts.getCombinedModifierFlags(fn as ts.Declaration) & ts.ModifierFlags.Async)) return undefined;
+  const name = callback.parameters[0] ? (callback.parameters[0].name as ts.Identifier).text : undefined;
+  // The new variable must not clash with a name already used in the function.
+  if (name && (ctx.text(fn).match(new RegExp(`\\b${name}\\b`, 'g'))?.length ?? 0) !== (ctx.text(callback).match(new RegExp(`\\b${name}\\b`, 'g'))?.length ?? 0)) return undefined;
+  const indent = ctx.indentOf(statement);
+  const awaited = `await ${ctx.text(call.expression.expression)}`;
+  const text = `${name ? `const ${name} = ` : ''}${awaited};\n${indent}return ${ctx.text(callback.body)};`;
+  return { id: 'thenToAwait', title: "Replace '.then()' with 'await'", edits: [ctx.replace(statement, text)] };
+}
+moreIntentions.push({ id: 'thenToAwait', title: 'Replace \'.then()\' with \'await\'', run: thenToAwait });
