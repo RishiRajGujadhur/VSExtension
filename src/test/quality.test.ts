@@ -82,3 +82,7 @@ test('Misspelled typeof result', () => {
 test('return in finally', () => {
   assert.equal(messages('function f() { try { return 1; } finally { return 2; } }', 'returnInFinally').length, 1);
 });
+
+test('Throwing a non-Error', () => {
+  assert.equal(fixed("function f() { throw 'failed'; }", 'throwLiteral'), "function f() { throw new Error('failed'); }");
+});

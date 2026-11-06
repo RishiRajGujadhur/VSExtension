@@ -245,3 +245,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'throwLiteral',
+  title: 'Throwing a non-Error',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const thrown = ts.isThrowStatement(node) ? unparen(node.expression) : undefined;
+      if (thrown && (ts.isStringLiteral(thrown) || ts.isNoSubstitutionTemplateLiteral(thrown) || ts.isTemplateExpression(thrown) || ts.isNumericLiteral(thrown))) {
+        const message = ts.isNumericLiteral(thrown) ? `'${thrown.text}'` : thrown.getText();
+        out.push(at(ctx.sourceFile, 'throwLiteral', thrown, 'Throw an Error, so the error has a stack trace.', 'warning', [{ title: 'Wrap in new Error()', edits: [replace(ctx.sourceFile, thrown, `new Error(${message})`)], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});
