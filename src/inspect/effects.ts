@@ -162,6 +162,10 @@ export class EffectAnalyzer {
         }
       }
     }
+    // `Date()` without new returns the current time as a string.
+    if (ts.isCallExpression(call) && ts.isIdentifier(callee) && callee.text === 'Date' && this.isLibrary(callee)) {
+      effects.push({ kind: 'nondeterministic', target: 'Date()', description: 'reads the current time', node: call });
+    }
     if (ts.isNewExpression(call) && ts.isIdentifier(callee) && callee.text === 'Date' && !call.arguments?.length && this.isLibrary(callee)) {
       effects.push({ kind: 'nondeterministic', target: 'new Date()', description: 'reads the current time', node: call });
     }

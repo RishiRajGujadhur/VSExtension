@@ -32,3 +32,7 @@ test('Side effects: idle callbacks', () => {
 test('Side effects: reading files in the browser', () => {
   assert.deepEqual(effects('function f(b: Blob) { new FileReader().readAsText(b); }'), ['io: reads a file']);
 });
+
+test('Side effects: Date() without new reads the clock', () => {
+  assert.deepEqual(effects('function f() { return Date(); }'), ['nondeterministic: reads the current time']);
+});
