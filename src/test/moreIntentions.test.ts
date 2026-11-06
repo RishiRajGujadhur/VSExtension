@@ -127,3 +127,9 @@ test('Replace \'c ? true : false\' with \'c\'', () => {
   assert.equal(apply('const b = x ¦? false : true;', 'ternaryBoolean'), 'const b = !x;');
   assert.equal(apply('const b = x ¦? true : false;', 'ternaryBoolean'), 'const b = !!x;');
 });
+
+test('Join declaration and assignment', () => {
+  assert.equal(apply(lines('l¦et x;', 'x = compute();'), 'joinDeclaration'), 'let x = compute();');
+  assert.equal(apply(lines('l¦et x: number;', 'x = 1;'), 'joinDeclaration'), 'let x: number = 1;');
+  assert.equal(apply(lines('l¦et x;', 'y = 1;'), 'joinDeclaration'), undefined);
+});

@@ -391,3 +391,19 @@ function ternaryBoolean(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'ternaryBoolean', title: 'Simplify boolean ?:', edits: [ctx.replace(t, wrap(result, requiredPrecedence(t)))] };
 }
 moreIntentions.push({ id: 'ternaryBoolean', title: 'Replace \'c ? true : false\' with \'c\'', run: ternaryBoolean });
+
+function joinDeclaration(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isVariableStatement, (s) => s.declarationList.declarations.length === 1 && !s.declarationList.declarations[0].initializer && ts.isIdentifier(s.declarationList.declarations[0].name));
+  if (!statement) return undefined;
+  const parent = statement.parent as ts.Block;
+  const next = parent.statements?.[parent.statements.indexOf(statement) + 1];
+  const declaration = statement.declarationList.declarations[0];
+  const name = (declaration.name as ts.Identifier).text;
+  const assignment = next && ts.isExpressionStatement(next) && ts.isBinaryExpression(next.expression) && next.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(next.expression.left) && next.expression.left.text === name ? next.expression : undefined;
+  if (!assignment) return undefined;
+  const keyword = ctx.text(statement.declarationList.getFirstToken(ctx.sourceFile)!);
+  const type = declaration.type ? `: ${ctx.text(declaration.type)}` : '';
+  const exported = statement.modifiers?.length ? `${statement.modifiers.map((m) => ctx.text(m)).join(' ')} ` : '';
+  return { id: 'joinDeclaration', title: 'Join declaration and assignment', edits: [{ start: statement.getStart(ctx.sourceFile), end: next!.end, text: `${exported}${keyword} ${name}${type} = ${ctx.text(assignment.right)};` }] };
+}
+moreIntentions.push({ id: 'joinDeclaration', title: 'Join declaration and assignment', run: joinDeclaration });
