@@ -110,6 +110,8 @@ throwingMethods.push({ receiver: 'string', method: 'normalize', note: 'RangeErro
 
 throwingMethods.push({ receiver: /^(Document|Element|HTMLElement|DocumentFragment|ParentNode|ShadowRoot)$/, method: /^(querySelector|querySelectorAll|matches|closest)$/, note: 'SyntaxError on an invalid selector' });
 
+throwingMethods.push({ receiver: 'Storage', method: 'setItem', note: 'QuotaExceededError when storage is full' });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */

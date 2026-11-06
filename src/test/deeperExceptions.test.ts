@@ -57,3 +57,7 @@ test('Exception flow: string repeat and normalize', () => {
 test('Exception flow: invalid CSS selectors', () => {
   assert.deepEqual(raised('function f(s: string) { return document.querySelector(s); }'), ['document.querySelector(): SyntaxError on an invalid selector']);
 });
+
+test('Exception flow: full browser storage', () => {
+  assert.deepEqual(raised('function f() { localStorage.setItem("k", "v"); }'), ['localStorage.setItem(): QuotaExceededError when storage is full']);
+});
