@@ -234,3 +234,7 @@ test('Inspection: Callback that never returns a value', () => {
   assert.equal(messages('declare const xs: number[]; const ys = xs.map((x) => { x * 2; });', 'missingCallbackReturn').length, 1);
   assert.equal(messages('declare const xs: number[]; xs.forEach((x) => { x * 2; });', 'missingCallbackReturn').length, 0);
 });
+
+test('Inspection: Comparison with a new object or array', () => {
+  assert.equal(messages('declare const xs: number[]; if (xs === []) {}', 'objectLiteralComparison').length, 1);
+});

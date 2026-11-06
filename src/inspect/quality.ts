@@ -846,3 +846,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'objectLiteralComparison',
+  title: 'Comparison with a new object or array',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || !comparisons.has(node.operatorToken.kind)) return;
+      const literal = [node.left, node.right].map(unparen).find((e) => ts.isObjectLiteralExpression(e) || ts.isArrayLiteralExpression(e));
+      if (literal) {
+        out.push(at(ctx.sourceFile, 'objectLiteralComparison', node, `A new ${ts.isArrayLiteralExpression(literal) ? 'array' : 'object'} is never equal to anything else; check its contents, such as .length === 0.`, 'warning'));
+      }
+    });
+    return out;
+  },
+});
