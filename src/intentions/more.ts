@@ -515,3 +515,12 @@ function removeDoubleNegation(ctx: IntentionContext): IntentionAction | undefine
   return { id: 'removeDoubleNegation', title: "Remove '!!'", edits: [ctx.replace(outer, wrap(ctx.text(inner), requiredPrecedence(outer)))] };
 }
 moreIntentions.push({ id: 'removeDoubleNegation', title: 'Remove \'!!\' in a condition', run: removeDoubleNegation });
+
+function ternaryToOr(ctx: IntentionContext): IntentionAction | undefined {
+  const t = ctx.nearest(ts.isConditionalExpression, (c) => isSimple(c.condition) && ctx.text(unparen(c.condition)) === ctx.text(unparen(c.whenTrue)));
+  if (!t) return undefined;
+  const f = unparen(t.whenFalse);
+  const right = ts.isBinaryExpression(f) && f.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken ? `(${ctx.text(f)})` : wrap(ctx.text(t.whenFalse), binaryPrecedence(ts.SyntaxKind.BarBarToken) + 1);
+  return { id: 'ternaryToOr', title: "Replace with '||'", edits: [ctx.replace(t, wrap(`${ctx.text(unparen(t.condition))} || ${right}`, requiredPrecedence(t)))] };
+}
+moreIntentions.push({ id: 'ternaryToOr', title: 'Replace \'x ? x : y\' with \'x || y\'', run: ternaryToOr });

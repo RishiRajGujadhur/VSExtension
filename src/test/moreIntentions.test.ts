@@ -181,3 +181,7 @@ test('Intention: Remove \'!!\' in a condition', () => {
   assert.equal(apply('if (!¦!user) {}', 'removeDoubleNegation'), 'if (user) {}');
   assert.equal(apply('const b = !¦!user;', 'removeDoubleNegation'), undefined);
 });
+
+test('Intention: Replace \'x ? x : y\' with \'x || y\'', () => {
+  assert.equal(apply("const v = name ¦? name : 'anon';", 'ternaryToOr'), "const v = name || 'anon';");
+});
