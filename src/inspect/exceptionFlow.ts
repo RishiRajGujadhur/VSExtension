@@ -45,6 +45,14 @@ throwingCalls['Buffer.alloc'] = 'RangeError on an invalid size';
 throwingCalls['require'] = 'Error when the module can\'t be found';
 throwingCalls['process.chdir'] = 'Error when the folder does not exist';
 
+throwingCalls['assert'] = 'AssertionError when the check fails';
+throwingCalls['assert.ok'] = 'AssertionError when the check fails';
+throwingCalls['assert.equal'] = 'AssertionError when the check fails';
+throwingCalls['assert.strictEqual'] = 'AssertionError when the check fails';
+throwingCalls['assert.deepEqual'] = 'AssertionError when the check fails';
+throwingCalls['assert.deepStrictEqual'] = 'AssertionError when the check fails';
+throwingCalls['assert.match'] = 'AssertionError when the check fails';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {

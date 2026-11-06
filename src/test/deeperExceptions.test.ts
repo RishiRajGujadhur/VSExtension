@@ -28,3 +28,7 @@ test('Exception flow: buffers with invalid sizes', () => {
 test('Exception flow: require and process.chdir', () => {
   assert.deepEqual(raised('declare function require(id: string): unknown; function f() { return require("x"); }'), ["require(): Error when the module can't be found"]);
 });
+
+test('Exception flow: Node\'s assert', () => {
+  assert.deepEqual(raised('declare function assert(v: unknown): void; function f(v: unknown) { assert(v); }'), ['assert(): AssertionError when the check fails']);
+});
