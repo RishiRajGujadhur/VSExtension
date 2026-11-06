@@ -497,6 +497,16 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }, 200);
   }
 
+  /** The files the shown rows point into, in the order they first appear. */
+  files(): string[] {
+    return [...new Map(this.located.map((n) => [pathKey(n.location!.file), n.location!.file])).values()];
+  }
+
+  /** The source line a row points at, for Copy Line of Code. */
+  codeLine(node: ReportNode): string | undefined {
+    return node.location ? this.lineAt(node.location) : undefined;
+  }
+
   /** Every shown row's location as `file:line`, one per line, for a ticket or another tool. */
   locations(): string[] {
     return [...new Set(this.located.map((n) => `${vscode.workspace.asRelativePath(n.location!.file)}:${n.location!.line + 1}`))];

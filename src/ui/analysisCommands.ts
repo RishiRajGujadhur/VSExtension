@@ -243,6 +243,23 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return editor && analyzeSymbol(editor);
     }),
     registerCommand('tsStructure.report.rerunOutdated', () => view.rerun()),
+    registerCommand('tsStructure.report.openFiles', async () => {
+      // Opening dozens of tabs helps nobody: the first ten, with a note about the rest.
+      const files = view.files();
+      for (const file of files.slice(0, 10)) {
+        await vscode.window.showTextDocument(vscode.Uri.file(file), { preview: false, preserveFocus: true });
+      }
+      if (files.length > 10) {
+        void vscode.window.showInformationMessage(`Opened the first 10 of ${files.length} files.`);
+      }
+    }),
+    registerCommand('tsStructure.report.copyCode', async (node: ReportNode) => {
+      const line = view.codeLine(node ?? view.view.selection[0]);
+      if (line) {
+        await vscode.env.clipboard.writeText(line);
+        void vscode.window.setStatusBarMessage('Copied the line of code', 3000);
+      }
+    }),
     registerCommand('tsStructure.report.copyLocations', async () => {
       const lines = view.locations();
       await vscode.env.clipboard.writeText(lines.join('\n'));
