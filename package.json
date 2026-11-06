@@ -846,6 +846,18 @@
         "key": "ctrl+alt+s k",
         "mac": "cmd+ctrl+s k",
         "command": "tsStructure.shortcutSheet"
+      },
+      {
+        "key": "ctrl+alt+s l",
+        "mac": "cmd+ctrl+s l",
+        "command": "tsStructure.rerunAnalysis",
+        "when": "tsStructure.hasReport"
+      },
+      {
+        "key": "ctrl+alt+s space",
+        "mac": "cmd+ctrl+s space",
+        "command": "tsStructure.actionsAtCursor",
+        "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
