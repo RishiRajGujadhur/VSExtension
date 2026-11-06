@@ -56,3 +56,7 @@ test('Iterator is recognized', () => {
 test('Prototype is recognized', () => {
   has('class Shape { clone() { return new Shape(); } }', 'Prototype');
 });
+
+test('Object pool is recognized', () => {
+  has('class Pool { private free: Conn[] = []; acquire() { return this.free.pop() ?? new Conn(); } release(c: Conn) { this.free.push(c); } }', 'Object pool');
+});

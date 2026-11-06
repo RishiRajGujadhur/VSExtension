@@ -246,3 +246,13 @@ catalog.push({
       return clone ? [{ node: clone, evidence: `${className(cls)}.${nameOf(clone)}() returns a copy of itself`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Object pool',
+  meaning: 'Expensive objects are reused: taken from a pool and given back instead of created each time.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const pool = fieldsOf(cls).find((f) => /\[\]|Array</.test(f.type + f.init) && methodsOf(cls).some((m) => text(m.body).includes(`this.${f.name}.pop(`)) && methodsOf(cls).some((m) => text(m.body).includes(`this.${f.name}.push(`)));
+      return pool ? [{ node: cls, evidence: `${className(cls)} hands out and takes back objects in ${pool.name}`, subject: className(cls) }] : [];
+    }),
+});
