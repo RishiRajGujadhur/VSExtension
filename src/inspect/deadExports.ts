@@ -51,6 +51,12 @@ export function findDeadExports(program: ts.Program, options: DeadExportOptions)
       }
     }
   }
+  // Files a framework loads by convention, such as Next.js pages or Storybook stories.
+  for (const sourceFile of files) {
+    if (isConventionalEntry(sourceFile.fileName)) {
+      entrySet.add(normalizePath(sourceFile.fileName));
+    }
+  }
   const reachable = reachableFrom(graph, entrySet);
 
   // Which files use each declaration, keyed by declaration node.
@@ -305,3 +311,13 @@ export function publicTagEdit(sourceFile: ts.SourceFile, offset: number): { offs
   return { offset: closeLine, text: `${indent} * @public\n` };
 }
 
+/** Files a framework loads by convention and whose exports it uses, so they count as entry points. */
+const entryConventions: { pattern: RegExp; what: string }[] = [];
+
+/** What makes the file an entry point by convention, such as `Next.js page`, or undefined. */
+export function isConventionalEntry(fileName: string): string | undefined {
+  const normalized = fileName.replace(/\\/g, '/');
+  return entryConventions.find((c) => c.pattern.test(normalized))?.what;
+}
+
+entryConventions.push({ pattern: /\/pages\/(?!(.*\/)?(components?|lib|utils?)\/)[^]*\.[cm]?[jt]sx?$/, what: 'Next.js page' });
