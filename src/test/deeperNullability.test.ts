@@ -35,3 +35,7 @@ test('Nullability: Map.get and WeakMap.get', () => {
 test('Nullability: querySelector and getElementById', () => {
   assert.equal(reason('function f() { return document.getElementById("app"); }'), 'null when no element has that id');
 });
+
+test('Nullability: closest and getAttribute', () => {
+  assert.equal(reason('function f(e: Element) { return e.getAttribute("href"); }'), 'null when the attribute is not set');
+});
