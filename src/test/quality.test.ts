@@ -173,3 +173,8 @@ test('Comparison with true or false', () => {
   assert.equal(fixed('declare const ok: boolean; if (ok === false) {}', 'booleanLiteralCompare'), 'declare const ok: boolean; if (!ok) {}');
   assert.equal(messages('declare const ok: boolean | undefined; if (ok === true) {}', 'booleanLiteralCompare').length, 0);
 });
+
+test('Inspection: Loop counting the wrong way', () => {
+  assert.equal(messages('for (let i = 0; i < 10; i--) {}', 'wrongDirectionLoop').length, 1);
+  assert.equal(messages('for (let i = 10; i > 0; i--) {}', 'wrongDirectionLoop').length, 0);
+});

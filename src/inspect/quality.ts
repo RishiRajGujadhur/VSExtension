@@ -601,3 +601,25 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'wrongDirectionLoop',
+  title: 'Loop counting the wrong way',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isForStatement(node) || !node.condition || !node.incrementor || !ts.isBinaryExpression(node.condition)) return;
+      const counter = unparen(node.condition.left).getText();
+      const k = node.condition.operatorToken.kind;
+      const up = k === ts.SyntaxKind.LessThanToken || k === ts.SyntaxKind.LessThanEqualsToken;
+      const down = k === ts.SyntaxKind.GreaterThanToken || k === ts.SyntaxKind.GreaterThanEqualsToken;
+      const inc = node.incrementor;
+      const step = (ts.isPrefixUnaryExpression(inc) || ts.isPostfixUnaryExpression(inc)) && inc.operand.getText() === counter ? (inc.operator === ts.SyntaxKind.PlusPlusToken ? 1 : -1) : ts.isBinaryExpression(inc) && inc.left.getText() === counter ? (inc.operatorToken.kind === ts.SyntaxKind.PlusEqualsToken ? 1 : inc.operatorToken.kind === ts.SyntaxKind.MinusEqualsToken ? -1 : 0) : 0;
+      if ((up && step < 0) || (down && step > 0)) {
+        out.push(at(ctx.sourceFile, 'wrongDirectionLoop', node.incrementor, `${counter} moves away from the end condition, so this loop may never stop.`, 'warning'));
+      }
+    });
+    return out;
+  },
+});
