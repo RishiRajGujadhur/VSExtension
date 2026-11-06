@@ -383,3 +383,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'instanceofArray',
+  title: 'instanceof Array',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword && node.right.getText() === 'Array') {
+        out.push(at(ctx.sourceFile, 'instanceofArray', node, 'instanceof Array fails for arrays from other frames or realms; Array.isArray() works for all.', 'info', [{ title: 'Use Array.isArray()', edits: [replace(ctx.sourceFile, node, `Array.isArray(${node.left.getText()})`)], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

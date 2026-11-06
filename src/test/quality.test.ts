@@ -118,3 +118,7 @@ test('Hole in an array literal', () => {
   assert.equal(messages('const a = [1, , 2];', 'sparseArray').length, 1);
   assert.equal(messages('let x, y; [x, , y] = [1, 2, 3];', 'sparseArray').length, 0);
 });
+
+test('instanceof Array', () => {
+  assert.equal(fixed('declare const v: unknown; const a = v instanceof Array;', 'instanceofArray'), 'declare const v: unknown; const a = Array.isArray(v);');
+});
