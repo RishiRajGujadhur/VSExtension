@@ -148,3 +148,8 @@ test('Case falls through', () => {
 test('Module imported twice', () => {
   assert.equal(messages("import { a } from './x';\nimport { b } from './x';", 'duplicateImport').length, 1);
 });
+
+test('Loose equality (== and !=)', () => {
+  assert.equal(fixed('declare const a: unknown; const b = a == 1;', 'looseEquality'), 'declare const a: unknown; const b = a === 1;');
+  assert.equal(messages('declare const a: unknown; const b = a == null;', 'looseEquality').length, 0);
+});

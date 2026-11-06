@@ -507,3 +507,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'looseEquality',
+  title: 'Loose equality (== and !=)',
+  defaultSeverity: 'info',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || (node.operatorToken.kind !== ts.SyntaxKind.EqualsEqualsToken && node.operatorToken.kind !== ts.SyntaxKind.ExclamationEqualsToken)) return;
+      // `== null` checks for null and undefined at once, on purpose.
+      if ([node.left, node.right].some((e) => unparen(e).kind === ts.SyntaxKind.NullKeyword)) return;
+      const strict = node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken ? '===' : '!==';
+      out.push(at(ctx.sourceFile, 'looseEquality', node.operatorToken, `${node.operatorToken.getText()} converts types before comparing; use ${strict}.`, 'info', [{ title: `Use ${strict}`, edits: [replace(ctx.sourceFile, node.operatorToken, strict)], preferred: true }]));
+    });
+    return out;
+  },
+});
