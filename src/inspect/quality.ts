@@ -330,3 +330,23 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'arrayIndexKey',
+  title: 'Array index as React key',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isJsxAttribute(node) || node.name.getText() !== 'key' || !node.initializer || !ts.isJsxExpression(node.initializer) || !node.initializer.expression || !ts.isIdentifier(node.initializer.expression)) return;
+      const name = node.initializer.expression.text;
+      for (let p: ts.Node | undefined = node.parent; p; p = p.parent) {
+        if ((ts.isArrowFunction(p) || ts.isFunctionExpression(p)) && ts.isCallExpression(p.parent) && /\.map$/.test(p.parent.expression.getText()) && p.parameters[1]?.name.getText() === name) {
+          out.push(at(ctx.sourceFile, 'arrayIndexKey', node, 'An index as key mixes up component state when items are added, removed or reordered; use an id from the item.', 'info'));
+          break;
+        }
+      }
+    });
+    return out;
+  },
+});

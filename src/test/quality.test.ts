@@ -103,3 +103,8 @@ test('console.log left in code', () => {
 test('parseInt without a radix', () => {
   assert.equal(fixed("const n = parseInt('12');", 'parseIntRadix'), "const n = parseInt('12', 10);");
 });
+
+test('Array index as React key', () => {
+  assert.equal(messages('declare const items: string[]; const l = items.map((item, i) => <li key={i}>{item}</li>);', 'arrayIndexKey').length, 1);
+  assert.equal(messages('declare const items: { id: string }[]; const l = items.map((item) => <li key={item.id} />);', 'arrayIndexKey').length, 0);
+});
