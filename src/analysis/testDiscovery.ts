@@ -61,7 +61,7 @@ const modifiers = new Set([
   'serial', 'parallel', 'shuffle', 'each', 'for', 'skipIf', 'runIf', 'if',
 ]);
 
-const testPathPattern = /(?:\.(?:test|spec|cy)\.[cm]?[jt]sx?$)|(?:\/(?:test|tests|__tests__)\/)/i;
+const testPathPattern = /(?:\.(?:test|spec|cy|e2e-spec|e2e)\.[cm]?[jt]sx?$)|(?:\/(?:test|tests|__tests__|spec|specs|e2e)\/)/i;
 
 const cache = new WeakMap<ts.SourceFile, DiscoveredTestFile>();
 

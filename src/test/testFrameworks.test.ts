@@ -62,3 +62,9 @@ test('Test impact: Jasmine', () => {
   assert.equal(detectFramework(pkg({ 'package.json': JSON.stringify({ devDependencies: { jasmine: '5' } }) })), 'jasmine');
   assert.equal(line(testCommand('jasmine', ['a.spec.ts'], 'adds', pkg({ 'package-lock.json': '' }))), 'npx jasmine a.spec.ts --filter=adds');
 });
+
+test('Test impact: NestJS e2e specs and spec folders count as tests', () => {
+  assert.equal(discover('export {};', 'apps/api/test/app.e2e-spec.ts').isTestFile, true);
+  assert.equal(discover('export {};', 'src/spec/helpers.ts').isTestFile, true);
+  assert.equal(discover('export {};', 'src/specification.ts').isTestFile, false);
+});
