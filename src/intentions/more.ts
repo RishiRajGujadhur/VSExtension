@@ -684,3 +684,14 @@ function awaitToPromiseAll(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'awaitToPromiseAll', title: 'Await together with Promise.all', edits: [{ start: first.getStart(ctx.sourceFile), end: second!.end, text: `${keyword} [${a.name}, ${b.name}] = await Promise.all([${ctx.text(a.expression)}, ${ctx.text(b.expression)}]);` }] };
 }
 moreIntentions.push({ id: 'awaitToPromiseAll', title: 'Await independent calls together', run: awaitToPromiseAll });
+
+function sortImportSpecifiers(ctx: IntentionContext): IntentionAction | undefined {
+  const named = ctx.nearest(ts.isNamedImports, (n) => n.elements.length > 1);
+  if (!named) return undefined;
+  const texts = named.elements.map((e) => ctx.text(e));
+  const key = (t: string) => t.replace(/^type\s+/, '').toLowerCase();
+  const sorted = [...texts].sort((x, y) => key(x).localeCompare(key(y)));
+  if (sorted.every((t, i) => t === texts[i])) return undefined;
+  return { id: 'sortImportSpecifiers', title: 'Sort imported names', edits: [ctx.replace(named, `{ ${sorted.join(', ')} }`)] };
+}
+moreIntentions.push({ id: 'sortImportSpecifiers', title: 'Sort imported names', run: sortImportSpecifiers });

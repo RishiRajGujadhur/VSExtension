@@ -265,3 +265,7 @@ test('Intention: Await independent calls together', () => {
   assert.equal(apply(lines('async function f() {', '  c¦onst user = await loadUser();', '  const cart = await loadCart();', '}'), 'awaitToPromiseAll'), lines('async function f() {', '  const [user, cart] = await Promise.all([loadUser(), loadCart()]);', '}'));
   assert.equal(apply(lines('async function f() {', '  c¦onst user = await loadUser();', '  const cart = await loadCart(user);', '}'), 'awaitToPromiseAll'), undefined);
 });
+
+test('Intention: Sort imported names', () => {
+  assert.equal(apply("import { c, ¦a, type B } from './x';", 'sortImportSpecifiers'), "import { a, type B, c } from './x';");
+});
