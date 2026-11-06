@@ -162,3 +162,8 @@ test('return await outside try', () => {
   assert.equal(fixed('async function f() { return await g(); } declare function g(): Promise<1>;', 'redundantReturnAwait'), 'async function f() { return g(); } declare function g(): Promise<1>;');
   assert.equal(messages('async function f() { try { return await g(); } catch { return 0; } } declare function g(): Promise<1>;', 'redundantReturnAwait').length, 0);
 });
+
+test('delete on an array element', () => {
+  assert.equal(messages('declare const xs: number[]; delete xs[0];', 'deleteArrayElement').length, 1);
+  assert.equal(messages('declare const o: Record<string, number>; delete o["a"];', 'deleteArrayElement').length, 0);
+});

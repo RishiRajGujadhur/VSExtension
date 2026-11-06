@@ -563,3 +563,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'deleteArrayElement',
+  title: 'delete on an array element',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isDeleteExpression(node) && ts.isElementAccessExpression(unparen(node.expression))) {
+        const target = (unparen(node.expression) as ts.ElementAccessExpression).expression;
+        if (ctx.checker.isArrayType(ctx.checker.getTypeAtLocation(target))) {
+          out.push(at(ctx.sourceFile, 'deleteArrayElement', node, 'delete leaves a hole and keeps the length; use splice() to remove the item.', 'warning'));
+        }
+      }
+    });
+    return out;
+  },
+});
