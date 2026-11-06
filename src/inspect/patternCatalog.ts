@@ -511,3 +511,14 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Plugin registry',
+  meaning: 'Plugins are registered in a list and each one is called in turn, so features can be added without changing the core.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const list = fieldsOf(cls).find((f) => /\[\]|Array</.test(f.type + f.init) && methodsOf(cls).some((m) => text(m.body).includes(`this.${f.name}.push(`)));
+      const runs = list && methodsOf(cls).find((m) => new RegExp(`this\\.${list.name}\\.forEach\\(\\s*\\(?\\s*(\\w+)\\s*\\)?\\s*=>\\s*\\1\\.\\w+\\(`).test(text(m.body)) || new RegExp(`for \\(const (\\w+) of this\\.${list.name}\\)[\\s\\S]*\\1\\.\\w+\\(`).test(text(m.body)));
+      return list && runs ? [{ node: cls, evidence: `${className(cls)} keeps plugins in ${list.name} and ${nameOf(runs)}() calls each one`, subject: className(cls) }] : [];
+    }),
+});

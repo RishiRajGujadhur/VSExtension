@@ -143,3 +143,7 @@ test('Design patterns: recognize Barrel module', () => {
 test('Design patterns: recognize Result type', () => {
   has('type Result<T> = { ok: true; value: T } | { ok: false; error: Error };', 'Result type');
 });
+
+test('Design patterns: recognize Plugin registry', () => {
+  has('class App { private plugins: Plugin[] = []; use(p: Plugin) { this.plugins.push(p); } start() { this.plugins.forEach((p) => p.install(this)); } }', 'Plugin registry');
+});
