@@ -217,3 +217,7 @@ test('Intention: Self-close empty JSX element', () => {
   assert.equal(applyTsx('const a = <Fo¦o bar="1"></Foo>;', 'jsxSelfClose'), 'const a = <Foo bar="1" />;');
   assert.equal(applyTsx('const a = <Fo¦o>x</Foo>;', 'jsxSelfClose'), undefined);
 });
+
+test('Intention: Expand self-closing JSX element', () => {
+  assert.equal(applyTsx('const a = <Fo¦o bar="1" />;', 'jsxExpand'), 'const a = <Foo bar="1"></Foo>;');
+});

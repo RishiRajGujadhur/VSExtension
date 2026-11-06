@@ -564,3 +564,11 @@ function jsxSelfClose(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'jsxSelfClose', title: 'Self-close element', edits: [ctx.replace(element, `${opening.slice(0, -1).trimEnd()} />`)] };
 }
 moreIntentions.push({ id: 'jsxSelfClose', title: 'Self-close empty JSX element', run: jsxSelfClose });
+
+function jsxExpand(ctx: IntentionContext): IntentionAction | undefined {
+  const element = ctx.nearest(ts.isJsxSelfClosingElement);
+  if (!element) return undefined;
+  const text = ctx.text(element);
+  return { id: 'jsxExpand', title: 'Add closing tag', edits: [ctx.replace(element, `${text.slice(0, -2).trimEnd()}></${ctx.text(element.tagName)}>`)] };
+}
+moreIntentions.push({ id: 'jsxExpand', title: 'Expand self-closing JSX element', run: jsxExpand });
