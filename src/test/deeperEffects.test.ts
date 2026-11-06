@@ -114,3 +114,7 @@ test('Side effects: logging libraries', () => {
 test('Side effects: error reporting and analytics SDKs', () => {
   assert.deepEqual(effects('import * as Sentry from "@sentry/node"; function f(e: Error) { Sentry.captureException(e); }'), ['io: sends telemetry']);
 });
+
+test('Side effects: message queues', () => {
+  assert.deepEqual(effects('import { Queue } from "bullmq"; function f() { return new Queue("jobs"); }'), ['io: uses a message queue']);
+});

@@ -135,6 +135,8 @@ ioPackages.push({ pattern: /^(winston|pino|bunyan|loglevel|debug|consola|signale
 
 ioPackages.push({ pattern: /^(@sentry\/.+|posthog-js|posthog-node|mixpanel(-browser)?|@segment\/.+|@amplitude\/.+|@datadog\/.+|newrelic|bugsnag|@bugsnag\/.+)$/, kind: 'io', note: 'sends telemetry' });
 
+ioPackages.push({ pattern: /^(kafkajs|amqplib|bullmq|bull|bee-queue|nats|mqtt|@google-cloud\/pubsub|ioredis-pubsub)$/, kind: 'io', note: 'uses a message queue' });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();
