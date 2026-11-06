@@ -919,3 +919,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'negatedIndexOf',
+  title: '!x.indexOf() is only true at index 0',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.ExclamationToken && ts.isCallExpression(unparen(node.operand))) {
+        const call = unparen(node.operand) as ts.CallExpression;
+        if (ts.isPropertyAccessExpression(call.expression) && call.expression.name.text === 'indexOf') {
+          out.push(at(ctx.sourceFile, 'negatedIndexOf', node, `!….indexOf() is true only when the item is first (index 0), not when it is missing; use !${call.expression.expression.getText()}.includes(…).`, 'warning', [{ title: "Use '!includes()'", edits: [replace(ctx.sourceFile, node, `!${call.expression.expression.getText()}.includes(${call.arguments.map((a) => a.getText()).join(', ')})`)] }]));
+        }
+      }
+    });
+    return out;
+  },
+});

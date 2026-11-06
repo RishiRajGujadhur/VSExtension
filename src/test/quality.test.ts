@@ -252,3 +252,7 @@ test('Inspection: List item without a key', () => {
   assert.equal(messages('declare const items: { id: string }[]; const l = items.map((i) => <li>{i.id}</li>);', 'missingJsxKey').length, 1);
   assert.equal(messages('declare const items: { id: string }[]; const l = items.map((i) => <li key={i.id} />);', 'missingJsxKey').length, 0);
 });
+
+test('Inspection: !x.indexOf() is only true at index 0', () => {
+  assert.equal(fixed('declare const xs: string[]; if (!xs.indexOf("a")) {}', 'negatedIndexOf'), 'declare const xs: string[]; if (!xs.includes("a")) {}');
+});
