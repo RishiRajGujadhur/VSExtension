@@ -460,6 +460,9 @@ libraryReasons.push({ receiver: 'HTMLElement', method: 'getAttribute', reason: '
 
 libraryReasons.push({ receiver: 'Storage', method: 'getItem', reason: 'null when nothing is stored under the key' });
 
+libraryReasons.push({ receiver: 'RegExp', method: 'exec', reason: 'null when the pattern does not match' });
+libraryReasons.push({ receiver: 'String', method: 'match', reason: 'null when the pattern does not match' });
+
 /** Why a library call can give null or undefined, such as Array.find when nothing matches. */
 export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): string | undefined {
   if (!ts.isCallExpression(call) || !ts.isPropertyAccessExpression(call.expression)) return undefined;

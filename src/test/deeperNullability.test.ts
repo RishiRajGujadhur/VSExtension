@@ -43,3 +43,8 @@ test('Nullability: closest and getAttribute', () => {
 test('Nullability: localStorage.getItem', () => {
   assert.equal(reason('function f() { return localStorage.getItem("token"); }'), 'null when nothing is stored under the key');
 });
+
+test('Nullability: regular expression matches', () => {
+  assert.equal(reason('function f(s: string) { return /a/.exec(s); }'), 'null when the pattern does not match');
+  assert.equal(reason('function f(s: string) { return s.match(/a/); }'), 'null when the pattern does not match');
+});
