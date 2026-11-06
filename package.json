@@ -576,6 +576,12 @@
         "title": "Keyboard Shortcuts…",
         "category": "TypeScript Structure",
         "icon": "$(keyboard)"
+      },
+      {
+        "command": "tsStructure.report.about",
+        "title": "About This Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(info)"
       }
     ],
     "viewsContainers": {
@@ -1311,6 +1317,10 @@
         {
           "command": "tsStructure.editKeybindings",
           "when": "true"
+        },
+        {
+          "command": "tsStructure.report.about",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -1443,6 +1453,11 @@
           "command": "tsStructure.editKeybindings",
           "when": "view == tsStructure.report",
           "group": "9_settings@3"
+        },
+        {
+          "command": "tsStructure.report.about",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@9"
         }
       ],
       "view/item/context": [

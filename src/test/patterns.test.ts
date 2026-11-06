@@ -51,3 +51,19 @@ function findIdentifier(sourceFile: ts.SourceFile, offset: number): ts.Node {
   visit(sourceFile);
   return found;
 }
+
+test('every report kind has an explanation for the info button', async () => {
+  const { explanations } = await import('../structure/explanations');
+  const fs = await import('fs');
+  const path = await import('path');
+  const kinds = new Set<string>();
+  for (const dir of ['inspect', 'navigate']) {
+    for (const file of fs.readdirSync(path.resolve(__dirname, '../../src', dir))) {
+      for (const m of fs.readFileSync(path.resolve(__dirname, '../../src', dir, file), 'utf8').matchAll(/new ReportBuilder\('(\w+)'/g)) {
+        kinds.add(m[1]);
+      }
+    }
+  }
+  assert.deepEqual([...kinds].filter((k) => !explanations[k]), []);
+  assert.match(explanations.mutations.text, /changes state that outlives the function call/);
+});

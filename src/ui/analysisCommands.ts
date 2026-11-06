@@ -30,6 +30,7 @@ import { reportError } from './applyRefactor';
 import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
 import { registerCommand } from './features';
+import { explanations, guideUrl } from '../structure/explanations';
 import { AnalysisError } from '../analysis/types';
 import { offerSymbols } from './analysisActions';
 
@@ -222,6 +223,17 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
+    // The info button: what the report on screen shows and the words it uses, such as what a mutation is.
+    registerCommand('tsStructure.report.about', async () => {
+      const explanation = view.report && explanations[view.report.kind];
+      if (!explanation) {
+        return;
+      }
+      const choice = await vscode.window.showInformationMessage(explanation.title, { modal: true, detail: explanation.text }, 'Open Guide');
+      if (choice) {
+        await vscode.env.openExternal(vscode.Uri.parse(guideUrl + explanation.anchor));
+      }
+    }),
     registerCommand('tsStructure.toggleHighlights', async () => {
       const config = vscode.workspace.getConfiguration('tsStructure');
       const on = !config.get('highlightResults', true);
