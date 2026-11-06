@@ -641,6 +641,21 @@
         "title": "Analyze a Symbol…",
         "category": "TypeScript Structure",
         "icon": "$(symbol-class)"
+      },
+      {
+        "command": "tsStructure.showLog",
+        "title": "Show Log",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.togglePreview",
+        "title": "Toggle Refactoring Preview",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.toggleLiveInspections",
+        "title": "Pause or Resume Live Inspections",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1473,6 +1488,18 @@
         {
           "command": "tsStructure.analyzeSymbol",
           "when": "editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.showLog",
+          "when": "true"
+        },
+        {
+          "command": "tsStructure.togglePreview",
+          "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.toggleLiveInspections",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "view/title": [
@@ -1625,6 +1652,11 @@
           "command": "tsStructure.howDoI",
           "when": "view == tsStructure.report",
           "group": "navigation@11"
+        },
+        {
+          "command": "tsStructure.showLog",
+          "when": "view == tsStructure.report",
+          "group": "9_settings@4"
         }
       ],
       "view/item/context": [

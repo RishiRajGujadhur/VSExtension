@@ -5,7 +5,7 @@ import { pathKey } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { RefactorError, RefactorResult } from '../refactor/types';
 
-const output = vscode.window.createOutputChannel('TypeScript Structure');
+export const output = vscode.window.createOutputChannel('TypeScript Structure');
 
 /**
  * Applies a computed refactoring after showing its conflicts. With `preview`, VS Code's Refactor

@@ -22,6 +22,7 @@ import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';
 import { tasks } from './structure/tasks';
+import { output } from './ui/applyRefactor';
 import { Keybinding, shortcuts } from './structure/keys';
 import { commandIcons } from './structure/icons';
 import { featureOf } from './structure/features';
@@ -68,6 +69,9 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
     // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
     registerCommand('tsStructure.shortcutSheet', () => showShortcutSheet(context.extension.packageJSON.contributes)),
+    registerCommand('tsStructure.showLog', () => output.show(true)),
+    registerCommand('tsStructure.togglePreview', () => toggleSetting('previewRefactorings', true, 'Refactoring preview')),
+    registerCommand('tsStructure.toggleLiveInspections', () => toggleSetting('inspections.enabled', true, 'Live inspections')),
     registerCommand('tsStructure.howDoI', () => showHowDoI(process.platform === 'darwin' ? 'Cmd+Ctrl+S' : 'Ctrl+Alt+S')),
     registerCommand('tsStructure.editKeybindings', (command?: string) => vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', command ? `"${command}"` : `@ext:${context.extension.id}`)),
   );
@@ -256,6 +260,15 @@ async function showShortcutSheet(contributes: { keybindings: Keybinding[]; comma
   });
   picker.onDidHide(() => picker.dispose());
   picker.show();
+}
+
+/** Flips a boolean setting where it is set (the workspace if it is set there, else the user settings) and says so. */
+async function toggleSetting(key: string, fallback: boolean, what: string): Promise<void> {
+  const config = vscode.workspace.getConfiguration('tsStructure');
+  const on = !config.get(key, fallback);
+  const target = config.inspect(key)?.workspaceValue !== undefined ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+  await config.update(key, on, target);
+  void vscode.window.setStatusBarMessage(`${what} ${on ? 'on' : 'off'}`, 3000);
 }
 
 export function deactivate(): void {}
