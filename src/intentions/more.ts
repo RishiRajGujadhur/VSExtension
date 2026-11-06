@@ -550,3 +550,9 @@ function jsxTernaryToAnd(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'jsxTernaryToAnd', title: "Replace with '&&'", edits: [ctx.replace(t, `${wrap(ctx.text(t.condition), binaryPrecedence(ts.SyntaxKind.AmpersandAmpersandToken))} && ${ctx.text(t.whenTrue)}`)] };
 }
 moreIntentions.push({ id: 'jsxTernaryToAnd', title: 'Replace JSX \'?: null\' with \'&&\'', run: jsxTernaryToAnd });
+
+function jsxAndToTernary(ctx: IntentionContext): IntentionAction | undefined {
+  const and = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && ts.isJsxExpression(b.parent) && (ts.isJsxElement(unparen(b.right)) || ts.isJsxSelfClosingElement(unparen(b.right)) || ts.isJsxFragment(unparen(b.right))));
+  return and && { id: 'jsxAndToTernary', title: "Replace with '? … : null'", edits: [ctx.replace(and, `${ctx.text(and.left)} ? ${ctx.text(and.right)} : null`)] };
+}
+moreIntentions.push({ id: 'jsxAndToTernary', title: 'Replace JSX \'&&\' with \'?: null\'', run: jsxAndToTernary });

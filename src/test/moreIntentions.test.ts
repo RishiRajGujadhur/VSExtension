@@ -208,3 +208,7 @@ test('Intention: Replace JSX \'?: null\' with \'&&\'', () => {
   assert.equal(applyTsx('const a = <div>{open ¦=== true ? <Menu /> : null}</div>;', 'jsxTernaryToAnd'), 'const a = <div>{open === true && <Menu />}</div>;');
   assert.equal(applyTsx('const a = <div>{count ¦? <Menu /> : null}</div>;', 'jsxTernaryToAnd'), undefined);
 });
+
+test('Intention: Replace JSX \'&&\' with \'?: null\'', () => {
+  assert.equal(applyTsx('const a = <div>{open ¦&& <Menu />}</div>;', 'jsxAndToTernary'), 'const a = <div>{open ? <Menu /> : null}</div>;');
+});
