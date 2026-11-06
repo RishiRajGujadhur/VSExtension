@@ -157,3 +157,16 @@ function removeElseAfterReturn(ctx: IntentionContext): IntentionAction | undefin
   };
 }
 moreIntentions.push({ id: 'removeElseAfterReturn', title: 'Remove \'else\' after \'return\'', run: removeElseAfterReturn });
+
+function letToConst(ctx: IntentionContext): IntentionAction | undefined {
+  const list = ctx.nearest(ts.isVariableDeclarationList, (l) => (l.flags & ts.NodeFlags.Let) !== 0 && ctx.position <= l.declarations[0].name.end);
+  if (!list) return undefined;
+  const inForOf = ts.isForOfStatement(list.parent) || ts.isForInStatement(list.parent);
+  if (!inForOf && !ts.isVariableStatement(list.parent)) return undefined;
+  if (!list.declarations.every((d) => ts.isIdentifier(d.name) && (inForOf || d.initializer))) return undefined;
+  const scope = inForOf ? list.parent : list.parent.parent;
+  if (list.declarations.some((d) => isAssigned(scope, (d.name as ts.Identifier).text))) return undefined;
+  const keyword = list.getFirstToken(ctx.sourceFile)!;
+  return { id: 'letToConst', title: "Replace 'let' with 'const'", edits: [{ start: keyword.getStart(ctx.sourceFile), end: keyword.end, text: 'const' }] };
+}
+moreIntentions.push({ id: 'letToConst', title: 'Replace \'let\' with \'const\'', run: letToConst });

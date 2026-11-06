@@ -41,3 +41,10 @@ test('Remove \'else\' after \'return\'', () => {
   );
   assert.equal(apply(lines('function f(a) {', '  i¦f (a) {', '    go();', '  } else {', '    stop();', '  }', '}'), 'removeElseAfterReturn'), undefined);
 });
+
+test('Replace \'let\' with \'const\'', () => {
+  assert.equal(apply('l¦et total = 1; use(total);', 'letToConst'), 'const total = 1; use(total);');
+  assert.equal(apply('l¦et n = 1; n++;', 'letToConst'), undefined);
+  assert.equal(apply('l¦et n = 1; [n] = [2];', 'letToConst'), undefined);
+  assert.equal(apply('for (l¦et x of xs) use(x);', 'letToConst'), 'for (const x of xs) use(x);');
+});
