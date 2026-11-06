@@ -31,3 +31,7 @@ test('Nullability: at() past the end', () => {
 test('Nullability: Map.get and WeakMap.get', () => {
   assert.equal(reason('function f(m: Map<string, number>) { return m.get("a"); }'), 'undefined when the key is missing');
 });
+
+test('Nullability: querySelector and getElementById', () => {
+  assert.equal(reason('function f() { return document.getElementById("app"); }'), 'null when no element has that id');
+});
