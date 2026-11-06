@@ -82,3 +82,12 @@ test('Replace \'hasOwnProperty\' with \'Object.hasOwn\'', () => {
   assert.equal(apply('if (o.hasOwn¦Property(k)) {}', 'hasOwn'), 'if (Object.hasOwn(o, k)) {}');
   assert.equal(apply('if (Object.prototype.hasOwnProperty.ca¦ll(o, k)) {}', 'hasOwn'), 'if (Object.hasOwn(o, k)) {}');
 });
+
+test('Replace \'switch\' with \'if\' chain', () => {
+  assert.equal(
+    apply(lines('s¦witch (k) {', '  case 1:', '    a();', '    break;', '  case 2:', '  case 3:', '    b();', '    break;', '  default:', '    c();', '}'), 'switchToIfChain'),
+    lines('if (k === 1) {', '  a();', '} else if (k === 2 || k === 3) {', '  b();', '} else {', '  c();', '}'),
+  );
+  assert.equal(apply(lines('s¦witch (k) {', '  case 1:', '    a();', '  case 2:', '    b();', '}'), 'switchToIfChain'), undefined);
+  assert.equal(apply(lines('s¦witch (f()) {', '  case 1:', '    a();', '}'), 'switchToIfChain'), undefined);
+});

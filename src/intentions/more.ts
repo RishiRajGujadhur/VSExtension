@@ -257,3 +257,44 @@ function hasOwn(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'hasOwn', title: "Replace with 'Object.hasOwn'", edits: [ctx.replace(call, `Object.hasOwn(${ctx.text(object)}, ${ctx.text(key)})`)] };
 }
 moreIntentions.push({ id: 'hasOwn', title: 'Replace \'hasOwnProperty\' with \'Object.hasOwn\'', run: hasOwn });
+
+function switchToIfChain(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isSwitchStatement, (s) => ctx.position >= s.getStart(ctx.sourceFile) && ctx.position <= s.caseBlock.getStart(ctx.sourceFile));
+  if (!statement || !isSimple(statement.expression)) return undefined;
+  const subject = ctx.text(unparen(statement.expression));
+  const groups: { tests: ts.Expression[] | 'default'; statements: ts.Statement[] }[] = [];
+  let pending: ts.Expression[] = [];
+  const clauses = statement.caseBlock.clauses;
+  for (const [i, clause] of clauses.entries()) {
+    if (clause.statements.length === 0 && i < clauses.length - 1) {
+      if (ts.isDefaultClause(clause)) return undefined;
+      pending.push(clause.expression);
+      continue;
+    }
+    if (ts.isDefaultClause(clause) && i !== clauses.length - 1) return undefined;
+    let statements = [...clause.statements];
+    const last = statements[statements.length - 1];
+    if (last && ts.isBreakStatement(last) && !last.label) statements = statements.slice(0, -1);
+    else if (i < clauses.length - 1 && !endsWithJump(statements)) return undefined;
+    // Another break would now leave a different statement.
+    if (statements.some((s) => ts.isBreakStatement(s) || containsInScope(s, (n) => ts.isBreakStatement(n) && !n.label && !insideLoopOrSwitch(n, s)))) return undefined;
+    groups.push({ tests: ts.isDefaultClause(clause) ? 'default' : [...pending, clause.expression], statements });
+    pending = [];
+  }
+  if (groups.length === 0) return undefined;
+  const indent = ctx.indentOf(statement);
+  const body = (statements: ts.Statement[]) => (statements.length === 0 ? '{}' : `{\n${indentLines(statements.flatMap((s) => statementLines(s, ctx.sourceFile)), indent + ctx.indentUnit)}\n${indent}}`);
+  const eq = binaryPrecedence(ts.SyntaxKind.EqualsEqualsEqualsToken);
+  const text = groups
+    .map((g, i) => (g.tests === 'default' ? (i === 0 ? body(g.statements) : `else ${body(g.statements)}`) : `${i === 0 ? '' : 'else '}if (${g.tests.map((t) => `${subject} === ${wrap(ctx.text(t), eq + 1)}`).join(' || ')}) ${body(g.statements)}`))
+    .join(' ');
+  return { id: 'switchToIfChain', title: "Replace 'switch' with 'if' chain", edits: [ctx.replace(statement, text)] };
+}
+
+function insideLoopOrSwitch(node: ts.Node, root: ts.Node): boolean {
+  for (let current = node.parent; current && current !== root; current = current.parent) {
+    if (ts.isIterationStatement(current, false) || ts.isSwitchStatement(current)) return true;
+  }
+  return false;
+}
+moreIntentions.push({ id: 'switchToIfChain', title: 'Replace \'switch\' with \'if\' chain', run: switchToIfChain });
