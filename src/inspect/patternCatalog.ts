@@ -129,3 +129,17 @@ catalog.push({
       return method ? [{ node: method, evidence: `${className(cls)}.${nameOf(method)}() coordinates ${collaborators.filter((f) => text(method.body).includes(`this.${f.name}.`)).map((f) => f.name).join(', ')}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Proxy',
+  meaning: 'Access to an object goes through a stand-in that can intercept reads, writes or calls.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isNewExpression(node) && text(node.expression) === 'Proxy') {
+        found.push({ node, evidence: `new Proxy(${text(node.arguments?.[0]).slice(0, 30)}, …) intercepts access` });
+      }
+    });
+    return found;
+  },
+});

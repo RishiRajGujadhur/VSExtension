@@ -14,3 +14,7 @@ test('Adapter is recognized', () => {
 test('Facade is recognized', () => {
   has('class Checkout { constructor(private cart: Cart, private payments: Payments, private mail: Mailer) {} placeOrder() { this.cart.lock(); this.payments.charge(); this.mail.send(); } }', 'Facade');
 });
+
+test('Proxy is recognized', () => {
+  has('const settings = new Proxy({}, { get: (t, k) => 1 });', 'Proxy');
+});
