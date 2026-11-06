@@ -84,3 +84,7 @@ test('Circuit breaker is recognized', () => {
 test('Context provider is recognized', () => {
   has('const Theme = createContext("light"); export function App() { return <Theme.Provider value="dark"><div /></Theme.Provider>; }', 'Context provider');
 });
+
+test('Higher-order component is recognized', () => {
+  has('function withUser(Wrapped: Comp) { return (props: P) => <Wrapped {...props} user={1} />; }', 'Higher-order component');
+});

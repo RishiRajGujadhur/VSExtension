@@ -333,3 +333,14 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Higher-order component',
+  meaning: 'A function takes a component and returns a new component that renders it with extra props or behavior.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      const component = fn.parameters.map((p) => text(p.name)).find((p) => /^[A-Z]/.test(p));
+      const returned = returnsOf(fn.body).map(unwrap).find((e) => ts.isArrowFunction(e) || ts.isFunctionExpression(e));
+      return component && returned && new RegExp(`<${component}[\\s/>]`).test(text(returned)) ? [{ node: fn, evidence: `${name}() wraps ${component} in a new component` }] : [];
+    }),
+});
