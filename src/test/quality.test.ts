@@ -243,3 +243,7 @@ test('Inspection: replaceAll() with a regex missing \'g\'', () => {
   assert.equal(fixed('declare const s: string; s.replaceAll(/a/, "b");', 'replaceAllWithoutGlobal'), 'declare const s: string; s.replaceAll(/a/g, "b");');
   assert.equal(messages('declare const s: string; s.replaceAll(/a/gi, "b");', 'replaceAllWithoutGlobal').length, 0);
 });
+
+test('Inspection: Async function passed to useEffect', () => {
+  assert.equal(messages('declare function useEffect(f: () => unknown, d?: unknown[]): void; useEffect(async () => { await 1; }, []);', 'asyncEffect').length, 1);
+});

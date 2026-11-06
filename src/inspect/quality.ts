@@ -880,3 +880,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'asyncEffect',
+  title: 'Async function passed to useEffect',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const effect = ts.isCallExpression(node) && /^(React\.)?(useEffect|useLayoutEffect|useInsertionEffect)$/.test(node.expression.getText()) ? node.arguments[0] : undefined;
+      if (effect && (ts.isArrowFunction(effect) || ts.isFunctionExpression(effect)) && effect.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)) {
+        out.push(at(ctx.sourceFile, 'asyncEffect', effect, 'An async effect returns a promise, so React gets no cleanup function and errors go unhandled. Call an async function inside the effect instead.', 'warning'));
+      }
+    });
+    return out;
+  },
+});
