@@ -41,6 +41,8 @@ export const rowCommandFeatures: Record<string, string> = {
   'tsStructure.report.safeDelete': 'tsStructure.safeDelete',
   'tsStructure.report.safeDeleteFile': 'tsStructure.safeDelete',
   'tsStructure.report.compareRevision': 'tsStructure.dependencyGraphDiff',
+  'tsStructure.report.usagesHere': 'tsStructure.semanticUsages',
+  'tsStructure.report.dataFlowHere': 'tsStructure.dataFlow',
 };
 
 /** The icon of each report kind, for the history list and messages about a report. */

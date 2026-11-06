@@ -100,6 +100,15 @@ async function deadExports(t: AnalysisTarget, inside?: (fileName: string) => boo
   return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded: excluded }, root);
 }
 
+/** Opens a row's location and runs an analysis there, such as Find Usages of the symbol a row points at. */
+async function runAt(view: StructureView, node: ReportNode | undefined, command: string): Promise<unknown> {
+  if (!node?.location) {
+    return;
+  }
+  await view.open(node.location);
+  return vscode.commands.executeCommand(command);
+}
+
 /** The scope's name in the title, and only the rows inside its lines when it is a function or selection. */
 function inScope(report: Report | undefined, scope: ChosenScope): Report | undefined {
   if (report && scope.label) {
@@ -224,6 +233,11 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
+    // Right-click on a row: start from where it points.
+    registerCommand('tsStructure.report.revealInExplorer', (node: ReportNode) => node?.location && vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(node.location.file))),
+    registerCommand('tsStructure.report.excludeFile', (node: ReportNode) => node?.location && vscode.commands.executeCommand('tsStructure.excludeFromAnalysis', vscode.Uri.file(node.location.file))),
+    registerCommand('tsStructure.report.usagesHere', (node: ReportNode) => runAt(view, node, 'tsStructure.semanticUsages')),
+    registerCommand('tsStructure.report.dataFlowHere', (node: ReportNode) => runAt(view, node, 'tsStructure.dataFlow')),
     // The info button: what the report on screen shows and the words it uses, such as what a mutation is.
     registerCommand('tsStructure.report.about', async () => {
       const explanation = view.report && explanations[view.report.kind];

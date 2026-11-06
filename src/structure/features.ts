@@ -43,7 +43,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Data Flow and Mutation Tracking',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere'],
   },
   {
     id: 'sideEffects',
@@ -87,7 +87,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Semantic Find Usages',
     description: 'References grouped by reads, writes, calls, imports, types and JSX.',
-    commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages', 'tsStructure.semanticUsagesInFile'],
+    commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.report.usagesHere'],
   },
   {
     id: 'reexports',

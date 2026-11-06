@@ -588,6 +588,28 @@
         "title": "Show Every Row",
         "category": "TypeScript Structure",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "tsStructure.report.usagesHere",
+        "title": "Find Usages Here",
+        "category": "TypeScript Structure",
+        "icon": "$(references)"
+      },
+      {
+        "command": "tsStructure.report.dataFlowHere",
+        "title": "Data Flow Here",
+        "category": "TypeScript Structure",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "tsStructure.report.revealInExplorer",
+        "title": "Reveal in Explorer",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.excludeFile",
+        "title": "Exclude File from Analysis",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1348,6 +1370,22 @@
         {
           "command": "tsStructure.report.clearFilters",
           "when": "tsStructure.narrowed"
+        },
+        {
+          "command": "tsStructure.report.usagesHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.dataFlowHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.revealInExplorer",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.excludeFile",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1612,6 +1650,26 @@
           "command": "tsStructure.report.markPublic",
           "when": "config.tsStructure.features.deadExports && view == tsStructure.report && viewItem =~ /action:(deadExport|unexport)( |$)/",
           "group": "inline@3"
+        },
+        {
+          "command": "tsStructure.report.usagesHere",
+          "when": "config.tsStructure.features.usages && view == tsStructure.report && viewItem =~ /location/",
+          "group": "1_analyze@1"
+        },
+        {
+          "command": "tsStructure.report.dataFlowHere",
+          "when": "config.tsStructure.features.dataFlow && view == tsStructure.report && viewItem =~ /location/",
+          "group": "1_analyze@2"
+        },
+        {
+          "command": "tsStructure.report.revealInExplorer",
+          "when": "view == tsStructure.report && viewItem =~ /location/",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tsStructure.report.excludeFile",
+          "when": "view == tsStructure.report && viewItem =~ /location/",
+          "group": "2_scope@1"
         }
       ],
       "scm/title": [
