@@ -201,3 +201,7 @@ test('Inspection: Sorting numbers without a compare function', () => {
   assert.equal(fixed('declare const xs: number[]; xs.sort();', 'sortWithoutCompare'), 'declare const xs: number[]; xs.sort((a, b) => a - b);');
   assert.equal(messages('declare const xs: string[]; xs.sort();', 'sortWithoutCompare').length, 0);
 });
+
+test('Inspection: Duplicate case label', () => {
+  assert.equal(messages('declare const k: number; switch (k) { case 1: break; case 1: break; }', 'duplicateCaseLabel').length, 1);
+});

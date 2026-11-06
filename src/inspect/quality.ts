@@ -712,3 +712,25 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'duplicateCaseLabel',
+  title: 'Duplicate case label',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isCaseBlock(node)) return;
+      const seen = new Set<string>();
+      for (const clause of node.clauses) {
+        if (!ts.isCaseClause(clause)) continue;
+        const key = clause.expression.getText().replace(/\s+/g, '');
+        if (seen.has(key)) {
+          out.push(at(ctx.sourceFile, 'duplicateCaseLabel', clause.expression, `case ${clause.expression.getText()} appears twice; the second one never runs.`, 'warning'));
+        }
+        seen.add(key);
+      }
+    });
+    return out;
+  },
+});
