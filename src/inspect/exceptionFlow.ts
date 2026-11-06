@@ -42,6 +42,9 @@ throwingCalls['new ArrayBuffer'] = 'RangeError on an invalid length';
 throwingCalls['new SharedArrayBuffer'] = 'RangeError on an invalid length';
 throwingCalls['Buffer.alloc'] = 'RangeError on an invalid size';
 
+throwingCalls['require'] = 'Error when the module can\'t be found';
+throwingCalls['process.chdir'] = 'Error when the folder does not exist';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {

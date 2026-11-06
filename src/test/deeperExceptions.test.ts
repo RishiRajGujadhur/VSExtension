@@ -24,3 +24,7 @@ test('Exception flow: new WebSocket and new Worker', () => {
 test('Exception flow: buffers with invalid sizes', () => {
   assert.deepEqual(raised('function f(n: number) { return new ArrayBuffer(n); }'), ['new ArrayBuffer(): RangeError on an invalid length']);
 });
+
+test('Exception flow: require and process.chdir', () => {
+  assert.deepEqual(raised('declare function require(id: string): unknown; function f() { return require("x"); }'), ["require(): Error when the module can't be found"]);
+});
