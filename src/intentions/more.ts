@@ -618,3 +618,15 @@ function thenToAwait(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'thenToAwait', title: "Replace '.then()' with 'await'", edits: [ctx.replace(statement, text)] };
 }
 moreIntentions.push({ id: 'thenToAwait', title: 'Replace \'.then()\' with \'await\'', run: thenToAwait });
+
+function functionPropertyToMethod(ctx: IntentionContext): IntentionAction | undefined {
+  const property = ctx.nearest(ts.isPropertyAssignment, (p) => ts.isFunctionExpression(p.initializer) && !p.initializer.name && ts.isObjectLiteralExpression(p.parent));
+  if (!property) return undefined;
+  const fn = property.initializer as ts.FunctionExpression;
+  const isAsync = fn.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) ? 'async ' : '';
+  const star = fn.asteriskToken ? '*' : '';
+  const typeParameters = fn.typeParameters ? `<${fn.typeParameters.map((t) => ctx.text(t)).join(', ')}>` : '';
+  const returnType = fn.type ? `: ${ctx.text(fn.type)}` : '';
+  return { id: 'functionPropertyToMethod', title: 'Use method shorthand', edits: [ctx.replace(property, `${isAsync}${star}${ctx.text(property.name)}${typeParameters}(${fn.parameters.map((p) => ctx.text(p)).join(', ')})${returnType} ${ctx.text(fn.body)}`)] };
+}
+moreIntentions.push({ id: 'functionPropertyToMethod', title: 'Use method shorthand', run: functionPropertyToMethod });

@@ -239,3 +239,7 @@ test('Intention: Replace \'.then()\' with \'await\'', () => {
   assert.equal(apply(lines('async function f() {', '  ¦return load().then((d) => d.items);', '}'), 'thenToAwait'), lines('async function f() {', '  const d = await load();', '  return d.items;', '}'));
   assert.equal(apply(lines('function f() {', '  ¦return load().then((d) => d.items);', '}'), 'thenToAwait'), undefined);
 });
+
+test('Intention: Use method shorthand', () => {
+  assert.equal(apply('const o = { sa¦ve: function (x: number) { return x; } };', 'functionPropertyToMethod'), 'const o = { save(x: number) { return x; } };');
+});
