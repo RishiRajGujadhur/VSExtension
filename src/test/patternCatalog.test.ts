@@ -43,3 +43,7 @@ test('Chain of responsibility is recognized', () => {
 test('Composite is recognized', () => {
   has('class Item { children: Item[] = []; size(): number { return 1 + this.children.reduce((n, c) => n + c.size(), 0); } }', 'Composite');
 });
+
+test('Visitor is recognized', () => {
+  has('class Num { accept(v: Visitor) { return v.visitNum(this); } }', 'Visitor');
+});

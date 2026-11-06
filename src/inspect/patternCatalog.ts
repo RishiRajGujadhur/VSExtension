@@ -212,3 +212,13 @@ catalog.push({
       return children && recursive ? [{ node: cls, evidence: `${className(cls)}.${nameOf(recursive)}() recurses into its ${children.name}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Visitor',
+  meaning: 'Operations live in a visitor object; each element calls the visitor method for its own type.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const accept = methodsOf(cls).find((m) => nameOf(m) === 'accept' && m.parameters.length > 0 && new RegExp(`${text(m.parameters[0].name)}\\.visit\\w*\\(`).test(text(m.body)));
+      return accept ? [{ node: accept, evidence: `${className(cls)}.accept() hands itself to the visitor`, subject: className(cls) }] : [];
+    }),
+});
