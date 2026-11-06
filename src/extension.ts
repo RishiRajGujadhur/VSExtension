@@ -21,6 +21,10 @@ import { registerGuide } from './ui/guide';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';
+import { tasks } from './structure/tasks';
+import { commandIcons } from './structure/icons';
+import { featureOf } from './structure/features';
+import { isFeatureEnabled } from './ui/features';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
@@ -62,6 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState, context.extension.packageJSON.contributes?.keybindings)), registerCommand('tsStructure.configureFeatures', configureFeatures),
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
     // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
+    registerCommand('tsStructure.howDoI', () => showHowDoI(process.platform === 'darwin' ? 'Cmd+Ctrl+S' : 'Ctrl+Alt+S')),
     registerCommand('tsStructure.editKeybindings', (command?: string) => vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', command ? `"${command}"` : `@ext:${context.extension.id}`)),
   );
   new InspectionDiagnostics(projects, configuredInspections).register(context, structureView);
@@ -203,6 +208,23 @@ function configuredInspections(): Inspection[] {
     }
   }
   return configured.inspections;
+}
+
+/** How Do I…?: the questions the extension answers, in plain words, each running its command. */
+async function showHowDoI(prefix: string): Promise<void> {
+  const items = tasks.map((task) => {
+    const feature = featureOf(task.command);
+    const off = feature && !isFeatureEnabled(feature.id);
+    return {
+      label: `$(${commandIcons[task.command] ?? 'question'}) ${task.question}`,
+      description: [task.key ? `${prefix} ${task.key}` : undefined, off ? `${feature.title} is off` : undefined].filter(Boolean).join(' · ') || undefined,
+      command: task.command,
+    };
+  });
+  const picked = await vscode.window.showQuickPick(items, { title: 'How Do I…?', placeHolder: 'Pick a question; its analysis runs at the cursor', matchOnDescription: true });
+  if (picked) {
+    await vscode.commands.executeCommand(picked.command);
+  }
 }
 
 export function deactivate(): void {}

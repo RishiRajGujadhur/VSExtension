@@ -67,3 +67,17 @@ test('every report kind has an explanation for the info button', async () => {
   assert.deepEqual([...kinds].filter((k) => !explanations[k]), []);
   assert.match(explanations.mutations.text, /changes state that outlives the function call/);
 });
+
+test('How Do I…? names only contributed commands, and its keys match the default shortcuts', async () => {
+  const { tasks } = await import('../structure/tasks');
+  const fs = await import('fs');
+  const path = await import('path');
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
+  const commands = new Set(pkg.contributes.commands.map((c: { command: string }) => c.command));
+  for (const task of tasks) {
+    assert.ok(commands.has(task.command), task.command);
+    if (task.key) {
+      assert.ok(pkg.contributes.keybindings.some((k: { key: string; command: string }) => k.command === task.command && k.key === `ctrl+alt+s ${task.key!.toLowerCase()}`), task.command);
+    }
+  }
+});

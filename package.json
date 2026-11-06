@@ -622,6 +622,12 @@
         "title": "Re-run Analysis (Results Out of Date)",
         "category": "TypeScript Structure",
         "icon": "$(warning)"
+      },
+      {
+        "command": "tsStructure.howDoI",
+        "title": "How Do I…?",
+        "category": "TypeScript Structure",
+        "icon": "$(comment-discussion)"
       }
     ],
     "viewsContainers": {
@@ -823,6 +829,11 @@
         "mac": "cmd+shift+c",
         "command": "tsStructure.report.copyLocation",
         "when": "focusedView == tsStructure.report && tsStructure.hasReport"
+      },
+      {
+        "key": "ctrl+alt+s oem_2",
+        "mac": "cmd+ctrl+s oem_2",
+        "command": "tsStructure.howDoI"
       }
     ],
     "menus": {
@@ -986,6 +997,10 @@
           "command": "tsStructure.semanticUsagesInFile",
           "when": "config.tsStructure.features.usages",
           "group": "4_navigate@1"
+        },
+        {
+          "command": "tsStructure.howDoI",
+          "group": "9_help@0"
         }
       ],
       "explorer/context": [
@@ -1406,6 +1421,10 @@
         {
           "command": "tsStructure.report.rerunOutdated",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.howDoI",
+          "when": "true"
         }
       ],
       "view/title": [
@@ -1553,6 +1572,11 @@
           "command": "tsStructure.report.rerunOutdated",
           "when": "view == tsStructure.report && tsStructure.hasReport && tsStructure.stale",
           "group": "navigation@1"
+        },
+        {
+          "command": "tsStructure.howDoI",
+          "when": "view == tsStructure.report",
+          "group": "navigation@11"
         }
       ],
       "view/item/context": [
