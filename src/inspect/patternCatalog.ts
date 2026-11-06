@@ -474,3 +474,17 @@ catalog.push({
       return mixed ? [{ node: fn, evidence: `${name}() adds members to any class passed as ${base}` }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Abstract factory',
+  meaning: 'Families of related objects are created through one interface, so the concrete classes can be swapped together.',
+  detect: (sf) => {
+    const byInterface = new Map<string, ts.ClassLikeDeclaration[]>();
+    for (const cls of classesIn(sf)) {
+      const creators = methodsOf(cls).filter((m) => returnsOf(m.body).some((e) => ts.isNewExpression(unwrap(e))));
+      if (creators.length < 2) continue;
+      for (const iface of heritage(cls, ts.SyntaxKind.ImplementsKeyword)) byInterface.set(iface, [...(byInterface.get(iface) ?? []), cls]);
+    }
+    return [...byInterface].filter(([, classes]) => classes.length >= 2).map(([iface, classes]) => ({ node: classes[0], evidence: `${classes.map(className).join(', ')} each create a family of objects for ${iface}`, subject: iface }));
+  },
+});

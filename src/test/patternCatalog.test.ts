@@ -130,3 +130,7 @@ test('Promise chain is recognized', () => {
 test('Mixin is recognized', () => {
   has('function Timestamped<T extends new (...a: any[]) => object>(Base: T) { return class extends Base { at = Date.now(); }; }', 'Mixin');
 });
+
+test('Design patterns: recognize Abstract factory', () => {
+  has('class LightTheme implements Ui { button() { return new LightButton(); } input() { return new LightInput(); } } class DarkTheme implements Ui { button() { return new DarkButton(); } input() { return new DarkInput(); } }', 'Abstract factory');
+});
