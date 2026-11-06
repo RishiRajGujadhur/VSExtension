@@ -89,3 +89,7 @@ test('Mutation tracking: classList changes', () => {
 test('Mutation tracking: DOM tree and attribute changes, through element subtypes', () => {
   assert.ok(effects('function f(e: HTMLDivElement) { e.setAttribute("x", "1"); }').some((e) => e.startsWith('mutates-parameter')));
 });
+
+test('Mutation tracking: typed arrays', () => {
+  assert.ok(effects('function f(b: Uint8Array) { b.fill(0); }').some((e) => e.startsWith('mutates-parameter')));
+});
