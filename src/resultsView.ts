@@ -19,8 +19,20 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
     return this.current;
   }
 
+  /** How many tests the last analysis found, until it is cleared; clicking shows them. */
+  private readonly status = vscode.window.createStatusBarItem('tsImpact.summary', vscode.StatusBarAlignment.Left, 50);
+
   set(result: ImpactResult | undefined): void {
     this.current = result;
+    if (result) {
+      this.status.name = 'Impacted Tests';
+      this.status.text = `$(beaker) ${countLabel(result.tests.length)}`;
+      this.status.tooltip = `Tests impacted by ${result.target.name}. Click to see or run them.`;
+      this.status.command = 'tsImpact.showLastResults';
+      this.status.show();
+    } else {
+      this.status.hide();
+    }
     if (this.view) {
       this.view.description = result ? `${result.target.name} · ${countLabel(result.tests.length)}` : undefined;
       this.view.message = result?.warnings.length ? result.warnings.join(' ') : undefined;
@@ -122,11 +134,14 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
   picker.items = items;
   // Run every impacted test without closing the list first.
   const runAll: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('run-all'), tooltip: `Run All ${countLabel(result.tests.length)}` };
-  picker.buttons = [runAll];
+  const copy: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('copy'), tooltip: 'Copy Impacted Tests…' };
+  picker.buttons = [runAll, copy];
   picker.onDidTriggerButton((button) => {
+    picker.hide();
     if (button === runAll) {
-      picker.hide();
       run(result.tests.map((t) => t.test));
+    } else {
+      void vscode.commands.executeCommand('tsImpact.copyTests');
     }
   });
   picker.onDidTriggerItemButton((e) => {
