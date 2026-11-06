@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Framework, TestCase } from './analysis/types';
+import { detectFramework, testCommand } from './analysis/testCommand';
 
 interface RunGroup {
   framework: Exclude<Framework, 'unknown'>;
@@ -50,30 +51,7 @@ export async function runTests(tests: TestCase[]): Promise<void> {
 function createTask(group: RunGroup): vscode.Task {
   const files = [...group.files].map((f) => path.relative(group.cwd, f).replace(/\\/g, '/'));
   const pattern = group.patterns && group.patterns.size > 0 ? [...group.patterns].join('|') : undefined;
-  let command: string;
-  let args: string[];
-  switch (group.framework) {
-    case 'vitest':
-      command = 'npx';
-      args = ['vitest', 'run', ...files, ...(pattern ? ['-t', pattern] : [])];
-      break;
-    case 'jest':
-      command = 'npx';
-      args = ['jest', '--runTestsByPath', ...files, ...(pattern ? ['-t', pattern] : [])];
-      break;
-    case 'playwright':
-      command = 'npx';
-      args = ['playwright', 'test', ...files, ...(pattern ? ['-g', pattern] : [])];
-      break;
-    case 'mocha':
-      command = 'npx';
-      args = ['mocha', ...files, ...(pattern ? ['-g', pattern] : [])];
-      break;
-    case 'node':
-      command = 'node';
-      args = ['--test', ...(pattern ? [`--test-name-pattern=${pattern}`] : []), ...files];
-      break;
-  }
+  const { command, args } = testCommand(group.framework, files, pattern, group.cwd);
   const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(group.cwd)) ?? vscode.TaskScope.Workspace;
   const quoted = args.map((value) => ({ value, quoting: vscode.ShellQuoting.Strong }));
   const task = new vscode.Task(
@@ -107,19 +85,3 @@ function findPackageDir(file: string): string | undefined {
   }
 }
 
-function detectFramework(packageDir: string | undefined): RunGroup['framework'] | undefined {
-  if (!packageDir) {
-    return undefined;
-  }
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    if (deps.vitest) return 'vitest';
-    if (deps.jest || deps['ts-jest']) return 'jest';
-    if (deps['@playwright/test']) return 'playwright';
-    if (deps.mocha) return 'mocha';
-  } catch {
-    // Unreadable package.json: fall through.
-  }
-  return undefined;
-}
