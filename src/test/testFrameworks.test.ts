@@ -45,3 +45,9 @@ test('Test impact: tape and tap', () => {
   const found = discover("import test from 'tape';\ntest('adds', (t) => t.end());");
   assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['tape adds']);
 });
+
+test('Test impact: Deno.test', () => {
+  const found = discover("Deno.test('adds', () => {});");
+  assert.deepEqual(found.cases.map((c) => `${c.framework} ${c.title}`), ['deno adds']);
+  assert.equal(line(testCommand('deno', ['a.test.ts'], 'adds', pkg({}))), 'deno test --allow-all a.test.ts --filter /adds/');
+});

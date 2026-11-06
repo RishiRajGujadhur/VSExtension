@@ -19,6 +19,8 @@ export function testCommand(framework: RunnableFramework, files: readonly string
   const exec = packageRunner(cwd);
   const run = (...args: string[]) => ({ command: exec.command, args: [...exec.prefix, ...args] });
   switch (framework) {
+    case 'deno':
+      return { command: 'deno', args: ['test', '--allow-all', ...files, ...(pattern ? ['--filter', `/${pattern}/`] : [])] };
     case 'tape':
       return run(fs.existsSync(path.join(cwd, 'node_modules', 'tap')) ? 'tap' : 'tape', ...files);
     case 'ava':

@@ -148,6 +148,12 @@ class Discovery {
         }
       }
     }
+    // Deno's built-in runner: `Deno.test(title, fn)`.
+    if (/\bDeno\.test\b/.test(this.sourceFile.text)) {
+      this.namespaces.add('Deno');
+      this.importsTestModule = true;
+      this.framework = 'deno';
+    }
     // Playwright fixtures: `const test = base.extend({...})`.
     for (const statement of this.sourceFile.statements) {
       if (!ts.isVariableStatement(statement)) {
