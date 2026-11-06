@@ -153,3 +153,7 @@ test('Loose equality (== and !=)', () => {
   assert.equal(fixed('declare const a: unknown; const b = a == 1;', 'looseEquality'), 'declare const a: unknown; const b = a === 1;');
   assert.equal(messages('declare const a: unknown; const b = a == null;', 'looseEquality').length, 0);
 });
+
+test('await inside a loop', () => {
+  assert.equal(messages('async function f(xs: string[]) { for (const x of xs) { await g(x); } } declare function g(x: string): Promise<void>;', 'awaitInLoop').length, 1);
+});

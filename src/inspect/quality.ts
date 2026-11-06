@@ -525,3 +525,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'awaitInLoop',
+  title: 'await inside a loop',
+  defaultSeverity: 'info',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!(ts.isForStatement(node) || ts.isForOfStatement(node) || ts.isForInStatement(node) || ts.isWhileStatement(node)) || (ts.isForOfStatement(node) && node.awaitModifier)) return;
+      walkInScope(node.statement, (inner) => {
+        if (ts.isAwaitExpression(inner)) {
+          out.push(at(ctx.sourceFile, 'awaitInLoop', inner, 'Each iteration waits for the one before; if they are independent, start them together with Promise.all.', 'info'));
+        }
+      });
+    });
+    return out;
+  },
+});
