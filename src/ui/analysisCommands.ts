@@ -6,6 +6,7 @@ import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
+import { patternsReport } from '../inspect/patterns';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { assertionAuditReport } from '../inspect/assertionAudit';
 import { nullabilityReport } from '../inspect/nullability';
@@ -378,6 +379,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         }
         return report;
       });
+    }),
+    scopedCommand('tsStructure.detectPatterns', 'Detecting design patterns', { id: 'patterns', kinds: ['file', 'folder', 'pickFolder', 'open', 'changed', 'project'] }, (t, scope) => {
+      const { files, note } = filesIn(t.project().program(), scope);
+      return withNote(patternsReport(files, t.folder), note);
     }),
     editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {

@@ -81,3 +81,12 @@ test('How Do I…? names only contributed commands, and its keys match the defau
     }
   }
 });
+
+test('Detect Design Patterns groups every pattern in the files, most frequent first', async () => {
+  const { patternsReport } = await import('../inspect/patterns');
+  const a = parse('function createA() { return new A(); }\nfunction createB() { return new B(); }', '/app/src/services/a.ts');
+  const b = parse('class Repo { findAll() {} save() {} }', '/app/src/repositories/b.ts');
+  const report = patternsReport([a, b], '/app');
+  assert.deepEqual(report.roots.map((r) => `${r.label} ${r.description}`), ['Factory 2 places', 'Repository 1 place', 'Layered architecture services → repositories']);
+  assert.equal(report.roots[0].children?.[0].description, 'src/services/a.ts:1');
+});

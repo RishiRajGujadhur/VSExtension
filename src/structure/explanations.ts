@@ -21,6 +21,11 @@ export const explanations: Record<string, Explanation> = {
     text: 'Every place the value is defined, changed, checked, passed on and read, grouped by function. Flows in shows what it is computed from, Flows out where it goes, and Design patterns how the code around it is organized.',
     anchor: 'data-flow-path-explorer',
   },
+  patterns: {
+    title: 'What is a design pattern?',
+    text: 'A well-known way of organizing code, such as a Factory that creates objects in one place, an Observer that notifies listeners, or a Strategy of interchangeable classes. They are recognized from the shape of the code, never from names alone; hover a pattern to read what it means.',
+    anchor: 'data-flow-path-explorer',
+  },
   sideEffects: {
     title: 'What is a side effect?',
     text: 'Anything a function does besides returning a value: changing state it does not own, input/output (console, network, storage, files), scheduling timers, or reading the clock or random numbers. A function without any is pure.',

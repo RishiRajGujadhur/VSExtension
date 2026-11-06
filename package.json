@@ -667,6 +667,12 @@
         "command": "tsStructure.report.copyCode",
         "title": "Copy Line of Code",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.detectPatterns",
+        "title": "Detect Design Patterns…",
+        "category": "TypeScript Structure",
+        "icon": "$(library)"
       }
     ],
     "viewsContainers": {
@@ -896,6 +902,12 @@
         "mac": "cmd+ctrl+s cmd+ctrl+s",
         "command": "tsStructure.analyzeSymbol",
         "when": "editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s y",
+        "mac": "cmd+ctrl+s y",
+        "command": "tsStructure.detectPatterns",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1067,6 +1079,11 @@
         {
           "command": "tsStructure.analyzeSymbol",
           "group": "0_all@2"
+        },
+        {
+          "command": "tsStructure.detectPatterns",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@2"
         }
       ],
       "explorer/context": [
@@ -1519,6 +1536,10 @@
         {
           "command": "tsStructure.report.copyCode",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.detectPatterns",
+          "when": "config.tsStructure.features.dataFlow"
         }
       ],
       "view/title": [

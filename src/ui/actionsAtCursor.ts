@@ -31,6 +31,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.dataFlow', label: 'Data Flow', detail: 'How the value changes through assignments, checks and calls' },
       { command: 'tsStructure.nullability', label: 'Nullability', detail: 'Which paths make this value null or undefined' },
       { command: 'tsStructure.sideEffects', label: 'Side Effects', detail: 'What this function changes or reads besides its result' },
+      { command: 'tsStructure.detectPatterns', label: 'Detect Design Patterns…', detail: 'Factories, observers, strategies, singletons and other patterns in the code' },
       { command: 'tsStructure.mutationTracking', label: 'Mutation Tracking', detail: 'Functions in this file that mutate shared state' },
       { command: 'tsStructure.mutationTrackingProject', label: 'Mutation Tracking (Project)', detail: 'Every function in the project that mutates shared state' },
       { command: 'tsStructure.promiseRejections', label: 'Promise Rejections', detail: 'Where this function’s rejections are handled or lost' },

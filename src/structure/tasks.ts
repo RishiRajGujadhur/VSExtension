@@ -5,6 +5,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Who uses it in this file only?', command: 'tsStructure.semanticUsagesInFile' },
   { question: 'Can this be null or undefined here, and why?', command: 'tsStructure.nullability', key: 'N' },
   { question: 'What does this function change besides its result?', command: 'tsStructure.sideEffects', key: 'E' },
+  { question: 'Which design patterns does this code use?', command: 'tsStructure.detectPatterns' },
   { question: 'Which functions in this file change shared state?', command: 'tsStructure.mutationTracking', key: 'M' },
   { question: 'Where do this async function’s errors end up?', command: 'tsStructure.promiseRejections', key: 'R' },
   { question: 'What can this function throw, and who catches it?', command: 'tsStructure.exceptionFlow', key: 'X' },

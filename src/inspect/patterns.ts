@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as ts from 'typescript';
+import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 
 /** A design pattern or architectural style recognized from the shape of the code, never guessed from names alone. */
 export interface DetectedPattern {
@@ -258,4 +259,34 @@ export function detectLayers(fileNames: readonly string[], root?: string): strin
 
 export function patternMeaning(name: string): string {
   return meanings[name] ?? '';
+}
+
+/** Detect Design Patterns: every pattern in the files, grouped by pattern, with what each means. */
+export function patternsReport(files: readonly ts.SourceFile[], root?: string): Report {
+  const builder = new ReportBuilder('patterns', 'Design patterns');
+  const byName = new Map<string, DetectedPattern[]>();
+  for (const file of files) {
+    for (const pattern of detectPatterns(file)) {
+      byName.set(pattern.name, [...(byName.get(pattern.name) ?? []), pattern]);
+    }
+  }
+  const relative = (f: string) => (root ? path.relative(root, f) : path.basename(f)).replace(/\\/g, '/');
+  const roots: ReportNode[] = [...byName]
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+    .map(([name, found]) => ({
+      label: name,
+      description: plural(found.length, 'place'),
+      tooltip: `**${name}**: ${meanings[name]}`,
+      icon: 'symbol-namespace',
+      expanded: byName.size <= 4,
+      children: found.map((p) => ({ label: p.evidence, description: `${relative(p.node.getSourceFile().fileName)}:${p.node.getSourceFile().getLineAndCharacterOfPosition(p.node.getStart()).line + 1}`, location: builder.at(p.node) })),
+    }));
+  const layered = detectLayers(files.map((f) => f.fileName), root);
+  if (layered.length >= 2) {
+    roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}`, icon: 'layers' });
+  }
+  if (roots.length === 0) {
+    builder.warnings.push(`No design patterns recognized in ${plural(files.length, 'file')}.`);
+  }
+  return builder.finish(roots, `${plural(roots.length, 'pattern')} in ${plural(files.length, 'file')}`);
 }

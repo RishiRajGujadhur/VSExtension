@@ -13,6 +13,7 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.inspectCode': 'checklist',
   'tsStructure.auditTypeAssertions': 'shield',
   'tsStructure.dataFlow': 'pulse',
+  'tsStructure.detectPatterns': 'library',
   'tsStructure.mutationTracking': 'diff-modified',
   'tsStructure.mutationTrackingProject': 'project',
   'tsStructure.sideEffects': 'zap',
@@ -49,6 +50,7 @@ export const rowCommandFeatures: Record<string, string> = {
 /** The icon of each report kind, for the history list and messages about a report. */
 export const reportIcons: Record<string, string> = {
   dataFlow: commandIcons['tsStructure.dataFlow'],
+  patterns: commandIcons['tsStructure.detectPatterns'],
   mutations: commandIcons['tsStructure.mutationTracking'],
   sideEffects: commandIcons['tsStructure.sideEffects'],
   nullability: commandIcons['tsStructure.nullability'],
