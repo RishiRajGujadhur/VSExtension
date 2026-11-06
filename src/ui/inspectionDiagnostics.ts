@@ -269,7 +269,16 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
           inspection,
         };
       });
-      const picked = await vscode.window.showQuickPick(items, { title: 'Configure Inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
+      // Inspections that report on their own first, then those that wait to be turned on.
+      type Row = (typeof items)[number] | vscode.QuickPickItem;
+      const grouped: Row[] = [
+        { label: 'On', kind: vscode.QuickPickItemKind.Separator },
+        ...items.filter((i) => !i.inspection.optIn),
+        { label: 'Off until turned on', kind: vscode.QuickPickItemKind.Separator },
+        ...items.filter((i) => i.inspection.optIn),
+      ];
+      const choice = await vscode.window.showQuickPick(grouped, { title: 'Configure Inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
+      const picked = choice && 'inspection' in choice ? choice : undefined;
       if (!picked) {
         return;
       }
