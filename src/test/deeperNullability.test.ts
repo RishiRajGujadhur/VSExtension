@@ -48,3 +48,7 @@ test('Nullability: regular expression matches', () => {
   assert.equal(reason('function f(s: string) { return /a/.exec(s); }'), 'null when the pattern does not match');
   assert.equal(reason('function f(s: string) { return s.match(/a/); }'), 'null when the pattern does not match');
 });
+
+test('Nullability: URL parameters, headers and form data', () => {
+  assert.equal(reason('function f(p: URLSearchParams) { return p.get("q"); }'), 'null when the parameter is missing');
+});
