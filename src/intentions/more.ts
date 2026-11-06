@@ -346,3 +346,11 @@ function removeParentheses(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'removeParentheses', title: 'Remove unnecessary parentheses', edits: [ctx.replace(paren, ctx.text(inner))] };
 }
 moreIntentions.push({ id: 'removeParentheses', title: 'Remove unnecessary parentheses', run: removeParentheses });
+
+function addParentheses(ctx: IntentionContext): IntentionAction | undefined {
+  const or = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.BarBarToken && [b.left, b.right].some((o) => ts.isBinaryExpression(o) && o.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken));
+  if (!or) return undefined;
+  const edits = [or.left, or.right].filter((o) => ts.isBinaryExpression(o) && o.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken).map((o) => ctx.replace(o, `(${ctx.text(o)})`));
+  return { id: 'addParentheses', title: "Add parentheses to clarify '&&' inside '||'", edits };
+}
+moreIntentions.push({ id: 'addParentheses', title: 'Add parentheses to mixed \'&&\' and \'||\'', run: addParentheses });

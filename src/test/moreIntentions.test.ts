@@ -110,3 +110,8 @@ test('Remove unnecessary parentheses', () => {
   assert.equal(apply('const z = (¦a?.b).c;', 'removeParentheses'), undefined);
   assert.equal(apply('const f = () => (¦{ a: 1 });', 'removeParentheses'), undefined);
 });
+
+test('Add parentheses to mixed \'&&\' and \'||\'', () => {
+  assert.equal(apply('const ok = a && b ¦|| c;', 'addParentheses'), 'const ok = (a && b) || c;');
+  assert.equal(apply('const ok = a ¦|| b;', 'addParentheses'), undefined);
+});
