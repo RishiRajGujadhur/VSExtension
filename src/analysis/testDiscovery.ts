@@ -17,9 +17,11 @@ export interface DiscoveredTestFile {
 }
 
 /** Frameworks whose default export is the test function, whatever it is named: `import t from 'ava'`. */
-const defaultExportsTest = new Set<Framework>(['node', 'ava']);
+const defaultExportsTest = new Set<Framework>(['node', 'ava', 'tape']);
 
 const testModules: Record<string, Framework> = {
+  'tape': 'tape',
+  'tap': 'tape',
   'ava': 'ava',
   'bun:test': 'bun',
   vitest: 'vitest',

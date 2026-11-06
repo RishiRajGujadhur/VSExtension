@@ -19,6 +19,8 @@ export function testCommand(framework: RunnableFramework, files: readonly string
   const exec = packageRunner(cwd);
   const run = (...args: string[]) => ({ command: exec.command, args: [...exec.prefix, ...args] });
   switch (framework) {
+    case 'tape':
+      return run(fs.existsSync(path.join(cwd, 'node_modules', 'tap')) ? 'tap' : 'tape', ...files);
     case 'ava':
       return run('ava', ...files);
     case 'bun':
@@ -48,6 +50,7 @@ export function detectFramework(packageDir: string | undefined): RunnableFramewo
     if (deps.jest || deps['ts-jest']) return 'jest';
     if (deps['@playwright/test']) return 'playwright';
     if (deps.mocha) return 'mocha';
+    if (deps.tape || deps.tap) return 'tape';
     if (deps.ava) return 'ava';
     if (deps['@types/bun'] || deps['bun-types']) return 'bun';
   } catch {

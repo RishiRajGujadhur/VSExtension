@@ -1,4 +1,4 @@
-export type Framework = 'vitest' | 'jest' | 'mocha' | 'playwright' | 'node' | 'ava' | 'bun' | 'unknown';
+export type Framework = 'vitest' | 'jest' | 'mocha' | 'playwright' | 'node' | 'tape' | 'ava' | 'bun' | 'unknown';
 
 /** confirmed: a resolved chain of references reaches the test body. possible: the chain relies on a conservative assumption. */
 export type Confidence = 'confirmed' | 'possible';
