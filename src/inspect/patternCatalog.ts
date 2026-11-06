@@ -200,3 +200,15 @@ catalog.push({
       return next && passes ? [{ node: cls, evidence: `${className(cls)} passes requests on to this.${next.name}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Composite',
+  meaning: 'A tree of objects where a group is treated like a single item: calls recurse into children.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const own = [className(cls), ...heritage(cls, ts.SyntaxKind.ImplementsKeyword)];
+      const children = fieldsOf(cls).find((f) => own.some((o) => f.type === `${o}[]` || f.type === `Array<${o}>`));
+      const recursive = children && methodsOf(cls).find((m) => text(m.body).includes(`this.${children.name}`) && text(m.body).includes(`.${nameOf(m)}(`));
+      return children && recursive ? [{ node: cls, evidence: `${className(cls)}.${nameOf(recursive)}() recurses into its ${children.name}`, subject: className(cls) }] : [];
+    }),
+});

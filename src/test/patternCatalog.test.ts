@@ -39,3 +39,7 @@ test('Event bus is recognized', () => {
 test('Chain of responsibility is recognized', () => {
   has('class Handler { constructor(private next?: Handler) {} handle(r: string): string { return this.next?.handle(r) ?? r; } }', 'Chain of responsibility');
 });
+
+test('Composite is recognized', () => {
+  has('class Item { children: Item[] = []; size(): number { return 1 + this.children.reduce((n, c) => n + c.size(), 0); } }', 'Composite');
+});
