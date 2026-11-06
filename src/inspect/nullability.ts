@@ -189,7 +189,7 @@ export class NullabilityExplorer {
     if (!fn) {
       const signature = this.checker.getResolvedSignature(call);
       const returns = signature ? typeText(this.checker, signature.getReturnType(), call) : this.typeOf(call);
-      return [this.leaf(`${nodeText(call.expression)}() returns ${returns}`, call, 'warning', 'declared outside the project')];
+      return [this.leaf(`${nodeText(call.expression)}() returns ${returns}`, call, 'warning', libraryReason(this.checker, call) ?? 'declared outside the project')];
     }
     return this.returnSources(fn, depth);
   }
@@ -427,6 +427,25 @@ function returnsReport(project: VirtualProject, fn: FunctionWithBody): Report {
 }
 
 /** Nullability Path Explorer for the expression at the cursor. */
+const libraryReasons: { receiver: string; method: string; reason: string }[] = [];
+
+/** The receiver of a method call in the terms of libraryReasons: Array for arrays, else the type's name. */
+function receiverNames(checker: ts.TypeChecker, receiver: ts.Expression): string[] {
+  const type = checker.getNonNullableType(checker.getTypeAtLocation(receiver));
+  const names = [checker.isArrayType(type) || checker.isTupleType(type) ? 'Array' : '', type.flags & ts.TypeFlags.StringLike ? 'String' : '', type.getSymbol()?.getName() ?? ''];
+  return names.filter(Boolean);
+}
+
+/** Why a library call can give null or undefined, such as Array.find when nothing matches. */
+export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): string | undefined {
+  if (!ts.isCallExpression(call) || !ts.isPropertyAccessExpression(call.expression)) return undefined;
+  const method = call.expression.name.text;
+  const names = receiverNames(checker, call.expression.expression);
+  return libraryReasons.find((r) => r.method === method && names.includes(r.receiver))?.reason;
+}
+
+libraryReasons.push({ receiver: 'Array', method: 'find', reason: 'undefined when nothing matches' });
+
 export function nullabilityReport(project: VirtualProject, fileName: string, offset: number): Report {
   const sourceFile = project.sourceFile(fileName);
   const identifier = identifierAt(sourceFile, offset, 'Place the cursor on a variable, property access or call.');
