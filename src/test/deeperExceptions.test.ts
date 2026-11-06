@@ -61,3 +61,7 @@ test('Exception flow: invalid CSS selectors', () => {
 test('Exception flow: full browser storage', () => {
   assert.deepEqual(raised('function f() { localStorage.setItem("k", "v"); }'), ['localStorage.setItem(): QuotaExceededError when storage is full']);
 });
+
+test('Exception flow: schema validation with Zod, Yup and others', () => {
+  assert.deepEqual(raised('declare class ZodType { parse(v: unknown): unknown } function f(s: ZodType, v: unknown) { return s.parse(v); }'), ['s.parse(): a validation error when the value does not match the schema']);
+});
