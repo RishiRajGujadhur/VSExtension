@@ -273,3 +273,8 @@ test('Intention: Sort imported names', () => {
 test('Intention: Convert \'a.b\' to \'a["b"]\'', () => {
   assert.equal(apply('const n = user.na¦me;', 'propertyToElementAccess'), "const n = user['name'];");
 });
+
+test('Intention: Convert \'a["b"]\' to \'a.b\'', () => {
+  assert.equal(apply("const n = user['na¦me'];", 'elementToPropertyAccess'), 'const n = user.name;');
+  assert.equal(apply("const n = user['first-¦name'];", 'elementToPropertyAccess'), undefined);
+});

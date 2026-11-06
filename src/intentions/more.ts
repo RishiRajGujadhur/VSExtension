@@ -702,3 +702,11 @@ function propertyToElementAccess(ctx: IntentionContext): IntentionAction | undef
   return { id: 'propertyToElementAccess', title: `Use ['${access.name.text}']`, edits: [ctx.replace(access, `${ctx.text(access.expression)}${access.questionDotToken ? '?.' : ''}['${access.name.text}']`)] };
 }
 moreIntentions.push({ id: 'propertyToElementAccess', title: 'Convert \'a.b\' to \'a["b"]\'', run: propertyToElementAccess });
+
+function elementToPropertyAccess(ctx: IntentionContext): IntentionAction | undefined {
+  const access = ctx.nearest(ts.isElementAccessExpression, (e) => (ts.isStringLiteral(e.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(e.argumentExpression)) && /^[A-Za-z_$][\w$]*$/.test(e.argumentExpression.text));
+  if (!access) return undefined;
+  const name = (access.argumentExpression as ts.StringLiteral).text;
+  return { id: 'elementToPropertyAccess', title: `Use .${name}`, edits: [ctx.replace(access, `${ctx.text(access.expression)}${access.questionDotToken ? '?.' : '.'}${name}`)] };
+}
+moreIntentions.push({ id: 'elementToPropertyAccess', title: 'Convert \'a["b"]\' to \'a.b\'', run: elementToPropertyAccess });
