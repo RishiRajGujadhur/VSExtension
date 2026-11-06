@@ -46,6 +46,18 @@ async function setFeature(id: string, enabled: boolean): Promise<void> {
   await config.update(id, enabled === inspected?.defaultValue ? undefined : enabled, target);
 }
 
+/** Where each feature's own settings are, for its gear button in Choose Features. */
+const featureSettings: Record<string, string> = {
+  testImpact: 'tsImpact.',
+  intentions: 'tsStructure.intentions',
+  inspections: 'tsStructure.inspections',
+  sideEffects: 'tsStructure.codeLens',
+  deadExports: 'tsStructure.deadExports',
+  duplicates: 'tsStructure.duplicates',
+  argumentFlow: 'tsStructure.argumentFlow',
+  refactorings: 'tsStructure.previewRefactorings',
+};
+
 /** A checklist of every feature; unticking one hides its commands, menus, lenses and lightbulb entries. */
 export async function configureFeatures(): Promise<void> {
   type Item = vscode.QuickPickItem & { feature?: Feature };
@@ -56,12 +68,31 @@ export async function configureFeatures(): Promise<void> {
     { label: 'More features (off by default)', kind: vscode.QuickPickItemKind.Separator },
     ...features.filter((f) => !enabledByDefault(f)).map(item),
   ];
-  const picked = await vscode.window.showQuickPick(items, {
-    title: 'TypeScript Structure Features',
-    placeHolder: 'Tick the features you want; the rest stay out of your menus',
-    canPickMany: true,
-    matchOnDetail: true,
+  // Title buttons tick everything or go back to the defaults; each feature's gear opens its settings.
+  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn All On' };
+  const defaults: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Back to Defaults' };
+  const settings: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('gear'), tooltip: 'Settings of This Feature' };
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = 'TypeScript Structure Features';
+  picker.placeholder = 'Tick the features you want; the rest stay out of your menus';
+  picker.canSelectMany = true;
+  picker.matchOnDetail = true;
+  picker.items = items.map((i) => (i.feature ? { ...i, buttons: [settings] } : i));
+  picker.selectedItems = picker.items.filter((i) => i.picked);
+  picker.buttons = [allOn, defaults];
+  picker.onDidTriggerButton((button) => {
+    picker.selectedItems = picker.items.filter((i) => i.feature && (button === allOn || enabledByDefault(i.feature)));
   });
+  picker.onDidTriggerItemButton((e) => {
+    picker.hide();
+    void vscode.commands.executeCommand('workbench.action.openSettings', featureSettings[e.item.feature!.id] ?? `tsStructure.features.${e.item.feature!.id}`);
+  });
+  const picked = await new Promise<readonly Item[] | undefined>((resolve) => {
+    picker.onDidAccept(() => resolve(picker.selectedItems));
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
   if (!picked) {
     return;
   }
