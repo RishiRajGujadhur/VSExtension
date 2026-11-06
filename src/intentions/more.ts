@@ -107,3 +107,22 @@ function ternaryToNullish(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'ternaryToNullish', title: "Replace '?:' with '??'", edits: [ctx.replace(t, `${ctx.text(unparen(subject))} ?? ${right}`)] };
 }
 moreIntentions.push({ id: 'ternaryToNullish', title: 'Replace \'?:\' with \'??\'', run: ternaryToNullish });
+
+function optionalChain(ctx: IntentionContext): IntentionAction | undefined {
+  const binary = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken);
+  if (!binary || !isSimple(binary.left)) return undefined;
+  const right = unparen(binary.right);
+  if (!(ts.isPropertyAccessExpression(right) || ts.isElementAccessExpression(right) || ts.isCallExpression(right))) return undefined;
+  const left = ctx.text(unparen(binary.left));
+  const rest = ctx.text(right);
+  const tail = rest.startsWith(`${left}.`) ? rest.slice(left.length + 1) : rest.startsWith(`${left}[`) ? rest.slice(left.length) : undefined;
+  if (tail === undefined) return undefined;
+  // Only where the result is used as a condition: `a && a.b` is `a` itself when `a` is falsy, `a?.b` is undefined.
+  let node: ts.Node = binary;
+  while (ts.isParenthesizedExpression(node.parent) || (ts.isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) || (ts.isPrefixUnaryExpression(node.parent) && node.parent.operator === ts.SyntaxKind.ExclamationToken)) node = node.parent;
+  const p = node.parent;
+  const condition = ((ts.isIfStatement(p) || ts.isWhileStatement(p) || ts.isDoStatement(p)) && p.expression === node) || (ts.isConditionalExpression(p) && p.condition === node) || (ts.isForStatement(p) && p.condition === node);
+  if (!condition) return undefined;
+  return { id: 'optionalChain', title: `Replace '${left} && …' with '${left}?.'`, edits: [ctx.replace(binary, `${left}?.${tail}`)] };
+}
+moreIntentions.push({ id: 'optionalChain', title: 'Replace \'&&\' check with \'?.\'', run: optionalChain });

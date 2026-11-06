@@ -19,3 +19,10 @@ test('Replace \'?:\' with \'??\'', () => {
   assert.equal(apply('const v = a != null ¦? b : 0;', 'ternaryToNullish'), undefined);
   assert.equal(apply('const v = f() != null ¦? f() : 0;', 'ternaryToNullish'), undefined);
 });
+
+test('Replace \'&&\' check with \'?.\'', () => {
+  assert.equal(apply('if (user ¦&& user.name) go();', 'optionalChain'), 'if (user?.name) go();');
+  assert.equal(apply('while (node ¦&& node.next()) step();', 'optionalChain'), 'while (node?.next()) step();');
+  assert.equal(apply('const n = user ¦&& user.name;', 'optionalChain'), undefined);
+  assert.equal(apply('if (user ¦&& user.age > 1) go();', 'optionalChain'), undefined);
+});
