@@ -10,3 +10,7 @@ const lacks = (code: string, name: string) => assert.ok(!names(code).includes(na
 test('Adapter is recognized', () => {
   has('interface Logger { log(m: string): void; warn(m: string): void } class ConsoleAdapter implements Logger { constructor(private readonly out: Console) {} log(m: string) { this.out.info(m); } warn(m: string) { this.out.error(m); } }', 'Adapter');
 });
+
+test('Facade is recognized', () => {
+  has('class Checkout { constructor(private cart: Cart, private payments: Payments, private mail: Mailer) {} placeOrder() { this.cart.lock(); this.payments.charge(); this.mail.send(); } }', 'Facade');
+});

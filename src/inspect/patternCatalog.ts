@@ -118,3 +118,14 @@ catalog.push({
       return adaptee ? [{ node: cls, evidence: `${className(cls)} adapts ${adaptee.type} to ${iface}`, subject: iface }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Facade',
+  meaning: 'One simple method coordinates several collaborators, hiding how they work together.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const collaborators = fieldsOf(cls).filter((f) => /^[A-Z]/.test(f.type));
+      const method = methodsOf(cls).find((m) => collaborators.filter((f) => text(m.body).includes(`this.${f.name}.`)).length >= 3);
+      return method ? [{ node: method, evidence: `${className(cls)}.${nameOf(method)}() coordinates ${collaborators.filter((f) => text(method.body).includes(`this.${f.name}.`)).map((f) => f.name).join(', ')}`, subject: className(cls) }] : [];
+    }),
+});
