@@ -413,3 +413,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'timerString',
+  title: 'String passed to a timer',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const arg = ts.isCallExpression(node) && /^(window\.|globalThis\.)?(setTimeout|setInterval)$/.test(node.expression.getText()) ? node.arguments[0] : undefined;
+      if (arg && (ts.isStringLiteral(arg) || ts.isTemplateExpression(arg) || ts.isNoSubstitutionTemplateLiteral(arg))) {
+        out.push(at(ctx.sourceFile, 'timerString', arg, 'A string here is run like eval; pass a function instead.', 'warning'));
+      }
+    });
+    return out;
+  },
+});

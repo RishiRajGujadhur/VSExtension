@@ -126,3 +126,7 @@ test('instanceof Array', () => {
 test('eval or new Function', () => {
   assert.equal(messages("eval('1'); const f = new Function('return 1');", 'evalUse').length, 2);
 });
+
+test('String passed to a timer', () => {
+  assert.equal(messages("setTimeout('tick()', 10);", 'timerString').length, 1);
+});
