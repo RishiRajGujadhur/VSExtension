@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
 import { AnalysisError } from '../analysis/types';
+import { DetectedPattern, detectLayers, detectPatterns, patternMeaning } from './patterns';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, nodeSnippet, plural } from '../structure/report';
 import {
@@ -214,10 +215,27 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     { label: 'Flows in', description: inflows.length ? `${plural(inflows.length, 'source')} of the value` : 'no values assigned', icon: 'arrow-circle-right', expanded: true, children: inflows },
     { label: 'Flows out', description: outflows.length ? `${plural(outflows.length, 'place')} the value goes` : 'the value stays here', icon: 'arrow-circle-left', expanded: true, children: outflows },
   );
+  // Types the value has: patterns about them count too, wherever they are declared.
+  const checker = project.program().getTypeChecker();
+  const typeDeclarations = steps.flatMap((s) => {
+    const symbol = checker.getTypeAtLocation(s.node).getSymbol();
+    return symbol?.declarations?.filter((d) => !d.getSourceFile().isDeclarationFile).map((d) => ({ name: symbol.getName(), file: d.getSourceFile() })) ?? [];
+  });
+  const patterns = patternsAlong(steps, typeDeclarations);
+  if (patterns.length > 0) {
+    roots.push({
+      label: 'Design patterns',
+      description: 'how the code this value passes through is organized',
+      icon: 'library',
+      expanded: true,
+      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined })),
+    });
+  }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;
+  const names = [...new Set(patterns.map((p) => p.name))];
   return builder.finish(
     roots,
-    `${plural(count(['write', 'update', 'declaration']), 'definition')}, ${plural(count(['mutation']), 'mutation')}, ${plural(count(['condition']), 'check')}, ${plural(count(['argument']), 'hand-off')}`,
+    `${plural(count(['write', 'update', 'declaration']), 'definition')}, ${plural(count(['mutation']), 'mutation')}, ${plural(count(['condition']), 'check')}, ${plural(count(['argument']), 'hand-off')}${names.length ? ` · ${names.join(', ')}` : ''}`,
   );
 }
 
@@ -459,4 +477,26 @@ function lineOf(node: ts.Node): number {
 
 function baseName(fileName: string): string {
   return fileName.replace(/^.*[\\/]/, '');
+}
+
+/**
+ * Design patterns the value passes through: those whose code contains one of its steps, or that sit
+ * inside a function where a step happens, plus layers when its files are in folders named after them.
+ */
+export function patternsAlong(steps: readonly { node: ts.Node }[], types: readonly { name: string; file: ts.SourceFile }[] = []): (Omit<DetectedPattern, 'node'> & { node?: ts.Node })[] {
+  const files = [...new Set(steps.map((s) => s.node.getSourceFile()))];
+  const typeNames = new Set(types.map((t) => t.name));
+  const typeFiles = [...new Set(types.map((t) => t.file))].filter((f) => !files.includes(f));
+  const inside = (inner: ts.Node, outer: ts.Node) => inner.getSourceFile() === outer.getSourceFile() && inner.getStart() >= outer.getStart() && inner.end <= outer.end;
+  const scopes = steps.map((s) => enclosingFunction(s.node)).filter((f): f is NonNullable<typeof f> => !!f);
+  const found: (Omit<DetectedPattern, 'node'> & { node?: ts.Node })[] = files
+    .flatMap(detectPatterns)
+    .filter((p) => steps.some((s) => inside(s.node, p.node)) || scopes.some((scope) => inside(p.node, scope)) || (!!p.subject && typeNames.has(p.subject)));
+  found.push(...typeFiles.flatMap(detectPatterns).filter((p) => !!p.subject && typeNames.has(p.subject)));
+  const layers = detectLayers(files.map((f) => f.fileName));
+  if (layers.length >= 2) {
+    found.push({ name: 'Layered architecture', evidence: `the value passes through ${layers.join(' → ')}`, meaning: patternMeaning('Layered architecture') });
+  }
+  // One row per pattern and place.
+  return found.filter((p, i) => found.findIndex((q) => q.name === p.name && q.node === p.node) === i);
 }
