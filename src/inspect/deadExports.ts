@@ -329,3 +329,5 @@ entryConventions.push({ pattern: /(\.(stories|story)\.[cm]?[jt]sx?$)|(\/\.storyb
 entryConventions.push({ pattern: /(^|\/)([\w-]+\.config|\.?(eslintrc|prettierrc|babelrc|commitlintrc|lintstagedrc))\.[cm]?[jt]s$/, what: 'tool config file' });
 
 entryConventions.push({ pattern: /\/app\/(routes\/[^]*|root|entry\.client|entry\.server)\.[cm]?[jt]sx?$/, what: 'route module' });
+
+entryConventions.push({ pattern: /(\/\+(page|layout|server|error)(\.server)?\.[cm]?[jt]s$)|(\/hooks\.(server|client)\.[cm]?[jt]s$)|(\/server\/(api|routes|middleware)\/[^]*\.[cm]?[jt]s$)|(\/src\/(pages|middleware)\/[^]*\.[cm]?[jt]s$)/, what: 'framework route' });

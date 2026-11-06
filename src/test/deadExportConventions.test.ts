@@ -29,3 +29,8 @@ test('Dead exports: Remix and React Router routes are entry points', () => {
   assert.equal(isConventionalEntry('/repo/app/routes/_index.tsx'), 'route module');
   assert.equal(isConventionalEntry('/repo/app/root.tsx'), 'route module');
 });
+
+test('Dead exports: SvelteKit, Nuxt and Astro conventions are entry points', () => {
+  assert.equal(isConventionalEntry('/repo/src/routes/+page.server.ts'), 'framework route');
+  assert.equal(isConventionalEntry('/repo/server/api/users.get.ts'), 'framework route');
+});
