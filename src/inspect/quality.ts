@@ -467,3 +467,24 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'caseFallthrough',
+  title: 'Case falls through',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const jumps = (s: ts.Statement | undefined): boolean => !!s && (ts.isReturnStatement(s) || ts.isThrowStatement(s) || ts.isBreakStatement(s) || ts.isContinueStatement(s) || (ts.isBlock(s) && jumps(s.statements[s.statements.length - 1])));
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isCaseBlock(node)) return;
+      node.clauses.forEach((clause, i) => {
+        const next = node.clauses[i + 1];
+        if (!next || clause.statements.length === 0 || jumps(clause.statements[clause.statements.length - 1])) return;
+        // `// falls through` before the next case says it is on purpose.
+        if (/falls?\s*through/i.test(ctx.sourceFile.text.slice(clause.statements[clause.statements.length - 1].end, next.getStart(ctx.sourceFile)))) return;
+        out.push(at(ctx.sourceFile, 'caseFallthrough', next, `The case before runs on into this one; add break, or a // falls through comment if it is meant to.`, 'warning'));
+      });
+    });
+    return out;
+  },
+});

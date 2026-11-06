@@ -139,3 +139,8 @@ test('Promise.resolve or reject in an async function', () => {
   assert.equal(fixed('async function f() { return Promise.resolve(1); }', 'promiseResolveInAsync'), 'async function f() { return 1; }');
   assert.equal(fixed('async function f(e: Error) { return Promise.reject(e); }', 'promiseResolveInAsync'), 'async function f(e: Error) { throw e; }');
 });
+
+test('Case falls through', () => {
+  assert.equal(messages('declare const k: number; switch (k) { case 1: f(); case 2: f(); break; } declare function f(): void;', 'caseFallthrough').length, 1);
+  assert.equal(messages('declare const k: number; switch (k) { case 1: f(); // falls through\n case 2: f(); } declare function f(): void;', 'caseFallthrough').length, 0);
+});
