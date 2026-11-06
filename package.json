@@ -1132,6 +1132,21 @@
           "command": "tsStructure.structuralSearchInFolder",
           "when": "config.tsStructure.features.structuralSearch && explorerResourceIsFolder",
           "group": "4_search@9"
+        },
+        {
+          "command": "tsStructure.detectPatterns",
+          "when": "config.tsStructure.features.dataFlow && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
+          "group": "7_modification@95"
+        },
+        {
+          "command": "tsStructure.mutationTrackingProject",
+          "when": "config.tsStructure.features.dataFlow && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
+          "group": "7_modification@96"
+        },
+        {
+          "command": "tsStructure.auditTypeAssertions",
+          "when": "config.tsStructure.features.inspections && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
+          "group": "7_modification@97"
         }
       ],
       "commandPalette": [

@@ -103,6 +103,23 @@ async function deadExports(t: AnalysisTarget, inside?: (fileName: string) => boo
   return deadExportReport(program, { entryPoints, testsAreEntryPoints: config.get('testFilesAreEntryPoints', true), isExcluded: excluded }, root);
 }
 
+/** The first TypeScript or JavaScript file among the picked files, or inside the picked folders. */
+async function firstSourceFile(uris: readonly vscode.Uri[]): Promise<vscode.Uri | undefined> {
+  for (const uri of uris) {
+    if ((await vscode.workspace.fs.stat(uri)).type !== vscode.FileType.Directory) {
+      if (/\.[cm]?[jt]sx?$/.test(uri.fsPath)) {
+        return uri;
+      }
+      continue;
+    }
+    const [found] = await vscode.workspace.findFiles(new vscode.RelativePattern(uri, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1);
+    if (found) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
 /** Opens a row's location and runs an analysis there, such as Find Usages of the symbol a row points at. */
 async function runAt(view: StructureView, node: ReportNode | undefined, command: string): Promise<unknown> {
   if (!node?.location) {
@@ -189,7 +206,25 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
 
   /** An analysis over many files that first asks where to look; re-running it keeps that scope. */
   const scopedCommand = (id: string, title: string, request: Omit<ScopeRequest, 'editor' | 'title'>, compute: (t: AnalysisTarget, scope: ChosenScope) => Report | Promise<Report | undefined> | undefined) =>
-    registerCommand(id, async (arg?: unknown) => {
+    registerCommand(id, async (arg?: unknown, selected?: vscode.Uri[]) => {
+      // From the Explorer: the folders and files picked there, without asking.
+      if (arg instanceof vscode.Uri) {
+        const uris = selected?.length ? selected : [arg];
+        const anchor = await firstSourceFile(uris);
+        if (!anchor) {
+          void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
+          return;
+        }
+        const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
+        const kinds = await Promise.all(uris.map(async (u) => (await vscode.workspace.fs.stat(u)).type === vscode.FileType.Directory));
+        const scope: ChosenScope = {
+          kind: 'folder',
+          label: uris.map((u) => vscode.workspace.asRelativePath(u)).join(', '),
+          spec: { folders: uris.filter((_, i) => kinds[i]).map((u) => u.fsPath), files: uris.filter((_, i) => !kinds[i]).map((u) => u.fsPath) },
+        };
+        const target: AnalysisTarget = { fileName: anchor.fsPath, offset: 0, end: 0, folder, project: () => projects.analysisProject(anchor.fsPath, folder) };
+        return runAnalysis(view, title, async () => inScope(await compute(target, scope), scope));
+      }
       const editor = sourceEditor();
       if (!editor) {
         return;
