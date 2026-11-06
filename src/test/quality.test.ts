@@ -55,3 +55,7 @@ test('Assignment in a condition', () => {
   assert.equal(fixed('let x = 0; if (x = 1) {}', 'assignmentInCondition'), 'let x = 0; if (x === 1) {}');
   assert.equal(messages('let m: unknown; while ((m = next())) {} declare function next(): unknown;', 'assignmentInCondition').length, 0);
 });
+
+test('Repeated condition in an if chain', () => {
+  assert.deepEqual(messages('declare const a: boolean; if (a) {} else if (!a) {} else if (a) {}', 'duplicateCondition'), ['Same condition as line 1: this branch never runs.']);
+});

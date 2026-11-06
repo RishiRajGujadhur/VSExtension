@@ -130,3 +130,25 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'duplicateCondition',
+  title: 'Repeated condition in an if chain',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isIfStatement(node) || (ts.isIfStatement(node.parent) && node.parent.elseStatement === node)) return;
+      const seen = new Map<string, number>();
+      for (let current: ts.Statement | undefined = node; current && ts.isIfStatement(current); current = current.elseStatement) {
+        const key = current.expression.getText().replace(/\s+/g, '');
+        if (seen.has(key)) {
+          out.push(at(ctx.sourceFile, 'duplicateCondition', current.expression, `Same condition as line ${seen.get(key)}: this branch never runs.`, 'warning'));
+        } else {
+          seen.set(key, ctx.sourceFile.getLineAndCharacterOfPosition(current.expression.getStart()).line + 1);
+        }
+      }
+    });
+    return out;
+  },
+});
