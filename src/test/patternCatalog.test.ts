@@ -134,3 +134,8 @@ test('Mixin is recognized', () => {
 test('Design patterns: recognize Abstract factory', () => {
   has('class LightTheme implements Ui { button() { return new LightButton(); } input() { return new LightInput(); } } class DarkTheme implements Ui { button() { return new DarkButton(); } input() { return new DarkInput(); } }', 'Abstract factory');
 });
+
+test('Design patterns: recognize Barrel module', () => {
+  has("export * from './cart';\nexport { total } from './pricing';", 'Barrel module');
+  lacks("export * from './cart';\nexport const x = 1;", 'Barrel module');
+});

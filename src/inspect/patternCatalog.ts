@@ -488,3 +488,12 @@ catalog.push({
     return [...byInterface].filter(([, classes]) => classes.length >= 2).map(([iface, classes]) => ({ node: classes[0], evidence: `${classes.map(className).join(', ')} each create a family of objects for ${iface}`, subject: iface }));
   },
 });
+
+catalog.push({
+  name: 'Barrel module',
+  meaning: 'A file that only re-exports other modules, so importers use one short path.',
+  detect: (sf) => {
+    const reexports = sf.statements.filter((s) => ts.isExportDeclaration(s) && !!s.moduleSpecifier);
+    return reexports.length >= 2 && reexports.length === sf.statements.filter((s) => !ts.isEmptyStatement(s)).length ? [{ node: sf.statements[0], evidence: `this file re-exports ${reexports.length} modules` }] : [];
+  },
+});
