@@ -139,3 +139,7 @@ test('Design patterns: recognize Barrel module', () => {
   has("export * from './cart';\nexport { total } from './pricing';", 'Barrel module');
   lacks("export * from './cart';\nexport const x = 1;", 'Barrel module');
 });
+
+test('Design patterns: recognize Result type', () => {
+  has('type Result<T> = { ok: true; value: T } | { ok: false; error: Error };', 'Result type');
+});

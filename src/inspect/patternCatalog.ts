@@ -497,3 +497,17 @@ catalog.push({
     return reexports.length >= 2 && reexports.length === sf.statements.filter((s) => !ts.isEmptyStatement(s)).length ? [{ node: sf.statements[0], evidence: `this file re-exports ${reexports.length} modules` }] : [];
   },
 });
+
+catalog.push({
+  name: 'Result type',
+  meaning: 'Success and failure are values of one union type, checked by a flag instead of thrown.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (!ts.isTypeAliasDeclaration(node) || !ts.isUnionTypeNode(node.type) || node.type.types.length < 2) return;
+      const flags = node.type.types.map((t) => (ts.isTypeLiteralNode(t) ? t.members.find((m) => ts.isPropertySignature(m) && /^(ok|success|isOk|isErr|kind|status)$/.test(nameOf(m) ?? '') && !!m.type && ts.isLiteralTypeNode(m.type)) : undefined));
+      if (flags.every(Boolean)) found.push({ node, evidence: `${node.name.text} is a union told apart by ${nameOf(flags[0])}`, subject: node.name.text });
+    });
+    return found;
+  },
+});
