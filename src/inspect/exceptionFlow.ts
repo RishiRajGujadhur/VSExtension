@@ -32,6 +32,9 @@ throwingCalls['new Intl.ListFormat'] = 'RangeError on an invalid locale or optio
 throwingCalls['new Intl.Segmenter'] = 'RangeError on an invalid locale or option';
 throwingCalls['new Intl.DisplayNames'] = 'RangeError on an invalid locale or option';
 
+throwingCalls['new Function'] = 'SyntaxError on invalid code';
+throwingCalls['eval'] = 'SyntaxError on invalid code, or whatever the code throws';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {

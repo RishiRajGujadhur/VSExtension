@@ -12,3 +12,7 @@ function raised(code: string): string[] {
 test('Exception flow: more Intl constructors', () => {
   assert.deepEqual(raised('function f() { return new Intl.PluralRules("en"); }'), ['new Intl.PluralRules(): RangeError on an invalid locale or option']);
 });
+
+test('Exception flow: new Function and eval', () => {
+  assert.deepEqual(raised('function f(s: string) { return new Function(s); }'), ['new Function(): SyntaxError on invalid code']);
+});
