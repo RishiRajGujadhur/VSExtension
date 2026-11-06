@@ -191,3 +191,7 @@ test('Intention: Replace \'.apply()\' with spread', () => {
   assert.equal(apply('obj.m.ap¦ply(obj, args);', 'applyToSpread'), 'obj.m(...args);');
   assert.equal(apply('obj.m.ap¦ply(null, args);', 'applyToSpread'), undefined);
 });
+
+test('Intention: Replace \'slice.call\' with \'Array.from\'', () => {
+  assert.equal(apply('const a = Array.prototype.slice.ca¦ll(arguments);', 'sliceCallToArrayFrom'), 'const a = Array.from(arguments);');
+});

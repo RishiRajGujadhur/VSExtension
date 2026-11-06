@@ -536,3 +536,9 @@ function applyToSpread(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'applyToSpread', title: 'Replace with spread arguments', edits: [ctx.replace(call, `${ctx.text(fn)}(...${ctx.text(call.arguments[1])})`)] };
 }
 moreIntentions.push({ id: 'applyToSpread', title: 'Replace \'.apply()\' with spread', run: applyToSpread });
+
+function sliceCallToArrayFrom(ctx: IntentionContext): IntentionAction | undefined {
+  const call = ctx.nearest(ts.isCallExpression, (c) => ['Array.prototype.slice.call', '[].slice.call'].includes(ctx.text(c.expression).replace(/\s/g, '')) && c.arguments.length === 1);
+  return call && { id: 'sliceCallToArrayFrom', title: "Replace with 'Array.from'", edits: [ctx.replace(call, `Array.from(${ctx.text(call.arguments[0])})`)] };
+}
+moreIntentions.push({ id: 'sliceCallToArrayFrom', title: 'Replace \'slice.call\' with \'Array.from\'', run: sliceCallToArrayFrom });
