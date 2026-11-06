@@ -102,10 +102,10 @@ test('mutation tracking selects the function around the cursor', () => {
   const file = path.join(fixtures, 'inspect/src/effects.ts');
   const program = virtualProject('inspect', 'src/effects.ts').program();
   const report = mutationReport(program, file, offsetIn(file, 'addItem(li|st, name)'));
-  const focused = report.roots[0].children!.filter((f) => f.focus);
+  const focused = byLabel(report, 'Functions that mutate state').filter((f) => f.focus);
   assert.deepEqual(focused.map((f) => f.label), ['track']);
   // Module state can be looked up by its usages from its row.
-  const cache = report.roots[1].children!.find((c) => c.label === 'cache');
+  const cache = byLabel(report, 'Shared state and who changes it').find((c) => c.label === 'cache');
   assert.equal(cache?.action?.command, 'tsStructure.semanticUsages');
 });
 
@@ -116,3 +116,8 @@ test('introduce parameter lists the names the new parameter must not reuse', () 
   const info = describeIntroduceParameter(virtualProject('introduce', 'src/pricing.ts'), pricing, start, start + '(1 + 0.2)'.length);
   assert.deepEqual(info.usedNames.sort(), ['base', 'qty', 'subtotal']);
 });
+
+/** The rows of a mutation report's group. */
+function byLabel(report: { roots: { label: string; children?: any[] }[] }, label: string): any[] {
+  return report.roots.find((r) => r.label === label)!.children!;
+}

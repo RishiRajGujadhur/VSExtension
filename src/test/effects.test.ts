@@ -59,7 +59,7 @@ test('mutation report groups writes by shared state', () => {
 
 test('mutation report says what kinds of state each function changes', () => {
   const program = virtualProject('inspect', 'src/effects.ts').program();
-  const functions = mutationReport(program, file).roots[0].children!;
+  const functions = byLabel(mutationReport(program, file), 'Functions that mutate state');
   const description = (name: string) => functions.find((f) => f.label.startsWith(name))?.description;
   assert.equal(description('track'), '3 mutations: arguments, module state');
   assert.equal(description('register'), '1 mutation: imported state');
@@ -73,10 +73,10 @@ test('mutation report can cover the whole project', () => {
   const files = program.getSourceFiles().filter((sf) => !sf.isDeclarationFile && sf.fileName.includes('test-fixtures'));
   const report = mutationReport(program, file, undefined, files);
   assert.equal(report.title, 'Mutations in the project');
-  const functions = report.roots[0].children!;
+  const functions = byLabel(report, 'Functions that mutate state');
   // Functions from other files are included and name their file.
   assert.ok(functions.some((f) => /^[a-z]+\.ts · /.test(f.description ?? '') && !f.description!.startsWith('effects.ts')), functions.map((f) => f.description).join(', '));
-  assert.ok(functions.length > mutationReport(program, file).roots[0].children!.length);
+  assert.ok(functions.length > byLabel(mutationReport(program, file), 'Functions that mutate state').length);
 });
 
 test('mutation report selects the state at the cursor', () => {
@@ -125,3 +125,8 @@ test('effects are also listed by the call that brings them in', () => {
     ['addItem() mutates arguments', 'remember() mutates module state'],
   );
 });
+
+/** The rows of a mutation report's group. */
+function byLabel(report: { roots: { label: string; children?: any[] }[] }, label: string): any[] {
+  return report.roots.find((r) => r.label === label)!.children!;
+}

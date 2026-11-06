@@ -631,7 +631,16 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
   if (cursorRow && ![...byState.values()].some((s) => atCursor && s.declaration === atCursor)) {
     cursorRow.expanded = cursorRow.focus = true;
   }
-  const roots: ReportNode[] = [];
+  // A first row that explains the term, for readers new to it.
+  const roots: ReportNode[] = [
+    {
+      label: 'What is a mutation?',
+      description: 'a change to state that outlives the call',
+      icon: 'info',
+      tooltip: 'Changing a module variable, an import, a global, a field of this or an argument. Click for more.',
+      action: { kind: 'explain' },
+    },
+  ];
   if (byFunction.length > 0) {
     roots.push({ label: 'Functions that mutate state', description: plural(byFunction.length, 'function'), icon: 'symbol-function', expanded: true, children: byFunction });
   }

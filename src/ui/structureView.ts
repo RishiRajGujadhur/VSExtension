@@ -383,6 +383,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     if (node.location) {
       item.command = { command: 'tsStructure.openLocation', title: 'Open', arguments: [node.location] };
+    } else if (node.action?.kind === 'explain') {
+      item.command = { command: 'tsStructure.report.about', title: 'About This Analysis' };
     }
     const done = this.done.get(rowKey(node));
     if (done) {
