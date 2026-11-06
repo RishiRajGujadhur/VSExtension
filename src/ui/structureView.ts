@@ -215,6 +215,14 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
   }
 
+  /** Escape in the view: back to every row, without the text filter, scope limit or hidden groups. */
+  clearFilters(): void {
+    this.filter = '';
+    this.limit = undefined;
+    this.hidden.clear();
+    this.render(true);
+  }
+
   /** Shows only the rows inside a scope, or all of them again without one. Kept when the report is re-run. */
   limitTo(limit: { label: string; inside: (location: ReportLocation) => boolean } | undefined): void {
     this.limit = limit;
@@ -284,6 +292,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     void vscode.commands.executeCommand('setContext', 'tsStructure.canGoForward', this.position < this.history.length - 1);
     void vscode.commands.executeCommand('setContext', 'tsStructure.filtered', !!this.filter);
     void vscode.commands.executeCommand('setContext', 'tsStructure.limited', !!this.limit);
+    void vscode.commands.executeCommand('setContext', 'tsStructure.narrowed', !!this.filter || !!this.limit || this.hidden.size > 0);
     void vscode.commands.executeCommand('setContext', 'tsStructure.reportKind', report?.kind);
     this.changed.fire();
     this.highlight();

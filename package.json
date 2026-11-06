@@ -582,6 +582,12 @@
         "title": "About This Analysis",
         "category": "TypeScript Structure",
         "icon": "$(info)"
+      },
+      {
+        "command": "tsStructure.report.clearFilters",
+        "title": "Show Every Row",
+        "category": "TypeScript Structure",
+        "icon": "$(clear-all)"
       }
     ],
     "viewsContainers": {
@@ -766,6 +772,23 @@
         "key": "ctrl+alt+s v",
         "mac": "cmd+ctrl+s v",
         "command": "tsStructure.report.focus"
+      },
+      {
+        "key": "escape",
+        "command": "tsStructure.report.clearFilters",
+        "when": "focusedView == tsStructure.report && tsStructure.hasReport && tsStructure.narrowed"
+      },
+      {
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "command": "tsStructure.report.copyRow",
+        "when": "focusedView == tsStructure.report && tsStructure.hasReport"
+      },
+      {
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "command": "tsStructure.report.copyLocation",
+        "when": "focusedView == tsStructure.report && tsStructure.hasReport"
       }
     ],
     "menus": {
@@ -1004,7 +1027,7 @@
         },
         {
           "command": "tsStructure.report.copyLocation",
-          "when": "false"
+          "when": "tsStructure.hasReport"
         },
         {
           "command": "tsStructure.report.back",
@@ -1244,7 +1267,7 @@
         },
         {
           "command": "tsStructure.report.copyRow",
-          "when": "false"
+          "when": "tsStructure.hasReport"
         },
         {
           "command": "tsStructure.report.history",
@@ -1321,6 +1344,10 @@
         {
           "command": "tsStructure.report.about",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.clearFilters",
+          "when": "tsStructure.narrowed"
         }
       ],
       "view/title": [

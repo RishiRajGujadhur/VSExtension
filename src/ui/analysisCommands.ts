@@ -223,6 +223,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
+    registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
     // The info button: what the report on screen shows and the words it uses, such as what a mutation is.
     registerCommand('tsStructure.report.about', async () => {
       const explanation = view.report && explanations[view.report.kind];
@@ -241,7 +242,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       void vscode.window.setStatusBarMessage(`Result highlights ${on ? 'on' : 'off'}`, 3000);
     }),
     registerCommand('tsStructure.report.copyRow', async (node: ReportNode, selected?: ReportNode[]) => {
-      const rows = selected?.length ? selected : node ? [node] : [];
+      // From a key there is no row argument: the rows selected in the view.
+      const rows = selected?.length ? selected : node ? [node] : [...view.view.selection];
       if (rows.length) {
         await vscode.env.clipboard.writeText(rows.map((r) => view.rowText(r)).join('\n'));
         void vscode.window.setStatusBarMessage(`Copied ${rows.length === 1 ? 'the row' : `${rows.length} rows`}`, 3000);
@@ -292,7 +294,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     }),
     registerCommand('tsStructure.report.openToSide', (node: ReportNode) => node?.location && view.open(node.location, true)),
-    registerCommand('tsStructure.report.copyLocation', async (node: ReportNode) => {
+    registerCommand('tsStructure.report.copyLocation', async (arg?: ReportNode) => {
+      const node = arg ?? view.view.selection[0];
       if (node?.location) {
         await vscode.env.clipboard.writeText(`${vscode.workspace.asRelativePath(node.location.file)}:${node.location.line + 1}:${node.location.character + 1}`);
       }
