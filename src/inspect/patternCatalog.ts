@@ -177,3 +177,14 @@ catalog.push({
       return state && delegating.length >= 2 ? [{ node: cls, evidence: `${className(cls)} delegates ${delegating.map((m) => `${nameOf(m)}()`).join(', ')} to its ${state.type}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Event bus',
+  meaning: 'Named events: listeners subscribe to an event name and every emit of that name reaches them.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const map = fieldsOf(cls).find((f) => /Map<\s*string/.test(f.type + f.init) || /Record<\s*string/.test(f.type));
+      const emits = map && methodsOf(cls).find((m) => text(m.body).includes(`this.${map.name}`) && /forEach\(|for \(const/.test(text(m.body)));
+      return map && emits ? [{ node: cls, evidence: `${className(cls)} keeps listeners per event name in ${map.name} and ${nameOf(emits)}() calls them`, subject: className(cls) }] : [];
+    }),
+});

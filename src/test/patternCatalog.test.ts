@@ -31,3 +31,7 @@ test('Template method is recognized', () => {
 test('State is recognized', () => {
   has('class Light { private state: LightState = new Off(); press() { this.state.press(this); } describe() { return this.state.name(); } }', 'State');
 });
+
+test('Event bus is recognized', () => {
+  has('class Bus { private handlers = new Map<string, Array<() => void>>(); on(e: string, h: () => void) { this.handlers.set(e, [...(this.handlers.get(e) ?? []), h]); } emit(e: string) { this.handlers.get(e)?.forEach((h) => h()); } }', 'Event bus');
+});
