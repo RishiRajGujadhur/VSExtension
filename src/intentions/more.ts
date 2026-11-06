@@ -218,3 +218,9 @@ function arrowToFunction(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'arrowToFunction', title: 'Convert to function declaration', edits: [ctx.replace(statement, text)] };
 }
 moreIntentions.push({ id: 'arrowToFunction', title: 'Convert arrow function to function declaration', run: arrowToFunction });
+
+function objectShorthand(ctx: IntentionContext): IntentionAction | undefined {
+  const property = ctx.nearest(ts.isPropertyAssignment, (p) => ts.isIdentifier(p.name) && ts.isIdentifier(p.initializer) && p.name.text === p.initializer.text);
+  return property && { id: 'objectShorthand', title: `Use shorthand '${ctx.text(property.name)}'`, edits: [ctx.replace(property, ctx.text(property.name))] };
+}
+moreIntentions.push({ id: 'objectShorthand', title: 'Use property shorthand', run: objectShorthand });

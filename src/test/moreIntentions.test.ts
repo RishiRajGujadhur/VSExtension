@@ -61,3 +61,8 @@ test('Convert arrow function to function declaration', () => {
   assert.equal(apply('c¦onst f = () => this.x;', 'arrowToFunction'), undefined);
   assert.equal(apply('c¦onst f: Handler = () => 1;', 'arrowToFunction'), undefined);
 });
+
+test('Use property shorthand', () => {
+  assert.equal(apply('const o = { a¦: a, b: 1 };', 'objectShorthand'), 'const o = { a, b: 1 };');
+  assert.equal(apply('const o = { a¦: b };', 'objectShorthand'), undefined);
+});
