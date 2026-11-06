@@ -702,6 +702,12 @@
         "title": "Find Import Cycles",
         "category": "TypeScript Structure",
         "icon": "$(sync)"
+      },
+      {
+        "command": "tsStructure.whoImports",
+        "title": "Who Imports This File",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-circle-up)"
       }
     ],
     "viewsContainers": {
@@ -1118,6 +1124,11 @@
           "command": "tsStructure.findImportCycles",
           "when": "config.tsStructure.features.dependencyPath",
           "group": "4_navigate@7"
+        },
+        {
+          "command": "tsStructure.whoImports",
+          "when": "config.tsStructure.features.dependencyPath",
+          "group": "4_navigate@6"
         }
       ],
       "explorer/context": [
@@ -1175,6 +1186,11 @@
           "command": "tsStructure.auditTypeAssertions",
           "when": "config.tsStructure.features.inspections && (explorerResourceIsFolder || resourceExtname =~ /^\\.[cm]?[jt]sx?$/)",
           "group": "7_modification@97"
+        },
+        {
+          "command": "tsStructure.whoImports",
+          "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
+          "group": "7_modification@91"
         }
       ],
       "commandPalette": [
@@ -1609,6 +1625,10 @@
         {
           "command": "tsStructure.findImportCycles",
           "when": "config.tsStructure.features.dependencyPath"
+        },
+        {
+          "command": "tsStructure.whoImports",
+          "when": "config.tsStructure.features.dependencyPath"
         }
       ],
       "view/title": [
@@ -1984,6 +2004,11 @@
           "command": "tsStructure.excludeFromAnalysis",
           "when": "resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "4_tsStructure@1"
+        },
+        {
+          "command": "tsStructure.whoImports",
+          "when": "config.tsStructure.features.dependencyPath && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "3_tsStructure@3"
         }
       ]
     },

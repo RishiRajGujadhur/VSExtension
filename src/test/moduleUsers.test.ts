@@ -22,3 +22,8 @@ test('Find Import Cycles: every group of modules that import each other', () => 
   assert.deepEqual(importCycles(graph('a>b', 'b>a?')), [], 'type-only imports do not make a cycle');
   assert.deepEqual(importCycles(graph('a>a')), [['a']]);
 });
+
+test('Who Imports This File: direct and indirect importers of a module', async () => {
+  const { dependents } = await import('../navigate/moduleUsers');
+  assert.deepEqual([...dependents(graph('a>b', 'b>c', 'd>c'), 'c')].sort(), [['a', 2], ['b', 1], ['d', 1]]);
+});

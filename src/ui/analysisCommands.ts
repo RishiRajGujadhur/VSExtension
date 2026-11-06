@@ -7,7 +7,7 @@ import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { patternMeaning, patternsReport } from '../inspect/patterns';
-import { cyclesReport } from '../navigate/moduleUsers';
+import { cyclesReport, dependentsReport } from '../navigate/moduleUsers';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { assertionAuditReport } from '../inspect/assertionAudit';
 import { nullabilityReport } from '../inspect/nullability';
@@ -447,6 +447,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     scopedCommand('tsStructure.detectPatterns', 'Detecting design patterns', { id: 'patterns', kinds: ['file', 'folder', 'pickFolder', 'open', 'changed', 'project'] }, (t, scope) => {
       const { files, note } = filesIn(t.project().program(), scope);
       return withNote(patternsReport(files, t.folder), note);
+    }),
+    registerCommand('tsStructure.whoImports', (uri?: vscode.Uri) => {
+      const file = uri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
+      if (!file) return;
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
+      return runAnalysis(view, `Finding importers of ${path.basename(file)}`, () => dependentsReport(projects.analysisProject(file, folder).program(), normalizePath(file), folder));
     }),
     registerCommand('tsStructure.findImportCycles', () => {
       const editor = sourceEditor();

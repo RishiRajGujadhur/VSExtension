@@ -31,6 +31,7 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.overrideImpact': 'type-hierarchy-sub',
   'tsStructure.dependencyPath': 'git-merge',
   'tsStructure.findImportCycles': 'sync',
+  'tsStructure.whoImports': 'arrow-circle-up',
   'tsStructure.dependencyGraphDiff': 'git-compare',
   'tsStructure.argumentFlow': 'call-incoming',
 };
@@ -66,6 +67,7 @@ export const reportIcons: Record<string, string> = {
   overrideImpact: commandIcons['tsStructure.overrideImpact'],
   dependencyPath: commandIcons['tsStructure.dependencyPath'],
   cycles: commandIcons['tsStructure.findImportCycles'],
+  dependents: commandIcons['tsStructure.whoImports'],
   graphDiff: commandIcons['tsStructure.dependencyGraphDiff'],
   argumentFlow: commandIcons['tsStructure.argumentFlow'],
   inspectCode: commandIcons['tsStructure.inspectCode'],

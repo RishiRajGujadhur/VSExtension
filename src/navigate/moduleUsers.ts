@@ -76,3 +76,46 @@ export function cyclesReport(program: ts.Program, root?: string): Report {
   if (roots.length === 0) builder.warnings.push('No modules import each other at run time.');
   return builder.finish(roots, `${plural(cycles.length, 'cycle')} in ${plural(graph.files.size, 'module')}`);
 }
+
+/** The modules that import `file`, by how many imports away they are: 1 imports it directly. */
+export function dependents(graph: ModuleGraph, file: string): Map<string, number> {
+  const importers = new Map<string, string[]>();
+  for (const [from, edges] of graph.edges) {
+    for (const e of edges) importers.set(e.to, [...(importers.get(e.to) ?? []), from]);
+  }
+  const distance = new Map<string, number>();
+  let frontier = [file];
+  for (let d = 1; frontier.length; d++) {
+    const next: string[] = [];
+    for (const f of frontier) {
+      for (const importer of importers.get(f) ?? []) {
+        if (importer !== file && !distance.has(importer)) {
+          distance.set(importer, d);
+          next.push(importer);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return distance;
+}
+
+/** Who Imports This File: the modules a change to the file can reach, nearest first. */
+export function dependentsReport(program: ts.Program, file: string, root?: string): Report {
+  const graph = programGraph(program);
+  const builder = new ReportBuilder('dependents', `Importers of ${path.basename(file)}`);
+  const distance = dependents(graph, file.replace(/\\/g, '/'));
+  const byDistance = new Map<number, string[]>();
+  for (const [f, d] of distance) byDistance.set(d, [...(byDistance.get(d) ?? []), f]);
+  const roots: ReportNode[] = [...byDistance]
+    .sort(([a], [b]) => a - b)
+    .map(([d, files]) => ({
+      label: d === 1 ? 'Import it directly' : `Through ${plural(d - 1, 'other module')}`,
+      description: plural(files.length, 'module'),
+      icon: d === 1 ? 'arrow-circle-up' : 'arrow-up',
+      expanded: d <= 2,
+      children: files.sort().map((f) => ({ label: path.basename(f), description: relative(path.dirname(f), root) || '.', icon: 'file-code', location: fileLocation(f) })),
+    }));
+  if (roots.length === 0) builder.warnings.push(`Nothing in the project imports ${path.basename(file)}.`);
+  return builder.finish(roots, `${plural(distance.size, 'module')} depend on it`);
+}

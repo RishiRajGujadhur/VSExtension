@@ -91,6 +91,11 @@ export const explanations: Record<string, Explanation> = {
     text: 'Modules that import each other, directly or through others. At run time one of them sees the other half-loaded, which causes undefined imports and order-dependent bugs. Type-only imports are erased and do not count.',
     anchor: 'types-modules-and-tests',
   },
+  dependents: {
+    title: 'Who imports this file',
+    text: 'Every module that imports the file, directly or through other modules, nearest first. These are the files a change to it can affect, and where to look for broken imports after a move or rename.',
+    anchor: 'types-modules-and-tests',
+  },
   graphDiff: {
     title: 'Dependency Graph Diff',
     text: 'How the import graph changed since a Git revision: new and removed import cycles, added, removed and changed imports, and modules whose number of importers changed most.',
