@@ -131,6 +131,8 @@ ioPackages.push({ pattern: /^(uuid|nanoid|cuid|@paralleldrive\/cuid2|ulid)$/, ki
 
 ioPackages.push({ pattern: /^crypto$/, kind: 'nondeterministic', note: 'produces random values', names: /^(random\w*|generateKey\w*)$/ });
 
+ioPackages.push({ pattern: /^(winston|pino|bunyan|loglevel|debug|consola|signale|log4js)$/, kind: 'io', note: 'writes logs' });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();

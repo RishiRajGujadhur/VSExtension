@@ -106,3 +106,7 @@ test('Side effects: opening windows and printing', () => {
 test('Side effects: performance marks read the clock', () => {
   assert.deepEqual(effects('function f() { performance.mark("a"); }'), ['nondeterministic: reads the current time']);
 });
+
+test('Side effects: logging libraries', () => {
+  assert.deepEqual(effects('import pino from "pino"; function f() { return pino(); }'), ['io: writes logs']);
+});
