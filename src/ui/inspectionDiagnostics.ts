@@ -264,7 +264,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const setting = overrides[inspection.id] ?? 'default';
         return {
           label: inspection.title,
-          description: setting === 'default' ? inspection.defaultSeverity : setting === 'off' ? 'off' : `${setting} (default ${inspection.defaultSeverity})`,
+          description: setting === 'default' ? (inspection.optIn ? 'off until turned on' : inspection.defaultSeverity) : setting === 'off' ? 'off' : `${setting} (default ${inspection.optIn ? 'off' : inspection.defaultSeverity})`,
           detail: inspection.id,
           inspection,
         };

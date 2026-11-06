@@ -47,6 +47,8 @@ export interface Inspection {
   id: string;
   title: string;
   defaultSeverity: Severity;
+  /** Off until turned on in Configure Inspections, for checks that are a matter of style. */
+  optIn?: boolean;
   run(context: InspectionContext): Finding[];
 }
 
@@ -72,7 +74,7 @@ export function runInspections(
   const findings: Finding[] = [];
   for (const inspection of inspections) {
     const severity = severityOf(inspection);
-    if (severity === 'off' || matches(ignoredInFile, inspection.id)) {
+    if (severity === 'off' || (severity === 'default' && inspection.optIn) || matches(ignoredInFile, inspection.id)) {
       continue;
     }
     for (const finding of inspection.run(context)) {
