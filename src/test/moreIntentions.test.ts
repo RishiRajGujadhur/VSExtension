@@ -283,3 +283,8 @@ test('Intention: Replace \'!== null && !== undefined\' with \'!= null\'', () => 
   assert.equal(apply('if (x !== null ¦&& x !== undefined) {}', 'nullCheckJoin'), 'if (x != null) {}');
   assert.equal(apply('if (x === undefined ¦|| x === null) {}', 'nullCheckJoin'), 'if (x == null) {}');
 });
+
+test('Intention: Replace \'!= null\' with explicit checks', () => {
+  assert.equal(apply('if (x ¦!= null) {}', 'nullCheckExpand'), 'if (x !== null && x !== undefined) {}');
+  assert.equal(apply('const ok = !(x ¦== null);', 'nullCheckExpand'), 'const ok = !(x === null || x === undefined);');
+});

@@ -728,3 +728,13 @@ function nullCheckJoin(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'nullCheckJoin', title: `Replace with '${and ? '!=' : '=='} null'`, edits: [ctx.replace(binary, wrap(`${l.subject} ${and ? '!=' : '=='} null`, requiredPrecedence(binary)))] };
 }
 moreIntentions.push({ id: 'nullCheckJoin', title: 'Replace \'!== null && !== undefined\' with \'!= null\'', run: nullCheckJoin });
+
+function nullCheckExpand(ctx: IntentionContext): IntentionAction | undefined {
+  const binary = ctx.nearest(ts.isBinaryExpression, (b) => (b.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsToken || b.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken) && unparen(b.right).kind === ts.SyntaxKind.NullKeyword && isSimple(b.left));
+  if (!binary) return undefined;
+  const s = ctx.text(unparen(binary.left));
+  const negative = binary.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsToken;
+  const text = negative ? `${s} !== null && ${s} !== undefined` : `${s} === null || ${s} === undefined`;
+  return { id: 'nullCheckExpand', title: negative ? "Replace with '!== null && !== undefined'" : "Replace with '=== null || === undefined'", edits: [ctx.replace(binary, wrap(text, requiredPrecedence(binary)))] };
+}
+moreIntentions.push({ id: 'nullCheckExpand', title: 'Replace \'!= null\' with explicit checks', run: nullCheckExpand });
