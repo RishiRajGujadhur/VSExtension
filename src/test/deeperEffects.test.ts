@@ -20,3 +20,7 @@ test('Side effects: notifications', () => {
 test('Side effects: Cache Storage and cookies', () => {
   assert.deepEqual(effects('async function f() { await caches.open("v1"); }'), ['io: uses the Cache Storage']);
 });
+
+test('Side effects: web workers', () => {
+  assert.deepEqual(effects('function f() { return new Worker("w.js"); }'), ['io: starts a background worker']);
+});

@@ -73,6 +73,8 @@ const effectfulGlobals: Record<string, { kind: EffectKind; note: string }> = {
   Notification: { kind: 'io', note: 'shows a system notification' },
   caches: { kind: 'io', note: 'uses the Cache Storage' },
   cookieStore: { kind: 'io', note: 'uses cookies' },
+  Worker: { kind: 'io', note: 'starts a background worker' },
+  SharedWorker: { kind: 'io', note: 'connects to a shared worker' },
   document: { kind: 'global', note: 'uses the DOM' },
   window: { kind: 'global', note: 'uses the window object' },
   globalThis: { kind: 'global', note: 'uses the global object' },
