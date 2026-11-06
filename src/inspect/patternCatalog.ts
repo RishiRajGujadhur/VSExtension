@@ -188,3 +188,15 @@ catalog.push({
       return map && emits ? [{ node: cls, evidence: `${className(cls)} keeps listeners per event name in ${map.name} and ${nameOf(emits)}() calls them`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Chain of responsibility',
+  meaning: 'A request is passed along a chain of handlers until one of them deals with it.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const own = [className(cls), ...heritage(cls, ts.SyntaxKind.ImplementsKeyword)];
+      const next = fieldsOf(cls).find((f) => own.includes(f.type.replace(/\s*\|\s*(undefined|null)/g, '')));
+      const passes = next && methodsOf(cls).some((m) => new RegExp(`this\\.${next.name}\\??\\.`).test(text(m.body)));
+      return next && passes ? [{ node: cls, evidence: `${className(cls)} passes requests on to this.${next.name}`, subject: className(cls) }] : [];
+    }),
+});

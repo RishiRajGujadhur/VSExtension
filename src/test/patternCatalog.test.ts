@@ -35,3 +35,7 @@ test('State is recognized', () => {
 test('Event bus is recognized', () => {
   has('class Bus { private handlers = new Map<string, Array<() => void>>(); on(e: string, h: () => void) { this.handlers.set(e, [...(this.handlers.get(e) ?? []), h]); } emit(e: string) { this.handlers.get(e)?.forEach((h) => h()); } }', 'Event bus');
 });
+
+test('Chain of responsibility is recognized', () => {
+  has('class Handler { constructor(private next?: Handler) {} handle(r: string): string { return this.next?.handle(r) ?? r; } }', 'Chain of responsibility');
+});
