@@ -38,6 +38,10 @@ throwingCalls['eval'] = 'SyntaxError on invalid code, or whatever the code throw
 throwingCalls['new WebSocket'] = 'SyntaxError on an invalid URL';
 throwingCalls['new Worker'] = 'SyntaxError on an invalid script URL';
 
+throwingCalls['new ArrayBuffer'] = 'RangeError on an invalid length';
+throwingCalls['new SharedArrayBuffer'] = 'RangeError on an invalid length';
+throwingCalls['Buffer.alloc'] = 'RangeError on an invalid size';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {

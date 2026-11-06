@@ -20,3 +20,7 @@ test('Exception flow: new Function and eval', () => {
 test('Exception flow: new WebSocket and new Worker', () => {
   assert.deepEqual(raised('function f(u: string) { return new WebSocket(u); }'), ['new WebSocket(): SyntaxError on an invalid URL']);
 });
+
+test('Exception flow: buffers with invalid sizes', () => {
+  assert.deepEqual(raised('function f(n: number) { return new ArrayBuffer(n); }'), ['new ArrayBuffer(): RangeError on an invalid length']);
+});
