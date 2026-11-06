@@ -572,3 +572,13 @@ function jsxExpand(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'jsxExpand', title: 'Add closing tag', edits: [ctx.replace(element, `${text.slice(0, -2).trimEnd()}></${ctx.text(element.tagName)}>`)] };
 }
 moreIntentions.push({ id: 'jsxExpand', title: 'Expand self-closing JSX element', run: jsxExpand });
+
+function jsxAttributeUnbrace(ctx: IntentionContext): IntentionAction | undefined {
+  const attribute = ctx.nearest(ts.isJsxAttribute, (a) => !!a.initializer && ts.isJsxExpression(a.initializer) && !!a.initializer.expression && ts.isStringLiteral(a.initializer.expression));
+  const literal = attribute && ((attribute.initializer as ts.JsxExpression).expression as ts.StringLiteral);
+  // JSX strings have no escapes, so the value must be written as is.
+  if (!attribute || !literal || ctx.text(literal).includes('\\') || /\n/.test(literal.text)) return undefined;
+  const q = !literal.text.includes('"') ? '"' : !literal.text.includes("'") ? "'" : undefined;
+  return q && { id: 'jsxAttributeUnbrace', title: 'Remove braces', edits: [ctx.replace(attribute.initializer!, `${q}${literal.text}${q}`)] };
+}
+moreIntentions.push({ id: 'jsxAttributeUnbrace', title: 'Remove braces around a JSX string', run: jsxAttributeUnbrace });
