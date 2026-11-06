@@ -483,6 +483,16 @@ const mutatedThing: Partial<Record<EffectKind, string>> = {
   'writes-global': 'globals',
 };
 
+/** What each kind of mutation means, for the hover of a function's row. */
+const mutationHelp: Partial<Record<EffectKind, string>> = {
+  'mutates-parameter': '**Arguments**: changes an object a caller passed in, so the caller sees the change.',
+  'mutates-this': '**The instance**: changes a field of this, which every user of the object sees.',
+  'mutates-module': '**Module state**: changes a variable at the top of its module, shared by every function there.',
+  'mutates-import': '**Imported state**: changes an object another module exports, so every importer sees it.',
+  'mutates-captured': '**Captured variables**: changes a variable of an enclosing function from a closure.',
+  'writes-global': '**Globals**: writes to window, globalThis or another global, visible to all code.',
+};
+
 function effectNode(effect: Effect, builder: ReportBuilder): ReportNode {
   const chain = effectChain(effect);
   const origin = chain[chain.length - 1];
@@ -603,6 +613,7 @@ export function mutationReport(program: ts.Program, fileName: string, offset?: n
         .filter(Boolean)
         .join(' · '),
       icon: 'symbol-function',
+      tooltip: [...new Set(mutations.map((e) => mutationHelp[e.kind]).filter(Boolean))].join('\n\n'),
       location: builder.at(functionNameOrSelf(fn)),
       action: { kind: 'showSideEffects', command: 'tsStructure.sideEffects', file: fn.getSourceFile().fileName, offset: functionNameOrSelf(fn).getStart() },
       children: mutations.map((e) => effectNode(e, builder)),

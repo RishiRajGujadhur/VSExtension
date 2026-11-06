@@ -278,6 +278,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
       description: plural(found.length, 'place'),
       tooltip: `**${name}**: ${meanings[name]}`,
       icon: 'symbol-namespace',
+      action: { kind: 'explainPattern', name },
       expanded: byName.size <= 4,
       children: found.map((p) => ({ label: p.evidence, description: `${relative(p.node.getSourceFile().fileName)}:${p.node.getSourceFile().getLineAndCharacterOfPosition(p.node.getStart()).line + 1}`, location: builder.at(p.node) })),
     }));

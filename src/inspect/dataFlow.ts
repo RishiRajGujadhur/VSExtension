@@ -228,7 +228,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       description: 'how the code this value passes through is organized',
       icon: 'library',
       expanded: true,
-      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined })),
+      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } })),
     });
   }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;

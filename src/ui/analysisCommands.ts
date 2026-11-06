@@ -6,7 +6,7 @@ import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
-import { patternsReport } from '../inspect/patterns';
+import { patternMeaning, patternsReport } from '../inspect/patterns';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { assertionAuditReport } from '../inspect/assertionAudit';
 import { nullabilityReport } from '../inspect/nullability';
@@ -244,6 +244,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return editor && analyzeSymbol(editor);
     }),
     registerCommand('tsStructure.report.rerunOutdated', () => view.rerun()),
+    registerCommand('tsStructure.report.explainPattern', async (node: ReportNode) => {
+      const name = String(node?.action?.name ?? '');
+      if (name) {
+        await vscode.window.showInformationMessage(name, { modal: true, detail: `${patternMeaning(name)}\n\nIn this code: ${node.description ?? node.label}` });
+      }
+    }),
     registerCommand('tsStructure.report.openFiles', async () => {
       // Opening dozens of tabs helps nobody: the first ten, with a note about the rest.
       const files = view.files();

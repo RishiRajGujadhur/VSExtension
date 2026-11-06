@@ -673,6 +673,12 @@
         "title": "Detect Design Patterns…",
         "category": "TypeScript Structure",
         "icon": "$(library)"
+      },
+      {
+        "command": "tsStructure.report.explainPattern",
+        "title": "What Does This Pattern Mean?",
+        "category": "TypeScript Structure",
+        "icon": "$(question)"
       }
     ],
     "viewsContainers": {
@@ -1540,6 +1546,10 @@
         {
           "command": "tsStructure.detectPatterns",
           "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.report.explainPattern",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -1854,6 +1864,11 @@
           "command": "tsStructure.report.copyCode",
           "when": "view == tsStructure.report && viewItem =~ /location/",
           "group": "9_cutcopypaste@2"
+        },
+        {
+          "command": "tsStructure.report.explainPattern",
+          "when": "view == tsStructure.report && viewItem =~ /action:explainPattern/",
+          "group": "inline@1"
         }
       ],
       "scm/title": [
@@ -1916,7 +1931,7 @@
     "viewsWelcome": [
       {
         "view": "tsStructure.report",
-        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[Find Usages](command:tsStructure.semanticUsages)\n[Data Flow](command:tsStructure.dataFlow)\n[Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNew here? [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
+        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[Find Usages](command:tsStructure.semanticUsages)\n[Data Flow](command:tsStructure.dataFlow)\n[Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNot sure where to start? [How Do I…?](command:tsStructure.howDoI), [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
       },
       {
         "view": "tsImpact.results",
@@ -2494,6 +2509,19 @@
             },
             "completionEvents": [
               "onCommand:tsStructure.actionsAtCursor"
+            ]
+          },
+          {
+            "id": "keyboard",
+            "title": "Everything from the keyboard",
+            "description": "Every analysis has a shortcut: Ctrl+Alt+S (Cmd+Ctrl+S on macOS), then a letter, such as D for Data Flow or U for Find Usages. Not sure which analysis answers your question? Ask How Do I…?\n[Show the Shortcuts](command:tsStructure.shortcutSheet)\n[How Do I…?](command:tsStructure.howDoI)",
+            "media": {
+              "image": "media/walkthrough/actions-at-cursor.png",
+              "altText": "The analyses with their shortcuts"
+            },
+            "completionEvents": [
+              "onCommand:tsStructure.shortcutSheet",
+              "onCommand:tsStructure.howDoI"
             ]
           },
           {
