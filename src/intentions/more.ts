@@ -380,3 +380,14 @@ function booleanReturn(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'booleanReturn', title: `Replace with 'return ${whenTrue ? '' : '!'}…'`, edits: [{ start: statement.getStart(ctx.sourceFile), end, text: `return ${value};` }] };
 }
 moreIntentions.push({ id: 'booleanReturn', title: 'Replace \'if\' returning true/false with \'return\'', run: booleanReturn });
+
+function ternaryBoolean(ctx: IntentionContext): IntentionAction | undefined {
+  const t = ctx.nearest(ts.isConditionalExpression);
+  if (!t) return undefined;
+  const value = (e: ts.Expression) => (unparen(e).kind === ts.SyntaxKind.TrueKeyword ? true : unparen(e).kind === ts.SyntaxKind.FalseKeyword ? false : undefined);
+  const [a, b] = [value(t.whenTrue), value(t.whenFalse)];
+  if (a === undefined || b === undefined || a === b) return undefined;
+  const result = a ? (isBooleanish(t.condition) ? ctx.text(unparen(t.condition)) : `!!${wrap(ctx.text(t.condition), 15)}`) : negate(t.condition, ctx.sourceFile);
+  return { id: 'ternaryBoolean', title: 'Simplify boolean ?:', edits: [ctx.replace(t, wrap(result, requiredPrecedence(t)))] };
+}
+moreIntentions.push({ id: 'ternaryBoolean', title: 'Replace \'c ? true : false\' with \'c\'', run: ternaryBoolean });

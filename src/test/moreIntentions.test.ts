@@ -121,3 +121,9 @@ test('Replace \'if\' returning true/false with \'return\'', () => {
   assert.equal(apply('function f(a) { i¦f (a) return false; return true; }', 'booleanReturn'), 'function f(a) { return !a; }');
   assert.equal(apply('function f(a) { i¦f (a) return true; return false; }', 'booleanReturn'), 'function f(a) { return !!a; }');
 });
+
+test('Replace \'c ? true : false\' with \'c\'', () => {
+  assert.equal(apply('const b = x > 1 ¦? true : false;', 'ternaryBoolean'), 'const b = x > 1;');
+  assert.equal(apply('const b = x ¦? false : true;', 'ternaryBoolean'), 'const b = !x;');
+  assert.equal(apply('const b = x ¦? true : false;', 'ternaryBoolean'), 'const b = !!x;');
+});
