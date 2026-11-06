@@ -113,3 +113,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'assignmentInCondition',
+  title: 'Assignment in a condition',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const condition = ts.isIfStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node) ? node.expression : ts.isConditionalExpression(node) ? node.condition : undefined;
+      // A parenthesized assignment, `while ((m = re.exec(s)))`, is the usual way to say it is on purpose.
+      if (condition && ts.isBinaryExpression(condition) && condition.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        out.push(at(ctx.sourceFile, 'assignmentInCondition', condition, `This assigns ${condition.left.getText()} instead of comparing it.`, 'warning', [{ title: "Compare with '==='", edits: [replace(ctx.sourceFile, condition.operatorToken, '===')], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

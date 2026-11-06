@@ -50,3 +50,8 @@ test('Empty catch block', () => {
   assert.equal(messages('try { f(); } catch {} declare function f(): void;', 'emptyCatch').length, 1);
   assert.equal(messages('try { f(); } catch { /* ignored */ } declare function f(): void;', 'emptyCatch').length, 0);
 });
+
+test('Assignment in a condition', () => {
+  assert.equal(fixed('let x = 0; if (x = 1) {}', 'assignmentInCondition'), 'let x = 0; if (x === 1) {}');
+  assert.equal(messages('let m: unknown; while ((m = next())) {} declare function next(): unknown;', 'assignmentInCondition').length, 0);
+});
