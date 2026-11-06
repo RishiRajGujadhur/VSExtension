@@ -407,3 +407,31 @@ function joinDeclaration(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'joinDeclaration', title: 'Join declaration and assignment', edits: [{ start: statement.getStart(ctx.sourceFile), end: next!.end, text: `${exported}${keyword} ${name}${type} = ${ctx.text(assignment.right)};` }] };
 }
 moreIntentions.push({ id: 'joinDeclaration', title: 'Join declaration and assignment', run: joinDeclaration });
+
+function equalityChainToIncludes(ctx: IntentionContext): IntentionAction | undefined {
+  let top = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.BarBarToken);
+  while (top && ts.isBinaryExpression(top.parent) && top.parent.operatorToken.kind === ts.SyntaxKind.BarBarToken) top = top.parent;
+  if (!top) return undefined;
+  const operands: ts.Expression[] = [];
+  const flatten = (e: ts.Expression): void => {
+    const u = unparen(e);
+    if (ts.isBinaryExpression(u) && u.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
+      flatten(u.left);
+      flatten(u.right);
+    } else operands.push(u);
+  };
+  flatten(top);
+  const isLiteral = (e: ts.Expression) => ts.isStringLiteral(e) || ts.isNumericLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e);
+  let subject: string | undefined;
+  const values: string[] = [];
+  for (const o of operands) {
+    if (!ts.isBinaryExpression(o) || o.operatorToken.kind !== ts.SyntaxKind.EqualsEqualsEqualsToken) return undefined;
+    const [s, v] = isLiteral(o.right) && isSimple(o.left) ? [o.left, o.right] : isLiteral(o.left) && isSimple(o.right) ? [o.right, o.left] : [];
+    if (!s || !v || (subject !== undefined && ctx.text(unparen(s)) !== subject)) return undefined;
+    subject = ctx.text(unparen(s));
+    values.push(ctx.text(v));
+  }
+  if (operands.length < 2) return undefined;
+  return { id: 'equalityChainToIncludes', title: "Replace '===' chain with 'includes'", edits: [ctx.replace(top, `[${values.join(', ')}].includes(${subject})`)] };
+}
+moreIntentions.push({ id: 'equalityChainToIncludes', title: 'Replace \'===\' chain with \'includes\'', run: equalityChainToIncludes });

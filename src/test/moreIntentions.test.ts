@@ -133,3 +133,9 @@ test('Join declaration and assignment', () => {
   assert.equal(apply(lines('l¦et x: number;', 'x = 1;'), 'joinDeclaration'), 'let x: number = 1;');
   assert.equal(apply(lines('l¦et x;', 'y = 1;'), 'joinDeclaration'), undefined);
 });
+
+test('Replace \'===\' chain with \'includes\'', () => {
+  assert.equal(apply("if (k === 'a' ¦|| k === 'b' || k === 'c') {}", 'equalityChainToIncludes'), "if (['a', 'b', 'c'].includes(k)) {}");
+  assert.equal(apply("if (k === 'a' ¦|| j === 'b') {}", 'equalityChainToIncludes'), undefined);
+  assert.equal(apply("if (k == 'a' ¦|| k == 'b') {}", 'equalityChainToIncludes'), undefined);
+});
