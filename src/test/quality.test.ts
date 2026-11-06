@@ -269,3 +269,8 @@ test('Inspection: Number literal beyond safe precision', () => {
   assert.equal(messages('const id = 9007199254740993;', 'unsafeNumberLiteral').length, 1);
   assert.equal(messages('const id = 9007199254740991;', 'unsafeNumberLiteral').length, 0);
 });
+
+test('Inspection: await on a value that is not a promise', () => {
+  assert.equal(fixed('async function f(n: number) { return await n; }', 'awaitNonPromise'), 'async function f(n: number) { return n; }');
+  assert.equal(messages('async function f(p: Promise<number>) { return await p; }', 'awaitNonPromise').length, 0);
+});

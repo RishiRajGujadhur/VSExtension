@@ -987,3 +987,24 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'awaitNonPromise',
+  title: 'await on a value that is not a promise',
+  defaultSeverity: 'hint',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isAwaitExpression(node)) return;
+      const type = ctx.checker.getTypeAtLocation(node.expression);
+      if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.TypeParameter)) return;
+      const parts = type.isUnion() ? type.types : [type];
+      const thenable = parts.some((t) => !!t.getProperty('then') || !!(t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.TypeParameter | ts.TypeFlags.Object) && t.getSymbol()?.getName() === 'Promise'));
+      if (!thenable) {
+        const keyword = node.getFirstToken(ctx.sourceFile)!;
+        out.push(at(ctx.sourceFile, 'awaitNonPromise', keyword, `${node.expression.getText()} is not a promise, so await only delays the code.`, 'hint', [{ title: "Remove 'await'", edits: [{ start: keyword.getStart(ctx.sourceFile), end: node.expression.getStart(ctx.sourceFile), text: '' }] }]));
+      }
+    });
+    return out;
+  },
+});
