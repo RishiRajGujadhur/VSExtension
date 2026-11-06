@@ -544,3 +544,19 @@ catalog.push({
         .map((d) => ({ node: d, evidence: `${nameOf(d)} is one shared ${text((d.initializer as ts.NewExpression).expression)} for every importer`, subject: text((d.initializer as ts.NewExpression).expression) }));
     }),
 });
+
+catalog.push({
+  name: 'Strategy map',
+  meaning: 'An object maps keys to functions and the code picks one at run time, instead of a long if or switch.',
+  detect: (sf) =>
+    sf.statements.flatMap((s) => {
+      if (!ts.isVariableStatement(s)) return [];
+      return s.declarationList.declarations.flatMap((d) => {
+        const name = nameOf(d);
+        const init = d.initializer && unwrap(d.initializer);
+        if (!name || !init || !ts.isObjectLiteralExpression(init)) return [];
+        const functions = init.properties.filter((p) => ts.isMethodDeclaration(p) || (ts.isPropertyAssignment(p) && (ts.isArrowFunction(p.initializer) || ts.isFunctionExpression(p.initializer))));
+        return functions.length >= 3 && new RegExp(`\\b${name}\\[[^\\]]+\\]\\s*\\(`).test(sf.text) ? [{ node: d, evidence: `${name} holds ${functions.length} functions chosen by key`, subject: name }] : [];
+      });
+    }),
+});

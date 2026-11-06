@@ -156,3 +156,7 @@ test('Design patterns: recognize Module-level singleton', () => {
   has('export const db = new Database("app.db");', 'Module-level singleton');
   lacks('export const cache = new Map();', 'Module-level singleton');
 });
+
+test('Design patterns: recognize Strategy map', () => {
+  has('const handlers = { add: (a: number) => a, remove: (a: number) => a, clear: () => 0 }; export function run(k: keyof typeof handlers) { return handlers[k](1); }', 'Strategy map');
+});
