@@ -14,6 +14,7 @@ import {
   unparen,
   wrap,
 } from './syntax';
+import { moreIntentions } from './more';
 
 export interface TextEdit {
   start: number;
@@ -839,6 +840,7 @@ export const intentionList: { id: string; title: string; run: Intention }[] = [
   { id: 'removeBraces', title: 'Remove braces', run: removeBraces },
   { id: 'splitDeclarations', title: 'Split into separate declarations', run: splitDeclarations },
   { id: 'splitInitializer', title: 'Split into declaration and assignment', run: splitInitializer },
+  ...moreIntentions,
 ];
 
 /** Every intention available at the position. Each result's edits are non-overlapping. */
