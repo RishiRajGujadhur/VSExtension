@@ -863,3 +863,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'replaceAllWithoutGlobal',
+  title: 'replaceAll() with a regex missing \'g\'',
+  defaultSeverity: 'error',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const pattern = ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && /^(replaceAll|matchAll)$/.test(node.expression.name.text) ? node.arguments[0] : undefined;
+      if (pattern && ts.isRegularExpressionLiteral(pattern) && !/\/[a-z]*g[a-z]*$/.test(pattern.text)) {
+        const name = (node as ts.CallExpression & { expression: ts.PropertyAccessExpression }).expression.name.text;
+        out.push(at(ctx.sourceFile, 'replaceAllWithoutGlobal', pattern, `${name}() throws a TypeError for a regex without the g flag.`, 'error', [{ title: "Add the 'g' flag", edits: [{ start: pattern.end, end: pattern.end, text: 'g' }], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

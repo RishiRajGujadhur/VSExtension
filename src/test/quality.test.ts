@@ -238,3 +238,8 @@ test('Inspection: Callback that never returns a value', () => {
 test('Inspection: Comparison with a new object or array', () => {
   assert.equal(messages('declare const xs: number[]; if (xs === []) {}', 'objectLiteralComparison').length, 1);
 });
+
+test('Inspection: replaceAll() with a regex missing \'g\'', () => {
+  assert.equal(fixed('declare const s: string; s.replaceAll(/a/, "b");', 'replaceAllWithoutGlobal'), 'declare const s: string; s.replaceAll(/a/g, "b");');
+  assert.equal(messages('declare const s: string; s.replaceAll(/a/gi, "b");', 'replaceAllWithoutGlobal').length, 0);
+});
