@@ -445,3 +445,14 @@ function objectAssignToSpread(ctx: IntentionContext): IntentionAction | undefine
   return { id: 'objectAssignToSpread', title: 'Replace with object spread', edits: [ctx.replace(call, arrowBody ? `(${literal})` : literal)] };
 }
 moreIntentions.push({ id: 'objectAssignToSpread', title: 'Replace \'Object.assign\' with spread', run: objectAssignToSpread });
+
+function destructureProperty(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isVariableStatement, (s) => s.declarationList.declarations.length === 1);
+  const declaration = statement?.declarationList.declarations[0];
+  const init = declaration?.initializer && unparen(declaration.initializer);
+  if (!statement || !declaration || !init || !ts.isIdentifier(declaration.name) || declaration.type || !ts.isPropertyAccessExpression(init) || init.questionDotToken || !ts.isIdentifier(init.name)) return undefined;
+  const name = declaration.name.text;
+  const property = init.name.text === name ? name : `${init.name.text}: ${name}`;
+  return { id: 'destructureProperty', title: `Destructure '${init.name.text}'`, edits: [ctx.replace(declaration, `{ ${property} } = ${ctx.text(init.expression)}`)] };
+}
+moreIntentions.push({ id: 'destructureProperty', title: 'Use destructuring', run: destructureProperty });

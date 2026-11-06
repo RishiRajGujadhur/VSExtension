@@ -145,3 +145,9 @@ test('Replace \'Object.assign\' with spread', () => {
   assert.equal(apply('Object.¦assign({}, a);', 'objectAssignToSpread'), undefined);
   assert.equal(apply('Object.¦assign(target, a);', 'objectAssignToSpread'), undefined);
 });
+
+test('Use destructuring', () => {
+  assert.equal(apply('c¦onst total = order.total;', 'destructureProperty'), 'const { total } = order;');
+  assert.equal(apply('c¦onst t = order.total;', 'destructureProperty'), 'const { total: t } = order;');
+  assert.equal(apply('c¦onst t = order?.total;', 'destructureProperty'), undefined);
+});
