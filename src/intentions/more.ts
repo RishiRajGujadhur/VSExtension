@@ -483,3 +483,11 @@ function removeNumericSeparators(ctx: IntentionContext): IntentionAction | undef
   return literal && raw?.includes('_') ? { id: 'removeNumericSeparators', title: 'Remove numeric separators', edits: [ctx.replace(literal, raw.replace(/_/g, ''))] } : undefined;
 }
 moreIntentions.push({ id: 'removeNumericSeparators', title: 'Remove numeric separators', run: removeNumericSeparators });
+
+function toggleQuotes(ctx: IntentionContext): IntentionAction | undefined {
+  const literal = ctx.nearest(ts.isStringLiteral, (l) => !ts.isJsxAttribute(l.parent) && !ts.isImportDeclaration(l.parent) && !ts.isExportDeclaration(l.parent));
+  if (!literal) return undefined;
+  const single = ctx.text(literal).startsWith("'");
+  return { id: 'toggleQuotes', title: single ? 'Use double quotes' : 'Use single quotes', edits: [ctx.replace(literal, quote(literal.text, single ? '"' : "'"))] };
+}
+moreIntentions.push({ id: 'toggleQuotes', title: 'Switch between single and double quotes', run: toggleQuotes });

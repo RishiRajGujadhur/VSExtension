@@ -166,3 +166,8 @@ test('Add numeric separators', () => {
 test('Remove numeric separators', () => {
   assert.equal(apply('const n = 1_0¦00;', 'removeNumericSeparators'), 'const n = 1000;');
 });
+
+test('Switch between single and double quotes', () => {
+  assert.equal(apply("const s = 'a¦b';", 'toggleQuotes'), 'const s = "ab";');
+  assert.equal(apply('const s = "say ¦\'hi\'";', 'toggleQuotes'), "const s = 'say \\'hi\\'';");
+});
