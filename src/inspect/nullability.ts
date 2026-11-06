@@ -436,6 +436,8 @@ function receiverNames(checker: ts.TypeChecker, receiver: ts.Expression): string
   return names.filter(Boolean);
 }
 
+libraryReasons.push({ receiver: 'Array', method: 'findLast', reason: 'undefined when nothing matches' });
+
 /** Why a library call can give null or undefined, such as Array.find when nothing matches. */
 export function libraryReason(checker: ts.TypeChecker, call: ts.Expression): string | undefined {
   if (!ts.isCallExpression(call) || !ts.isPropertyAccessExpression(call.expression)) return undefined;

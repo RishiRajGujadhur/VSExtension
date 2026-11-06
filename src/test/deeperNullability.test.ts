@@ -15,3 +15,7 @@ test('Nullability: say why library calls can be empty, starting with find', () =
   assert.equal(reason('function f(xs: number[]) { return xs.find((x) => x > 1); }'), 'undefined when nothing matches');
   assert.equal(reason('function f(xs: number[]) { return xs.filter((x) => x > 1); }'), undefined);
 });
+
+test('Nullability: findLast', () => {
+  assert.equal(reason('interface Array<T> { findLast(p: (x: T) => boolean): T | undefined } function f(xs: number[]) { return xs.findLast((x) => x > 1); }'), 'undefined when nothing matches');
+});
