@@ -40,3 +40,7 @@ test('Side effects: Date() without new reads the clock', () => {
 test('Side effects: system information and DNS in Node', () => {
   assert.deepEqual(effects('import { hostname } from "os"; function f() { return hostname(); }'), ['io: uses os']);
 });
+
+test('Side effects: packages that do I/O, starting with HTTP clients', () => {
+  assert.deepEqual(effects('import axios from "axios"; function f() { return axios.get("/x"); }'), ['io: makes a network request']);
+});

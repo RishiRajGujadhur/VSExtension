@@ -98,7 +98,12 @@ const nondeterministicMembers: Record<string, readonly string[]> = {
   crypto: ['randomUUID', 'getRandomValues'],
 };
 
+/** Packages whose calls do I/O or are nondeterministic, by module name and optionally imported names. */
+const ioPackages: { pattern: RegExp; kind: EffectKind; note: string; names?: RegExp }[] = [];
+
 const ioModules = new Set(['fs', 'fs/promises', 'child_process', 'net', 'http', 'https', 'http2', 'dgram', 'readline', 'cluster', 'worker_threads', 'tls', 'os', 'dns', 'dns/promises', 'v8', 'inspector']);
+
+ioPackages.push({ pattern: /^(axios|node-fetch|undici|got|ky|superagent|cross-fetch|isomorphic-fetch|ofetch)$/, kind: 'io', note: 'makes a network request' });
 
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
@@ -309,6 +314,13 @@ export class EffectAnalyzer {
     const moduleName = this.importedModule(identifier);
     if (moduleName && ioModules.has(moduleName.replace(/^node:/, '')) && ts.isCallExpression(skipCallee(identifier).parent)) {
       return { kind: 'io', target: `${moduleName} ${identifier.text}`, description: `uses ${moduleName}`, node: identifier };
+    }
+    // Calls and constructions of imported packages known to do I/O, such as axios.get() or new PrismaClient().
+    const use = skipCallee(identifier).parent;
+    const member = ts.isPropertyAccessExpression(parent) && parent.expression === identifier ? parent.name.text : identifier.text;
+    const pkg = moduleName && ioPackages.find((p) => p.pattern.test(moduleName.replace(/^node:/, '')) && (!p.names || p.names.test(member)));
+    if (pkg && (ts.isCallExpression(use) || ts.isNewExpression(use))) {
+      return { kind: pkg.kind, target: `${moduleName} ${identifier.text}${member !== identifier.text ? `.${member}` : ''}`, description: pkg.note, node: identifier };
     }
     return undefined;
   }
