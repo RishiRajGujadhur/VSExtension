@@ -655,3 +655,15 @@ function joinStrings(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'joinStrings', title: 'Join string literals', edits: [ctx.replace(plus, quote(left.text + (unparen(plus.right) as ts.StringLiteral).text, q))] };
 }
 moreIntentions.push({ id: 'joinStrings', title: 'Join string literals', run: joinStrings });
+
+function guardClause(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isIfStatement, (s) => ctx.onHeader(s) && !s.elseStatement && ts.isBlock(s.thenStatement));
+  const body = statement?.parent;
+  if (!statement || !body || !ts.isBlock(body) || !ts.isFunctionLike(body.parent) || body.statements[body.statements.length - 1] !== statement) return undefined;
+  // A returned value would now be lost, so only functions that return nothing.
+  if (containsInScope(statement.thenStatement, (n) => ts.isReturnStatement(n) && !!n.expression)) return undefined;
+  const indent = ctx.indentOf(statement);
+  const lines = statementLines(statement.thenStatement, ctx.sourceFile);
+  return { id: 'guardClause', title: 'Invert into early return', edits: [ctx.replace(statement, `if (${negate(statement.expression, ctx.sourceFile)}) {\n${indent}${ctx.indentUnit}return;\n${indent}}\n${indentLines(lines, indent)}`)] };
+}
+moreIntentions.push({ id: 'guardClause', title: 'Invert if into an early return', run: guardClause });

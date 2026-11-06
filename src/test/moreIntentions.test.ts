@@ -255,3 +255,8 @@ test('Intention: Split string at the cursor', () => {
 test('Intention: Join string literals', () => {
   assert.equal(apply("const s = 'Hello ' ¦+ 'world';", 'joinStrings'), "const s = 'Hello world';");
 });
+
+test('Intention: Invert if into an early return', () => {
+  assert.equal(apply(lines('function f(a: boolean) {', '  i¦f (a) {', '    go();', '    stop();', '  }', '}'), 'guardClause'), lines('function f(a: boolean) {', '  if (!a) {', '    return;', '  }', '  go();', '  stop();', '}'));
+  assert.equal(apply(lines('function f(a: boolean) {', '  i¦f (a) {', '    go();', '  }', '  more();', '}'), 'guardClause'), undefined);
+});
