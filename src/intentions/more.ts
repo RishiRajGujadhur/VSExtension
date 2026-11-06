@@ -588,3 +588,14 @@ function jsxAttributeBrace(ctx: IntentionContext): IntentionAction | undefined {
   return attribute && { id: 'jsxAttributeBrace', title: 'Put in braces', edits: [ctx.replace(attribute.initializer!, `{${quote((attribute.initializer as ts.StringLiteral).text, '"')}}`)] };
 }
 moreIntentions.push({ id: 'jsxAttributeBrace', title: 'Put a JSX string in braces', run: jsxAttributeBrace });
+
+function wrapInTryCatch(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest((n): n is ts.Statement => ts.isExpressionStatement(n) || ts.isReturnStatement(n) || ts.isIfStatement(n) || ts.isForOfStatement(n) || ts.isForStatement(n) || ts.isWhileStatement(n), (s) => (ts.isBlock(s.parent) || ts.isSourceFile(s.parent)) && !ctx.sourceFile.text.slice(s.getStart(ctx.sourceFile), ctx.position).includes('\n'));
+  if (!statement) return undefined;
+  const indent = ctx.indentOf(statement);
+  const unit = ctx.indentUnit;
+  const body = indentLines(statementLines(statement, ctx.sourceFile), indent + unit);
+  // Rethrowing keeps the behavior the same until the catch block is filled in.
+  return { id: 'wrapInTryCatch', title: 'Surround with try/catch', edits: [ctx.replace(statement, `try {\n${body}\n${indent}} catch (error) {\n${indent}${unit}throw error;\n${indent}}`)] };
+}
+moreIntentions.push({ id: 'wrapInTryCatch', title: 'Surround with try/catch', run: wrapInTryCatch });

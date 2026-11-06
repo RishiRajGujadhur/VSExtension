@@ -229,3 +229,8 @@ test('Intention: Remove braces around a JSX string', () => {
 test('Intention: Put a JSX string in braces', () => {
   assert.equal(applyTsx('const a = <A title=¦"Hi" />;', 'jsxAttributeBrace'), 'const a = <A title={"Hi"} />;');
 });
+
+test('Intention: Surround with try/catch', () => {
+  assert.equal(apply('l¦oad();', 'wrapInTryCatch'), lines('try {', '  load();', '} catch (error) {', '  throw error;', '}'));
+  assert.equal(apply('const x = l¦oad();', 'wrapInTryCatch'), undefined);
+});
