@@ -256,3 +256,19 @@ catalog.push({
       return pool ? [{ node: cls, evidence: `${className(cls)} hands out and takes back objects in ${pool.name}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Lazy initialization',
+  meaning: 'A value is created the first time it is needed and reused after that.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) =>
+      cls.members
+        .filter((m) => (ts.isMethodDeclaration(m) || ts.isGetAccessor(m)) && !!m.body)
+        .filter((m) => {
+          const body = text((m as ts.MethodDeclaration).body);
+          const field = /this\.(\w+)\s*\?\?=/.exec(body)?.[1] ?? /if\s*\(\s*!this\.(\w+)\s*\)/.exec(body)?.[1];
+          return !!field && body.includes(`return this.${field}`);
+        })
+        .map((m) => ({ node: m, evidence: `${className(cls)}.${nameOf(m)} creates its value on first use`, subject: className(cls) })),
+    ),
+});

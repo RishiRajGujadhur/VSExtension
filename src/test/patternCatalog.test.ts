@@ -60,3 +60,7 @@ test('Prototype is recognized', () => {
 test('Object pool is recognized', () => {
   has('class Pool { private free: Conn[] = []; acquire() { return this.free.pop() ?? new Conn(); } release(c: Conn) { this.free.push(c); } }', 'Object pool');
 });
+
+test('Lazy initialization is recognized', () => {
+  has('class Db { private conn?: Conn; get connection() { this.conn ??= new Conn(); return this.conn; } }', 'Lazy initialization');
+});
