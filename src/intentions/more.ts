@@ -230,3 +230,20 @@ function expandShorthand(ctx: IntentionContext): IntentionAction | undefined {
   return property && { id: 'expandShorthand', title: `Expand to '${property.name.text}: ${property.name.text}'`, edits: [ctx.replace(property, `${property.name.text}: ${property.name.text}`)] };
 }
 moreIntentions.push({ id: 'expandShorthand', title: 'Expand property shorthand', run: expandShorthand });
+
+function templateToConcat(ctx: IntentionContext): IntentionAction | undefined {
+  const template = ctx.nearest(ts.isTemplateExpression);
+  if (!template || ts.isTaggedTemplateExpression(template.parent)) return undefined;
+  const parts: { text: string; literal: boolean }[] = [];
+  const plus = binaryPrecedence(ts.SyntaxKind.PlusToken);
+  if (template.head.text) parts.push({ text: quote(template.head.text, "'"), literal: true });
+  for (const span of template.templateSpans) {
+    parts.push({ text: wrap(ctx.text(span.expression), plus + 1), literal: false });
+    if (span.literal.text) parts.push({ text: quote(span.literal.text, "'"), literal: true });
+  }
+  // Two values in a row would be added, not joined: start with a string.
+  if (!parts[0].literal && (parts.length === 1 || !parts[1].literal)) parts.unshift({ text: "''", literal: true });
+  const joined = parts.map((p) => p.text).join(' + ');
+  return { id: 'templateToConcat', title: "Replace template literal with '+'", edits: [ctx.replace(template, wrap(joined, requiredPrecedence(template)))] };
+}
+moreIntentions.push({ id: 'templateToConcat', title: 'Replace template literal with \'+\'', run: templateToConcat });

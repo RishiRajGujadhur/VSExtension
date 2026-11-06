@@ -70,3 +70,10 @@ test('Use property shorthand', () => {
 test('Expand property shorthand', () => {
   assert.equal(apply('const o = { ¦a };', 'expandShorthand'), 'const o = { a: a };');
 });
+
+test('Replace template literal with \'+\'', () => {
+  assert.equal(apply('const s = `Hi ${n¦ame}!`;', 'templateToConcat'), "const s = 'Hi ' + name + '!';");
+  assert.equal(apply('const s = `${a}${¦b}`;', 'templateToConcat'), "const s = '' + a + b;");
+  assert.equal(apply('const n = `x${¦y}`.length;', 'templateToConcat'), "const n = ('x' + y).length;");
+  assert.equal(apply('const s = `it\'s ${¦a}`;', 'templateToConcat'), "const s = 'it\\'s ' + a;");
+});
