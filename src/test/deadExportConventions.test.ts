@@ -24,3 +24,8 @@ test('Dead exports: tool config files are entry points', () => {
   assert.equal(isConventionalEntry('/repo/tailwind.config.mjs'), 'tool config file');
   assert.equal(isConventionalEntry('/repo/src/config.ts'), undefined);
 });
+
+test('Dead exports: Remix and React Router routes are entry points', () => {
+  assert.equal(isConventionalEntry('/repo/app/routes/_index.tsx'), 'route module');
+  assert.equal(isConventionalEntry('/repo/app/root.tsx'), 'route module');
+});
