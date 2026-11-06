@@ -410,3 +410,14 @@ catalog.push({
       return iface && methods.length >= 2 && empty ? [{ node: cls, evidence: `${className(cls)} implements ${iface} by doing nothing`, subject: iface }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Value object',
+  meaning: 'An immutable object compared by its values, such as Money or a date range.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const fields = fieldsOf(cls);
+      const equals = methodsOf(cls).find((m) => nameOf(m) === 'equals');
+      return equals && fields.length >= 2 && fields.every((f) => f.readonly) ? [{ node: cls, evidence: `${className(cls)} is immutable and compared with equals()`, subject: className(cls) }] : [];
+    }),
+});

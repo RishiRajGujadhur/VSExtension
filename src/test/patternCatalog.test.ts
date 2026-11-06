@@ -109,3 +109,7 @@ test('Service locator is recognized', () => {
 test('Null object is recognized', () => {
   has('class NullLogger implements Logger { log() {} warn() {} }', 'Null object');
 });
+
+test('Value object is recognized', () => {
+  has('class Money { constructor(readonly amount: number, readonly currency: string) {} equals(o: Money) { return o.amount === this.amount; } }', 'Value object');
+});
