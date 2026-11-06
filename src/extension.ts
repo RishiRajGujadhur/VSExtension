@@ -22,6 +22,7 @@ import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';
 import { tasks } from './structure/tasks';
+import { Keybinding, shortcuts } from './structure/keys';
 import { commandIcons } from './structure/icons';
 import { featureOf } from './structure/features';
 import { isFeatureEnabled } from './ui/features';
@@ -66,6 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState, context.extension.packageJSON.contributes?.keybindings)), registerCommand('tsStructure.configureFeatures', configureFeatures),
     registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
     // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
+    registerCommand('tsStructure.shortcutSheet', () => showShortcutSheet(context.extension.packageJSON.contributes)),
     registerCommand('tsStructure.howDoI', () => showHowDoI(process.platform === 'darwin' ? 'Cmd+Ctrl+S' : 'Ctrl+Alt+S')),
     registerCommand('tsStructure.editKeybindings', (command?: string) => vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', command ? `"${command}"` : `@ext:${context.extension.id}`)),
   );
@@ -225,6 +227,35 @@ async function showHowDoI(prefix: string): Promise<void> {
   if (picked) {
     await vscode.commands.executeCommand(picked.command);
   }
+}
+
+/** Every default shortcut of the extension with what it runs, as the keys VS Code shows; picking one runs it. */
+async function showShortcutSheet(contributes: { keybindings: Keybinding[]; commands: { command: string; title: string }[] }): Promise<void> {
+  const keys = shortcuts(contributes.keybindings);
+  const items = contributes.commands
+    .filter((c) => keys.has(c.command) && (!featureOf(c.command) || isFeatureEnabled(featureOf(c.command)!.id)))
+    .map((c) => ({ label: `$(${commandIcons[c.command] ?? 'keyboard'}) ${c.title}`, description: keys.get(c.command), command: c.command }))
+    .sort((a, b) => a.description!.localeCompare(b.description!));
+  const editShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Change Shortcuts…' };
+  const picker = vscode.window.createQuickPick<(typeof items)[number]>();
+  picker.title = 'TypeScript Structure Shortcuts';
+  picker.placeholder = 'Pick one to run it';
+  picker.matchOnDescription = true;
+  picker.items = items;
+  picker.buttons = [editShortcuts];
+  picker.onDidTriggerButton(() => {
+    picker.hide();
+    void vscode.commands.executeCommand('tsStructure.editKeybindings');
+  });
+  picker.onDidAccept(() => {
+    const picked = picker.selectedItems[0];
+    picker.hide();
+    if (picked) {
+      void vscode.commands.executeCommand(picked.command);
+    }
+  });
+  picker.onDidHide(() => picker.dispose());
+  picker.show();
 }
 
 export function deactivate(): void {}

@@ -628,6 +628,12 @@
         "title": "How Do I…?",
         "category": "TypeScript Structure",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "tsStructure.shortcutSheet",
+        "title": "Shortcut Cheat Sheet",
+        "category": "TypeScript Structure",
+        "icon": "$(keyboard)"
       }
     ],
     "viewsContainers": {
@@ -834,6 +840,11 @@
         "key": "ctrl+alt+s oem_2",
         "mac": "cmd+ctrl+s oem_2",
         "command": "tsStructure.howDoI"
+      },
+      {
+        "key": "ctrl+alt+s k",
+        "mac": "cmd+ctrl+s k",
+        "command": "tsStructure.shortcutSheet"
       }
     ],
     "menus": {
@@ -1424,6 +1435,10 @@
         },
         {
           "command": "tsStructure.howDoI",
+          "when": "true"
+        },
+        {
+          "command": "tsStructure.shortcutSheet",
           "when": "true"
         }
       ],
