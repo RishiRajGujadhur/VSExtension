@@ -22,3 +22,9 @@ test('Test impact: run tests with pnpm, yarn or bun when the project uses them',
   assert.equal(line(testCommand('jest', ['a.test.ts'], undefined, pkg({ 'yarn.lock': '' }))), 'yarn jest --runTestsByPath a.test.ts');
   assert.equal(line(testCommand('mocha', ['a.test.ts'], undefined, pkg({ 'package-lock.json': '' }))), 'npx mocha a.test.ts');
 });
+
+test('Test impact: detect the framework from its config file', () => {
+  assert.equal(detectFramework(pkg({ 'package.json': '{}', 'vitest.config.ts': '' })), 'vitest');
+  assert.equal(detectFramework(pkg({ 'package.json': '{}', '.mocharc.json': '{}' })), 'mocha');
+  assert.equal(detectFramework(pkg({ 'package.json': '{}' })), undefined);
+});

@@ -47,5 +47,12 @@ export function detectFramework(packageDir: string | undefined): RunnableFramewo
   } catch {
     // Unreadable package.json: fall through.
   }
-  return undefined;
+  // A config file says it too, such as vitest.config.ts in a package that gets vitest from the workspace root.
+  const configs: [RegExp, RunnableFramework][] = [[/^vitest\.config\./, 'vitest'], [/^jest\.config\./, 'jest'], [/^playwright\.config\./, 'playwright'], [/^\.mocharc/, 'mocha']];
+  try {
+    const names = fs.readdirSync(packageDir);
+    return configs.find(([pattern]) => names.some((n) => pattern.test(n)))?.[1];
+  } catch {
+    return undefined;
+  }
 }
