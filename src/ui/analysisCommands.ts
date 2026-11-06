@@ -49,7 +49,9 @@ type Compute = (target: AnalysisTarget) => Report | Promise<Report | undefined> 
 export async function runAnalysis(view: StructureView, title: string, compute: () => Report | Promise<Report | undefined> | undefined): Promise<Report | undefined> {
   const run = async () => {
     try {
-      return await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `${title}…` }, async () => {
+      // A spinner in the status bar by default; a notification when tsStructure.results.progress asks for one.
+      const location = vscode.workspace.getConfiguration('tsStructure.results').get<string>('progress', 'statusBar') === 'notification' ? vscode.ProgressLocation.Notification : vscode.ProgressLocation.Window;
+      return await vscode.window.withProgress({ location, title: `${title}…` }, async () => {
         // Let the notification render before the synchronous analysis starts.
         await new Promise((resolve) => setTimeout(resolve, 0));
         const started = Date.now();
@@ -177,7 +179,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       if (editor) {
         const target = editorTarget(projects, editor);
         const text = editor.document.getText();
-        return runAnalysis(view, title, () => startingAtCursor(id, editor, () => compute(followEdits(target, text))));
+        // The progress names what is analyzed: "Data Flow of total…".
+        const word = editor.document.getWordRangeAtPosition(editor.selection.active);
+        const subject = word && id !== 'tsStructure.mutationTracking' ? ` of ${editor.document.getText(word)}` : '';
+        return runAnalysis(view, `${title}${subject}`, () => startingAtCursor(id, editor, () => compute(followEdits(target, text))));
       }
     });
 
@@ -329,8 +334,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const { files, note } = filesIn(program, scope);
       return withNote(mutationReport(program, t.fileName, t.offset, files), note);
     }),
-    editorCommand('tsStructure.nullability', 'Nullability Analysis', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.promiseRejections', 'Promise Rejection Analysis', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.nullability', 'Nullability', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.promiseRejections', 'Promise rejections', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
     // The whole project still decides what is used; the scope only limits which exports are reported.
     scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: projectScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
     // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
@@ -353,7 +358,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return report;
       });
     }),
-    editorCommand('tsStructure.exceptionFlow', 'Exception Flow Analysis', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {
       const program = t.project().program();
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('typeAssertion.ignoreTestFiles', false);
@@ -431,7 +436,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
-    editorCommand('tsStructure.overrideImpact', 'Analyzing override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.overrideImpact', 'Override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
     registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
       const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
       if (from && to) {
@@ -530,6 +535,6 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         await view.rerun();
       }
     }),
-    editorCommand('tsStructure.sideEffects', 'Side-Effect Analysis', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
+    editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
   );
 }

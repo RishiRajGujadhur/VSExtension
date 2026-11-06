@@ -1947,6 +1947,19 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show **Find Usages in Current File**, **Semantic Find Usages**, **Data Flow Path Explorer** and **Analyze or Refactor This…** directly in the editor's right-click menu, next to Go to Definition. Everything else stays under **TypeScript Structure**."
+          },
+          "tsStructure.results.progress": {
+            "type": "string",
+            "enum": [
+              "statusBar",
+              "notification"
+            ],
+            "enumDescriptions": [
+              "A spinner in the status bar while an analysis runs.",
+              "A notification while an analysis runs."
+            ],
+            "default": "statusBar",
+            "markdownDescription": "Where analyses show that they are running. Inspect Code always uses a notification, so it can be cancelled."
           }
         }
       },
