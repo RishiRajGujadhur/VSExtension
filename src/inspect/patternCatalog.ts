@@ -236,3 +236,13 @@ catalog.push({
         ),
       ),
 });
+
+catalog.push({
+  name: 'Prototype',
+  meaning: 'New objects are made by copying an existing one rather than built from scratch.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const clone = methodsOf(cls).find((m) => /^(clone|copy)$/.test(nameOf(m) ?? '') && returnsOf(m.body).some((e) => (ts.isNewExpression(unwrap(e)) && text((unwrap(e) as ts.NewExpression).expression) === className(cls)) || /Object\.create|structuredClone|\{\s*\.\.\.this/.test(text(e))));
+      return clone ? [{ node: clone, evidence: `${className(cls)}.${nameOf(clone)}() returns a copy of itself`, subject: className(cls) }] : [];
+    }),
+});

@@ -52,3 +52,7 @@ test('Iterator is recognized', () => {
   has('class Range { *[Symbol.iterator]() { yield 1; } }', 'Iterator');
   has('function* ids() { yield 1; }', 'Iterator');
 });
+
+test('Prototype is recognized', () => {
+  has('class Shape { clone() { return new Shape(); } }', 'Prototype');
+});
