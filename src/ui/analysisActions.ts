@@ -102,12 +102,16 @@ async function pickSymbol(editor: vscode.TextEditor, symbols: readonly FileSymbo
   type Item = vscode.QuickPickItem & { symbol: FileSymbol };
   const line = editor.selection.active.line;
   const items: Item[] = symbols.map((s) => ({ label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`].filter(Boolean).join(' · '), symbol: s }));
+  // Functions, variables, classes and so on under their own headings when the file has several kinds.
+  const kindTitles: Record<SymbolKind, string> = { function: 'Functions', variable: 'Variables', class: 'Classes', interface: 'Interfaces', member: 'Members', parameter: 'Parameters', import: 'Imports' };
+  const kinds = [...new Set(items.map((i) => i.symbol.kind))];
+  const sections: (Item | (vscode.QuickPickItem & { symbol?: undefined }))[] = kinds.length > 1 ? kinds.flatMap((k) => [{ label: kindTitles[k], kind: vscode.QuickPickItemKind.Separator }, ...items.filter((i) => i.symbol.kind === k)]) : items;
   const nearest = [...items].sort((a, b) => Math.abs(a.symbol.line - line) - Math.abs(b.symbol.line - line))[0];
   const picker = vscode.window.createQuickPick<Item>();
   picker.title = title;
   picker.placeholder = `Declarations in ${vscode.workspace.asRelativePath(editor.document.uri)}`;
   picker.matchOnDescription = true;
-  picker.items = items;
+  picker.items = sections as Item[];
   picker.activeItems = nearest ? [nearest] : [];
   const picked = await new Promise<Item | undefined>((resolve) => {
     picker.onDidAccept(() => resolve(picker.selectedItems[0] ?? picker.activeItems[0]));
