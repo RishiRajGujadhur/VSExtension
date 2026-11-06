@@ -288,3 +288,7 @@ test('Intention: Replace \'!= null\' with explicit checks', () => {
   assert.equal(apply('if (x ¦!= null) {}', 'nullCheckExpand'), 'if (x !== null && x !== undefined) {}');
   assert.equal(apply('const ok = !(x ¦== null);', 'nullCheckExpand'), 'const ok = !(x === null || x === undefined);');
 });
+
+test('Intention: Remove redundant \'return\' at the end', () => {
+  assert.equal(apply(lines('function f() {', '  go();', '  ret¦urn;', '}'), 'removeTrailingReturn'), lines('function f() {', '  go();', '}'));
+});

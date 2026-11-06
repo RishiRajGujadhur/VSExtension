@@ -738,3 +738,12 @@ function nullCheckExpand(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'nullCheckExpand', title: negative ? "Replace with '!== null && !== undefined'" : "Replace with '=== null || === undefined'", edits: [ctx.replace(binary, wrap(text, requiredPrecedence(binary)))] };
 }
 moreIntentions.push({ id: 'nullCheckExpand', title: 'Replace \'!= null\' with explicit checks', run: nullCheckExpand });
+
+function removeTrailingReturn(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isReturnStatement, (r) => !r.expression && ts.isBlock(r.parent) && ts.isFunctionLike(r.parent.parent) && r.parent.statements[r.parent.statements.length - 1] === r);
+  if (!statement) return undefined;
+  const text = ctx.sourceFile.text;
+  const start = text.lastIndexOf('\n', statement.getStart(ctx.sourceFile) - 1);
+  return { id: 'removeTrailingReturn', title: "Remove redundant 'return'", edits: [{ start: start >= 0 ? start : statement.getStart(ctx.sourceFile), end: statement.end, text: '' }] };
+}
+moreIntentions.push({ id: 'removeTrailingReturn', title: 'Remove redundant \'return\' at the end', run: removeTrailingReturn });
