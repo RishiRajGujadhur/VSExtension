@@ -118,3 +118,7 @@ test('Side effects: error reporting and analytics SDKs', () => {
 test('Side effects: message queues', () => {
   assert.deepEqual(effects('import { Queue } from "bullmq"; function f() { return new Queue("jobs"); }'), ['io: uses a message queue']);
 });
+
+test('Side effects: GraphQL clients', () => {
+  assert.deepEqual(effects('import { request } from "graphql-request"; function f() { return request("/q", "{ a }"); }'), ['io: makes a network request']);
+});
