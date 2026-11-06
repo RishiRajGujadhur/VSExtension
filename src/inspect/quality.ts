@@ -674,3 +674,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'jsonStringifyCollection',
+  title: 'JSON.stringify of a Map or Set',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isCallExpression(node) && node.expression.getText() === 'JSON.stringify' && node.arguments[0]) {
+        const name = ctx.checker.getTypeAtLocation(node.arguments[0]).getSymbol()?.getName();
+        if (name === 'Map' || name === 'Set' || name === 'WeakMap' || name === 'WeakSet') {
+          out.push(at(ctx.sourceFile, 'jsonStringifyCollection', node.arguments[0], `JSON.stringify turns a ${name} into {}; convert it first, such as ${name.endsWith('Map') ? 'Object.fromEntries(map)' : '[...set]'}.`, 'warning'));
+        }
+      }
+    });
+    return out;
+  },
+});

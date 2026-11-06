@@ -192,3 +192,7 @@ test('Inspection: Month 12 or more in new Date()', () => {
   assert.equal(messages('const d = new Date(2024, 12, 1);', 'dateMonthOverflow').length, 1);
   assert.equal(messages('const d = new Date(2024, 11, 1);', 'dateMonthOverflow').length, 0);
 });
+
+test('Inspection: JSON.stringify of a Map or Set', () => {
+  assert.equal(messages('const m = new Map<string, number>(); JSON.stringify(m);', 'jsonStringifyCollection').length, 1);
+});
