@@ -304,6 +304,8 @@ export class StructuralSearchPanel {
       try {
         const program = this.projects.analysisProject(this.anchor, this.folder()).program();
         this.matches = structuralSearch(program, clean(message.spec), await this.scopeOf(message.scope));
+        // The count in the tab, so it shows while another editor is in front.
+        this.panel.title = `Structural Search (${this.matches.length})`;
         void this.remember(clean(message.spec));
         void this.panel.webview.postMessage({
           type: 'results',
@@ -490,6 +492,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <div class="row tools">
     <button id="makePlaceholder" class="secondary" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">Make Placeholder</button>
     <button id="fromSelection" class="secondary" title="Use the code selected in the editor as the pattern">From Editor Selection</button>
+    <button id="clear" class="secondary" title="Empty the pattern, constraints, replacement and results">Clear</button>
   </div>
   <div id="patternProblem" class="error"></div>
   <h2>Placeholder constraints</h2>
@@ -691,6 +694,21 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     if (event.altKey && event.code === 'KeyP') { event.preventDefault(); makePlaceholder(); }
   });
   $('fromSelection').addEventListener('click', () => vscode.postMessage({ type: 'fromSelection' }));
+  $('clear').addEventListener('click', () => {
+    startNew();
+    $('pattern').value = '';
+    $('template').value = '';
+    $('message').value = '';
+    $('include').value = '';
+    state.constraints = {};
+    $('results').innerHTML = '';
+    $('summary').textContent = '';
+    $('count').textContent = '';
+    $('error').textContent = '';
+    $('patternProblem').textContent = '';
+    save(); renderConstraints(); renderMessageTools(); checkTemplate();
+    $('pattern').focus();
+  });
   $('copyPattern').addEventListener('click', () => {
     $('template').value = $('pattern').value;
     $('template').focus();
