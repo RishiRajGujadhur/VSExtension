@@ -298,3 +298,20 @@ function insideLoopOrSwitch(node: ts.Node, root: ts.Node): boolean {
   return false;
 }
 moreIntentions.push({ id: 'switchToIfChain', title: 'Replace \'switch\' with \'if\' chain', run: switchToIfChain });
+
+const compoundOperators = new Map<ts.SyntaxKind, string>([
+  [ts.SyntaxKind.PlusToken, '+='], [ts.SyntaxKind.MinusToken, '-='], [ts.SyntaxKind.AsteriskToken, '*='], [ts.SyntaxKind.SlashToken, '/='],
+  [ts.SyntaxKind.PercentToken, '%='], [ts.SyntaxKind.AsteriskAsteriskToken, '**='], [ts.SyntaxKind.AmpersandToken, '&='], [ts.SyntaxKind.BarToken, '|='],
+  [ts.SyntaxKind.CaretToken, '^='], [ts.SyntaxKind.LessThanLessThanToken, '<<='], [ts.SyntaxKind.GreaterThanGreaterThanToken, '>>='],
+  [ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken, '>>>='], [ts.SyntaxKind.AmpersandAmpersandToken, '&&='], [ts.SyntaxKind.BarBarToken, '||='], [ts.SyntaxKind.QuestionQuestionToken, '??='],
+]);
+
+function compoundAssignment(ctx: IntentionContext): IntentionAction | undefined {
+  const assignment = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.EqualsToken);
+  const right = assignment && unparen(assignment.right);
+  if (!assignment || !right || !ts.isBinaryExpression(right) || !compoundOperators.has(right.operatorToken.kind) || !isSimple(assignment.left)) return undefined;
+  if (ctx.text(unparen(right.left)) !== ctx.text(unparen(assignment.left))) return undefined;
+  const op = compoundOperators.get(right.operatorToken.kind)!;
+  return { id: 'compoundAssignment', title: `Replace with '${op}'`, edits: [ctx.replace(assignment, `${ctx.text(assignment.left)} ${op} ${ctx.text(right.right)}`)] };
+}
+moreIntentions.push({ id: 'compoundAssignment', title: 'Replace \'x = x + y\' with \'x += y\'', run: compoundAssignment });

@@ -91,3 +91,9 @@ test('Replace \'switch\' with \'if\' chain', () => {
   assert.equal(apply(lines('s¦witch (k) {', '  case 1:', '    a();', '  case 2:', '    b();', '}'), 'switchToIfChain'), undefined);
   assert.equal(apply(lines('s¦witch (f()) {', '  case 1:', '    a();', '}'), 'switchToIfChain'), undefined);
 });
+
+test('Replace \'x = x + y\' with \'x += y\'', () => {
+  assert.equal(apply('t¦otal = total + price;', 'compoundAssignment'), 'total += price;');
+  assert.equal(apply('this.n = this.n ¦* 2;', 'compoundAssignment'), 'this.n *= 2;');
+  assert.equal(apply('x = x - y ¦+ z;', 'compoundAssignment'), undefined);
+});
