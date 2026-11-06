@@ -251,3 +251,7 @@ test('Intention: Replace unary \'+\' with \'Number()\'', () => {
 test('Intention: Split string at the cursor', () => {
   assert.equal(apply("const s = 'Hello ¦world';", 'splitString'), "const s = 'Hello ' + 'world';");
 });
+
+test('Intention: Join string literals', () => {
+  assert.equal(apply("const s = 'Hello ' ¦+ 'world';", 'joinStrings'), "const s = 'Hello world';");
+});

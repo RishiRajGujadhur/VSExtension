@@ -646,3 +646,12 @@ function splitString(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'splitString', title: 'Split string here', edits: [ctx.replace(literal, wrap(`${raw.slice(0, offset)}${q} + ${q}${raw.slice(offset)}`, requiredPrecedence(literal)))] };
 }
 moreIntentions.push({ id: 'splitString', title: 'Split string at the cursor', run: splitString });
+
+function joinStrings(ctx: IntentionContext): IntentionAction | undefined {
+  const plus = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.PlusToken && ts.isStringLiteral(unparen(b.left)) && ts.isStringLiteral(unparen(b.right)));
+  if (!plus) return undefined;
+  const left = unparen(plus.left) as ts.StringLiteral;
+  const q = ctx.text(left)[0] === '"' ? '"' : "'";
+  return { id: 'joinStrings', title: 'Join string literals', edits: [ctx.replace(plus, quote(left.text + (unparen(plus.right) as ts.StringLiteral).text, q))] };
+}
+moreIntentions.push({ id: 'joinStrings', title: 'Join string literals', run: joinStrings });
