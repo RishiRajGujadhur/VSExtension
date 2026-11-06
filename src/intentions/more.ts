@@ -710,3 +710,21 @@ function elementToPropertyAccess(ctx: IntentionContext): IntentionAction | undef
   return { id: 'elementToPropertyAccess', title: `Use .${name}`, edits: [ctx.replace(access, `${ctx.text(access.expression)}${access.questionDotToken ? '?.' : '.'}${name}`)] };
 }
 moreIntentions.push({ id: 'elementToPropertyAccess', title: 'Convert \'a["b"]\' to \'a.b\'', run: elementToPropertyAccess });
+
+function nullCheckJoin(ctx: IntentionContext): IntentionAction | undefined {
+  const binary = ctx.nearest(ts.isBinaryExpression, (b) => b.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || b.operatorToken.kind === ts.SyntaxKind.BarBarToken);
+  if (!binary) return undefined;
+  const and = binary.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken;
+  const op = and ? ts.SyntaxKind.ExclamationEqualsEqualsToken : ts.SyntaxKind.EqualsEqualsEqualsToken;
+  const check = (e: ts.Expression) => {
+    const u = unparen(e);
+    if (!ts.isBinaryExpression(u) || u.operatorToken.kind !== op || !isSimple(u.left)) return undefined;
+    const r = unparen(u.right);
+    const what = r.kind === ts.SyntaxKind.NullKeyword ? 'null' : ts.isIdentifier(r) && r.text === 'undefined' ? 'undefined' : undefined;
+    return what && { subject: ctx.text(unparen(u.left)), what };
+  };
+  const [l, r] = [check(binary.left), check(binary.right)];
+  if (!l || !r || l.subject !== r.subject || l.what === r.what) return undefined;
+  return { id: 'nullCheckJoin', title: `Replace with '${and ? '!=' : '=='} null'`, edits: [ctx.replace(binary, wrap(`${l.subject} ${and ? '!=' : '=='} null`, requiredPrecedence(binary)))] };
+}
+moreIntentions.push({ id: 'nullCheckJoin', title: 'Replace \'!== null && !== undefined\' with \'!= null\'', run: nullCheckJoin });

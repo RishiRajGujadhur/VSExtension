@@ -278,3 +278,8 @@ test('Intention: Convert \'a["b"]\' to \'a.b\'', () => {
   assert.equal(apply("const n = user['na¦me'];", 'elementToPropertyAccess'), 'const n = user.name;');
   assert.equal(apply("const n = user['first-¦name'];", 'elementToPropertyAccess'), undefined);
 });
+
+test('Intention: Replace \'!== null && !== undefined\' with \'!= null\'', () => {
+  assert.equal(apply('if (x !== null ¦&& x !== undefined) {}', 'nullCheckJoin'), 'if (x != null) {}');
+  assert.equal(apply('if (x === undefined ¦|| x === null) {}', 'nullCheckJoin'), 'if (x == null) {}');
+});
