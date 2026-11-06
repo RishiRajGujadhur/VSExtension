@@ -118,6 +118,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     // A new report drops any history ahead of the current one, like browser navigation.
     const config = vscode.workspace.getConfiguration('tsStructure.results');
     const historySize = Math.max(1, config.get('historySize', 20));
+    report.ranAt ??= Date.now();
     this.history = [...this.history.slice(0, this.position + 1), { report, rerun }].slice(-historySize);
     this.position = this.history.length - 1;
     this.filter = '';
@@ -183,7 +184,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
         return {
           label: `${index === this.position ? '$(arrow-right) ' : ''}$(${reportIcons[entry.report.kind] ?? 'list-tree'}) ${heading}`,
           description: subject,
-          detail: [entry.report.description, entry.rerun ? undefined : 'from an earlier session'].filter(Boolean).join(' · ') || undefined,
+          detail: [entry.report.description, entry.report.ranAt ? ago(entry.report.ranAt) : undefined, entry.rerun ? undefined : 'from an earlier session'].filter(Boolean).join(' · ') || undefined,
           index,
         };
       })
@@ -203,6 +204,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const report = await entry.rerun();
     if (report) {
       // Replace the entry in place: a refreshed report is not a new step in the history.
+      report.ranAt ??= Date.now();
       this.history[this.position] = { report, rerun: entry.rerun };
       this.render();
       this.persist();
@@ -539,4 +541,17 @@ function summaryLine(report: Report): string {
 function rowKey(node: ReportNode): string {
   const where = node.location ? `${node.location.file}:${node.location.line}:${node.location.character}` : String(node.action?.file ?? '');
   return `${node.label} @ ${where}`;
+}
+
+/** "just now", "5 min ago", "2 h ago", "3 days ago". */
+export function ago(time: number, now = Date.now()): string {
+  const minutes = Math.round((now - time) / 60000);
+  if (minutes < 1) {
+    return 'just now';
+  }
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'} ago`;
 }

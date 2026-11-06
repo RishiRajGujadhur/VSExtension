@@ -42,6 +42,8 @@ export interface Report {
   fileHashes: Record<string, string>;
   /** How long the analysis took, set by the UI. */
   durationMs?: number;
+  /** When it ran (milliseconds since 1970), set by the UI. */
+  ranAt?: number;
 }
 
 /** Collects locations while a report is built, remembering the text each one was computed from. */
