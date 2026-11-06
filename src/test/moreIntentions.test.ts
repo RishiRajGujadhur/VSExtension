@@ -260,3 +260,8 @@ test('Intention: Invert if into an early return', () => {
   assert.equal(apply(lines('function f(a: boolean) {', '  i¦f (a) {', '    go();', '    stop();', '  }', '}'), 'guardClause'), lines('function f(a: boolean) {', '  if (!a) {', '    return;', '  }', '  go();', '  stop();', '}'));
   assert.equal(apply(lines('function f(a: boolean) {', '  i¦f (a) {', '    go();', '  }', '  more();', '}'), 'guardClause'), undefined);
 });
+
+test('Intention: Await independent calls together', () => {
+  assert.equal(apply(lines('async function f() {', '  c¦onst user = await loadUser();', '  const cart = await loadCart();', '}'), 'awaitToPromiseAll'), lines('async function f() {', '  const [user, cart] = await Promise.all([loadUser(), loadCart()]);', '}'));
+  assert.equal(apply(lines('async function f() {', '  c¦onst user = await loadUser();', '  const cart = await loadCart(user);', '}'), 'awaitToPromiseAll'), undefined);
+});

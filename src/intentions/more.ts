@@ -667,3 +667,20 @@ function guardClause(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'guardClause', title: 'Invert into early return', edits: [ctx.replace(statement, `if (${negate(statement.expression, ctx.sourceFile)}) {\n${indent}${ctx.indentUnit}return;\n${indent}}\n${indentLines(lines, indent)}`)] };
 }
 moreIntentions.push({ id: 'guardClause', title: 'Invert if into an early return', run: guardClause });
+
+function awaitToPromiseAll(ctx: IntentionContext): IntentionAction | undefined {
+  const first = ctx.nearest(ts.isVariableStatement);
+  const block = first?.parent;
+  if (!first || !block || !(ts.isBlock(block) || ts.isSourceFile(block))) return undefined;
+  const second = block.statements[block.statements.indexOf(first) + 1];
+  const awaited = (s: ts.Statement | undefined) => {
+    const d = s && ts.isVariableStatement(s) && s.declarationList.declarations.length === 1 ? s.declarationList.declarations[0] : undefined;
+    return d && ts.isIdentifier(d.name) && d.initializer && ts.isAwaitExpression(d.initializer) && !d.type ? { name: d.name.text, expression: d.initializer.expression, list: s as ts.VariableStatement } : undefined;
+  };
+  const [a, b] = [awaited(first), awaited(second)];
+  // The second call must not use the first result, or they can't run together.
+  if (!a || !b || new RegExp(`\\b${a.name}\\b`).test(ctx.text(b.expression))) return undefined;
+  const keyword = (first.declarationList.flags & ts.NodeFlags.Const) && (b.list.declarationList.flags & ts.NodeFlags.Const) ? 'const' : 'let';
+  return { id: 'awaitToPromiseAll', title: 'Await together with Promise.all', edits: [{ start: first.getStart(ctx.sourceFile), end: second!.end, text: `${keyword} [${a.name}, ${b.name}] = await Promise.all([${ctx.text(a.expression)}, ${ctx.text(b.expression)}]);` }] };
+}
+moreIntentions.push({ id: 'awaitToPromiseAll', title: 'Await independent calls together', run: awaitToPromiseAll });
