@@ -96,6 +96,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   listeners(): vscode.Disposable[] {
     return [
       vscode.window.onDidChangeVisibleTextEditors(() => this.highlight()),
+      vscode.window.onDidChangeTextEditorSelection((e) => this.followCursor(e.textEditor)),
       vscode.workspace.onDidChangeTextDocument((e) => this.checkStale(e.document)),
       vscode.workspace.onDidSaveTextDocument((document) => this.rerunOnSave(document)),
       vscode.workspace.onDidChangeConfiguration((e) => {
@@ -443,6 +444,27 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   private stepStatus: vscode.Disposable | undefined;
+  private followTimer: NodeJS.Timeout | undefined;
+
+  /** Selects the row of the place under the editor's cursor, so the view shows where you are in the results. */
+  private followCursor(editor: vscode.TextEditor): void {
+    clearTimeout(this.followTimer);
+    if (!this.view.visible || this.located.length === 0 || this.stale || !vscode.workspace.getConfiguration('tsStructure.results').get('followCursor', true)) {
+      return;
+    }
+    this.followTimer = setTimeout(() => {
+      const key = pathKey(editor.document.uri.fsPath);
+      const { line, character } = editor.selection.active;
+      const contains = (l: ReportLocation) =>
+        pathKey(l.file) === key && (line > l.line || (line === l.line && character >= l.character)) && (line < l.endLine || (line === l.endLine && character <= l.endCharacter));
+      // The narrowest row around the cursor: a step rather than the function it is in.
+      const node = this.located.filter((n) => contains(n.location!)).sort((a, b) => a.location!.endLine - a.location!.line - (b.location!.endLine - b.location!.line))[0];
+      if (node && this.view.selection[0] !== node) {
+        this.cursor = this.located.indexOf(node);
+        void Promise.resolve(this.view.reveal(node, { select: true, focus: false })).catch(() => undefined);
+      }
+    }, 200);
+  }
 
   /** Every shown row's location as `file:line`, one per line, for a ticket or another tool. */
   locations(): string[] {
