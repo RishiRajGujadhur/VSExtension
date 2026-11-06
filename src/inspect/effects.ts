@@ -54,6 +54,7 @@ const mutatingMethods: Record<string, readonly string[]> = {
   URLSearchParams: ['append', 'set', 'delete', 'sort'],
   Headers: ['append', 'set', 'delete'],
   FormData: ['append', 'set', 'delete'],
+  DOMTokenList: ['add', 'remove', 'toggle', 'replace'],
   Map: ['set', 'delete', 'clear'],
   Set: ['add', 'delete', 'clear'],
   WeakMap: ['set', 'delete'],

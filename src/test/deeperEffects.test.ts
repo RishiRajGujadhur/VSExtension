@@ -81,3 +81,7 @@ test('Mutation tracking: Date setters', () => {
 test('Mutation tracking: URLSearchParams, Headers and FormData', () => {
   assert.ok(effects('function f(p: URLSearchParams) { p.set("q", "1"); }').some((e) => e.startsWith('mutates-parameter')));
 });
+
+test('Mutation tracking: classList changes', () => {
+  assert.ok(effects('function f(e: Element) { e.classList.add("on"); }').some((e) => e.startsWith('mutates-parameter')));
+});
