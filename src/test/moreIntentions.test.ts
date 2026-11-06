@@ -115,3 +115,9 @@ test('Add parentheses to mixed \'&&\' and \'||\'', () => {
   assert.equal(apply('const ok = a && b ¦|| c;', 'addParentheses'), 'const ok = (a && b) || c;');
   assert.equal(apply('const ok = a ¦|| b;', 'addParentheses'), undefined);
 });
+
+test('Replace \'if\' returning true/false with \'return\'', () => {
+  assert.equal(apply('function f(a) { i¦f (a > 1) { return true; } else { return false; } }', 'booleanReturn'), 'function f(a) { return a > 1; }');
+  assert.equal(apply('function f(a) { i¦f (a) return false; return true; }', 'booleanReturn'), 'function f(a) { return !a; }');
+  assert.equal(apply('function f(a) { i¦f (a) return true; return false; }', 'booleanReturn'), 'function f(a) { return !!a; }');
+});

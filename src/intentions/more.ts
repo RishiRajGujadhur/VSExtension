@@ -354,3 +354,29 @@ function addParentheses(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'addParentheses', title: "Add parentheses to clarify '&&' inside '||'", edits };
 }
 moreIntentions.push({ id: 'addParentheses', title: 'Add parentheses to mixed \'&&\' and \'||\'', run: addParentheses });
+
+function booleanReturn(ctx: IntentionContext): IntentionAction | undefined {
+  const statement = ctx.nearest(ts.isIfStatement, (s) => ctx.onHeader(s));
+  if (!statement) return undefined;
+  const literal = (s: ts.Statement | undefined): boolean | undefined => {
+    const only = s && (ts.isBlock(s) ? (s.statements.length === 1 ? s.statements[0] : undefined) : s);
+    const e = only && ts.isReturnStatement(only) && only.expression;
+    return e ? (e.kind === ts.SyntaxKind.TrueKeyword ? true : e.kind === ts.SyntaxKind.FalseKeyword ? false : undefined) : undefined;
+  };
+  const whenTrue = literal(statement.thenStatement);
+  let end = statement.end;
+  let whenFalse: boolean | undefined;
+  if (statement.elseStatement) {
+    whenFalse = literal(statement.elseStatement);
+  } else {
+    const siblings = (statement.parent as ts.Block).statements;
+    const next = siblings?.[siblings.indexOf(statement) + 1];
+    whenFalse = literal(next);
+    end = next?.end ?? end;
+  }
+  if (whenTrue === undefined || whenFalse === undefined || whenTrue === whenFalse) return undefined;
+  const condition = statement.expression;
+  const value = whenTrue ? (isBooleanish(condition) ? ctx.text(unparen(condition)) : `!!${wrap(ctx.text(condition), 15)}`) : negate(condition, ctx.sourceFile);
+  return { id: 'booleanReturn', title: `Replace with 'return ${whenTrue ? '' : '!'}…'`, edits: [{ start: statement.getStart(ctx.sourceFile), end, text: `return ${value};` }] };
+}
+moreIntentions.push({ id: 'booleanReturn', title: 'Replace \'if\' returning true/false with \'return\'', run: booleanReturn });
