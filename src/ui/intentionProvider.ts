@@ -27,7 +27,7 @@ export class IntentionProvider implements vscode.CodeActionProvider {
   }
 }
 
-const conditionIntentions = new Set(['invertIf', 'ifToTernary', 'ternaryToIf', 'flipTernary', 'mergeNestedIfs', 'splitAndCondition', 'ifChainToSwitch', 'deMorgan', 'flipComparison']);
+const conditionIntentions = new Set(['invertIf', 'ifToTernary', 'ternaryToIf', 'flipTernary', 'mergeNestedIfs', 'splitAndCondition', 'ifChainToSwitch', 'deMorgan', 'flipComparison', 'ternaryToNullish', 'optionalChain', 'removeElseAfterReturn', 'switchToIfChain', 'addParentheses', 'booleanReturn', 'ternaryBoolean', 'equalityChainToIncludes', 'simplifyNegation', 'removeDoubleNegation', 'ternaryToOr', 'guardClause', 'nullCheckJoin', 'nullCheckExpand']);
 
 /** The rewrites that apply at the editor's cursor, whether or not they are turned off. */
 export function intentionsAtCursor(editor: vscode.TextEditor | undefined, disabled: ReadonlySet<string> = new Set()): ReturnType<typeof intentionsAt> {
