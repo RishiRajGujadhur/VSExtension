@@ -48,3 +48,9 @@ test('Replace \'let\' with \'const\'', () => {
   assert.equal(apply('l¦et n = 1; [n] = [2];', 'letToConst'), undefined);
   assert.equal(apply('for (l¦et x of xs) use(x);', 'letToConst'), 'for (const x of xs) use(x);');
 });
+
+test('Replace \'var\' with \'let\'', () => {
+  assert.equal(apply('function f() { v¦ar a = 1; return a; }', 'varToLet'), 'function f() { let a = 1; return a; }');
+  assert.equal(apply('function f(x) { if (x) { v¦ar a = 1; } return a; }', 'varToLet'), undefined);
+  assert.equal(apply('function f() { use(a); v¦ar a = 1; }', 'varToLet'), undefined);
+});

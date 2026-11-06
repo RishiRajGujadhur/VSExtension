@@ -170,3 +170,25 @@ function letToConst(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'letToConst', title: "Replace 'let' with 'const'", edits: [{ start: keyword.getStart(ctx.sourceFile), end: keyword.end, text: 'const' }] };
 }
 moreIntentions.push({ id: 'letToConst', title: 'Replace \'let\' with \'const\'', run: letToConst });
+
+function varToLet(ctx: IntentionContext): IntentionAction | undefined {
+  const list = ctx.nearest(ts.isVariableDeclarationList, (l) => (l.flags & (ts.NodeFlags.Let | ts.NodeFlags.Const)) === 0 && ctx.position <= l.declarations[0].name.end);
+  if (!list || !ts.isVariableStatement(list.parent) || !list.declarations.every((d) => ts.isIdentifier(d.name))) return undefined;
+  const block = list.parent.parent;
+  // Hoisting must not matter: every use comes after the declaration and stays inside its block, and nothing redeclares it.
+  let functionScope: ts.Node = block;
+  while (!ts.isSourceFile(functionScope) && !ts.isFunctionLike(functionScope)) functionScope = functionScope.parent;
+  const names = list.declarations.map((d) => (d.name as ts.Identifier).text);
+  let safe = true;
+  everyNode(functionScope, (node) => {
+    if (!ts.isIdentifier(node) || !names.includes(node.text)) return;
+    const p = node.parent;
+    if ((ts.isPropertyAccessExpression(p) && p.name === node) || (ts.isPropertyAssignment(p) && p.name === node)) return;
+    if (ts.isVariableDeclaration(p) && p.name === node && !list.declarations.includes(p)) safe = false;
+    if (node.getStart(ctx.sourceFile) < list.declarations[0].name.getStart(ctx.sourceFile) || node.getStart(ctx.sourceFile) >= block.end) safe = false;
+  });
+  if (!safe) return undefined;
+  const keyword = list.getFirstToken(ctx.sourceFile)!;
+  return { id: 'varToLet', title: "Replace 'var' with 'let'", edits: [{ start: keyword.getStart(ctx.sourceFile), end: keyword.end, text: 'let' }] };
+}
+moreIntentions.push({ id: 'varToLet', title: 'Replace \'var\' with \'let\'', run: varToLet });
