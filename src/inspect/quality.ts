@@ -445,3 +445,25 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'promiseResolveInAsync',
+  title: 'Promise.resolve or reject in an async function',
+  defaultSeverity: 'hint',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isFunctionLike(node) || !(ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Async) || !('body' in node) || !node.body) return;
+      walkInScope(node.body as ts.Node, (inner) => {
+        const call = ts.isReturnStatement(inner) && inner.expression && ts.isCallExpression(inner.expression) ? inner.expression : undefined;
+        const callee = call?.expression.getText();
+        if (call && (callee === 'Promise.resolve' || callee === 'Promise.reject') && call.arguments.length <= 1) {
+          const value = call.arguments[0]?.getText() ?? '';
+          const text = callee === 'Promise.resolve' ? `return${value ? ` ${value}` : ''};` : `throw ${value || 'undefined'};`;
+          out.push(at(ctx.sourceFile, 'promiseResolveInAsync', call, callee === 'Promise.resolve' ? 'An async function already wraps its result in a promise.' : 'In an async function, throw rejects the promise.', 'hint', [{ title: callee === 'Promise.resolve' ? 'Return the value' : 'Throw the error', edits: [replace(ctx.sourceFile, inner, text)], preferred: true }]));
+        }
+      });
+    });
+    return out;
+  },
+});

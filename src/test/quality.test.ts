@@ -134,3 +134,8 @@ test('String passed to a timer', () => {
 test('new String, Number or Boolean', () => {
   assert.equal(fixed('const s = new String(1);', 'primitiveWrapper'), 'const s = String(1);');
 });
+
+test('Promise.resolve or reject in an async function', () => {
+  assert.equal(fixed('async function f() { return Promise.resolve(1); }', 'promiseResolveInAsync'), 'async function f() { return 1; }');
+  assert.equal(fixed('async function f(e: Error) { return Promise.reject(e); }', 'promiseResolveInAsync'), 'async function f(e: Error) { throw e; }');
+});
