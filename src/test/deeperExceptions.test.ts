@@ -65,3 +65,7 @@ test('Exception flow: full browser storage', () => {
 test('Exception flow: schema validation with Zod, Yup and others', () => {
   assert.deepEqual(raised('declare class ZodType { parse(v: unknown): unknown } function f(s: ZodType, v: unknown) { return s.parse(v); }'), ['s.parse(): a validation error when the value does not match the schema']);
 });
+
+test('Exception flow: decoding text strictly', () => {
+  assert.deepEqual(raised('function f(b: Uint8Array) { return new TextDecoder("utf-8", { fatal: true }).decode(b); }'), ['new TextDecoder("utf-8", { fatal: true }).decode(): TypeError on invalid bytes when fatal is set']);
+});

@@ -114,6 +114,8 @@ throwingMethods.push({ receiver: 'Storage', method: 'setItem', note: 'QuotaExcee
 
 throwingMethods.push({ receiver: /^(Zod\w*|ObjectSchema|Schema|StringSchema|NumberSchema)$/, method: /^(parse|validateSync)$/, note: 'a validation error when the value does not match the schema' });
 
+throwingMethods.push({ receiver: 'TextDecoder', method: 'decode', note: 'TypeError on invalid bytes when fatal is set' });
+
 /** An error that can leave a function: thrown inside it or in a function it calls. */
 export interface ThrowPath {
   /** The throw statement or library call that raises the error. */
