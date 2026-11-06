@@ -71,6 +71,8 @@ const effectfulGlobals: Record<string, { kind: EffectKind; note: string }> = {
   BroadcastChannel: { kind: 'io', note: 'sends messages to other tabs' },
   postMessage: { kind: 'io', note: 'sends a message to another window' },
   Notification: { kind: 'io', note: 'shows a system notification' },
+  caches: { kind: 'io', note: 'uses the Cache Storage' },
+  cookieStore: { kind: 'io', note: 'uses cookies' },
   document: { kind: 'global', note: 'uses the DOM' },
   window: { kind: 'global', note: 'uses the window object' },
   globalThis: { kind: 'global', note: 'uses the global object' },

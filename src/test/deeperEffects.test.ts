@@ -16,3 +16,7 @@ test('Side effects: cross-window and cross-tab messaging', () => {
 test('Side effects: notifications', () => {
   assert.deepEqual(effects('function f() { new Notification("Saved"); }'), ['io: shows a system notification']);
 });
+
+test('Side effects: Cache Storage and cookies', () => {
+  assert.deepEqual(effects('async function f() { await caches.open("v1"); }'), ['io: uses the Cache Storage']);
+});
