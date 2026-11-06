@@ -78,3 +78,7 @@ test('Misspelled typeof result', () => {
   assert.deepEqual(messages("declare const x: unknown; if (typeof x === 'strng') {}", 'typeofTypo'), ["typeof never returns 'strng'; did you mean 'string'?"]);
   assert.deepEqual(messages("declare const x: unknown; if (typeof x === 'string') {}", 'typeofTypo'), []);
 });
+
+test('return in finally', () => {
+  assert.equal(messages('function f() { try { return 1; } finally { return 2; } }', 'returnInFinally').length, 1);
+});

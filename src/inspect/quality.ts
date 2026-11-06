@@ -226,3 +226,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'returnInFinally',
+  title: 'return in finally',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isTryStatement(node) && node.finallyBlock) {
+        walkInScope(node.finallyBlock, (inner) => {
+          if (ts.isReturnStatement(inner) || ts.isThrowStatement(inner)) {
+            out.push(at(ctx.sourceFile, 'returnInFinally', inner, `A ${ts.isReturnStatement(inner) ? 'return' : 'throw'} in finally replaces any error or return value from the try block.`, 'warning'));
+          }
+        });
+      }
+    });
+    return out;
+  },
+});
