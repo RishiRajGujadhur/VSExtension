@@ -310,6 +310,14 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         void vscode.window.setStatusBarMessage('Analysis copied as CSV', 3000);
       }
     }),
+    // The report as a formatted document beside the editor, to read or print.
+    registerCommand('tsStructure.report.preview', async () => {
+      const markdown = view.markdown();
+      if (markdown) {
+        const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: markdown });
+        await vscode.commands.executeCommand('markdown.showPreviewToSide', document.uri);
+      }
+    }),
     registerCommand('tsStructure.report.copyLocations', async () => {
       const lines = view.locations();
       await vscode.env.clipboard.writeText(lines.join('\n'));

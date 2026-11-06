@@ -685,6 +685,12 @@
         "title": "Copy Analysis as CSV",
         "category": "TypeScript Structure",
         "icon": "$(table)"
+      },
+      {
+        "command": "tsStructure.report.preview",
+        "title": "Open Analysis as Markdown Preview",
+        "category": "TypeScript Structure",
+        "icon": "$(open-preview)"
       }
     ],
     "viewsContainers": {
@@ -1575,6 +1581,10 @@
         {
           "command": "tsStructure.report.copyCsv",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.report.preview",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -1742,6 +1752,11 @@
           "command": "tsStructure.report.copyCsv",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "1_export@4"
+        },
+        {
+          "command": "tsStructure.report.preview",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "1_export@5"
         }
       ],
       "view/item/context": [
