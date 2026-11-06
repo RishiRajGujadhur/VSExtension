@@ -101,3 +101,7 @@ test('Custom hook is recognized', () => {
 test('Store is recognized', () => {
   has('const store = configureStore({ reducer: {} });', 'Store');
 });
+
+test('Service locator is recognized', () => {
+  has('class Container { private factories = new Map<string, () => unknown>(); register(k: string, f: () => unknown) { this.factories.set(k, f); } resolve(k: string) { return this.factories.get(k)!(); } }', 'Service locator');
+});

@@ -386,3 +386,15 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Service locator',
+  meaning: 'Objects are registered under keys and looked up when needed, instead of being passed in.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const map = fieldsOf(cls).find((f) => /Map</.test(f.type + f.init));
+      const registers = map && methodsOf(cls).some((m) => text(m.body).includes(`this.${map.name}.set(`));
+      const resolves = map && methodsOf(cls).find((m) => new RegExp(`this\\.${map.name}\\.get\\([^)]*\\)!?\\(`).test(text(m.body)));
+      return registers && resolves ? [{ node: cls, evidence: `${className(cls)} registers factories in ${map!.name} and ${nameOf(resolves)}() creates them`, subject: className(cls) }] : [];
+    }),
+});
