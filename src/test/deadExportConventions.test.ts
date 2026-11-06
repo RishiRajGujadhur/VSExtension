@@ -34,3 +34,8 @@ test('Dead exports: SvelteKit, Nuxt and Astro conventions are entry points', () 
   assert.equal(isConventionalEntry('/repo/src/routes/+page.server.ts'), 'framework route');
   assert.equal(isConventionalEntry('/repo/server/api/users.get.ts'), 'framework route');
 });
+
+test('Dead exports: test setup files are entry points', () => {
+  assert.equal(isConventionalEntry('/repo/src/setupTests.ts'), 'test setup file');
+  assert.equal(isConventionalEntry('/repo/vitest.setup.ts'), 'test setup file');
+});

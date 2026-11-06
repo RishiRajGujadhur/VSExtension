@@ -331,3 +331,5 @@ entryConventions.push({ pattern: /(^|\/)([\w-]+\.config|\.?(eslintrc|prettierrc|
 entryConventions.push({ pattern: /\/app\/(routes\/[^]*|root|entry\.client|entry\.server)\.[cm]?[jt]sx?$/, what: 'route module' });
 
 entryConventions.push({ pattern: /(\/\+(page|layout|server|error)(\.server)?\.[cm]?[jt]s$)|(\/hooks\.(server|client)\.[cm]?[jt]s$)|(\/server\/(api|routes|middleware)\/[^]*\.[cm]?[jt]s$)|(\/src\/(pages|middleware)\/[^]*\.[cm]?[jt]s$)/, what: 'framework route' });
+
+entryConventions.push({ pattern: /(^|\/)(setupTests|setup-tests|test-setup|testSetup|vitest\.setup|jest\.setup|global-setup|globalSetup)\.[cm]?[jt]sx?$/, what: 'test setup file' });
