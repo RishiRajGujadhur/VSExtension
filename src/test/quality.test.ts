@@ -247,3 +247,8 @@ test('Inspection: replaceAll() with a regex missing \'g\'', () => {
 test('Inspection: Async function passed to useEffect', () => {
   assert.equal(messages('declare function useEffect(f: () => unknown, d?: unknown[]): void; useEffect(async () => { await 1; }, []);', 'asyncEffect').length, 1);
 });
+
+test('Inspection: List item without a key', () => {
+  assert.equal(messages('declare const items: { id: string }[]; const l = items.map((i) => <li>{i.id}</li>);', 'missingJsxKey').length, 1);
+  assert.equal(messages('declare const items: { id: string }[]; const l = items.map((i) => <li key={i.id} />);', 'missingJsxKey').length, 0);
+});

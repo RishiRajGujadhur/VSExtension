@@ -896,3 +896,26 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'missingJsxKey',
+  title: 'List item without a key',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression) || !/^(map|flatMap)$/.test(node.expression.name.text)) return;
+      const callback = node.arguments[0];
+      if (!callback || !(ts.isArrowFunction(callback) || ts.isFunctionExpression(callback))) return;
+      const results = ts.isBlock(callback.body) ? [] : [callback.body];
+      if (ts.isBlock(callback.body)) walkInScope(callback.body, (inner) => ts.isReturnStatement(inner) && inner.expression && results.push(inner.expression));
+      for (const result of results.map(unparen)) {
+        const opening = ts.isJsxElement(result) ? result.openingElement : ts.isJsxSelfClosingElement(result) ? result : undefined;
+        if (opening && !opening.attributes.properties.some((p) => ts.isJsxAttribute(p) && p.name.getText() === 'key')) {
+          out.push(at(ctx.sourceFile, 'missingJsxKey', opening, 'Each item of a list needs a key, such as key={item.id}, so React can track it.', 'warning'));
+        }
+      }
+    });
+    return out;
+  },
+});
