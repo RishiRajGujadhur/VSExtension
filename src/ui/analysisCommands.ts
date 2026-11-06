@@ -32,6 +32,7 @@ import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
 import { registerCommand } from './features';
 import { explanations, guideUrl } from '../structure/explanations';
+import { reportCsv } from '../structure/markdown';
 import { AnalysisError } from '../analysis/types';
 import { analyzeSymbol, offerSymbols } from './analysisActions';
 
@@ -300,6 +301,13 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       if (line) {
         await vscode.env.clipboard.writeText(line);
         void vscode.window.setStatusBarMessage('Copied the line of code', 3000);
+      }
+    }),
+    registerCommand('tsStructure.report.copyCsv', async () => {
+      const report = view.report;
+      if (report) {
+        await vscode.env.clipboard.writeText(reportCsv(report.roots, vscode.workspace.workspaceFolders?.[0]?.uri.fsPath));
+        void vscode.window.setStatusBarMessage('Analysis copied as CSV', 3000);
       }
     }),
     registerCommand('tsStructure.report.copyLocations', async () => {

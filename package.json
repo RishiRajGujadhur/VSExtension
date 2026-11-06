@@ -679,6 +679,12 @@
         "title": "What Does This Pattern Mean?",
         "category": "TypeScript Structure",
         "icon": "$(question)"
+      },
+      {
+        "command": "tsStructure.report.copyCsv",
+        "title": "Copy Analysis as CSV",
+        "category": "TypeScript Structure",
+        "icon": "$(table)"
       }
     ],
     "viewsContainers": {
@@ -1565,6 +1571,10 @@
         {
           "command": "tsStructure.report.explainPattern",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.copyCsv",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
@@ -1727,6 +1737,11 @@
           "command": "tsStructure.report.openFiles",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "0_view@4"
+        },
+        {
+          "command": "tsStructure.report.copyCsv",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "1_export@4"
         }
       ],
       "view/item/context": [

@@ -67,3 +67,20 @@ function filterBy(nodes: readonly ReportNode[], accept: (node: ReportNode) => bo
   }
   return result;
 }
+
+/** The report's rows as CSV: group, row, details, file and line, for a spreadsheet. */
+export function reportCsv(nodes: readonly ReportNode[], root?: string): string {
+  const cell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+  const lines = ['Group,Row,Details,File,Line'];
+  const visit = (list: readonly ReportNode[], group: string) => {
+    for (const node of list) {
+      if (node.location) {
+        const file = root ? path.relative(root, node.location.file).replace(/\\/g, '/') : node.location.file;
+        lines.push([group, node.label, node.description ?? '', file, String(node.location.line + 1)].map(cell).join(','));
+      }
+      visit(node.children ?? [], group || node.label);
+    }
+  };
+  visit(nodes, '');
+  return lines.join('\n');
+}

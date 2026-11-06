@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { reportCsv } from '../structure/markdown';
 import { filterReport, reportMarkdown } from '../structure/markdown';
 import { Report, titleParts } from '../structure/report';
 
@@ -104,4 +105,9 @@ test('Results view: filter rows by tone with is:error, is:warning or is:info', (
 test('Results view: exclude rows with -text in the filter', () => {
   const roots = [{ label: 'g', children: [{ label: 'in cart.test.ts' }, { label: 'in cart.ts' }] }];
   assert.deepEqual(filterReport(roots, '-test').map((r) => r.children?.map((c) => c.label)), [['in cart.ts']]);
+});
+
+test('Results view: Copy as CSV', () => {
+  const csv = reportCsv([{ label: 'Calls', children: [{ label: 'total, x', location: { file: '/r/a.ts', line: 2, character: 0, endLine: 2, endCharacter: 1 } }] }], '/r');
+  assert.equal(csv, 'Group,Row,Details,File,Line\nCalls,"total, x",,a.ts,3');
 });
