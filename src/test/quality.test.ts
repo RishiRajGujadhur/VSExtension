@@ -182,3 +182,8 @@ test('Inspection: Loop counting the wrong way', () => {
 test('Inspection: \'!\' before \'in\' or \'instanceof\'', () => {
   assert.equal(fixed('declare const o: object; if (!"a" in o) {}', 'negatedInOrInstanceof'), 'declare const o: object; if (!("a" in o)) {}');
 });
+
+test('Inspection: Bitwise \'&\' or \'|\' in a condition', () => {
+  assert.equal(fixed('declare const a: boolean, b: boolean; if (a & b) {}', 'bitwiseInCondition'), 'declare const a: boolean, b: boolean; if (a && b) {}');
+  assert.equal(messages('declare const flags: number; if (flags & 4) {}', 'bitwiseInCondition').length, 0);
+});

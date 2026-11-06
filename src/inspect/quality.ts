@@ -639,3 +639,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'bitwiseInCondition',
+  title: 'Bitwise \'&\' or \'|\' in a condition',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const condition = ts.isIfStatement(node) || ts.isWhileStatement(node) ? node.expression : ts.isConditionalExpression(node) ? node.condition : undefined;
+      const c = condition && unparen(condition);
+      if (!c || !ts.isBinaryExpression(c) || (c.operatorToken.kind !== ts.SyntaxKind.AmpersandToken && c.operatorToken.kind !== ts.SyntaxKind.BarToken)) return;
+      // Flag masks such as `flags & 4` are bitwise on purpose.
+      if ([c.left, c.right].some((o) => ts.isNumericLiteral(unparen(o)) || /flag|mask|bits/i.test(o.getText()))) return;
+      const logical = c.operatorToken.kind === ts.SyntaxKind.AmpersandToken ? '&&' : '||';
+      out.push(at(ctx.sourceFile, 'bitwiseInCondition', c.operatorToken, `Bitwise ${c.operatorToken.getText()} in a condition; did you mean ${logical}?`, 'info', [{ title: `Use ${logical}`, edits: [replace(ctx.sourceFile, c.operatorToken, logical)] }]));
+    });
+    return out;
+  },
+});
