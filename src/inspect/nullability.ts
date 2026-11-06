@@ -179,7 +179,7 @@ export class NullabilityExplorer {
     if (declaration && !declaration.getSourceFile().isDeclarationFile) {
       results.push(...this.propertySources(declaration, depth));
     } else if (this.nullable(node) && !node.questionDotToken) {
-      results.push(this.leaf(`${nodeText(node)}: ${this.typeOf(node)}`, node, 'warning', 'library type'));
+      results.push(this.leaf(`${nodeText(node)}: ${this.typeOf(node)}`, node, 'warning', /^process\.env\./.test(node.getText()) ? 'undefined when the variable is not set' : 'library type'));
     }
     return results;
   }
