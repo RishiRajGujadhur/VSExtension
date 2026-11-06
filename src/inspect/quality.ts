@@ -62,3 +62,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'nanComparison',
+  title: 'Comparison with NaN',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || !comparisons.has(node.operatorToken.kind)) return;
+      const isNaN = (e: ts.Expression) => /^(Number\.)?NaN$/.test(unparen(e).getText());
+      const other = isNaN(node.right) ? node.left : isNaN(node.left) ? node.right : undefined;
+      if (!other) return;
+      const negative = isNegative(node.operatorToken.kind);
+      out.push(at(ctx.sourceFile, 'nanComparison', node, `Comparing with NaN is always ${negative ? 'true' : 'false'}; use Number.isNaN().`, 'warning', [{ title: 'Use Number.isNaN()', edits: [replace(ctx.sourceFile, node, `${negative ? '!' : ''}Number.isNaN(${other.getText()})`)], preferred: true }]));
+    });
+    return out;
+  },
+});

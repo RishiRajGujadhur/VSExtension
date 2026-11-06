@@ -35,3 +35,8 @@ test('Self-assignment', () => {
   assert.equal(fixed('let a = 1;\na = a;\n', 'selfAssignment'), 'let a = 1;\n');
   assert.deepEqual(messages('let a = 1, b = 2; a = b;', 'selfAssignment'), []);
 });
+
+test('Comparison with NaN', () => {
+  assert.deepEqual(messages('declare const x: number; if (x === NaN) {}', 'nanComparison'), ['Comparing with NaN is always false; use Number.isNaN().']);
+  assert.equal(fixed('declare const x: number; const b = x !== NaN;', 'nanComparison'), 'declare const x: number; const b = !Number.isNaN(x);');
+});
