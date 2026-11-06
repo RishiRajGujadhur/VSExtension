@@ -225,3 +225,7 @@ test('Inspection: Exact comparison of decimal arithmetic', () => {
   assert.equal(messages('const ok = 0.1 + 0.2 === 0.3;', 'floatEquality').length, 1);
   assert.equal(messages('declare const n: number; const ok = n + 1 === 2;', 'floatEquality').length, 0);
 });
+
+test('Inspection: Unused catch variable', () => {
+  assert.equal(fixed('try { f(); } catch (e) { g(); } declare function f(): void; declare function g(): void;', 'unusedCatchBinding'), 'try { f(); } catch { g(); } declare function f(): void; declare function g(): void;');
+});

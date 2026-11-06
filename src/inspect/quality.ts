@@ -804,3 +804,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'unusedCatchBinding',
+  title: 'Unused catch variable',
+  defaultSeverity: 'hint',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const name = ts.isCatchClause(node) && node.variableDeclaration && ts.isIdentifier(node.variableDeclaration.name) ? node.variableDeclaration.name.text : undefined;
+      if (name && !new RegExp(`\\b${name}\\b`).test((node as ts.CatchClause).block.getText())) {
+        const clause = node as ts.CatchClause;
+        const start = clause.getStart(ctx.sourceFile) + 'catch'.length;
+        out.push(at(ctx.sourceFile, 'unusedCatchBinding', clause.variableDeclaration!, `${name} is never used; catch without a variable says so.`, 'hint', [{ title: `Remove (${name})`, edits: [{ start, end: clause.block.getStart(ctx.sourceFile), text: ' ' }] }]));
+      }
+    });
+    return out;
+  },
+});
