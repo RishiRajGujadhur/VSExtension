@@ -24,3 +24,7 @@ test('Side effects: Cache Storage and cookies', () => {
 test('Side effects: web workers', () => {
   assert.deepEqual(effects('function f() { return new Worker("w.js"); }'), ['io: starts a background worker']);
 });
+
+test('Side effects: idle callbacks', () => {
+  assert.deepEqual(effects('function f() { requestIdleCallback(() => 1); }'), ['timer: schedules work for when the browser is idle']);
+});
