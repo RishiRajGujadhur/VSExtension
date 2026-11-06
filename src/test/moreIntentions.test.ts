@@ -247,3 +247,7 @@ test('Intention: Use method shorthand', () => {
 test('Intention: Replace unary \'+\' with \'Number()\'', () => {
   assert.equal(apply('const n = ¦+input.value;', 'unaryPlusToNumber'), 'const n = Number(input.value);');
 });
+
+test('Intention: Split string at the cursor', () => {
+  assert.equal(apply("const s = 'Hello ¦world';", 'splitString'), "const s = 'Hello ' + 'world';");
+});

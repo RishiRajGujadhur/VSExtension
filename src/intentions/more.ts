@@ -636,3 +636,13 @@ function unaryPlusToNumber(ctx: IntentionContext): IntentionAction | undefined {
   return plus && { id: 'unaryPlusToNumber', title: "Replace with 'Number()'", edits: [ctx.replace(plus, `Number(${ctx.text(unparen(plus.operand))})`)] };
 }
 moreIntentions.push({ id: 'unaryPlusToNumber', title: 'Replace unary \'+\' with \'Number()\'', run: unaryPlusToNumber });
+
+function splitString(ctx: IntentionContext): IntentionAction | undefined {
+  const literal = ctx.nearest(ts.isStringLiteral, (l) => !ts.isJsxAttribute(l.parent) && !ts.isImportDeclaration(l.parent) && ctx.position > l.getStart(ctx.sourceFile) + 1 && ctx.position < l.end - 1);
+  if (!literal || ctx.text(literal).includes('\\')) return undefined;
+  const q = ctx.text(literal)[0];
+  const offset = ctx.position - literal.getStart(ctx.sourceFile);
+  const raw = ctx.text(literal);
+  return { id: 'splitString', title: 'Split string here', edits: [ctx.replace(literal, wrap(`${raw.slice(0, offset)}${q} + ${q}${raw.slice(offset)}`, requiredPrecedence(literal)))] };
+}
+moreIntentions.push({ id: 'splitString', title: 'Split string at the cursor', run: splitString });
