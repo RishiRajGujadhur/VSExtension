@@ -284,3 +284,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'debuggerStatement',
+  title: 'debugger statement',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isDebuggerStatement(node)) {
+        out.push(at(ctx.sourceFile, 'debuggerStatement', node, 'debugger stops the program when DevTools are open; remove it before committing.', 'warning', [{ title: 'Remove debugger', edits: [removeStatement(ctx.sourceFile, node)], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});

@@ -91,3 +91,7 @@ test('Expression with no effect', () => {
   assert.equal(messages('declare let a: number, b: number; a === b;', 'noEffectExpression').length, 1);
   assert.equal(messages("'use strict'; declare let a: number; a++;", 'noEffectExpression').length, 0);
 });
+
+test('debugger statement', () => {
+  assert.equal(fixed('f();\ndebugger;\nf();\ndeclare function f(): void;', 'debuggerStatement'), 'f();\nf();\ndeclare function f(): void;');
+});
