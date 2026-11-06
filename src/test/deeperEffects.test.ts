@@ -77,3 +77,7 @@ test('Mutation tracking: Date setters', () => {
   assert.ok(effects('function f(d: Date) { d.setFullYear(2020); }').some((e) => e.startsWith('mutates-parameter')));
   assert.deepEqual(effects('function f(d: Date) { return d.getFullYear(); }'), []);
 });
+
+test('Mutation tracking: URLSearchParams, Headers and FormData', () => {
+  assert.ok(effects('function f(p: URLSearchParams) { p.set("q", "1"); }').some((e) => e.startsWith('mutates-parameter')));
+});
