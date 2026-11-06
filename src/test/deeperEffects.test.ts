@@ -12,3 +12,7 @@ function effects(code: string): string[] {
 test('Side effects: cross-window and cross-tab messaging', () => {
   assert.deepEqual(effects('function f() { new BroadcastChannel("c").postMessage(1); }'), ['io: sends messages to other tabs']);
 });
+
+test('Side effects: notifications', () => {
+  assert.deepEqual(effects('function f() { new Notification("Saved"); }'), ['io: shows a system notification']);
+});
