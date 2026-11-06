@@ -171,3 +171,8 @@ test('Switch between single and double quotes', () => {
   assert.equal(apply("const s = 'a¦b';", 'toggleQuotes'), 'const s = "ab";');
   assert.equal(apply('const s = "say ¦\'hi\'";', 'toggleQuotes'), "const s = 'say \\'hi\\'';");
 });
+
+test('Intention: Simplify negated comparison', () => {
+  assert.equal(apply('if (!(a ¦=== b)) {}', 'simplifyNegation'), 'if (a !== b) {}');
+  assert.equal(apply('const x = !(a ¦!= null);', 'simplifyNegation'), 'const x = a == null;');
+});

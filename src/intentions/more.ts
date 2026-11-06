@@ -491,3 +491,10 @@ function toggleQuotes(ctx: IntentionContext): IntentionAction | undefined {
   return { id: 'toggleQuotes', title: single ? 'Use double quotes' : 'Use single quotes', edits: [ctx.replace(literal, quote(literal.text, single ? '"' : "'"))] };
 }
 moreIntentions.push({ id: 'toggleQuotes', title: 'Switch between single and double quotes', run: toggleQuotes });
+
+function simplifyNegation(ctx: IntentionContext): IntentionAction | undefined {
+  const comparisonKinds = [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken];
+  const not = ctx.nearest(ts.isPrefixUnaryExpression, (p) => p.operator === ts.SyntaxKind.ExclamationToken && ts.isParenthesizedExpression(p.operand) && ts.isBinaryExpression(unparen(p.operand)) && comparisonKinds.includes((unparen(p.operand) as ts.BinaryExpression).operatorToken.kind));
+  return not && { id: 'simplifyNegation', title: 'Simplify negated comparison', edits: [ctx.replace(not, wrap(negate(unparen(not.operand), ctx.sourceFile), requiredPrecedence(not)))] };
+}
+moreIntentions.push({ id: 'simplifyNegation', title: 'Simplify negated comparison', run: simplifyNegation });
