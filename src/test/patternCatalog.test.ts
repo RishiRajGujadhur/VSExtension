@@ -92,3 +92,8 @@ test('Higher-order component is recognized', () => {
 test('Render props is recognized', () => {
   has('function A() { return <List render={(x: string) => <b>{x}</b>} />; }', 'Render props');
 });
+
+test('Custom hook is recognized', () => {
+  has('function useCart() { const [c] = useState(0); return c; }', 'Custom hook');
+  lacks('function useCart() { const [c] = useState(0); return c; }', 'React component with hooks');
+});

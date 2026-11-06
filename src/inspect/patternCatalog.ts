@@ -358,3 +358,17 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Custom hook',
+  meaning: 'Reusable stateful logic in a use… function that other components call.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      if (!/^use[A-Z]/.test(name)) return [];
+      const hooks = new Set<string>();
+      walk(fn.body ?? fn, (node) => {
+        if (ts.isCallExpression(node) && /^use[A-Z]/.test(text(node.expression).replace(/^React\./, ''))) hooks.add(text(node.expression));
+      });
+      return hooks.size ? [{ node: fn, evidence: `${name}() packages ${[...hooks].slice(0, 3).join(', ')} for reuse` }] : [];
+    }),
+});

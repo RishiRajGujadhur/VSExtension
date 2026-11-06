@@ -193,7 +193,7 @@ export function detectPatterns(sourceFile: ts.SourceFile): DetectedPattern[] {
     if (chain.length > 0) {
       found.push(describe(chain[0], 'Pipeline', `${name}() chains ${chain[0].getText().match(/\.(map|filter|reduce|flatMap|sort|slice)\(/g)?.map((m) => m.slice(1, -1)).join(' → ')}`));
     }
-    if (/^use[A-Z]/.test(name) || (containsJsx(body) && calls(body, (c) => /^use[A-Z]/.test(calleeName(c) ?? '')).length > 0)) {
+    if (!/^use[A-Z]/.test(name) && (containsJsx(body) && calls(body, (c) => /^use[A-Z]/.test(calleeName(c) ?? '')).length > 0)) {
       const hooks = [...new Set(calls(body, (c) => /^use[A-Z]/.test(calleeName(c) ?? '')).map((c) => calleeName(c)))];
       if (hooks.length) {
         found.push(describe(fn, 'React component with hooks', `${name} uses ${hooks.slice(0, 3).join(', ')}`));
