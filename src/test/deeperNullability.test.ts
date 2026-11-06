@@ -23,3 +23,7 @@ test('Nullability: findLast', () => {
 test('Nullability: pop and shift on empty arrays', () => {
   assert.equal(reason('function f(xs: number[]) { return xs.pop(); }'), 'undefined when the array is empty');
 });
+
+test('Nullability: at() past the end', () => {
+  assert.equal(reason('function f(xs: number[]) { return xs.at(-1); }'), 'undefined when the index is past either end');
+});
