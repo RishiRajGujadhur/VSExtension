@@ -212,3 +212,8 @@ test('Intention: Replace JSX \'?: null\' with \'&&\'', () => {
 test('Intention: Replace JSX \'&&\' with \'?: null\'', () => {
   assert.equal(applyTsx('const a = <div>{open ¦&& <Menu />}</div>;', 'jsxAndToTernary'), 'const a = <div>{open ? <Menu /> : null}</div>;');
 });
+
+test('Intention: Self-close empty JSX element', () => {
+  assert.equal(applyTsx('const a = <Fo¦o bar="1"></Foo>;', 'jsxSelfClose'), 'const a = <Foo bar="1" />;');
+  assert.equal(applyTsx('const a = <Fo¦o>x</Foo>;', 'jsxSelfClose'), undefined);
+});

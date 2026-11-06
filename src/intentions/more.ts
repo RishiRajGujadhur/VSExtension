@@ -556,3 +556,11 @@ function jsxAndToTernary(ctx: IntentionContext): IntentionAction | undefined {
   return and && { id: 'jsxAndToTernary', title: "Replace with '? … : null'", edits: [ctx.replace(and, `${ctx.text(and.left)} ? ${ctx.text(and.right)} : null`)] };
 }
 moreIntentions.push({ id: 'jsxAndToTernary', title: 'Replace JSX \'&&\' with \'?: null\'', run: jsxAndToTernary });
+
+function jsxSelfClose(ctx: IntentionContext): IntentionAction | undefined {
+  const element = ctx.nearest(ts.isJsxElement, (e) => e.children.every((c) => ts.isJsxText(c) && !c.text.trim()));
+  if (!element) return undefined;
+  const opening = ctx.text(element.openingElement);
+  return { id: 'jsxSelfClose', title: 'Self-close element', edits: [ctx.replace(element, `${opening.slice(0, -1).trimEnd()} />`)] };
+}
+moreIntentions.push({ id: 'jsxSelfClose', title: 'Self-close empty JSX element', run: jsxSelfClose });
