@@ -586,3 +586,13 @@ catalog.push({
       return check ? [{ node: check, evidence: `${className(cls)} is a rule checked with isSatisfiedBy()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Unit of work',
+  meaning: 'Changes are collected and then saved together, or all thrown away.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const names = methodsOf(cls).map(nameOf);
+      return names.includes('commit') && names.includes('rollback') ? [{ node: cls, evidence: `${className(cls)} saves its changes together with commit() or drops them with rollback()`, subject: className(cls) }] : [];
+    }),
+});

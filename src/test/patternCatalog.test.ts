@@ -168,3 +168,7 @@ test('Design patterns: recognize State machine', () => {
 test('Design patterns: recognize Specification', () => {
   has('class AdultSpec { isSatisfiedBy(u: { age: number }) { return u.age >= 18; } }', 'Specification');
 });
+
+test('Design patterns: recognize Unit of work', () => {
+  has('class UnitOfWork { commit() {} rollback() {} }', 'Unit of work');
+});
