@@ -308,3 +308,13 @@ catalog.push({
       return inner && kind ? [{ node: fn, evidence: `${name}() ${kind} the function it wraps` }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Circuit breaker',
+  meaning: 'After repeated failures, calls are refused for a while instead of hitting a broken service.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const body = text(cls);
+      return /['"]open['"]/.test(body) && /['"](closed|half-open)['"]/.test(body) && /fail\w*/i.test(body) ? [{ node: cls, evidence: `${className(cls)} opens after failures and refuses calls while open`, subject: className(cls) }] : [];
+    }),
+});

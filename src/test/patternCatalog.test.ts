@@ -76,3 +76,7 @@ test('Retry is recognized', () => {
 test('Debounce or throttle is recognized', () => {
   has('function debounce(fn: () => void, ms: number) { let t: any; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }', 'Debounce or throttle');
 });
+
+test('Circuit breaker is recognized', () => {
+  has("class Breaker { private state: 'open' | 'closed' | 'half-open' = 'closed'; private failures = 0; call() { if (this.state === 'open') throw new Error(); } }", 'Circuit breaker');
+});
