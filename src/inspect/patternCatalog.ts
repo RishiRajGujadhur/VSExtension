@@ -166,3 +166,14 @@ catalog.push({
       return template ? [{ node: template, evidence: `${className(cls)}.${nameOf(template)}() calls the abstract ${abstract.filter((a) => text(template.body).includes(`this.${a}(`)).join(', ')}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'State',
+  meaning: 'Behavior changes with the object’s current state object: each state class handles the calls its own way.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const state = fieldsOf(cls).find((f) => /state/i.test(f.name) && /^[A-Z]\w*$/.test(f.type));
+      const delegating = state ? methodsOf(cls).filter((m) => new RegExp(`this\\.${state.name}\\.\\w+\\(`).test(text(m.body))) : [];
+      return state && delegating.length >= 2 ? [{ node: cls, evidence: `${className(cls)} delegates ${delegating.map((m) => `${nameOf(m)}()`).join(', ')} to its ${state.type}`, subject: className(cls) }] : [];
+    }),
+});

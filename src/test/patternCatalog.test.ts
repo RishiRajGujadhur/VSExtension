@@ -27,3 +27,7 @@ test('Decorator is recognized', () => {
 test('Template method is recognized', () => {
   has('abstract class Report { abstract body(): string; render() { return "<h1>" + this.body(); } }', 'Template method');
 });
+
+test('State is recognized', () => {
+  has('class Light { private state: LightState = new Off(); press() { this.state.press(this); } describe() { return this.state.name(); } }', 'State');
+});
