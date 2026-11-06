@@ -641,6 +641,119 @@
         "key": "shift+alt+f7",
         "command": "tsStructure.semanticUsagesInFile",
         "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s d",
+        "mac": "cmd+ctrl+s d",
+        "command": "tsStructure.dataFlow",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s n",
+        "mac": "cmd+ctrl+s n",
+        "command": "tsStructure.nullability",
+        "when": "config.tsStructure.features.nullability && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s e",
+        "mac": "cmd+ctrl+s e",
+        "command": "tsStructure.sideEffects",
+        "when": "config.tsStructure.features.sideEffects && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s m",
+        "mac": "cmd+ctrl+s m",
+        "command": "tsStructure.mutationTracking",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s r",
+        "mac": "cmd+ctrl+s r",
+        "command": "tsStructure.promiseRejections",
+        "when": "config.tsStructure.features.promiseRejections && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s x",
+        "mac": "cmd+ctrl+s x",
+        "command": "tsStructure.exceptionFlow",
+        "when": "config.tsStructure.features.exceptionFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s a",
+        "mac": "cmd+ctrl+s a",
+        "command": "tsStructure.argumentFlow",
+        "when": "config.tsStructure.features.argumentFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s h",
+        "mac": "cmd+ctrl+s h",
+        "command": "tsStructure.typeHierarchy",
+        "when": "config.tsStructure.features.hierarchy && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s o",
+        "mac": "cmd+ctrl+s o",
+        "command": "tsStructure.overrideImpact",
+        "when": "config.tsStructure.features.hierarchy && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s c",
+        "mac": "cmd+ctrl+s c",
+        "command": "tsStructure.reexportChain",
+        "when": "config.tsStructure.features.reexports && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s p",
+        "mac": "cmd+ctrl+s p",
+        "command": "tsStructure.dependencyPath",
+        "when": "config.tsStructure.features.dependencyPath && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s g",
+        "mac": "cmd+ctrl+s g",
+        "command": "tsStructure.dependencyGraphDiff",
+        "when": "config.tsStructure.features.graphDiff && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s u",
+        "mac": "cmd+ctrl+s u",
+        "command": "tsStructure.semanticUsages",
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s i",
+        "mac": "cmd+ctrl+s i",
+        "command": "tsStructure.inspectCode",
+        "when": "config.tsStructure.features.inspections && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s t",
+        "mac": "cmd+ctrl+s t",
+        "command": "tsImpact.analyze",
+        "when": "config.tsStructure.features.testImpact && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s s",
+        "mac": "cmd+ctrl+s s",
+        "command": "tsStructure.structuralSearch",
+        "when": "config.tsStructure.features.structuralSearch && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s f",
+        "mac": "cmd+ctrl+s f",
+        "command": "tsStructure.findDuplicates",
+        "when": "config.tsStructure.features.duplicates && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s z",
+        "mac": "cmd+ctrl+s z",
+        "command": "tsStructure.deadExports",
+        "when": "config.tsStructure.features.deadExports && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s v",
+        "mac": "cmd+ctrl+s v",
+        "command": "tsStructure.report.focus"
       }
     ],
     "menus": {
