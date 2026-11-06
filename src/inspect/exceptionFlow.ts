@@ -53,6 +53,13 @@ throwingCalls['assert.deepEqual'] = 'AssertionError when the check fails';
 throwingCalls['assert.deepStrictEqual'] = 'AssertionError when the check fails';
 throwingCalls['assert.match'] = 'AssertionError when the check fails';
 
+throwingCalls['yaml.parse'] = 'YAMLParseError on invalid YAML';
+throwingCalls['YAML.parse'] = 'YAMLParseError on invalid YAML';
+throwingCalls['yaml.load'] = 'YAMLException on invalid YAML';
+throwingCalls['jsyaml.load'] = 'YAMLException on invalid YAML';
+throwingCalls['toml.parse'] = 'Error on invalid TOML';
+throwingCalls['JSON5.parse'] = 'SyntaxError on invalid JSON5';
+
 /** Node's synchronous file system calls throw when a path is missing or inaccessible. */
 const fsSyncCalls = ['readFileSync', 'writeFileSync', 'appendFileSync', 'readdirSync', 'statSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'renameSync', 'copyFileSync', 'openSync'];
 for (const call of fsSyncCalls) {

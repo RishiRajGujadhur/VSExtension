@@ -32,3 +32,7 @@ test('Exception flow: require and process.chdir', () => {
 test('Exception flow: Node\'s assert', () => {
   assert.deepEqual(raised('declare function assert(v: unknown): void; function f(v: unknown) { assert(v); }'), ['assert(): AssertionError when the check fails']);
 });
+
+test('Exception flow: YAML and TOML parsers', () => {
+  assert.deepEqual(raised('declare const YAML: { parse(s: string): unknown }; function f(s: string) { return YAML.parse(s); }'), ['YAML.parse(): YAMLParseError on invalid YAML']);
+});
