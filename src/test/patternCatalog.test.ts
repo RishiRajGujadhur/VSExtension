@@ -105,3 +105,7 @@ test('Store is recognized', () => {
 test('Service locator is recognized', () => {
   has('class Container { private factories = new Map<string, () => unknown>(); register(k: string, f: () => unknown) { this.factories.set(k, f); } resolve(k: string) { return this.factories.get(k)!(); } }', 'Service locator');
 });
+
+test('Null object is recognized', () => {
+  has('class NullLogger implements Logger { log() {} warn() {} }', 'Null object');
+});

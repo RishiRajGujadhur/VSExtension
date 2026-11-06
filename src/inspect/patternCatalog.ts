@@ -398,3 +398,15 @@ catalog.push({
       return registers && resolves ? [{ node: cls, evidence: `${className(cls)} registers factories in ${map!.name} and ${nameOf(resolves)}() creates them`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Null object',
+  meaning: 'A do-nothing implementation stands in for a missing object, so callers need no null checks.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const [iface] = heritage(cls, ts.SyntaxKind.ImplementsKeyword);
+      const methods = methodsOf(cls);
+      const empty = methods.every((m) => m.body!.statements.length === 0 || (m.body!.statements.length === 1 && ts.isReturnStatement(m.body!.statements[0]) && (!m.body!.statements[0].expression || ts.isLiteralExpression(m.body!.statements[0].expression) || [ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword, ts.SyntaxKind.NullKeyword].includes(m.body!.statements[0].expression.kind))));
+      return iface && methods.length >= 2 && empty ? [{ node: cls, evidence: `${className(cls)} implements ${iface} by doing nothing`, subject: iface }] : [];
+    }),
+});
