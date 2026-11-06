@@ -262,3 +262,25 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'noEffectExpression',
+  title: 'Expression with no effect',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isExpressionStatement(node)) return;
+      const e = unparen(node.expression);
+      const isDirective = ts.isStringLiteral(e) && (ts.isSourceFile(node.parent) || ts.isBlock(node.parent));
+      const pure =
+        ts.isIdentifier(e) || ts.isNumericLiteral(e) || (ts.isStringLiteral(e) && !isDirective) ||
+        (ts.isBinaryExpression(e) && (comparisons.has(e.operatorToken.kind) || [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken, ts.SyntaxKind.LessThanToken, ts.SyntaxKind.GreaterThanToken].includes(e.operatorToken.kind)) && !ts.isCallExpression(unparen(e.right)) && !ts.isCallExpression(unparen(e.left))) ||
+        (ts.isPrefixUnaryExpression(e) && [ts.SyntaxKind.ExclamationToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.PlusToken].includes(e.operator));
+      if (pure && !(ts.isStringLiteral(e) && isDirective)) {
+        out.push(at(ctx.sourceFile, 'noEffectExpression', node, 'This expression does nothing: did you mean to assign, return or call it?', 'warning'));
+      }
+    });
+    return out;
+  },
+});

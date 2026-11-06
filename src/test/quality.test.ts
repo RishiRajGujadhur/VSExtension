@@ -86,3 +86,8 @@ test('return in finally', () => {
 test('Throwing a non-Error', () => {
   assert.equal(fixed("function f() { throw 'failed'; }", 'throwLiteral'), "function f() { throw new Error('failed'); }");
 });
+
+test('Expression with no effect', () => {
+  assert.equal(messages('declare let a: number, b: number; a === b;', 'noEffectExpression').length, 1);
+  assert.equal(messages("'use strict'; declare let a: number; a++;", 'noEffectExpression').length, 0);
+});
