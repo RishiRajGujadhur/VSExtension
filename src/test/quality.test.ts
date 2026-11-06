@@ -45,3 +45,8 @@ test('Async Promise executor', () => {
   assert.equal(messages('const p = new Promise(async (resolve) => { resolve(await f()); }); declare function f(): Promise<number>;', 'asyncPromiseExecutor').length, 1);
   assert.equal(messages('const p = new Promise((resolve) => resolve(1));', 'asyncPromiseExecutor').length, 0);
 });
+
+test('Empty catch block', () => {
+  assert.equal(messages('try { f(); } catch {} declare function f(): void;', 'emptyCatch').length, 1);
+  assert.equal(messages('try { f(); } catch { /* ignored */ } declare function f(): void;', 'emptyCatch').length, 0);
+});

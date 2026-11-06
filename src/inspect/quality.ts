@@ -96,3 +96,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'emptyCatch',
+  title: 'Empty catch block',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isCatchClause(node) && node.block.statements.length === 0 && !/\/\/|\/\*/.test(node.block.getText())) {
+        const sf = ctx.sourceFile;
+        const indent = /^[ \t]*/.exec(sf.text.slice(sf.text.lastIndexOf('\n', node.getStart(sf) - 1) + 1))![0];
+        out.push(at(sf, 'emptyCatch', node, 'The error is silently ignored. Handle it, or say why it is safe to ignore.', 'info', [{ title: 'Add a comment saying why it is ignored', edits: [replace(sf, node.block, `{\n${indent}  // Ignored on purpose: \n${indent}}`)] }]));
+      }
+    });
+    return out;
+  },
+});
