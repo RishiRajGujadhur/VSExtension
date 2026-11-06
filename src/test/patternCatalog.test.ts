@@ -97,3 +97,7 @@ test('Custom hook is recognized', () => {
   has('function useCart() { const [c] = useState(0); return c; }', 'Custom hook');
   lacks('function useCart() { const [c] = useState(0); return c; }', 'React component with hooks');
 });
+
+test('Store is recognized', () => {
+  has('const store = configureStore({ reducer: {} });', 'Store');
+});

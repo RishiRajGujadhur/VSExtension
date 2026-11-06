@@ -372,3 +372,17 @@ catalog.push({
       return hooks.size ? [{ node: fn, evidence: `${name}() packages ${[...hooks].slice(0, 3).join(', ')} for reuse` }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Store',
+  meaning: 'Application state lives in one store that components read from and dispatch changes to.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /^(createStore|configureStore|createSlice|defineStore|makeAutoObservable|makeObservable|createSignal|writable|atom)$/.test(text(node.expression))) {
+        found.push({ node, evidence: `${text(node.expression)}() creates shared application state` });
+      }
+    });
+    return found;
+  },
+});
