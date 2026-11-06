@@ -278,3 +278,7 @@ test('Inspection: await on a value that is not a promise', () => {
 test('Inspection: Empty block', () => {
   assert.equal(messages('declare const a: boolean; if (a) {}', 'emptyBlock').length, 1);
 });
+
+test('Inspection: Empty destructuring pattern', () => {
+  assert.equal(messages('declare const o: { a: number }; const {} = o;', 'emptyDestructuring').length, 1);
+});

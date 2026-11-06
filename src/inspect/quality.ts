@@ -1025,3 +1025,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'emptyDestructuring',
+  title: 'Empty destructuring pattern',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if ((ts.isObjectBindingPattern(node) || ts.isArrayBindingPattern(node)) && node.elements.length === 0) {
+        out.push(at(ctx.sourceFile, 'emptyDestructuring', node, 'This destructuring takes nothing out; was a name left out?', 'info'));
+      }
+    });
+    return out;
+  },
+});
