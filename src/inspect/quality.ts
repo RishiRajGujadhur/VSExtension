@@ -581,3 +581,23 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'booleanLiteralCompare',
+  title: 'Comparison with true or false',
+  defaultSeverity: 'hint',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || (node.operatorToken.kind !== ts.SyntaxKind.EqualsEqualsEqualsToken && node.operatorToken.kind !== ts.SyntaxKind.ExclamationEqualsEqualsToken)) return;
+      const literal = (e: ts.Expression) => (unparen(e).kind === ts.SyntaxKind.TrueKeyword ? true : unparen(e).kind === ts.SyntaxKind.FalseKeyword ? false : undefined);
+      const [value, other] = literal(node.right) !== undefined ? [literal(node.right), node.left] : [literal(node.left), node.right];
+      // `boolean` itself, not `boolean | undefined`, where === true also checks for undefined.
+      if (value === undefined || !(ctx.checker.getTypeAtLocation(other).flags & (ts.TypeFlags.Boolean | ts.TypeFlags.BooleanLiteral))) return;
+      const positive = value !== isNegative(node.operatorToken.kind);
+      const text = other.getText();
+      out.push(at(ctx.sourceFile, 'booleanLiteralCompare', node, `${text} is already a boolean.`, 'hint', [{ title: positive ? `Use ${text}` : `Use !${text}`, edits: [replace(ctx.sourceFile, node, positive ? text : `!${/^[\w.]+$/.test(text) ? text : `(${text})`}`)], preferred: true }]));
+    });
+    return out;
+  },
+});

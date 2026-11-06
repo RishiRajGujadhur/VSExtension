@@ -167,3 +167,9 @@ test('delete on an array element', () => {
   assert.equal(messages('declare const xs: number[]; delete xs[0];', 'deleteArrayElement').length, 1);
   assert.equal(messages('declare const o: Record<string, number>; delete o["a"];', 'deleteArrayElement').length, 0);
 });
+
+test('Comparison with true or false', () => {
+  assert.equal(fixed('declare const ok: boolean; if (ok === true) {}', 'booleanLiteralCompare'), 'declare const ok: boolean; if (ok) {}');
+  assert.equal(fixed('declare const ok: boolean; if (ok === false) {}', 'booleanLiteralCompare'), 'declare const ok: boolean; if (!ok) {}');
+  assert.equal(messages('declare const ok: boolean | undefined; if (ok === true) {}', 'booleanLiteralCompare').length, 0);
+});
