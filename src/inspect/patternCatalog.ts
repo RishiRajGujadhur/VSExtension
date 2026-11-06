@@ -438,3 +438,14 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Fluent interface',
+  meaning: 'Methods return the object itself, so calls chain into readable sentences.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const fluent = methodsOf(cls).filter((m) => returnsOf(m.body).some((e) => unwrap(e).kind === ts.SyntaxKind.ThisKeyword));
+      const build = methodsOf(cls).some((m) => nameOf(m) === 'build');
+      return fluent.length >= 3 && !build ? [{ node: cls, evidence: `${className(cls)}: ${fluent.map((m) => `${nameOf(m)}()`).slice(0, 4).join(', ')} return this for chaining`, subject: className(cls) }] : [];
+    }),
+});

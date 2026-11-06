@@ -117,3 +117,8 @@ test('Value object is recognized', () => {
 test('Module pattern is recognized', () => {
   has('const counter = (() => { let n = 0; return { inc: () => ++n }; })();', 'Module pattern');
 });
+
+test('Fluent interface is recognized', () => {
+  has('class Query { where() { return this; } order() { return this; } limit() { return this; } }', 'Fluent interface');
+  lacks('class QueryBuilder { where() { return this; } limit() { return this; } build() { return 1; } }', 'Fluent interface');
+});
