@@ -187,3 +187,8 @@ test('Inspection: Bitwise \'&\' or \'|\' in a condition', () => {
   assert.equal(fixed('declare const a: boolean, b: boolean; if (a & b) {}', 'bitwiseInCondition'), 'declare const a: boolean, b: boolean; if (a && b) {}');
   assert.equal(messages('declare const flags: number; if (flags & 4) {}', 'bitwiseInCondition').length, 0);
 });
+
+test('Inspection: Month 12 or more in new Date()', () => {
+  assert.equal(messages('const d = new Date(2024, 12, 1);', 'dateMonthOverflow').length, 1);
+  assert.equal(messages('const d = new Date(2024, 11, 1);', 'dateMonthOverflow').length, 0);
+});

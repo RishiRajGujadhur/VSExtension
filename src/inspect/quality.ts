@@ -658,3 +658,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'dateMonthOverflow',
+  title: 'Month 12 or more in new Date()',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const month = ts.isNewExpression(node) && node.expression.getText() === 'Date' && node.arguments && node.arguments.length >= 2 ? node.arguments[1] : undefined;
+      if (month && ts.isNumericLiteral(month) && Number(month.text) >= 12) {
+        out.push(at(ctx.sourceFile, 'dateMonthOverflow', month, `Months count from 0, so ${month.text} rolls over into the next year.`, 'info'));
+      }
+    });
+    return out;
+  },
+});
