@@ -522,3 +522,13 @@ catalog.push({
       return list && runs ? [{ node: cls, evidence: `${className(cls)} keeps plugins in ${list.name} and ${nameOf(runs)}() calls each one`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'API client',
+  meaning: 'One class wraps the HTTP calls to a service, so the rest of the code never builds requests itself.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const calls = methodsOf(cls).filter((m) => /\b(fetch|axios(\.\w+)?|this\.(http|client|api)\.\w+|ky(\.\w+)?|got)\(/.test(text(m.body)));
+      return calls.length >= 2 ? [{ node: cls, evidence: `${className(cls)} wraps ${calls.length} HTTP calls: ${calls.slice(0, 3).map((m) => `${nameOf(m)}()`).join(', ')}`, subject: className(cls) }] : [];
+    }),
+});

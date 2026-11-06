@@ -147,3 +147,7 @@ test('Design patterns: recognize Result type', () => {
 test('Design patterns: recognize Plugin registry', () => {
   has('class App { private plugins: Plugin[] = []; use(p: Plugin) { this.plugins.push(p); } start() { this.plugins.forEach((p) => p.install(this)); } }', 'Plugin registry');
 });
+
+test('Design patterns: recognize API client', () => {
+  has('class UsersApi { list() { return fetch("/users"); } get(id: string) { return fetch(`/users/${id}`); } }', 'API client');
+});
