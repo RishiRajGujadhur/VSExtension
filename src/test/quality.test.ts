@@ -144,3 +144,7 @@ test('Case falls through', () => {
   assert.equal(messages('declare const k: number; switch (k) { case 1: f(); case 2: f(); break; } declare function f(): void;', 'caseFallthrough').length, 1);
   assert.equal(messages('declare const k: number; switch (k) { case 1: f(); // falls through\n case 2: f(); } declare function f(): void;', 'caseFallthrough').length, 0);
 });
+
+test('Module imported twice', () => {
+  assert.equal(messages("import { a } from './x';\nimport { b } from './x';", 'duplicateImport').length, 1);
+});

@@ -488,3 +488,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'duplicateImport',
+  title: 'Module imported twice',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const seen = new Map<string, boolean>();
+    for (const statement of ctx.sourceFile.statements) {
+      if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) || !statement.importClause) continue;
+      const key = `${statement.moduleSpecifier.text}|${statement.importClause.isTypeOnly}`;
+      if (seen.has(key)) {
+        out.push(at(ctx.sourceFile, 'duplicateImport', statement.moduleSpecifier, `'${statement.moduleSpecifier.text}' is already imported above; merge the imports.`, 'info'));
+      }
+      seen.set(key, true);
+    }
+    return out;
+  },
+});
