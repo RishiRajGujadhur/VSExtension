@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { hashText, pathKey } from '../analysis/paths';
@@ -268,6 +269,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       }
     };
     index(this.roots);
+    this.lines.clear();
     if (!kept) {
       this.done.clear();
       this.stale = false;
@@ -389,9 +391,19 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const item = new vscode.TreeItem(node.label, state);
     item.description = node.description;
     const where = node.location ? `\n\n${vscode.workspace.asRelativePath(node.location.file)}:${node.location.line + 1}` : '';
+    // Rows without their own hover show the line they point at.
+    const code = !node.tooltip && node.location ? this.lineAt(node.location) : undefined;
     item.tooltip = new vscode.MarkdownString(`${node.tooltip ?? node.label}${where}`);
+    if (code) {
+      item.tooltip.appendCodeblock(code, /\.[jt]sx?$/.exec(node.location!.file)?.[0].slice(1) ?? 'ts');
+    }
     if (node.icon) {
       item.iconPath = new vscode.ThemeIcon(node.icon, node.tone ? new vscode.ThemeColor(toneColors[node.tone]) : undefined);
+    }
+    // File rows get the file's icon from the icon theme.
+    if ((node.icon === 'file-code' || node.icon === 'file') && node.location) {
+      item.resourceUri = vscode.Uri.file(node.location.file);
+      item.iconPath = vscode.ThemeIcon.File;
     }
     if (node.location) {
       item.command = { command: 'tsStructure.openLocation', title: 'Open', arguments: [node.location] };
@@ -445,6 +457,23 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
 
   private stepStatus: vscode.Disposable | undefined;
   private followTimer: NodeJS.Timeout | undefined;
+
+  private readonly lines = new Map<string, string[]>();
+
+  /** The trimmed source line of a location, from the editor if the file is open. */
+  private lineAt(location: ReportLocation): string | undefined {
+    let lines = this.lines.get(location.file);
+    if (!lines) {
+      const open = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === pathKey(location.file));
+      try {
+        lines = (open?.getText() ?? fs.readFileSync(location.file, 'utf8')).split(/\r?\n/);
+      } catch {
+        lines = [];
+      }
+      this.lines.set(location.file, lines);
+    }
+    return lines[location.line]?.trim() || undefined;
+  }
 
   /** Selects the row of the place under the editor's cursor, so the view shows where you are in the results. */
   private followCursor(editor: vscode.TextEditor): void {
