@@ -160,3 +160,7 @@ test('Design patterns: recognize Module-level singleton', () => {
 test('Design patterns: recognize Strategy map', () => {
   has('const handlers = { add: (a: number) => a, remove: (a: number) => a, clear: () => 0 }; export function run(k: keyof typeof handlers) { return handlers[k](1); }', 'Strategy map');
 });
+
+test('Design patterns: recognize State machine', () => {
+  has('const machine = { initial: "idle", states: { idle: { on: { FETCH: "loading" } }, loading: { on: { DONE: "idle" } } } };', 'State machine');
+});

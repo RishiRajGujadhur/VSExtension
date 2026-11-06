@@ -560,3 +560,19 @@ catalog.push({
       });
     }),
 });
+
+catalog.push({
+  name: 'State machine',
+  meaning: 'Explicit states and the events that move between them, such as an XState machine or a transition table.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /(^|\.)(createMachine|setup)$/.test(text(node.expression))) {
+        found.push({ node, evidence: `${text(node.expression)}() defines states and transitions` });
+      } else if (ts.isObjectLiteralExpression(node) && node.properties.some((p) => nameOf(p) === 'states' && ts.isPropertyAssignment(p) && ts.isObjectLiteralExpression(p.initializer) && /\bon\s*:/.test(text(p.initializer)))) {
+        found.push({ node, evidence: 'a table of states, each with the events it handles' });
+      }
+    });
+    return found;
+  },
+});
