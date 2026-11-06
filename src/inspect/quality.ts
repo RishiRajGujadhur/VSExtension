@@ -755,3 +755,18 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'replaceFirstOnly',
+  title: 'replace() with a string changes only the first match',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'replace' && node.arguments.length === 2 && ts.isStringLiteral(node.arguments[0]) && ctx.checker.getTypeAtLocation(node.expression.expression).flags & ts.TypeFlags.StringLike) {
+        out.push(at(ctx.sourceFile, 'replaceFirstOnly', node.expression.name, `replace() with a string changes only the first '${node.arguments[0].text}'; use replaceAll() for every one.`, 'info', [{ title: 'Use replaceAll()', edits: [replace(ctx.sourceFile, node.expression.name, 'replaceAll')] }]));
+      }
+    });
+    return out;
+  },
+});

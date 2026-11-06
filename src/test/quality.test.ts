@@ -210,3 +210,8 @@ test('Inspection: Unnecessary optional chain', () => {
   assert.equal(fixed('declare const user: { name: string }; const n = user?.name;', 'unnecessaryOptionalChain'), 'declare const user: { name: string }; const n = user.name;');
   assert.equal(messages('declare const user: { name: string } | undefined; const n = user?.name;', 'unnecessaryOptionalChain').length, 0);
 });
+
+test('Inspection: replace() with a string changes only the first match', () => {
+  assert.equal(fixed('declare const s: string; const t = s.replace("-", " ");', 'replaceFirstOnly'), 'declare const s: string; const t = s.replaceAll("-", " ");');
+  assert.equal(messages('declare const s: string; const t = s.replace(/-/g, " ");', 'replaceFirstOnly').length, 0);
+});
