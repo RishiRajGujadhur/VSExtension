@@ -76,6 +76,7 @@ const effectfulGlobals: Record<string, { kind: EffectKind; note: string }> = {
   Worker: { kind: 'io', note: 'starts a background worker' },
   SharedWorker: { kind: 'io', note: 'connects to a shared worker' },
   requestIdleCallback: { kind: 'timer', note: 'schedules work for when the browser is idle' },
+  FileReader: { kind: 'io', note: 'reads a file' },
   document: { kind: 'global', note: 'uses the DOM' },
   window: { kind: 'global', note: 'uses the window object' },
   globalThis: { kind: 'global', note: 'uses the global object' },

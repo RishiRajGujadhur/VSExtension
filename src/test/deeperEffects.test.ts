@@ -28,3 +28,7 @@ test('Side effects: web workers', () => {
 test('Side effects: idle callbacks', () => {
   assert.deepEqual(effects('function f() { requestIdleCallback(() => 1); }'), ['timer: schedules work for when the browser is idle']);
 });
+
+test('Side effects: reading files in the browser', () => {
+  assert.deepEqual(effects('function f(b: Blob) { new FileReader().readAsText(b); }'), ['io: reads a file']);
+});
