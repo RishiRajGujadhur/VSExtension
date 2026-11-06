@@ -106,7 +106,7 @@ const effectfulGlobals: Record<string, { kind: EffectKind; note: string }> = {
 const nondeterministicMembers: Record<string, readonly string[]> = {
   Math: ['random'],
   Date: ['now'],
-  performance: ['now'],
+  performance: ['now', 'mark', 'measure', 'getEntries', 'getEntriesByName'],
   crypto: ['randomUUID', 'getRandomValues'],
 };
 

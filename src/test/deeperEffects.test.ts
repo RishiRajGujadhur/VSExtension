@@ -102,3 +102,7 @@ test('Mutation tracking: Object.freeze, seal and Reflect writes', () => {
 test('Side effects: opening windows and printing', () => {
   assert.deepEqual(effects('function f() { print(); }'), ['io: opens the print dialog']);
 });
+
+test('Side effects: performance marks read the clock', () => {
+  assert.deepEqual(effects('function f() { performance.mark("a"); }'), ['nondeterministic: reads the current time']);
+});
