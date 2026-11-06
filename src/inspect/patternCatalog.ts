@@ -421,3 +421,20 @@ catalog.push({
       return equals && fields.length >= 2 && fields.every((f) => f.readonly) ? [{ node: cls, evidence: `${className(cls)} is immutable and compared with equals()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Module pattern',
+  meaning: 'A function runs once and returns an object, keeping its variables private.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isVariableDeclaration(node) && node.initializer && ts.isCallExpression(node.initializer)) {
+        const callee = unwrap(node.initializer.expression);
+        if ((ts.isArrowFunction(callee) || ts.isFunctionExpression(callee)) && returnsOf(callee.body).some((e) => ts.isObjectLiteralExpression(unwrap(e)))) {
+          found.push({ node, evidence: `${nameOf(node)} is built by a function that runs once and keeps its variables private` });
+        }
+      }
+    });
+    return found;
+  },
+});

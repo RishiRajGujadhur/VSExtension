@@ -113,3 +113,7 @@ test('Null object is recognized', () => {
 test('Value object is recognized', () => {
   has('class Money { constructor(readonly amount: number, readonly currency: string) {} equals(o: Money) { return o.amount === this.amount; } }', 'Value object');
 });
+
+test('Module pattern is recognized', () => {
+  has('const counter = (() => { let n = 0; return { inc: () => ++n }; })();', 'Module pattern');
+});
