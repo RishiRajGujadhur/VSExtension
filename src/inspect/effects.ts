@@ -109,6 +109,8 @@ ioPackages.push({ pattern: /^(pg|mysql2?|mongodb|mongoose|redis|ioredis|better-s
 
 ioPackages.push({ pattern: /^(@aws-sdk\/.+|aws-sdk|@google-cloud\/.+|@azure\/.+)$/, kind: 'io', note: 'calls a cloud service' });
 
+ioPackages.push({ pattern: /^(nodemailer|@sendgrid\/mail|resend|postmark)$/, kind: 'io', note: 'sends email' });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();

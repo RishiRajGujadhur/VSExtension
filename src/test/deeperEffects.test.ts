@@ -52,3 +52,7 @@ test('Side effects: database clients', () => {
 test('Side effects: AWS, Google Cloud and Azure SDKs', () => {
   assert.deepEqual(effects('import { S3Client } from "@aws-sdk/client-s3"; function f() { return new S3Client({}); }'), ['io: calls a cloud service']);
 });
+
+test('Side effects: sending email', () => {
+  assert.deepEqual(effects('import nodemailer from "nodemailer"; function f() { return nodemailer.createTransport({}); }'), ['io: sends email']);
+});
