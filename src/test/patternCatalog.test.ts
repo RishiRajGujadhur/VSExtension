@@ -151,3 +151,8 @@ test('Design patterns: recognize Plugin registry', () => {
 test('Design patterns: recognize API client', () => {
   has('class UsersApi { list() { return fetch("/users"); } get(id: string) { return fetch(`/users/${id}`); } }', 'API client');
 });
+
+test('Design patterns: recognize Module-level singleton', () => {
+  has('export const db = new Database("app.db");', 'Module-level singleton');
+  lacks('export const cache = new Map();', 'Module-level singleton');
+});

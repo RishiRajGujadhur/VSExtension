@@ -532,3 +532,15 @@ catalog.push({
       return calls.length >= 2 ? [{ node: cls, evidence: `${className(cls)} wraps ${calls.length} HTTP calls: ${calls.slice(0, 3).map((m) => `${nameOf(m)}()`).join(', ')}`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Module-level singleton',
+  meaning: 'A module exports one ready-made instance that every importer shares.',
+  detect: (sf) =>
+    sf.statements.flatMap((s) => {
+      if (!ts.isVariableStatement(s) || !s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) return [];
+      return s.declarationList.declarations
+        .filter((d) => d.initializer && ts.isNewExpression(d.initializer) && !/^(Map|Set|WeakMap|WeakSet|Array|Date|Error|RegExp|Promise|URL|URLSearchParams|Intl\.\w+)$/.test(text(d.initializer.expression)))
+        .map((d) => ({ node: d, evidence: `${nameOf(d)} is one shared ${text((d.initializer as ts.NewExpression).expression)} for every importer`, subject: text((d.initializer as ts.NewExpression).expression) }));
+    }),
+});
