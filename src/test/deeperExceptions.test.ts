@@ -49,3 +49,7 @@ test('Exception flow: toISOString on an invalid date', () => {
 test('Exception flow: number formatting out of range', () => {
   assert.deepEqual(raised('function f(n: number, d: number) { return n.toFixed(d); }'), ['n.toFixed(): RangeError when the digits are out of range']);
 });
+
+test('Exception flow: string repeat and normalize', () => {
+  assert.deepEqual(raised('function f(s: string, n: number) { return s.repeat(n); }'), ['s.repeat(): RangeError on a negative or infinite count']);
+});
