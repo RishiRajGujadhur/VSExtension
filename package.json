@@ -1735,7 +1735,7 @@
     "viewsWelcome": [
       {
         "view": "tsStructure.report",
-        "contents": "Results of analyses appear here. Place the cursor on a symbol and press Ctrl+Alt+Shift+T, or right-click and choose TypeScript Structure.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\nNew here? [Guide Me](command:tsStructure.guideMe) walks through the main features, and [Choose Features…](command:tsStructure.configureFeatures) turns on more of them."
+        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[Find Usages](command:tsStructure.semanticUsages)\n[Data Flow](command:tsStructure.dataFlow)\n[Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNew here? [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
       },
       {
         "view": "tsImpact.results",
