@@ -113,6 +113,8 @@ ioPackages.push({ pattern: /^(nodemailer|@sendgrid\/mail|resend|postmark)$/, kin
 
 ioPackages.push({ pattern: /^(fs-extra|graceful-fs|glob|fast-glob|globby|rimraf|chokidar|del)$/, kind: 'io', note: 'uses the file system' });
 
+ioPackages.push({ pattern: /^(execa|cross-spawn|shelljs|zx)$/, kind: 'io', note: 'runs another program' });
+
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
   private readonly cache = new Map<FunctionWithBody, Effect[]>();

@@ -60,3 +60,7 @@ test('Side effects: sending email', () => {
 test('Side effects: file system packages', () => {
   assert.deepEqual(effects('import fse from "fs-extra"; function f() { return fse.readJson("a.json"); }'), ['io: uses the file system']);
 });
+
+test('Side effects: running processes', () => {
+  assert.deepEqual(effects('import { execa } from "execa"; function f() { return execa("ls"); }'), ['io: runs another program']);
+});
