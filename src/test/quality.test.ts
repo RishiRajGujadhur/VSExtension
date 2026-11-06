@@ -59,3 +59,8 @@ test('Assignment in a condition', () => {
 test('Repeated condition in an if chain', () => {
   assert.deepEqual(messages('declare const a: boolean; if (a) {} else if (!a) {} else if (a) {}', 'duplicateCondition'), ['Same condition as line 1: this branch never runs.']);
 });
+
+test('Identical branches', () => {
+  assert.equal(messages('declare const a: boolean; if (a) { f(); } else { f(); } declare function f(): void;', 'identicalBranches').length, 1);
+  assert.equal(fixed('declare const a: boolean; const x = a ? 1 : 1;', 'identicalBranches'), 'declare const a: boolean; const x = 1;');
+});

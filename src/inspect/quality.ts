@@ -152,3 +152,22 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'identicalBranches',
+  title: 'Identical branches',
+  defaultSeverity: 'info',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    const same = (a: ts.Node, b: ts.Node) => a.getText().replace(/\s+/g, '') === b.getText().replace(/\s+/g, '');
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isIfStatement(node) && node.elseStatement && !ts.isIfStatement(node.elseStatement) && same(node.thenStatement, node.elseStatement)) {
+        out.push(at(ctx.sourceFile, 'identicalBranches', node.expression, 'Both branches do the same thing, so the condition has no effect.', 'info'));
+      }
+      if (ts.isConditionalExpression(node) && same(node.whenTrue, node.whenFalse)) {
+        out.push(at(ctx.sourceFile, 'identicalBranches', node, 'Both results are the same, so the condition has no effect.', 'info', [{ title: 'Keep only the value', edits: [replace(ctx.sourceFile, node, node.whenTrue.getText())] }]));
+      }
+    });
+    return out;
+  },
+});
