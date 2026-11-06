@@ -274,3 +274,7 @@ test('Inspection: await on a value that is not a promise', () => {
   assert.equal(fixed('async function f(n: number) { return await n; }', 'awaitNonPromise'), 'async function f(n: number) { return n; }');
   assert.equal(messages('async function f(p: Promise<number>) { return await p; }', 'awaitNonPromise').length, 0);
 });
+
+test('Inspection: Empty block', () => {
+  assert.equal(messages('declare const a: boolean; if (a) {}', 'emptyBlock').length, 1);
+});

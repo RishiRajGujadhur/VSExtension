@@ -1008,3 +1008,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'emptyBlock',
+  title: 'Empty block',
+  defaultSeverity: 'info',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      const block = ts.isIfStatement(node) ? node.thenStatement : ts.isForStatement(node) || ts.isForOfStatement(node) || ts.isForInStatement(node) || ts.isWhileStatement(node) ? node.statement : undefined;
+      if (block && ts.isBlock(block) && block.statements.length === 0 && !/\/\/|\/\*/.test(block.getText())) {
+        out.push(at(ctx.sourceFile, 'emptyBlock', block, 'This block is empty: unfinished code?', 'info'));
+      }
+    });
+    return out;
+  },
+});
