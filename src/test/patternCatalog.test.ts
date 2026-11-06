@@ -18,3 +18,8 @@ test('Facade is recognized', () => {
 test('Proxy is recognized', () => {
   has('const settings = new Proxy({}, { get: (t, k) => 1 });', 'Proxy');
 });
+
+test('Decorator is recognized', () => {
+  has('interface Store { get(k: string): string } class CachingStore implements Store { constructor(private inner: Store) {} get(k: string) { return this.inner.get(k); } }', 'Decorator');
+  lacks('interface Store { get(k: string): string } class CachingStore implements Store { constructor(private inner: Store) {} get(k: string) { return this.inner.get(k); } }', 'Adapter');
+});

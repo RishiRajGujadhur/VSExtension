@@ -143,3 +143,15 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Decorator',
+  meaning: 'An object wraps another of the same interface and adds behavior around its calls.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const interfaces = heritage(cls, ts.SyntaxKind.ImplementsKeyword);
+      const inner = fieldsOf(cls).find((f) => interfaces.includes(f.type));
+      const wraps = inner && methodsOf(cls).some((m) => text(m.body).includes(`this.${inner.name}.${nameOf(m)}(`));
+      return inner && wraps ? [{ node: cls, evidence: `${className(cls)} wraps another ${inner.type} and adds to its calls`, subject: inner.type }] : [];
+    }),
+});
