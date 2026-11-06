@@ -576,3 +576,13 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Specification',
+  meaning: 'Business rules are objects with isSatisfiedBy(), combined with and, or and not.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const check = methodsOf(cls).find((m) => nameOf(m) === 'isSatisfiedBy');
+      return check ? [{ node: check, evidence: `${className(cls)} is a rule checked with isSatisfiedBy()`, subject: className(cls) }] : [];
+    }),
+});

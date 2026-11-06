@@ -164,3 +164,7 @@ test('Design patterns: recognize Strategy map', () => {
 test('Design patterns: recognize State machine', () => {
   has('const machine = { initial: "idle", states: { idle: { on: { FETCH: "loading" } }, loading: { on: { DONE: "idle" } } } };', 'State machine');
 });
+
+test('Design patterns: recognize Specification', () => {
+  has('class AdultSpec { isSatisfiedBy(u: { age: number }) { return u.age >= 18; } }', 'Specification');
+});
