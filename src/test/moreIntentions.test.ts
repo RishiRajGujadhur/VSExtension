@@ -151,3 +151,9 @@ test('Use destructuring', () => {
   assert.equal(apply('c¦onst t = order.total;', 'destructureProperty'), 'const { total: t } = order;');
   assert.equal(apply('c¦onst t = order?.total;', 'destructureProperty'), undefined);
 });
+
+test('Replace \'Math.pow\' with \'**\'', () => {
+  assert.equal(apply('const x = Math.¦pow(a + 1, 2);', 'mathPowToExponent'), 'const x = (a + 1) ** 2;');
+  assert.equal(apply('const x = Math.¦pow(-a, 2);', 'mathPowToExponent'), 'const x = (-a) ** 2;');
+  assert.equal(apply('const x = Math.¦pow(a, b).toFixed();', 'mathPowToExponent'), 'const x = (a ** b).toFixed();');
+});

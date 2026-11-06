@@ -456,3 +456,15 @@ function destructureProperty(ctx: IntentionContext): IntentionAction | undefined
   return { id: 'destructureProperty', title: `Destructure '${init.name.text}'`, edits: [ctx.replace(declaration, `{ ${property} } = ${ctx.text(init.expression)}`)] };
 }
 moreIntentions.push({ id: 'destructureProperty', title: 'Use destructuring', run: destructureProperty });
+
+function mathPowToExponent(ctx: IntentionContext): IntentionAction | undefined {
+  const call = ctx.nearest(ts.isCallExpression, (c) => ctx.text(c.expression).replace(/\s/g, '') === 'Math.pow' && c.arguments.length === 2);
+  if (!call) return undefined;
+  const p = binaryPrecedence(ts.SyntaxKind.AsteriskAsteriskToken);
+  const [a, b] = call.arguments;
+  const unary = ts.isPrefixUnaryExpression(a) || ts.isAwaitExpression(a) || ts.isTypeOfExpression(a) || ts.isVoidExpression(a) || ts.isDeleteExpression(a);
+  const left = unary ? `(${ctx.text(a)})` : wrap(ctx.text(a), p + 1);
+  const result = `${left} ** ${wrap(ctx.text(b), p)}`;
+  return { id: 'mathPowToExponent', title: "Replace with '**'", edits: [ctx.replace(call, wrap(result, requiredPrecedence(call)))] };
+}
+moreIntentions.push({ id: 'mathPowToExponent', title: 'Replace \'Math.pow\' with \'**\'', run: mathPowToExponent });
