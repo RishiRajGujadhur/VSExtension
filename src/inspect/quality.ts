@@ -190,3 +190,20 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'selfComparison',
+  title: 'Comparison with itself',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (!ts.isBinaryExpression(node) || !isSimple(node.left) || unparen(node.left).getText() !== unparen(node.right).getText()) return;
+      const k = node.operatorToken.kind;
+      if (!comparisons.has(k) && ![ts.SyntaxKind.LessThanToken, ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.LessThanEqualsToken, ts.SyntaxKind.GreaterThanEqualsToken].includes(k)) return;
+      const nanCheck = isNegative(k);
+      out.push(at(ctx.sourceFile, 'selfComparison', node, nanCheck ? `${node.left.getText()} !== itself is a hidden NaN check; Number.isNaN() says so.` : `${node.left.getText()} is compared with itself.`, nanCheck ? 'info' : 'warning', nanCheck ? [{ title: 'Use Number.isNaN()', edits: [replace(ctx.sourceFile, node, `Number.isNaN(${node.left.getText()})`)] }] : undefined));
+    });
+    return out;
+  },
+});

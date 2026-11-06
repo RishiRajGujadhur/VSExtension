@@ -68,3 +68,8 @@ test('Identical branches', () => {
 test('Constant condition', () => {
   assert.deepEqual(messages('if (false) {} while (true) { break; }', 'constantCondition'), ['The condition is always false.']);
 });
+
+test('Comparison with itself', () => {
+  assert.deepEqual(messages('declare const a: number; if (a === a) {}', 'selfComparison'), ['a is compared with itself.']);
+  assert.equal(fixed('declare const a: number; const n = a !== a;', 'selfComparison'), 'declare const a: number; const n = Number.isNaN(a);');
+});
