@@ -498,3 +498,20 @@ function simplifyNegation(ctx: IntentionContext): IntentionAction | undefined {
   return not && { id: 'simplifyNegation', title: 'Simplify negated comparison', edits: [ctx.replace(not, wrap(negate(unparen(not.operand), ctx.sourceFile), requiredPrecedence(not)))] };
 }
 moreIntentions.push({ id: 'simplifyNegation', title: 'Simplify negated comparison', run: simplifyNegation });
+
+
+/** Whether the node's value is only used as true or false: a condition, or inside one through !, && and ||. */
+function inBooleanContext(node: ts.Node): boolean {
+  let current = node;
+  while (ts.isParenthesizedExpression(current.parent) || (ts.isBinaryExpression(current.parent) && (current.parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || current.parent.operatorToken.kind === ts.SyntaxKind.BarBarToken)) || (ts.isPrefixUnaryExpression(current.parent) && current.parent.operator === ts.SyntaxKind.ExclamationToken)) current = current.parent;
+  const p = current.parent;
+  return ((ts.isIfStatement(p) || ts.isWhileStatement(p) || ts.isDoStatement(p)) && p.expression === current) || (ts.isConditionalExpression(p) && p.condition === current) || (ts.isForStatement(p) && p.condition === current);
+}
+
+function removeDoubleNegation(ctx: IntentionContext): IntentionAction | undefined {
+  const outer = ctx.nearest(ts.isPrefixUnaryExpression, (p) => p.operator === ts.SyntaxKind.ExclamationToken && ts.isPrefixUnaryExpression(p.operand) && p.operand.operator === ts.SyntaxKind.ExclamationToken);
+  if (!outer || !inBooleanContext(outer)) return undefined;
+  const inner = (outer.operand as ts.PrefixUnaryExpression).operand;
+  return { id: 'removeDoubleNegation', title: "Remove '!!'", edits: [ctx.replace(outer, wrap(ctx.text(inner), requiredPrecedence(outer)))] };
+}
+moreIntentions.push({ id: 'removeDoubleNegation', title: 'Remove \'!!\' in a condition', run: removeDoubleNegation });

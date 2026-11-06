@@ -176,3 +176,8 @@ test('Intention: Simplify negated comparison', () => {
   assert.equal(apply('if (!(a ¦=== b)) {}', 'simplifyNegation'), 'if (a !== b) {}');
   assert.equal(apply('const x = !(a ¦!= null);', 'simplifyNegation'), 'const x = a == null;');
 });
+
+test('Intention: Remove \'!!\' in a condition', () => {
+  assert.equal(apply('if (!¦!user) {}', 'removeDoubleNegation'), 'if (user) {}');
+  assert.equal(apply('const b = !¦!user;', 'removeDoubleNegation'), undefined);
+});
