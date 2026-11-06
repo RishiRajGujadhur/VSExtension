@@ -350,3 +350,21 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'forInArray',
+  title: 'for…in over an array',
+  defaultSeverity: 'warning',
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isForInStatement(node)) {
+        const type = ctx.checker.getTypeAtLocation(node.expression);
+        if (ctx.checker.isArrayType(type) || ctx.checker.isTupleType(type)) {
+          out.push(at(ctx.sourceFile, 'forInArray', node.expression, 'for…in over an array gives string indexes, including inherited properties; use for…of for the items.', 'warning'));
+        }
+      }
+    });
+    return out;
+  },
+});

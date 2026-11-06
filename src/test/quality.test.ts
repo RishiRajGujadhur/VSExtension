@@ -108,3 +108,8 @@ test('Array index as React key', () => {
   assert.equal(messages('declare const items: string[]; const l = items.map((item, i) => <li key={i}>{item}</li>);', 'arrayIndexKey').length, 1);
   assert.equal(messages('declare const items: { id: string }[]; const l = items.map((item) => <li key={item.id} />);', 'arrayIndexKey').length, 0);
 });
+
+test('for…in over an array', () => {
+  assert.equal(messages('declare const xs: number[]; for (const i in xs) {}', 'forInArray').length, 1);
+  assert.equal(messages('declare const o: Record<string, number>; for (const k in o) {}', 'forInArray').length, 0);
+});
