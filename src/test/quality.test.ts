@@ -95,3 +95,7 @@ test('Expression with no effect', () => {
 test('debugger statement', () => {
   assert.equal(fixed('f();\ndebugger;\nf();\ndeclare function f(): void;', 'debuggerStatement'), 'f();\nf();\ndeclare function f(): void;');
 });
+
+test('console.log left in code', () => {
+  assert.equal(fixed('const a = 1;\nconsole.log(a);\n', 'consoleLog'), 'const a = 1;\n');
+});

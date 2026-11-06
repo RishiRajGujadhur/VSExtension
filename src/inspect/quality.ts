@@ -299,3 +299,19 @@ qualityInspections.push({
     return out;
   },
 });
+
+qualityInspections.push({
+  id: 'consoleLog',
+  title: 'console.log left in code',
+  defaultSeverity: 'hint',
+  optIn: true,
+  run: (ctx) => {
+    const out: Finding[] = [];
+    walk(ctx.sourceFile, (node) => {
+      if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && /^console\.(log|debug|info|trace|dir)$/.test(node.expression.expression.getText())) {
+        out.push(at(ctx.sourceFile, 'consoleLog', node.expression, `${node.expression.expression.getText()}() is debugging output; remove it or use a logger.`, 'hint', [{ title: 'Remove the call', edits: [removeStatement(ctx.sourceFile, node)], preferred: true }]));
+      }
+    });
+    return out;
+  },
+});
