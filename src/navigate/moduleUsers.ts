@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { ModuleGraph, programGraph } from './moduleGraph';
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 
 const relative = (file: string, root?: string) => (root ? path.relative(root, file) : path.basename(file)).replace(/\\/g, '/');
 const fileLocation = (file: string) => ({ file, line: 0, character: 0, endLine: 0, endCharacter: 0 });
@@ -75,6 +76,15 @@ export function cyclesReport(program: ts.Program, root?: string, inside: (file: 
     ),
   }));
   if (roots.length === 0) builder.warnings.push('No modules import each other at run time.');
+  else
+    roots.push(
+      howToFix([
+        'Move the code both modules need into a third module that imports neither.',
+        'Import only types with import type, which disappears at run time and cannot cause a cycle.',
+        'Pass the dependency in as a parameter instead of importing it (dependency injection).',
+        'Avoid importing from a barrel (index.ts) inside the folder it re-exports.',
+      ]),
+    );
   return builder.finish(roots, `${plural(cycles.length, 'cycle')} in ${plural(graph.files.size, 'module')}`);
 }
 
