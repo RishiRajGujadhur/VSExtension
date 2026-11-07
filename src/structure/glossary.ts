@@ -625,3 +625,19 @@ glossary.push(
     url: 'https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html',
   },
 );
+
+// --- Duplicates ----------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Structural duplicate',
+    match: /^Duplicate \d+:/,
+    meaning: 'Code with the same structure in several places: the same statements in the same order, possibly with different names or values. "repeated" counts the lines that extracting one function would remove.',
+    url: 'https://en.wikipedia.org/wiki/Duplicate_code',
+  },
+  {
+    term: 'Differences between copies',
+    match: /^(differs in|identical copies)\b/,
+    meaning: 'What changes from one copy to the next, such as a variable name or a number. Each difference becomes a parameter when the copies are merged into one function.',
+    url: 'https://en.wikipedia.org/wiki/Duplicate_code',
+  },
+);

@@ -103,3 +103,8 @@ test('Audit Type Assertions rows explain their terms', () => {
   assert.equal(termFor('Unsafe', '')?.term, 'Unsafe assertion');
   assert.equal(termFor('Widening', '')?.term, 'Widening');
 });
+
+test('Duplicates rows explain their terms', () => {
+  assert.equal(termFor('Duplicate 1: 6 lines × 2, 6 repeated', '')?.term, 'Structural duplicate');
+  assert.equal(termFor('differs in total, price', '')?.term, 'Differences between copies');
+});
