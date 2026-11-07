@@ -39,3 +39,9 @@ relatedAnalyses.hierarchy = [
   { command: 'tsStructure.overrideImpact', title: 'What changing a member reaches (Override Impact)' },
   { command: 'tsStructure.semanticUsages', title: 'Where the type is used (Find Usages)' },
 ];
+
+relatedAnalyses.overrideImpact = [
+  { command: 'tsStructure.typeHierarchy', title: 'The whole hierarchy (Inheritance Hierarchy)' },
+  { command: 'tsStructure.semanticUsages', title: 'Every call (Find Usages)' },
+  { command: 'tsImpact.analyze', title: 'Tests to run after the change (Test Impact)' },
+];
