@@ -57,10 +57,11 @@ export function importCycles(graph: ModuleGraph, includeTypeOnly = false): strin
 }
 
 /** Find Import Cycles: every group of modules that import each other at run time. */
-export function cyclesReport(program: ts.Program, root?: string): Report {
+export function cyclesReport(program: ts.Program, root?: string, inside: (file: string) => boolean = () => true): Report {
   const graph = programGraph(program);
   const builder = new ReportBuilder('cycles', 'Import cycles');
-  const cycles = importCycles(graph);
+  // Cycles with at least one module in the scope.
+  const cycles = importCycles(graph).filter((group) => group.some(inside));
   const roots: ReportNode[] = cycles.map((group) => ({
     label: group.map((f) => path.basename(f)).join(' ⇄ '),
     description: plural(group.length, 'module'),

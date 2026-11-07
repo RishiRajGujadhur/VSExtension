@@ -465,7 +465,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.nullability', 'Nullability', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.promiseRejections', 'Promise rejections', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
     // The whole project still decides what is used; the scope only limits which exports are reported.
-    scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: projectScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
+    scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: fineScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
     // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
     registerCommand('tsStructure.deadExportsInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
       const folders = selected?.length ? selected : uri ? [uri] : [];
@@ -496,13 +496,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
       return runAnalysis(view, `Finding importers of ${path.basename(file)}`, () => dependentsReport(projects.analysisProject(file, folder).program(), normalizePath(file), folder));
     }),
-    registerCommand('tsStructure.findImportCycles', () => {
-      const editor = sourceEditor();
-      if (editor) {
-        const target = editorTarget(projects, editor);
-        return runAnalysis(view, 'Finding import cycles', () => cyclesReport(target.project().program(), target.folder));
-      }
-    }),
+    scopedCommand('tsStructure.findImportCycles', 'Finding import cycles', { id: 'cycles', kinds: projectScopes }, (t, scope) => cyclesReport(t.project().program(), t.folder, scopeFilter(scope.spec))),
     editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {
       const program = t.project().program();

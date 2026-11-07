@@ -1203,6 +1203,11 @@
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
           "group": "7_modification@91"
+        },
+        {
+          "command": "tsStructure.findImportCycles",
+          "when": "config.tsStructure.features.dependencyPath && explorerResourceIsFolder",
+          "group": "7_modification@98"
         }
       ],
       "commandPalette": [
