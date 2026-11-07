@@ -1007,6 +1007,12 @@
         "mac": "cmd+ctrl+s 5",
         "command": "tsStructure.nextProblem",
         "when": "config.tsStructure.features.inspections && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s 2",
+        "mac": "cmd+ctrl+s 2",
+        "command": "tsStructure.auditTypeAssertions",
+        "when": "config.tsStructure.features.inspections && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
