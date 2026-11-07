@@ -33,3 +33,9 @@ export function lookup(): void {
   const shown = name;
   console.log(shown);
 }
+
+export function area({ width, height = 1 }: { width: number; height?: number }): number {
+  return width * height;
+}
+
+export const square = area({ width: 2 });

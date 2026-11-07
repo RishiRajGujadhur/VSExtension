@@ -146,3 +146,17 @@ test('flows in of React state lists the initial value and every setter call', ()
     ['initial state 0 · line 8 · Counter', 'setCount(0) · line 9 · reset', 'setCount((c) => c + step) · line 10 · add · from the previous state'],
   );
 });
+
+test('flows in of a destructured prop or option lists what each call site passes', () => {
+  const project = virtualProject('navigate', 'src/state.tsx');
+  const incoming = (marker: string) =>
+    dataFlowReport(project, state, offsetIn(state, marker))
+      .roots.find((r) => r.label === 'Flows in')
+      ?.children?.find((c) => c.label === 'Incoming values from call sites')
+      ?.children?.map((c) => `${c.label} · ${c.description}`);
+  assert.deepEqual(incoming('Price({ am|ount'), ['count · Counter · state.tsx', '9.5 · Shop · state.tsx']);
+  assert.deepEqual(incoming('area({ width, hei|ght'), ['omitted, default 1 · module scope · state.tsx']);
+  // The prop name at a call site sets the prop; it does not declare it.
+  const steps = dataFlowReport(project, state, offsetIn(state, 'Price({ am|ount')).roots.flatMap((r) => r.children ?? []).map((c) => c.label);
+  assert.ok(steps.includes('set by <Price amount=count>'), steps.join(', '));
+});

@@ -69,6 +69,11 @@ function classify(node: ts.Node, checker: ts.TypeChecker): FlowStep {
   if (isImportOrExport(node)) {
     return { kind: 'import', node, label: ts.isImportSpecifier(parent) || ts.isImportClause(parent) ? 'imported' : 're-exported' };
   }
+  // `<Price amount={count} />` names the prop at a call site: the call site sets it.
+  if (ts.isJsxAttribute(parent) && parent.name === node) {
+    const value = parent.initializer && ts.isJsxExpression(parent.initializer) ? parent.initializer.expression : parent.initializer;
+    return step('write', `set by <${nodeText(parent.parent.parent.tagName)} ${node.getText()}=${value ? nodeText(value) : 'true'}>`, value);
+  }
   if ((parent as ts.NamedDeclaration).name === node) {
     if (ts.isVariableDeclaration(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertyAssignment(parent) || ts.isParameter(parent) || ts.isBindingElement(parent)) {
       const initializer = (parent as ts.VariableDeclaration).initializer;
@@ -213,6 +218,10 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   const read = byDirection ? scopeRows((s) => !isWrite(s)) : [];
   // Where the value comes from and where it goes, before the step-by-step timeline.
   const inflows = [...flowsIn(project, steps, name, builder), ...stateInflows(project, declaration, name, builder)];
+  const destructured = declaration && ts.isBindingElement(declaration) ? incomingProperty(project, declaration, builder) : [];
+  if (destructured.length > 0) {
+    inflows.unshift({ label: 'Incoming values from call sites', icon: 'call-incoming', expanded: true, children: destructured });
+  }
   if (declaration && ts.isParameter(declaration) && isFunctionWithBody(declaration.parent)) {
     const incoming = incomingValues(project, declaration, builder);
     if (incoming.length > 0) {
@@ -534,6 +543,37 @@ function incomingValues(project: VirtualProject, parameter: ts.ParameterDeclarat
       role: 'read' as const,
       location: builder.at(expression ?? call),
     };
+  });
+}
+
+/**
+ * A property destructured from a parameter, such as the `amount` prop of `Price({ amount })`: what each call site
+ * passes for it, from the JSX attribute or the object literal, or that it is left out.
+ */
+function incomingProperty(project: VirtualProject, binding: ts.BindingElement, builder: ReportBuilder): ReportNode[] {
+  const parameter = binding.parent.parent;
+  if (!ts.isObjectBindingPattern(binding.parent) || !ts.isParameter(parameter) || !isFunctionWithBody(parameter.parent)) {
+    return [];
+  }
+  const fn = parameter.parent as Parameters<typeof callSitesOf>[1];
+  const index = fn.parameters.indexOf(parameter);
+  const prop = (binding.propertyName ?? binding.name).getText();
+  const omitted = binding.initializer ? `omitted, default ${nodeText(binding.initializer)}` : 'omitted (undefined)';
+  return callSitesOf(project.service, fn).calls.map(({ call }): ReportNode => {
+    const where = `${functionLabel(enclosingFunction(call))} · ${baseName(call.getSourceFile().fileName)}`;
+    let value: ts.Node | undefined;
+    let label = omitted;
+    if (ts.isJsxOpeningElement(call) || ts.isJsxSelfClosingElement(call)) {
+      const attribute = index === 0 ? jsxAttribute(call, prop) : undefined;
+      value = attribute?.initializer && ts.isJsxExpression(attribute.initializer) ? attribute.initializer.expression : attribute?.initializer;
+      label = attribute ? (value ? nodeText(value) : 'true') : omitted;
+    } else if (ts.isCallExpression(call) || ts.isNewExpression(call)) {
+      const argument = call.arguments?.[index];
+      const property = argument && ts.isObjectLiteralExpression(argument) ? argument.properties.find((p) => p.name?.getText() === prop) : undefined;
+      value = property && ts.isPropertyAssignment(property) ? property.initializer : property && ts.isShorthandPropertyAssignment(property) ? property.name : undefined;
+      label = value ? nodeText(value) : argument && !ts.isObjectLiteralExpression(argument) ? `${nodeText(argument)}.${prop}` : omitted;
+    }
+    return { label, description: where, icon: 'arrow-left', tone: value || label !== omitted || binding.initializer ? undefined : 'info', role: 'read', location: builder.at(value ?? call) };
   });
 }
 
