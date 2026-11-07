@@ -32,6 +32,11 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `T` | Test Impact | `Z` | Dead Exports |
 | `V` | Show the results view | `L` | Re-run the last analysis |
 | `K` | Shortcut Cheat Sheet | `/` | How Do I…? |
+| `W` | Show Rewrites Here | `B` | Move Members to Module |
+| `J` | Who Imports This File | `Q` | Find Import Cycles |
+| `2` | Audit Type Assertions | `3` | Mutation Tracking (Project) |
+| `4` | Test Impact of Changed Files | `5` | Next inspection problem |
+| `Escape` | Stop the running analysis | | |
 
 Refactorings: **Change Signature** `Ctrl+F6`, **Safe Delete** `Alt+Delete`, **Introduce Parameter** `Ctrl+Alt+P`.
 
@@ -74,7 +79,7 @@ References grouped by what they do: definitions, calls, writes, reads, type refe
 | **Exception Flow Visualizer** | a function | what it can throw, and what each `catch` does with it |
 | **Argument Propagation** | a parameter | every value that can arrive, and where it goes |
 
-The **ⓘ** button in the results view explains the analysis on screen and the terms it uses.
+The **ⓘ** button in the results view explains the analysis on screen and the terms it uses. Each report ends with a **Next** group: click a row to run a related analysis on the same symbol, such as Nullability after Data Flow. When an analysis doesn't fit the symbol, the error offers one that does.
 
 ![Nullability of coupon](docs/images/nullability.gif)
 ![Mutations in cart.ts, starting with what a mutation is](docs/images/mutation-tracking.gif)
@@ -85,7 +90,7 @@ The **ⓘ** button in the results view explains the analysis on screen and the t
 - **Inheritance Hierarchy** and **Override Impact**: supertypes, subtypes and overrides, and what a change to a member reaches.
 - **Re-export Chain**: follow a name through barrel files to its declaration.
 - **Dependency Path Finder**: why one module imports another. **Who Imports This File**: every module that imports it, directly or through others, nearest first. **Find Import Cycles**: every group of modules that import each other at run time. **Dependency Graph Diff**: how imports changed since a Git revision, including new cycles.
-- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many. It understands Jest, Vitest, Mocha, Playwright, `node:test`, Bun, AVA, tape, Deno, Cypress and Jasmine, and runs tests with pnpm, yarn or bun when the project uses them.
+- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many. **Test Impact of Changed Files** finds the tests for every uncommitted change; **Open Impacted Test Files** opens them. It understands Jest, Vitest, Mocha, Playwright, `node:test`, Bun, AVA, tape, Deno, Cypress and Jasmine, and runs tests with pnpm, yarn or bun when the project uses them.
 
 **What the analyses recognize.** Side Effects knows browser APIs (storage, workers, notifications, messaging), Node modules, and packages for HTTP, databases, cloud SDKs, email, logging, telemetry, queues and payments. Exception Flow knows which library calls throw, including methods judged by their receiver's type, such as `reduce()` on an empty array or `toISOString()` on an invalid date. Nullability says why a library call can be empty, such as *undefined when nothing matches* for `find()`. Dead Exports treats framework entry points as used: Next.js pages and app routes, Remix, SvelteKit and Nuxt routes, Storybook stories, config files, test setup files and workers.
 
@@ -94,11 +99,11 @@ The **ⓘ** button in the results view explains the analysis on screen and the t
 
 ## Refactor
 
-- **Change Signature** (`Ctrl+F6`): rename, add, remove and reorder parameters, updating every call. Problems are flagged as you type; `Ctrl+Enter` previews.
-- **Safe Delete** (`Alt+Delete`): deletes after checking every usage, or lists what still uses it.
-- **Introduce Parameter** (`Ctrl+Alt+P`): turns the selected expression into a parameter.
-- **Move Members to Module**: moves declarations to another file and fixes imports.
-- **Intention actions** in the lightbulb (`Ctrl+.`): 70 rewrites, each offered only where it keeps the behavior. Some examples:
+- **Change Signature** (`Ctrl+F6`): rename, add, remove and reorder parameters, updating every call. Problems are flagged as you type, the preview shows the signature before and after, `Ctrl+Enter` previews the edits and `Ctrl+Delete` removes a parameter.
+- **Safe Delete** (`Alt+Delete`): deletes after checking every usage, or lists what still uses it (and copies their locations). Select several files in the Explorer to delete them one after another.
+- **Introduce Parameter** (`Ctrl+Alt+P`): turns the selected expression into a parameter; **Introduce Optional Parameter** skips the question.
+- **Move Members to Module** (`Ctrl+Alt+S B`): moves declarations to another file and fixes imports.
+- **Intention actions** in the lightbulb (`Ctrl+.`), or all at once with **Show Rewrites Here** (`Ctrl+Alt+S W`): 70 rewrites, each offered only where it keeps the behavior. Some examples:
   - `a != null ? a : b` to `a ?? b`, and `user && user.name` to `user?.name` in conditions.
   - `indexOf(x) !== -1` to `includes(x)`, and `let` to `const`.
   - `switch` to an `if` chain and back, early returns, and two independent `await`s into `Promise.all`.
@@ -116,8 +121,8 @@ Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorin
   - a `map()` callback that never returns, a list item without a `key`, an async `useEffect`;
   - `JSON.stringify` of a Map, `throw 'text'`, `delete` on an array.
 
-  Style checks such as `console.log`, `==` and `await` in loops are off until you turn them on in **Configure Inspections…**. Click the status bar count for the file's problems and a menu.
-- **Inspect Code…** runs every inspection over a scope you choose; **Apply All Fixes** fixes a whole group.
+  Style checks such as `console.log`, `==` and `await` in loops are off until you turn them on in **Configure Inspections…**. The status bar shows error, warning and info counts; click it for the file's problems and a menu. `Ctrl+Alt+S 5` jumps to the next one, and **Copy Problems in This File** copies them.
+- **Inspect Code…** runs every inspection over a scope you choose; **Apply All Fixes** fixes a whole group. **Inspect Changed Files** and **Inspect Open Editors** skip the scope question.
 - **Dead Exports**, **Structural Duplicates** and **Audit Type Assertions** clean up a project or folder.
 - **Structural Search and Replace** finds code by shape with `$placeholders$`, and can save a pattern as your own inspection.
 
@@ -125,7 +130,7 @@ Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorin
 ![Dead exports with Safe Delete and Mark as Public API](docs/images/dead-exports.gif)
 ![Structural search for $list$.find($callback$)](docs/images/structural-search.gif)
 
-Analyses over many files ask where to look: the whole project, a folder, the open editors, the changed files, the current file, function or selection. In the Explorer, right-click folders to analyze only those.
+Analyses over many files ask where to look: the whole project, a folder, the open editors, the changed files, the current file, function or selection. While one runs, the results view shows a progress bar and a stop button (`Ctrl+Alt+S Escape`). In the Explorer, right-click folders to analyze only those.
 
 ## Working with results
 
