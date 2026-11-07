@@ -691,3 +691,15 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Mediator',
+  meaning: 'Objects talk to one coordinator instead of to each other; it decides who reacts to what.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const colleagues = fieldsOf(cls).filter((f) => /^[A-Z]/.test(f.type));
+      // notify(sender, event): the colleagues report to the mediator, which routes the event.
+      const notify = methodsOf(cls).find((m) => m.parameters.length >= 2 && /^(notify|mediate|send|relay)$/.test(nameOf(m) ?? ''));
+      return colleagues.length >= 2 && notify ? [{ node: cls, evidence: `${className(cls)} coordinates ${colleagues.map((c) => c.name).join(', ')} through ${nameOf(notify)}()`, subject: className(cls) }] : [];
+    }),
+});

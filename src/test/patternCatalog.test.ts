@@ -202,3 +202,8 @@ test('Exhaustive check is recognized', () => {
   has('function area(s: Shape) { switch (s.kind) { default: { const unhandled: never = s; return unhandled; } } }', 'Exhaustive check');
   has('function assertNever(x: never): never { throw new Error(String(x)); }', 'Exhaustive check');
 });
+
+test('Mediator is recognized', () => {
+  has('class Dialog { constructor(private title: TextBox, private ok: Button) {} notify(sender: object, event: string) { if (event === "change") this.ok.enable(); } }', 'Mediator');
+  lacks('class Dialog { constructor(private title: TextBox) {} notify(sender: object, event: string) {} }', 'Mediator');
+});
