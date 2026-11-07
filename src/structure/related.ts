@@ -22,3 +22,9 @@ relatedAnalyses.rejections = [
   { command: 'tsStructure.exceptionFlow', title: 'What it throws synchronously (Exception Flow)' },
   { command: 'tsStructure.sideEffects', title: 'What else it does (Side Effects)' },
 ];
+
+relatedAnalyses.exceptions = [
+  { command: 'tsStructure.promiseRejections', title: 'Where its rejections go (Promise Rejections)' },
+  { command: 'tsStructure.sideEffects', title: 'What else it does (Side Effects)' },
+  { command: 'tsStructure.semanticUsages', title: 'Who calls it? (Find Usages)' },
+];
