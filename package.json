@@ -719,6 +719,11 @@
         "command": "tsStructure.introduceOptionalParameter",
         "title": "Introduce Optional Parameter…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.showRewrites",
+        "title": "Show Rewrites Here…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -966,6 +971,12 @@
         "mac": "cmd+ctrl+s b",
         "command": "tsStructure.moveMembers",
         "when": "config.tsStructure.features.refactorings && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s w",
+        "mac": "cmd+ctrl+s w",
+        "command": "tsStructure.showRewrites",
+        "when": "config.tsStructure.features.intentions && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1157,6 +1168,11 @@
           "command": "tsStructure.introduceOptionalParameter",
           "when": "config.tsStructure.features.refactorings",
           "group": "1_refactor@3"
+        },
+        {
+          "command": "tsStructure.showRewrites",
+          "when": "config.tsStructure.features.intentions",
+          "group": "1_refactor@9"
         }
       ],
       "explorer/context": [
@@ -1670,6 +1686,10 @@
         {
           "command": "tsStructure.introduceOptionalParameter",
           "when": "config.tsStructure.features.refactorings"
+        },
+        {
+          "command": "tsStructure.showRewrites",
+          "when": "config.tsStructure.features.intentions"
         }
       ],
       "view/title": [

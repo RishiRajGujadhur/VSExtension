@@ -37,6 +37,25 @@ export function intentionsAtCursor(editor: vscode.TextEditor | undefined, disabl
   return intentionsAt(parse(editor.document), editor.document.offsetAt(editor.selection.active), indentUnit(editor.document), disabled);
 }
 
+/** Show Rewrites Here: the intentions that apply at the cursor, as a list that applies the one picked. */
+export async function showRewritesHere(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  const disabled = new Set(vscode.workspace.getConfiguration('tsStructure').get<string[]>('intentions.disabled', []));
+  const rewrites = intentionsAtCursor(editor, disabled);
+  if (!editor || rewrites.length === 0) {
+    void vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.');
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(rewrites.map((r) => ({ label: `$(wand) ${r.title}`, rewrite: r })), { title: 'Rewrites Here', placeHolder: 'Pick a rewrite to apply' });
+  if (picked) {
+    const edit = new vscode.WorkspaceEdit();
+    for (const e of picked.rewrite.edits) {
+      edit.replace(editor.document.uri, new vscode.Range(editor.document.positionAt(e.start), editor.document.positionAt(e.end)), e.text);
+    }
+    await vscode.workspace.applyEdit(edit);
+  }
+}
+
 /** A checklist of the intention actions, in the README's two groups; unticked ones are left out of the lightbulb menu. */
 export async function chooseIntentions(): Promise<void> {
   const config = vscode.workspace.getConfiguration('tsStructure');

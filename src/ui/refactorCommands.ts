@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { openChangeSignature } from './changeSignaturePanel';
 import { RefactorCommandProvider } from './codeActions';
-import { IntentionProvider, chooseIntentions } from './intentionProvider';
+import { IntentionProvider, chooseIntentions, showRewritesHere } from './intentionProvider';
 import { runIntroduceParameter } from './introduceParameterUi';
 import { runMoveMembers } from './moveMembersUi';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
@@ -43,6 +43,7 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
       }
     }),
     registerCommand('tsStructure.chooseIntentions', chooseIntentions),
+    registerCommand('tsStructure.showRewrites', showRewritesHere),
     // With several files selected in the Explorer, each is checked and deleted in turn.
     registerCommand('tsStructure.safeDeleteFile', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
       for (const file of selected?.length ? selected : [uri]) {
