@@ -125,6 +125,7 @@ export class DiagramPanel {
     <li>Right-click a box: Check for Null, Find Usages, Data Flow and more</li>
   </ul>
 </aside>
+<svg id="minimap" class="off" aria-label="Overview of the whole chart; click to move there" role="img"><g id="miniScene"></g><rect id="miniView"/></svg>
 <footer id="info" aria-live="polite"></footer>
 <script src="${asset('diagram.js')}"></script>
 </body>

@@ -211,6 +211,7 @@
     if (diagram.leftCaption && roots(diagram.left).length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
     if (diagram.rightCaption && roots(diagram.right).length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     highlighted = [];
+    drawMinimap();
     apply();
     if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
   }
@@ -234,6 +235,57 @@
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && isolated && e.target !== searchBox && legend.hidden) isolate(undefined);
   });
+
+  // Minimap: the whole chart in the corner with the visible part outlined, shown when the chart is bigger than the
+  // window. Click or drag in it to move there.
+  const minimap = document.getElementById('minimap');
+  const miniScene = document.getElementById('miniScene');
+  const miniView = document.getElementById('miniView');
+  let bounds;
+  function drawMinimap() {
+    miniScene.textContent = '';
+    bounds = undefined;
+    if (!diagram || !shownNodes.length) return;
+    const pad = 20;
+    const left = Math.min(...shownNodes.map((n) => n.px)) - pad;
+    const top = Math.min(...shownNodes.map((n) => n.py)) - pad;
+    const right = Math.max(...shownNodes.map((n) => n.px + n.w)) + pad;
+    const bottom = Math.max(...shownNodes.map((n) => n.py + H)) + pad;
+    bounds = { x: left, y: top, w: right - left, h: bottom - top };
+    minimap.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
+    for (const n of shownNodes) {
+      el('rect', { x: n.px, y: n.py, width: n.w, height: H, rx: 6, class: `mini${n === diagram.center ? ' center' : ''}${n.kind ? ' ' + n.kind : ''}${n.tone ? ' ' + n.tone : ''}` }, miniScene);
+    }
+  }
+  function updateMinimapView() {
+    if (!bounds) {
+      minimap.classList.add('off');
+      return;
+    }
+    const vx = -view.x / view.k;
+    const vy = -view.y / view.k;
+    const vw = svg.clientWidth / view.k;
+    const vh = svg.clientHeight / view.k;
+    miniView.setAttribute('x', vx);
+    miniView.setAttribute('y', vy);
+    miniView.setAttribute('width', vw);
+    miniView.setAttribute('height', vh);
+    const fits = vx <= bounds.x && vy <= bounds.y && vx + vw >= bounds.x + bounds.w && vy + vh >= bounds.y + bounds.h;
+    minimap.classList.toggle('off', fits);
+  }
+  let miniDrag = false;
+  const moveTo = (e) => {
+    const point = minimap.createSVGPoint();
+    point.x = e.clientX;
+    point.y = e.clientY;
+    const at = point.matrixTransform(minimap.getScreenCTM().inverse());
+    view = { k: view.k, x: svg.clientWidth / 2 - at.x * view.k, y: svg.clientHeight / 2 - at.y * view.k };
+    apply();
+  };
+  minimap.addEventListener('pointerdown', (e) => { miniDrag = true; minimap.setPointerCapture(e.pointerId); moveTo(e); });
+  minimap.addEventListener('pointermove', (e) => { if (miniDrag) moveTo(e); });
+  minimap.addEventListener('pointerup', () => { miniDrag = false; });
+  window.addEventListener('resize', () => updateMinimapView());
 
   // The bar under the chart shows the whole text of the hovered or focused box, where it is, and what can be done with it.
   function showInfo(node) {
@@ -331,6 +383,7 @@
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
     zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
+    updateMinimapView();
     remember();
   }
 

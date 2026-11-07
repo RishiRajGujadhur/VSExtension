@@ -95,3 +95,15 @@ body { position: relative; }
 #branch { display: flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--vscode-editorInfo-background, rgba(55, 148, 255, .1)); border-bottom: 1px solid var(--vscode-panel-border, transparent); font-size: 12px; }
 #branch[hidden] { display: none; }
 #branch button { min-height: 22px; padding: 1px 8px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; cursor: pointer; background: var(--vscode-button-background); color: var(--vscode-button-foreground); font-family: inherit; font-size: inherit; }
+
+/* Minimap */
+#minimap { position: absolute; right: 12px; bottom: 44px; width: 200px; height: 120px; z-index: 1; cursor: pointer; border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545)); border-radius: 4px;
+  background: var(--vscode-editorWidget-background, #252526); box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); }
+#minimap.off { display: none; }
+#minimap .mini { fill: var(--vscode-editorLineNumber-foreground, #858585); opacity: .55; }
+#minimap .mini.center { fill: var(--vscode-button-background, #0e639c); opacity: 1; }
+#minimap .mini.pattern { fill: var(--vscode-charts-purple, #b180d7); }
+#minimap .mini.warning { fill: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+#minimap .mini.error { fill: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+#minimap .mini.ok { fill: var(--vscode-testing-iconPassed, #73c991); }
+#miniView { fill: var(--vscode-focusBorder, #007fd4); fill-opacity: .12; stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
