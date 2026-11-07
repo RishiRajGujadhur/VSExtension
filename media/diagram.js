@@ -44,7 +44,23 @@
   };
   const visible = (node) => (node.collapsed ? [] : node.children);
   const forEach = (nodes, visit) => nodes.forEach((n) => { visit(n); forEach(n.children, visit); });
-  const linkParents = (nodes, parent) => nodes.forEach((n) => { n.parent = parent; linkParents(n.children, n); });
+  // Each box gets its parent and a key made of the labels on its way to the subject, which survives a re-run.
+  const linkParents = (nodes, parent, side) => nodes.forEach((n) => { n.parent = parent; n.key = `${parent ? parent.key : side}/${n.label}`; linkParents(n.children, n, side); });
+
+  // Zoom, position and folding are remembered per analysis title (the 20 most recent), also after the tab is reloaded.
+  const saved = (vscode.getState() || {}).memory || {};
+  let rememberTimer;
+  function remember() {
+    clearTimeout(rememberTimer);
+    rememberTimer = setTimeout(() => {
+      if (!diagram) return;
+      const collapsed = {};
+      forEach([...diagram.left, ...diagram.right], (n) => { if (n.children.length) collapsed[n.key] = n.collapsed; });
+      saved[diagram.title] = { view, collapsed, at: Date.now() };
+      Object.keys(saved).sort((a, b) => saved[b].at - saved[a].at).slice(20).forEach((title) => delete saved[title]);
+      vscode.setState({ memory: saved });
+    }, 300);
+  }
   const isMatch = (n) => !!query && `${n.label} ${n.description || ''}`.toLowerCase().includes(query);
   const allNodes = () => (diagram ? [diagram.center, ...(() => { const out = []; forEach([...diagram.left, ...diagram.right], (n) => out.push(n)); return out; })()] : []);
 
@@ -250,6 +266,7 @@
 
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    remember();
   }
 
   function fit(all) {
@@ -372,13 +389,23 @@
     focused = undefined;
     selected = undefined;
     showInfo(undefined);
-    if (diagram) linkParents([...diagram.left, ...diagram.right], undefined);
+    if (diagram) {
+      linkParents(diagram.left, undefined, 'in');
+      linkParents(diagram.right, undefined, 'out');
+    }
+    const memory = diagram && saved[diagram.title];
+    if (memory) forEach([...diagram.left, ...diagram.right], (n) => { if (n.key in memory.collapsed) n.collapsed = memory.collapsed[n.key]; });
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
     svg.classList.toggle('off', !diagram);
     caption.textContent = diagram ? [diagram.title, diagram.center.description].filter(Boolean).join(' · ') : '';
     render();
-    fit();
+    if (memory) {
+      view = { ...memory.view };
+      apply();
+    } else {
+      fit();
+    }
   });
   vscode.postMessage({ type: 'ready' });
 })();
