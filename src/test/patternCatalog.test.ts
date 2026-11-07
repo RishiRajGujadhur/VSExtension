@@ -215,3 +215,7 @@ test('Memento is recognized', () => {
 test('Flyweight is recognized', () => {
   has('class Glyphs { private cache = new Map<string, Glyph>(); get(c: string) { if (!this.cache.has(c)) this.cache.set(c, new Glyph(c)); return this.cache.get(c)!; } }', 'Flyweight');
 });
+
+test('Bridge is recognized', () => {
+  has('interface Device { on(): void } class Tv implements Device { on() {} } class Radio implements Device { on() {} } class Remote { constructor(protected device: Device) {} power() { this.device.on(); } } class AdvancedRemote extends Remote { mute() {} }', 'Bridge');
+});

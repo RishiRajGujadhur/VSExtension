@@ -743,3 +743,22 @@ function enclosing(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
   }
   return undefined;
 }
+
+catalog.push({
+  name: 'Bridge',
+  meaning: 'An abstraction holds an implementation behind an interface, so both sides can have their own subclasses and vary independently.',
+  detect: (sf) => {
+    const classes = classesIn(sf);
+    const interfaces = new Set<string>();
+    walk(sf, (node) => ts.isInterfaceDeclaration(node) && interfaces.add(node.name.text));
+    return classes.flatMap((cls) => {
+      const name = className(cls);
+      const refined = classes.filter((c) => heritage(c, ts.SyntaxKind.ExtendsKeyword).includes(name));
+      const implementation = fieldsOf(cls).find((f) => interfaces.has(f.type));
+      const implementors = implementation ? classes.filter((c) => heritage(c, ts.SyntaxKind.ImplementsKeyword).includes(implementation.type)) : [];
+      return refined.length && implementation && implementors.length >= 2
+        ? [{ node: cls, evidence: `${name} (refined by ${refined.map(className).join(', ')}) works through ${implementation.type} (${implementors.map(className).join(', ')})`, subject: name }]
+        : [];
+    });
+  },
+});
