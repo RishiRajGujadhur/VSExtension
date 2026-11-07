@@ -67,5 +67,6 @@ export function inspectionReport(files: readonly InspectedFile[], inspections: r
     })
     .sort((a, b) => a.sortKey - b.sortKey)
     .map((r) => r.node);
-  return builder.finish(roots, `${plural(total, 'problem')} in ${plural(files.filter((f) => f.findings.length).length, 'file')} (${plural(files.length, 'file')} inspected)`);
+  const fixable = files.reduce((n, f) => n + f.findings.filter((x) => x.fixes?.length).length, 0);
+  return builder.finish(roots, `${plural(total, 'problem')} in ${plural(files.filter((f) => f.findings.length).length, 'file')} (${plural(files.length, 'file')} inspected)${fixable ? `, ${fixable} with a fix` : ''}`);
 }
