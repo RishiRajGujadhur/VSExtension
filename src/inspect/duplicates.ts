@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as ts from 'typescript';
 import { ReportBuilder, ReportNode, Report, plural, shorten } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { enclosingFunction, functionLabel } from '../structure/util';
 import { AnalysisError } from '../analysis/types';
 
@@ -332,6 +333,15 @@ export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options:
       },
     ],
   }));
+  if (groups.length) {
+    roots.push(
+      howToFix([
+        'Extract the copied lines into one function, with a parameter for each difference listed under the copy.',
+        'Start with the group that repeats the most lines; it is listed first.',
+        'Leave copies that are expected to change separately, such as test setup; a little repetition is fine there.',
+      ]),
+    );
+  }
   const total = groups.reduce((n, g) => n + repeated(g), 0);
   return builder.finish(roots, `${plural(groups.length, 'duplicate group')} in ${plural(sourceFiles.length, 'file')}${total ? `, ${plural(total, 'repeated line')}` : ''}`);
 }
