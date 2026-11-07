@@ -78,3 +78,9 @@ test('Find Usages rows explain their terms', () => {
   assert.equal(termFor('Type references', '')?.term, 'Type reference');
   assert.equal(termFor('JSX usages', '')?.term, 'JSX usage');
 });
+
+test('Inheritance Hierarchy rows explain their terms', () => {
+  assert.equal(termFor('Supertypes', '')?.term, 'Supertype');
+  assert.equal(termFor('Overrides in subtypes', '')?.term, 'Override');
+  assert.equal(termFor('super calls from overrides', '')?.term, 'super call');
+});

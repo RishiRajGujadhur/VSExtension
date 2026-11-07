@@ -480,3 +480,40 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export',
   },
 );
+
+// --- Inheritance Hierarchy -----------------------------------------------------------
+glossary.push(
+  {
+    term: 'Supertype',
+    match: /^Supertypes$/,
+    meaning: 'Classes this class extends and interfaces it implements: whatever it can be used as.',
+    example: 'class CardPayment implements PaymentMethod',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/extends',
+  },
+  {
+    term: 'Subtype',
+    match: /^Subtypes( and implementations| that inherit it unchanged)?$/,
+    meaning: 'Classes that extend this one or implement this interface. Code that works with the supertype should work with each of them.',
+    url: 'https://en.wikipedia.org/wiki/Liskov_substitution_principle',
+  },
+  {
+    term: 'Override',
+    match: /^Overrides in subtypes$/,
+    meaning: 'A subclass method with the same name replaces the inherited one for objects of that subclass.',
+    example: 'class GiftCard extends Card { charge() { … } }',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/classes.html',
+  },
+  {
+    term: 'Inherited member',
+    match: /^Inherited members$/,
+    meaning: 'Members the class gets from its supertypes without declaring them itself.',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/classes.html',
+  },
+  {
+    term: 'super call',
+    match: /^super calls\b/,
+    meaning: "super.method() runs the parent class's version from inside an override.",
+    example: 'charge() { super.charge(); log(); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/super',
+  },
+);
