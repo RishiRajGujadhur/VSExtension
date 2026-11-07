@@ -4,7 +4,7 @@ import { normalizePath } from '../analysis/paths';
 import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
 import { languageSelector, previewEnabled } from './refactorCommands';
-import { buttonCss, icon } from './webviewStyle';
+import { buttonCss, helpTip, icon } from './webviewStyle';
 import { CustomInspectionConfig, includePattern, inspectionId } from '../search/customInspections';
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
@@ -486,7 +486,7 @@ ${buttonCss}
     <select id="templates"><option value="">Start from an example…</option></select>
     <select id="history"><option value="">Recent searches…</option></select>
   </div>
-  <h2>Pattern</h2>
+  <h2>Pattern${helpTip('Code to find, matched by its syntax, so spacing, quotes and comments do not matter. $name$ stands for any expression or statement.')}</h2>
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
   <div class="row tools">
@@ -495,7 +495,7 @@ ${buttonCss}
     <button id="clear" title="Empty the pattern, constraints, replacement and results">${icon('close')}<span>Clear</span></button>
   </div>
   <div id="patternProblem" class="error"></div>
-  <h2>Placeholder constraints</h2>
+  <h2>Placeholder constraints${helpTip('Optional regular expressions per placeholder. Type is tested against the TypeScript type of what it matched; Text against its source. Invert keeps matches that do not fit.')}</h2>
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
@@ -504,7 +504,7 @@ ${buttonCss}
     <span id="count" class="hint"></span>
     <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as Keybinding</span></button>
   </div>
-  <h2>Replace with</h2>
+  <h2>Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
   <div id="templateProblem" class="error"></div>
@@ -513,7 +513,7 @@ ${buttonCss}
     <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview Replacements</span></button>
     <button id="replace" title="Ctrl+Enter in the replacement">${icon('replace')}<span>Replace All…</span></button>
   </div>
-  <h2>Save as inspection</h2>
+  <h2>Save as inspection${helpTip('Keeps the pattern as your own inspection: matches are underlined in open files and listed in the Problems panel, with the replacement as a quick fix.')}</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
     <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()">
