@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, forEachReportNode, nodeSnippet, plural, withPlace } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import {
   FunctionWithBody,
   accessExpression,
@@ -549,5 +550,15 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
       origins++;
     }
   });
+  if (nullableHere) {
+    roots.push(
+      howToFix([
+        'Check it before use: if (value) { … } or if (value != null) { … }.',
+        'Read through it safely with ?. (value?.name) and give a fallback with ?? (value ?? defaultValue).',
+        'Give it a value where it starts: a default parameter, a default in destructuring ({ badge = null }), or an initializer.',
+        'If it can never be missing here, say why in the type instead of asserting with !.',
+      ]),
+    );
+  }
   return builder.finish(roots, nullableHere ? plural(origins, 'source') : 'safe here');
 }

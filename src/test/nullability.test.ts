@@ -7,9 +7,10 @@ import { fixtures, offsetIn, virtualProject } from './helpers';
 
 const file = path.join(fixtures, 'inspect/src/nullable.ts');
 
+/** The tree's labels, indented by depth, without the How to fix advice. */
 function labels(nodes: readonly ReportNode[]): string[] {
   const result: string[] = [];
-  forEachReportNode(nodes, (n, depth) => result.push(`${'  '.repeat(depth)}${n.label}`));
+  forEachReportNode(nodes.filter((n) => n.label !== 'How to fix'), (n, depth) => result.push(`${'  '.repeat(depth)}${n.label}`));
   return result;
 }
 
