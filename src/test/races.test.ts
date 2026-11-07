@@ -3,6 +3,7 @@ import * as path from 'path';
 import { test } from 'node:test';
 import { raceFindings, raceReport, variableMutationReport, variableUse } from '../inspect/races';
 import { fixtures, offsetIn, virtualProject } from './helpers';
+import { dataFlowReport } from '../inspect/dataFlow';
 
 const races = path.join(fixtures, 'inspect/src/races.ts');
 const use = (marker: string) => variableUse(virtualProject('inspect', 'src/races.ts'), races, offsetIn(races, marker));
@@ -48,4 +49,11 @@ test('the reports group uses by function and name the risk', () => {
     'bump: 1 change · async · changes after an await',
     'arrow function: 1 change · runs from setTimeout()',
   ]);
+});
+
+test('Data Flow ends with the race conditions of a shared variable', () => {
+  const report = dataFlowReport(virtualProject('inspect', 'src/races.ts'), races, offsetIn(races, 'let ca|che'));
+  const group = report.roots.find((r) => r.label === 'Race conditions');
+  assert.equal(group?.children?.length, 1);
+  assert.match(group!.children![0].label, /checks cache, waits at await load\(\), then sets it/);
 });

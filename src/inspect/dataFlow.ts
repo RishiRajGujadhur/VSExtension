@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
 import { learnMore } from './patternLinks';
+import { raceFindings, variableUse } from './races';
 import { AnalysisError } from '../analysis/types';
 import { DetectedPattern, detectLayers, detectPatterns, patternMeaning } from './patterns';
 import { VirtualProject } from '../refactor/virtualProject';
@@ -230,6 +231,18 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       icon: 'library',
       expanded: true,
       children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}${learnMore(p.name)}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } })),
+    });
+  }
+  // Shared state read, awaited and written: the same findings as Race Conditions.
+  const races = raceFindings(variableUse(project, fileName, offset));
+  if (races.length) {
+    roots.push({
+      label: 'Race conditions',
+      description: `${plural(races.length, 'possible race')} between async calls`,
+      icon: 'warning',
+      tone: 'warning',
+      expanded: true,
+      children: races.map((r) => ({ label: r.message, tooltip: r.message, icon: 'watch', tone: 'warning', location: r.write ? builder.at(r.write.node) : r.fn ? builder.at(r.fn) : undefined })),
     });
   }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;
