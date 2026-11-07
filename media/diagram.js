@@ -217,6 +217,19 @@
     const rest = document.createElement('span');
     rest.textContent = [...parts, actions.filter(Boolean).join(', ')].filter(Boolean).map((t) => ` · ${t}`).join('');
     info.appendChild(rest);
+    // The line of code the box points at, asked from the extension once and then remembered.
+    infoKey = node.location ? `${node.location.file}:${node.location.line}` : undefined;
+    if (infoKey && codeLines.has(infoKey)) showCode(codeLines.get(infoKey));
+    else if (infoKey) vscode.postMessage({ type: 'peek', location: node.location });
+  }
+
+  const codeLines = new Map();
+  let infoKey;
+  function showCode(code) {
+    if (!code) return;
+    const line = document.createElement('code');
+    line.textContent = code;
+    info.appendChild(line);
   }
 
   // The way from a box to the subject stands out while the box is hovered or focused.
@@ -445,6 +458,12 @@
 
   window.addEventListener('message', (event) => {
     if (event.data.type === 'select') return select(event.data.location);
+    if (event.data.type === 'peek') {
+      const key = `${event.data.location.file}:${event.data.location.line}`;
+      codeLines.set(key, event.data.code);
+      if (key === infoKey) showCode(event.data.code);
+      return;
+    }
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
     focused = undefined;

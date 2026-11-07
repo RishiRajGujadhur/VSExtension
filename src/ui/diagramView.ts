@@ -40,6 +40,14 @@ export class DiagramPanel {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
+      } else if (message.type === 'peek' && message.location) {
+        // The line a box points at, for the bar under the chart.
+        const where = message.location;
+        const code = await vscode.workspace.openTextDocument(where.file).then(
+          (document) => (where.line < document.lineCount ? document.lineAt(where.line).text.trim().slice(0, 200) : ''),
+          () => '',
+        );
+        void this.panel?.webview.postMessage({ type: 'peek', location: where, code });
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
         await this.view.revealLocation(message.location);
