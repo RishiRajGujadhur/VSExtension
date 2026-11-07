@@ -117,3 +117,8 @@ test('Who Imports This File rows explain their terms', () => {
 test('cycle rows explain import cycles', () => {
   assert.equal(termFor('cart.ts ⇄ orders.ts', '2 modules')?.term, 'Import cycle');
 });
+
+test('Dependency Graph Diff rows explain their terms', () => {
+  assert.equal(termFor('Added imports', '')?.term, 'Added import');
+  assert.equal(termFor('Biggest changes in importers', '')?.term, 'Importer changes');
+});

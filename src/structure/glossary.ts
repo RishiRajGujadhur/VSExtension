@@ -658,3 +658,31 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules',
   },
 );
+
+// --- Dependency Graph Diff -----------------------------------------------------------
+glossary.push(
+  {
+    term: 'Added import',
+    match: /^Added imports$/,
+    meaning: 'Imports that exist now but not at the compared revision: new dependencies this branch introduces.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import',
+  },
+  {
+    term: 'Removed import',
+    match: /^Removed imports$/,
+    meaning: 'Imports that existed at the compared revision and are gone now.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import',
+  },
+  {
+    term: 'Changed import',
+    match: /^Changed imports$/,
+    meaning: 'Imports between the same two modules whose details changed, such as the imported names or a switch to import type.',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/modules.html',
+  },
+  {
+    term: 'Importer changes',
+    match: /^Biggest changes in importers$/,
+    meaning: 'The modules whose imports changed the most, so review can start where the dependency structure moved most.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules',
+  },
+);
