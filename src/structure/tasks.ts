@@ -28,6 +28,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Where is this name really declared?', command: 'tsStructure.reexportChain', key: 'C' },
   { question: 'Rewrite the code at the cursor', command: 'tsStructure.showRewrites' },
   { question: 'Which type assertions are risky?', command: 'tsStructure.auditTypeAssertions' },
+  { question: 'Which functions in the project change shared state?', command: 'tsStructure.mutationTrackingProject' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];
