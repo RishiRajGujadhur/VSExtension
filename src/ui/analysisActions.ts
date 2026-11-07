@@ -87,8 +87,16 @@ export async function offerSymbols(command: string, message: string, editor: vsc
     void vscode.window.showErrorMessage(message);
     return;
   }
-  const choice = await vscode.window.showErrorMessage(message, 'Choose a Symbol…');
+  // On a function, a class or an import, offer the analysis that fits it, such as Side Effects for Data Flow on a function.
+  const here = symbolAt(parse(editor.document), editor.document.offsetAt(editor.selection.active));
+  const fitting = here && analyses.find((a) => a.command !== command && a.lightbulb && isFeatureEnabled(a.feature) && fits(a, here) && (a.command !== 'tsStructure.promiseRejections' || here.async));
+  const alternative = fitting ? `${titles[fitting.command] ?? 'Analyze'} of ${here!.name}` : undefined;
+  const choice = await vscode.window.showErrorMessage(message, ...(alternative ? [alternative] : []), 'Choose a Symbol…');
   if (!choice) {
+    return;
+  }
+  if (choice === alternative) {
+    await vscode.commands.executeCommand(fitting!.command);
     return;
   }
   const picked = await pickSymbol(editor, symbols);
