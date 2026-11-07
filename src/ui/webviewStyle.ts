@@ -12,10 +12,17 @@ const paths: Record<string, string> = {
   up: '<path d="M8 3 3 8l.7.7L7.5 5V13h1V5l3.8 3.7L13 8z"/>',
   down: '<path d="m8 13 5-5-.7-.7L8.5 11V3h-1v8L3.7 7.3 3 8z"/>',
   remove: '<path d="M6 2h4v1h3v1H3V3h3zM4 5h8l-.6 9H4.6zm1.1 1 .5 7h4.8l.5-7z"/>',
+  help: '<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 13A6 6 0 1 1 8 2a6 6 0 0 1 0 12zm-.6-3.5h1.2V12H7.4zM8 4c-1.4 0-2.5.9-2.5 2.2h1.1c0-.6.6-1.1 1.4-1.1s1.4.5 1.4 1.1c0 .5-.3.8-.9 1.2-.7.5-1.1 1-1.1 1.9h1.1c0-.6.2-.9.8-1.3.7-.5 1.2-1 1.2-1.9C10.5 4.9 9.4 4 8 4z"/>',
 };
 
 export function icon(name: keyof typeof paths): string {
   return `<svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">${paths[name]}</svg>`;
+}
+
+/** A help icon that shows `text` on hover and to screen readers, and can be reached with Tab. */
+export function helpTip(text: string): string {
+  const safe = text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return `<span class="help" tabindex="0" role="img" title="${safe}" aria-label="${safe}">${icon('help')}</span>`;
 }
 
 /** Buttons styled like VS Code's own: same height, 2px corners, primary and secondary colors, icon then label. */
@@ -33,4 +40,6 @@ export const buttonCss = `
   button.icon-only:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .actions .spacer { flex: 1; }
+  .help { display: inline-flex; vertical-align: -3px; margin-left: 4px; opacity: .7; cursor: help; }
+  .help:hover, .help:focus-visible { opacity: 1; outline: none; color: var(--vscode-textLink-foreground); }
 `;

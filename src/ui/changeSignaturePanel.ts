@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { FunctionInfo, SignatureSpec, changeSignature, describeFunction } from '../refactor/changeSignature';
 import { applyRefactor, reportError } from './applyRefactor';
-import { buttonCss, icon } from './webviewStyle';
+import { buttonCss, helpTip, icon } from './webviewStyle';
 
 interface Row {
   originalIndex: number | null;
@@ -123,7 +123,7 @@ ${buttonCss}
   <label id="returnLabel"><span>Return type (empty for none)</span><input type="text" id="returnType"></label>
 </div>
 <table>
-  <thead><tr><th>Name</th><th class="typed">Type</th><th>Default value</th><th>Value for existing callers</th><th class="typed">Optional</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th class="typed">Type</th><th>Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th>Value for existing callers${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Leave it empty for an optional parameter or one with a default value.')}</th><th class="typed">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
 <button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add Parameter</span></button>
