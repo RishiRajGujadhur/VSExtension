@@ -621,3 +621,12 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Type guard',
+  meaning: 'A function returning "x is T" checks a value at run time and narrows its type for the code after the check.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) =>
+      fn.type && ts.isTypePredicateNode(fn.type) && !fn.type.assertsModifier && fn.type.type ? [{ node: fn, evidence: `${name}() narrows ${text(fn.type.parameterName)} to ${text(fn.type.type)}`, subject: text(fn.type.type) }] : [],
+    ),
+});

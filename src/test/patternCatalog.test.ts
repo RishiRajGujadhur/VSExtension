@@ -177,3 +177,8 @@ test('Discriminated union is recognized', () => {
   has("type Shape = { kind: 'circle'; r: number } | { kind: 'square'; side: number };", 'Discriminated union');
   lacks('type Id = { a: string } | { b: number };', 'Discriminated union');
 });
+
+test('Type guard is recognized', () => {
+  has('function isUser(x: unknown): x is User { return typeof x === "object"; }', 'Type guard');
+  lacks('function isUser(x: unknown): boolean { return typeof x === "object"; }', 'Type guard');
+});
