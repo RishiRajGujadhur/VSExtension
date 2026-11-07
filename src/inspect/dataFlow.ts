@@ -478,7 +478,7 @@ function outflowOf(node: ts.Node): Outflow | undefined {
 }
 
 /** Where the variable's value goes: other variables, calls, returns and, through returns, the callers that receive it. */
-function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBuilder): ReportNode[] {
+function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBuilder, depth = 0): ReportNode[] {
   const checker = project.program().getTypeChecker();
   const rows: ReportNode[] = [];
   for (const step of steps) {
@@ -495,7 +495,20 @@ function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBui
       continue;
     }
     if (flow.kind === 'into') {
-      rows.push({ label: `→ ${nodeText(flow.target)}`, description, tooltip: nodeSnippet(flow.target.parent, 80), icon: 'arrow-right', role: 'read', location: builder.at(step.node), action: followFlow(flow.target) });
+      // One hop further: where the receiving variable passes the value on, folded under it.
+      const follow = followFlow(flow.target);
+      const next = depth === 0 && follow ? nextHop(project, follow, builder) : [];
+      rows.push({
+        label: `→ ${nodeText(flow.target)}`,
+        description: next.length ? `${description} · then ${plural(next.length, 'place')}` : description,
+        tooltip: nodeSnippet(flow.target.parent, 80),
+        icon: 'arrow-right',
+        role: 'read',
+        location: builder.at(step.node),
+        action: follow,
+        children: next.length ? next : undefined,
+        expanded: false,
+      });
     } else if (flow.kind === 'argument') {
       const callee = calledFunction(checker, flow.call);
       const parameter = callee?.parameters[Math.min(flow.index, callee.parameters.length - 1)];
@@ -551,6 +564,17 @@ function propBinding(checker: ts.TypeChecker, tagName: ts.JsxTagNameExpression, 
     return props.name.elements.find((e) => (e.propertyName ?? e.name).getText() === prop)?.name;
   }
   return props && ts.isIdentifier(props.name) ? props.name : undefined;
+}
+
+/** Where a variable that received the value sends it next, one level deep. */
+function nextHop(project: VirtualProject, follow: Follow, builder: ReportBuilder): ReportNode[] {
+  try {
+    const { steps } = dataFlowSteps(project, follow.file, follow.offset);
+    return flowsOut(project, steps, builder, 1);
+  } catch {
+    // Not a variable or property, such as an element of a destructuring pattern.
+    return [];
+  }
 }
 
 /** What callers do with a function's result: the variables that receive it, or where it goes next. */

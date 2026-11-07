@@ -180,3 +180,14 @@ test('flows in flags values that may be null or undefined', () => {
   const count = dataFlowReport(virtualProject('navigate', 'src/state.tsx'), state, offsetIn(state, 'const [co|unt'));
   assert.ok(!count.roots.find((r) => r.label === 'Flows in')?.children?.some((c) => c.tone === 'warning'));
 });
+
+test('flows out show, folded under each receiving variable, where it sends the value next', () => {
+  const project = virtualProject('inspect', 'src/flow.ts');
+  const sum = dataFlowReport(project, flow, offsetIn(flow, 'const s|um'));
+  const copy = sum.roots.find((r) => r.label === 'Flows out')?.children?.find((c) => c.label === '→ copy');
+  assert.equal(copy?.expanded, false);
+  assert.match(copy?.description ?? '', / · then 1 place$/);
+  assert.deepEqual(copy?.children?.map((c) => c.label), ['returned from receipt']);
+  // Only one hop: the rows below have no further hops of their own.
+  assert.ok(!copy?.children?.some((c) => c.label.startsWith('→') && c.children?.length));
+});
