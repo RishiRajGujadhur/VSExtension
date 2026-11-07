@@ -285,7 +285,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
       icon: 'symbol-namespace',
       action: { kind: 'explainPattern', name },
       expanded: byName.size <= 4,
-      children: found.map((p) => ({ label: p.evidence, description: `${relative(p.node.getSourceFile().fileName)}:${p.node.getSourceFile().getLineAndCharacterOfPosition(p.node.getStart()).line + 1}`, location: builder.at(p.node) })),
+      children: [...found].sort((a, b) => a.node.getSourceFile().fileName.localeCompare(b.node.getSourceFile().fileName) || a.node.getStart() - b.node.getStart()).map((p) => ({ label: p.evidence, description: `${relative(p.node.getSourceFile().fileName)}:${p.node.getSourceFile().getLineAndCharacterOfPosition(p.node.getStart()).line + 1}`, location: builder.at(p.node) })),
     }));
   const layered = detectLayers(files.map((f) => f.fileName), root);
   if (layered.length >= 2) {
