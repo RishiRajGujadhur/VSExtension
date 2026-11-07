@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportBuilder, ReportNode, nodeSnippet, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { FunctionWithBody, accessExpression, enclosingFunction, functionLabel, isFunctionWithBody, writeOf } from '../structure/util';
 import { FlowStep, dataFlowSteps } from './dataFlow';
 
@@ -257,5 +258,13 @@ export function raceReport(project: VirtualProject, fileName: string, offset: nu
     });
   }
   roots.push({ label: 'Who uses it, in order', icon: 'list-ordered', children: functionRows(use, builder, (a) => a.kind !== 'init') });
+  const tips: Record<RaceFinding['kind'], string> = {
+    'lost-update': 'Lost update: await first, then read and write in one step (const p = await price(); total += p), or keep the change in a local and combine results at the end.',
+    'check-then-act': 'Check, then act: store the pending promise instead of the result (cachePromise ??= load()), so every caller waits for the same load.',
+    'many-writers': 'Several writers: ignore results that arrive late (compare a request id or use an AbortController), or queue the updates so they apply in order.',
+  };
+  if (findings.length) {
+    roots.push(howToFix([...new Set(findings.map((f) => tips[f.kind]))]));
+  }
   return builder.finish(roots, findings.length ? plural(findings.length, 'possible race') : 'no race found');
 }
