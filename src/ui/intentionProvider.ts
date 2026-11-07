@@ -69,15 +69,28 @@ export async function chooseIntentions(): Promise<void> {
     picked: !disabled.has(intention.id),
     id: intention.id,
   });
-  const picked = await vscode.window.showQuickPick<Item>(
-    [
-      { label: 'Conditions', kind: vscode.QuickPickItemKind.Separator },
-      ...intentionList.filter((i) => conditionIntentions.has(i.id)).map(item),
-      { label: 'Loops, functions and expressions', kind: vscode.QuickPickItemKind.Separator },
-      ...intentionList.filter((i) => !conditionIntentions.has(i.id)).map(item),
-    ],
-    { title: 'Intention Actions', placeHolder: 'Tick the rewrites to offer in the lightbulb menu', canPickMany: true, matchOnDescription: true },
-  );
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = `Intention Actions (${intentionList.length})`;
+  picker.placeholder = 'Tick the rewrites to offer in the lightbulb menu';
+  picker.canSelectMany = true;
+  picker.matchOnDescription = true;
+  picker.items = [
+    { label: 'Conditions', kind: vscode.QuickPickItemKind.Separator },
+    ...intentionList.filter((i) => conditionIntentions.has(i.id)).map(item),
+    { label: 'Loops, functions and expressions', kind: vscode.QuickPickItemKind.Separator },
+    ...intentionList.filter((i) => !conditionIntentions.has(i.id)).map(item),
+  ];
+  picker.selectedItems = picker.items.filter((i) => i.picked);
+  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn All On' };
+  const allOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('clear-all'), tooltip: 'Turn All Off' };
+  picker.buttons = [allOn, allOff];
+  picker.onDidTriggerButton((b) => (picker.selectedItems = b === allOn ? picker.items.filter((i) => i.id) : []));
+  const picked = await new Promise<readonly Item[] | undefined>((resolve) => {
+    picker.onDidAccept(() => resolve(picker.selectedItems));
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
   if (!picked) {
     return;
   }
