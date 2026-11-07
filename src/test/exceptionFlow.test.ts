@@ -9,7 +9,7 @@ const file = path.join(fixtures, 'inspect/src/exceptions.ts');
 
 function outline(nodes: readonly ReportNode[]): string[] {
   const lines: string[] = [];
-  forEachReportNode(nodes, (n, depth) => lines.push(`${'  '.repeat(depth)}${n.label}${n.description ? ` — ${n.description}` : ''}`));
+  forEachReportNode(nodes.filter((n) => n.label !== 'How to fix'), (n, depth) => lines.push(`${'  '.repeat(depth)}${n.label}${n.description ? ` — ${n.description}` : ''}`));
   return lines;
 }
 

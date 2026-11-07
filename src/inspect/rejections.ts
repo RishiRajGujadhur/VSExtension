@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural, withPlace } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import {
   FunctionWithBody,
   callSitesOf,
@@ -317,6 +318,15 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
   if (call && calledFunction(program.getTypeChecker(), call) === fn) {
     const here = tracer.follow(call, 0);
     roots.unshift({ label: `This call: ${nodeSnippet(call, 40)}`, icon: 'debug-step-into', tone: worst([here]), location: builder.at(call), focus: true, expanded: true, children: [here] });
+  }
+  if (count('error') > 0) {
+    roots.push(
+      howToFix([
+        'await the call inside try { … } catch (e) { … } where the error can be shown or recovered from.',
+        'When the call is not awaited on purpose (fire and forget), end it with .catch((e) => report(e)).',
+        'In event handlers and useEffect, wrap the async work so the handler itself catches: onClick={() => void save().catch(showError)}.',
+      ]),
+    );
   }
   return builder.finish(roots, plural(count('error'), 'unhandled path'));
 }
