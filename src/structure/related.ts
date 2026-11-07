@@ -56,3 +56,8 @@ relatedAnalyses.usages = [
   { command: 'tsStructure.reexportChain', title: 'Which paths it is imported through (Re-export Chain)' },
   { command: 'tsImpact.analyze', title: 'Tests that use it (Test Impact)' },
 ];
+
+relatedAnalyses.mutations = [
+  { command: 'tsStructure.sideEffects', title: 'Everything the function at the cursor does (Side Effects)' },
+  { command: 'tsStructure.mutationTrackingProject', title: 'Mutations across the project' },
+];
