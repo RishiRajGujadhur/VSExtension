@@ -15,7 +15,7 @@ interface Row {
 
 type Message =
   | { type: 'submit'; preview: boolean; name: string; returnType: string; rows: Row[] }
-  | { type: 'cancel' };
+  | { type: 'cancel'; dirty?: boolean };
 
 /** Opens the Change Signature dialog for the function at the cursor. */
 export async function openChangeSignature(context: vscode.ExtensionContext, projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
@@ -39,6 +39,9 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
   panel.webview.onDidReceiveMessage(
     async (message: Message) => {
       if (message.type === 'cancel') {
+        if (message.dirty && (await vscode.window.showWarningMessage('Discard your changes to the signature?', { modal: true }, 'Discard')) !== 'Discard') {
+          return;
+        }
         panel.dispose();
         return;
       }
@@ -252,7 +255,8 @@ ${buttonCss}
   $('returnType').addEventListener('input', update);
   $('previewBtn').addEventListener('click', () => submit(true));
   $('apply').addEventListener('click', () => submit(false));
-  $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel' }));
+  const isDirty = () => JSON.stringify(rows) !== initialRows || $('name').value !== info.name || $('returnType').value !== info.returnType;
+  $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel', dirty: isDirty() }));
   $('reset').addEventListener('click', () => {
     rows.splice(0, rows.length, ...JSON.parse(initialRows));
     $('name').value = info.name;
@@ -265,7 +269,7 @@ ${buttonCss}
       e.preventDefault();
       submit(!e.shiftKey);
     } else if (e.key === 'Escape') {
-      vscode.postMessage({ type: 'cancel' });
+      vscode.postMessage({ type: 'cancel', dirty: isDirty() });
     } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
       e.preventDefault();
       $('add').click();
