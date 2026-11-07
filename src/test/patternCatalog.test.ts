@@ -187,3 +187,8 @@ test('Assertion function is recognized', () => {
   has('function assertDefined<T>(x: T | undefined): asserts x is T { if (x === undefined) throw new Error(); }', 'Assertion function');
   has('function assert(c: unknown): asserts c { if (!c) throw new Error(); }', 'Assertion function');
 });
+
+test('Branded type is recognized', () => {
+  has("type UserId = string & { readonly __brand: 'UserId' };", 'Branded type');
+  lacks('type Named = { name: string } & { id: number };', 'Branded type');
+});

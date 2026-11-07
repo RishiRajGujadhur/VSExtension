@@ -637,3 +637,22 @@ catalog.push({
   detect: (sf) =>
     functionsIn(sf).flatMap(({ name, fn }) => (fn.type && ts.isTypePredicateNode(fn.type) && fn.type.assertsModifier ? [{ node: fn, evidence: `${name}() throws unless ${text(fn.type.parameterName)}${fn.type.type ? ` is ${text(fn.type.type)}` : ' holds'}` }] : [])),
 });
+
+catalog.push({
+  name: 'Branded type',
+  meaning: 'A primitive type is combined with a marker so that, for example, a UserId cannot be passed where an OrderId is expected.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    const primitive = new Set([ts.SyntaxKind.StringKeyword, ts.SyntaxKind.NumberKeyword, ts.SyntaxKind.BigIntKeyword]);
+    walk(sf, (node) => {
+      if (ts.isTypeAliasDeclaration(node) && ts.isIntersectionTypeNode(node.type)) {
+        const base = node.type.types.find((t) => primitive.has(t.kind));
+        const marker = node.type.types.find((t) => ts.isTypeLiteralNode(t) || (ts.isTypeReferenceNode(t) && /brand|tag/i.test(text(t.typeName))));
+        if (base && marker) {
+          found.push({ node, evidence: `${node.name.text} is a ${text(base)} that only matches values marked as ${node.name.text}`, subject: node.name.text });
+        }
+      }
+    });
+    return found;
+  },
+});
