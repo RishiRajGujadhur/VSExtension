@@ -84,3 +84,7 @@ test('Inheritance Hierarchy rows explain their terms', () => {
   assert.equal(termFor('Overrides in subtypes', '')?.term, 'Override');
   assert.equal(termFor('super calls from overrides', '')?.term, 'super call');
 });
+
+test('Re-export Chain rows explain their terms', () => {
+  assert.equal(termFor('Imported through', '')?.term, 'Imported through');
+});

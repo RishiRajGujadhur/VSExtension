@@ -517,3 +517,20 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/super',
   },
 );
+
+// --- Re-export Chain -----------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Imported through',
+    match: /^Imported through$/,
+    meaning: 'The modules a name passes through between its declaration and the import at the cursor, such as barrel index.ts files.',
+    example: "export * from './cart';",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export#re-exporting_aggregating',
+  },
+  {
+    term: 'Resolution',
+    match: /^Resolution from the cursor$/,
+    meaning: 'Each step TypeScript takes from the import at the cursor to the real declaration.',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/modules.html',
+  },
+);
