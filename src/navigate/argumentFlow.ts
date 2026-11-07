@@ -299,6 +299,9 @@ export function argumentFlowReport(project: VirtualProject, fileName: string, of
   const builder = new ReportBuilder('argumentFlow', `Propagation of ${inputLabel(input)}`);
   const flow = new ArgumentFlow(project, builder, maxDepth);
   const origins = flow.origins(input, 0, new Set());
+  if (origins.length === 0) {
+    builder.warnings.push('No call sites pass this parameter. The function may be called from outside the project, only passed as a callback (such as onClick={handler}), or not used yet.');
+  }
   const destinations = flow.destinations(input, 0, new Set());
   const roots: ReportNode[] = [
     { label: inputLabel(input), description: inputSummary(project, input), icon: 'symbol-parameter', tone: 'ok', location: builder.at(input.name) },
