@@ -57,6 +57,7 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
       removable > 0 ? `${removable} import${removable === 1 ? '' : 's'} or re-export${removable === 1 ? '' : 's'} of it will also be removed.` : 'No usages were found.',
       testNote,
       plan.exported ? 'It is exported, so code outside this project could still use it.' : '',
+      'Ctrl+Z undoes the delete.',
     ].filter(Boolean);
     // Preview is offered even with tsStructure.previewRefactorings off, for a one-off look at the edits.
     const preview = previewEnabled();
