@@ -4,6 +4,7 @@ import { normalizePath } from '../analysis/paths';
 import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
 import { applyRefactor, reportError } from './applyRefactor';
 import { languageSelector, previewEnabled } from './refactorCommands';
+import { buttonCss, icon } from './webviewStyle';
 import { CustomInspectionConfig, includePattern, inspectionId } from '../search/customInspections';
 import { Severity } from '../inspect/inspection';
 import { StructureView } from './structureView';
@@ -464,8 +465,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   td, th { text-align: left; padding: 3px 6px 3px 0; font-weight: normal; }
   th { color: var(--vscode-descriptionForeground); }
   td input[type=text] { width: 100%; }
-  button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px 12px; cursor: pointer; margin-right: 6px; }
-  button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+${buttonCss}
   .hint { color: var(--vscode-descriptionForeground); margin: 4px 0; }
   .error { color: var(--vscode-errorForeground); white-space: pre-wrap; }
   .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
@@ -490,9 +490,9 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
   <div class="row tools">
-    <button id="makePlaceholder" class="secondary" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">Make Placeholder</button>
-    <button id="fromSelection" class="secondary" title="Use the code selected in the editor as the pattern">From Editor Selection</button>
-    <button id="clear" class="secondary" title="Empty the pattern, constraints, replacement and results">Clear</button>
+    <button id="makePlaceholder" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">${icon('add')}<span>Make Placeholder</span></button>
+    <button id="fromSelection" title="Use the code selected in the editor as the pattern">${icon('copy')}<span>From Editor Selection</span></button>
+    <button id="clear" title="Empty the pattern, constraints, replacement and results">${icon('close')}<span>Clear</span></button>
   </div>
   <div id="patternProblem" class="error"></div>
   <h2>Placeholder constraints</h2>
@@ -500,18 +500,18 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option><option value="open">Open editors</option><option value="changed">Changed files</option><option value="pickFolder">Choose folder…</option></select></label>
-    <button id="search" title="Ctrl+Enter in the pattern">Search</button>
+    <button id="search" class="primary" title="Ctrl+Enter in the pattern">${icon('search')}<span>Search</span></button>
     <span id="count" class="hint"></span>
-    <button id="copyKeybinding" class="secondary" title="Copy this search as a keybindings.json entry that runs it">Copy as Keybinding</button>
+    <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as Keybinding</span></button>
   </div>
   <h2>Replace with</h2>
   <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
   <div id="templateProblem" class="error"></div>
   <div class="row">
-    <button id="copyPattern" class="secondary" title="Start the replacement from the pattern, to edit only what changes">Copy Pattern</button>
-    <button id="previewReplace" class="secondary" title="Show each match with its replacement, without changing any file">Preview Replacements</button>
-    <button id="replace" class="secondary" title="Ctrl+Enter in the replacement">Replace All…</button>
+    <button id="copyPattern" title="Start the replacement from the pattern, to edit only what changes">${icon('copy')}<span>Copy Pattern</span></button>
+    <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview Replacements</span></button>
+    <button id="replace" title="Ctrl+Enter in the replacement">${icon('replace')}<span>Replace All…</span></button>
   </div>
   <h2>Save as inspection</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
@@ -519,7 +519,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()">
     <input id="include" type="text" style="width: 160px" placeholder="all files, or src/**" title="Only inspect files whose path matches this glob, such as src/** or **/*.tsx">
     <select id="severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
-    <button id="saveInspection" class="secondary">Save as Inspection</button>
+    <button id="saveInspection">${icon('save')}<span>Save as Inspection</span></button>
   </div>
   <div class="row tools" id="messagePlaceholders"></div>
   <div id="messageProblem" class="error"></div>
@@ -560,7 +560,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   // Starting from an example or a past search makes a new inspection, not an edit of the open one.
   function startNew() {
     state.editing = undefined;
-    $('saveInspection').textContent = 'Save as Inspection';
+    $('saveInspection').querySelector('span').textContent = 'Save as Inspection';
   }
   $('templates').addEventListener('change', () => {
     const t = templates[Number($('templates').value)];
@@ -773,7 +773,7 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
     if (message.type === 'load') {
       loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
       state.editing = message.inspection.id;
-      $('saveInspection').textContent = 'Update Inspection';
+      $('saveInspection').querySelector('span').textContent = 'Update Inspection';
       save();
     }
     if (message.type === 'history') {

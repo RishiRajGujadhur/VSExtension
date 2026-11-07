@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { FunctionInfo, SignatureSpec, changeSignature, describeFunction } from '../refactor/changeSignature';
 import { applyRefactor, reportError } from './applyRefactor';
+import { buttonCss, icon } from './webviewStyle';
 
 interface Row {
   originalIndex: number | null;
@@ -105,14 +106,8 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   th { text-align: left; font-weight: normal; opacity: .8; padding: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
   td { padding: 3px 4px; vertical-align: middle; }
   tr.new td:first-child { border-left: 2px solid var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
-  button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 4px 10px; cursor: pointer; }
-  button:hover { background: var(--vscode-button-secondaryHoverBackground); }
-  button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-  button.primary:hover { background: var(--vscode-button-hoverBackground); }
-  button.icon { padding: 2px 7px; }
-  button:disabled { opacity: .4; cursor: default; }
-  .actions { display: flex; gap: 8px; margin-top: 16px; }
-  .spacer { flex: 1; }
+${buttonCss}
+  .actions { margin-top: 16px; }
   pre { background: var(--vscode-textCodeBlock-background); padding: 8px; white-space: pre-wrap; word-break: break-word; font-family: var(--vscode-editor-font-family); }
   .hint { opacity: .75; font-size: .92em; }
   .problems { color: var(--vscode-errorForeground); min-height: 1em; margin: 4px 0 0; }
@@ -128,16 +123,16 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   <thead><tr><th>Name</th><th class="typed">Type</th><th>Default value</th><th>Value for existing callers</th><th class="typed">Optional</th><th></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
-<button id="add">+ Add parameter</button>
+<button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add Parameter</span></button>
 <p class="hint">Existing parameters keep the argument each caller passes. For a new parameter, the value for existing callers is inserted at every call site; leave it empty when the parameter is optional or has a default value.</p>
 <pre id="preview"></pre>
 <p id="problems" class="problems" role="alert"></p>
 <div class="actions">
-  <button class="primary" id="previewBtn" title="Ctrl+Enter">Preview Changes</button>
-  <button id="apply" title="Ctrl+Shift+Enter">Refactor</button>
+  <button class="primary" id="previewBtn" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview Changes</span></button>
+  <button id="apply" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
   <span class="spacer"></span>
-  <button id="reset" title="Back to the signature the function has now">Reset</button>
-  <button id="cancel">Cancel</button>
+  <button id="reset" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
+  <button id="cancel" title="Close without changing anything (Escape)">${icon('close')}<span>Cancel</span></button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -163,10 +158,12 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
     td.appendChild(el);
     return td;
   }
+  const icons = ${JSON.stringify({ up: icon('up'), down: icon('down'), remove: icon('remove') })};
   function button(text, title, disabled, onClick) {
     const b = document.createElement('button');
-    b.className = 'icon';
-    b.textContent = text;
+    b.className = 'icon-only';
+    b.innerHTML = icons[text];
+    b.setAttribute('aria-label', title);
     b.title = title;
     b.disabled = disabled;
     b.addEventListener('click', onClick);
@@ -197,9 +194,9 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
       tr.appendChild(optCell);
       const tools = document.createElement('td');
       tools.style.whiteSpace = 'nowrap';
-      tools.appendChild(button('↑', 'Move up', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); }));
-      tools.appendChild(button('↓', 'Move down', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); }));
-      tools.appendChild(button('✕', 'Remove', false, () => { rows.splice(i, 1); render(); }));
+      tools.appendChild(button('up', 'Move up (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); }));
+      tools.appendChild(button('down', 'Move down (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); }));
+      tools.appendChild(button('remove', 'Remove parameter', false, () => { rows.splice(i, 1); render(); }));
       tr.appendChild(tools);
       body.appendChild(tr);
     });
@@ -245,6 +242,10 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   $('add').addEventListener('click', () => {
     rows.push({ originalIndex: null, name: 'param' + (rows.length + 1), type: info.typed ? 'unknown' : '', initializer: '', optional: false, callValue: 'undefined' });
     render();
+    // Straight into naming the new parameter.
+    const name = $('rows').lastElementChild.querySelector('input');
+    name.focus();
+    name.select();
   });
   $('name').addEventListener('input', update);
   $('returnType').addEventListener('input', update);
@@ -264,6 +265,9 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
       submit(!e.shiftKey);
     } else if (e.key === 'Escape') {
       vscode.postMessage({ type: 'cancel' });
+    } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+      e.preventDefault();
+      $('add').click();
     } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       const cell = e.target.closest && e.target.closest('td');
       const tr = cell && cell.parentElement;
