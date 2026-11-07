@@ -14,6 +14,7 @@
   const caption = document.getElementById('caption');
   const searchBox = document.getElementById('search');
   const searchCount = document.getElementById('searchCount');
+  const info = document.getElementById('info');
   let diagram;
   let view = { x: 0, y: 0, k: 1 };
   let query = '';
@@ -129,9 +130,9 @@
       const found = query ? (isMatch(node) ? ' match' : ' dim') : '';
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
-      g.addEventListener('focus', () => { focused = node; highlightPath(node); });
-      g.addEventListener('mouseenter', () => highlightPath(node));
-      g.addEventListener('mouseleave', () => highlightPath(focused));
+      g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
+      g.addEventListener('mouseenter', () => { highlightPath(node); showInfo(node); });
+      g.addEventListener('mouseleave', () => { highlightPath(focused); showInfo(focused); });
       g.addEventListener('keydown', (e) => onNodeKey(e, node));
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
       el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
@@ -166,6 +167,23 @@
     highlighted = [];
     apply();
     if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
+  }
+
+  // The bar under the chart shows the whole text of the hovered or focused box, where it is, and what can be done with it.
+  function showInfo(node) {
+    info.textContent = '';
+    if (!node) {
+      info.textContent = 'Hover or focus a box for its full text. Click opens the code, the round button folds, right-click runs another analysis.';
+      return;
+    }
+    const strong = document.createElement('strong');
+    strong.textContent = node.label;
+    info.appendChild(strong);
+    const parts = [node.description, node.location ? `${node.location.file.split(/[\/]/).pop()}:${node.location.line + 1}` : ''];
+    const actions = [node.location ? 'Enter or click: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : ''];
+    const rest = document.createElement('span');
+    rest.textContent = [...parts, actions.filter(Boolean).join(', ')].filter(Boolean).map((t) => ` · ${t}`).join('');
+    info.appendChild(rest);
   }
 
   // The way from a box to the subject stands out while the box is hovered or focused.
@@ -332,6 +350,7 @@
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
     focused = undefined;
+    showInfo(undefined);
     if (diagram) linkParents([...diagram.left, ...diagram.right], undefined);
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;

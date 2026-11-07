@@ -5,7 +5,8 @@ header button { display: inline-flex; align-items: center; gap: 4px; min-height:
   background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); font-family: inherit; font-size: inherit; }
 header button:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
 header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
-#canvas { width: 100%; height: calc(100% - 40px); cursor: grab; }
+body { display: flex; flex-direction: column; }
+#canvas { width: 100%; flex: 1; min-height: 0; cursor: grab; }
 #canvas.dragging { cursor: grabbing; }
 #empty { padding: 24px; color: var(--vscode-descriptionForeground); }
 
@@ -49,3 +50,7 @@ header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outl
 .edge.onpath { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.4; }
 #arrowOn path { fill: var(--vscode-focusBorder, #007fd4); }
 .node.onpath .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; }
+
+/* The bar under the chart. */
+#info { flex: none; padding: 4px 12px; min-height: 18px; border-top: 1px solid var(--vscode-panel-border, transparent); color: var(--vscode-descriptionForeground); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#info strong { color: var(--vscode-foreground); font-weight: 600; }
