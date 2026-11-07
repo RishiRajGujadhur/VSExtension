@@ -236,3 +236,42 @@ glossary.push(
     url: 'https://en.wikipedia.org/wiki/Side_effect_%28computer_science%29',
   },
 );
+
+// --- Mutation Tracking ---------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Mutating an argument',
+    match: /^Mutates arguments$/,
+    meaning: 'The function changes an object a caller passed in, so the caller sees the change after the call. Returning a changed copy avoids that.',
+    example: 'function addItem(cart, item) { cart.items.push(item); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Glossary/Mutable',
+  },
+  {
+    term: 'Mutating the instance',
+    match: /^Mutates the instance$/,
+    meaning: 'A method changes a field of this, which every user of the same object sees.',
+    example: 'this.count++;',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this',
+  },
+  {
+    term: 'Module state',
+    match: /^Mutates module state$|module-level/,
+    meaning: 'A variable at the top of a module is created once and shared by every function and caller that uses the module.',
+    example: 'let cache = new Map();\nexport function remember(k, v) { cache.set(k, v); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules',
+  },
+  {
+    term: 'Mutating an import',
+    match: /^Mutates imported state$/,
+    meaning: 'The function changes an object that another module exports, so every module importing it sees the change.',
+    example: "import { settings } from './config';\nsettings.debug = true;",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import',
+  },
+  {
+    term: 'Captured variable',
+    match: /^Mutates captured variables$|captured by inner functions/,
+    meaning: 'An inner function (a closure) changes a variable of the function around it. Every closure created by that call shares the variable.',
+    example: 'function counter() { let n = 0; return () => ++n; }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures',
+  },
+);

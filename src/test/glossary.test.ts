@@ -43,3 +43,9 @@ test('Side Effects rows explain their terms', () => {
   assert.equal(termFor('Schedules work', '')?.term, 'Scheduled work');
   assert.equal(termFor('Writes globals', '')?.term, 'Global state');
 });
+
+test('Mutation Tracking rows explain their terms', () => {
+  assert.equal(termFor('Mutates arguments', '')?.term, 'Mutating an argument');
+  assert.equal(termFor('Mutates captured variables', '')?.term, 'Captured variable');
+  assert.equal(termFor('total', 'module-level: every caller shares one value')?.term, 'Module state');
+});
