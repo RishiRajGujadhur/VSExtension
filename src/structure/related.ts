@@ -6,3 +6,8 @@ relatedAnalyses.dataFlow = [
   { command: 'tsStructure.argumentFlow', title: 'What values can it receive? (Argument Propagation)' },
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
 ];
+
+relatedAnalyses.nullability = [
+  { command: 'tsStructure.dataFlow', title: 'Where does it come from? (Data Flow)' },
+  { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
+];
