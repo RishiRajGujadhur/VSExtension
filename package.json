@@ -111,9 +111,12 @@
       },
       {
         "command": "tsStructure.clearReport",
-        "title": "Clear Analysis",
+        "title": "Clear Analysis and Go Back to the Start Page",
         "category": "TypeScript Structure",
-        "icon": "$(clear-all)"
+        "icon": {
+          "light": "media/clear-light.svg",
+          "dark": "media/clear-dark.svg"
+        }
       },
       {
         "command": "tsStructure.dataFlow",
@@ -765,6 +768,16 @@
         "title": "Open Impacted Test Files",
         "category": "TypeScript Structure",
         "icon": "$(file-code)"
+      },
+      {
+        "command": "tsStructure.report.fewerButtons",
+        "title": "Show Fewer Title Buttons",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.allButtons",
+        "title": "Show All Title Buttons",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1795,6 +1808,14 @@
         {
           "command": "tsImpact.openTestFiles",
           "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsStructure.report.fewerButtons",
+          "when": "config.tsStructure.results.toolbar != 'essential'"
+        },
+        {
+          "command": "tsStructure.report.allButtons",
+          "when": "config.tsStructure.results.toolbar == 'essential'"
         }
       ],
       "view/title": [
@@ -1835,7 +1856,7 @@
         },
         {
           "command": "tsStructure.report.forward",
-          "when": "view == tsStructure.report && tsStructure.canGoForward",
+          "when": "view == tsStructure.report && tsStructure.canGoForward && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@0"
         },
         {
@@ -1850,12 +1871,12 @@
         },
         {
           "command": "tsStructure.report.previous",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@3"
         },
         {
           "command": "tsStructure.report.next",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@4"
         },
         {
@@ -1885,12 +1906,12 @@
         },
         {
           "command": "tsStructure.guideMe",
-          "when": "view == tsStructure.report",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@10"
         },
         {
           "command": "tsStructure.report.expandAll",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@5"
         },
         {
@@ -1915,7 +1936,7 @@
         },
         {
           "command": "tsStructure.report.limitScope",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@2"
         },
         {
@@ -1945,7 +1966,7 @@
         },
         {
           "command": "tsStructure.howDoI",
-          "when": "view == tsStructure.report",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar != 'essential'",
           "group": "navigation@11"
         },
         {
@@ -1987,6 +2008,51 @@
           "command": "tsImpact.openTestFiles",
           "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "1_tsImpact@1"
+        },
+        {
+          "command": "tsStructure.report.forward",
+          "when": "view == tsStructure.report && tsStructure.canGoForward && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@0"
+        },
+        {
+          "command": "tsStructure.report.previous",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@3"
+        },
+        {
+          "command": "tsStructure.report.next",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@4"
+        },
+        {
+          "command": "tsStructure.guideMe",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@10"
+        },
+        {
+          "command": "tsStructure.report.expandAll",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@5"
+        },
+        {
+          "command": "tsStructure.report.limitScope",
+          "when": "view == tsStructure.report && tsStructure.hasReport && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@2"
+        },
+        {
+          "command": "tsStructure.howDoI",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar == 'essential'",
+          "group": "2_more@11"
+        },
+        {
+          "command": "tsStructure.report.fewerButtons",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar != 'essential'",
+          "group": "9_settings@5"
+        },
+        {
+          "command": "tsStructure.report.allButtons",
+          "when": "view == tsStructure.report && config.tsStructure.results.toolbar == 'essential'",
+          "group": "9_settings@5"
         }
       ],
       "view/item/context": [
@@ -2461,6 +2527,19 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Ask before Safe Delete removes something nothing uses. Turn off to delete unused, unexported code straight away (Ctrl+Z still undoes it)."
+          },
+          "tsStructure.results.toolbar": {
+            "type": "string",
+            "enum": [
+              "all",
+              "essential"
+            ],
+            "enumDescriptions": [
+              "Every button in the title of the results view.",
+              "Only Back, Re-run, Filter, About and Clear; the rest move to the ... menu."
+            ],
+            "default": "all",
+            "markdownDescription": "Which buttons the title of the **TypeScript Structure** results view shows. You can also hide a single button by right-clicking the title bar."
           }
         }
       },

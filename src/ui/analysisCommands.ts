@@ -346,6 +346,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
     registerCommand('tsStructure.cancelAnalysis', () => cancelRunningAnalysis()),
+    registerCommand('tsStructure.report.fewerButtons', () => vscode.workspace.getConfiguration('tsStructure').update('results.toolbar', 'essential', vscode.ConfigurationTarget.Global)),
+    registerCommand('tsStructure.report.allButtons', () => vscode.workspace.getConfiguration('tsStructure').update('results.toolbar', 'all', vscode.ConfigurationTarget.Global)),
     registerCommand('tsStructure.toggleAssertionTests', async () => {
       const config = vscode.workspace.getConfiguration('tsStructure');
       const skip = !config.get('typeAssertion.ignoreTestFiles', false);
