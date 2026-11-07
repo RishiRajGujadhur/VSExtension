@@ -117,7 +117,7 @@ glossary.push(
   },
   {
     term: 'Passing an argument',
-    match: /^→ /,
+    match: /^→ .*\(/,
     meaning: 'The value is passed to a function call as an argument; inside the function it becomes the matching parameter. Trace This Value follows it there.',
     example: 'saveOrder(id, total);',
     url: mdn('Guide/Functions'),

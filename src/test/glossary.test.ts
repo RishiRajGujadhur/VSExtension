@@ -24,3 +24,7 @@ test('every term links to documentation and has a plain meaning', () => {
     names.add(t.term);
   }
 });
+
+test('import rows that start with an arrow are not arguments', () => {
+  assert.equal(termFor('→ src/cart.ts'), undefined);
+});
