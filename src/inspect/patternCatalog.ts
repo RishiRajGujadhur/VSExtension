@@ -656,3 +656,21 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Constant object as enum',
+  meaning: 'An object frozen with "as const" lists the allowed values, and a type derived from it accepts only those values.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isVariableDeclaration(node) && node.initializer && ts.isAsExpression(node.initializer) && text(node.initializer.type) === 'const' && ts.isObjectLiteralExpression(node.initializer.expression)) {
+        const name = nameOf(node);
+        // The derived type: typeof X[keyof typeof X].
+        if (name && new RegExp(`keyof\\s+typeof\\s+${name}\\b`).test(sf.text)) {
+          found.push({ node, evidence: `${name} lists the allowed values, and its type accepts only those`, subject: name });
+        }
+      }
+    });
+    return found;
+  },
+});

@@ -192,3 +192,8 @@ test('Branded type is recognized', () => {
   has("type UserId = string & { readonly __brand: 'UserId' };", 'Branded type');
   lacks('type Named = { name: string } & { id: number };', 'Branded type');
 });
+
+test('Constant object as enum is recognized', () => {
+  has("const Role = { Admin: 'admin', User: 'user' } as const; type Role = (typeof Role)[keyof typeof Role];", 'Constant object as enum');
+  lacks("const Role = { Admin: 'admin' } as const;", 'Constant object as enum');
+});
