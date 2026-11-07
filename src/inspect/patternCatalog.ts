@@ -630,3 +630,10 @@ catalog.push({
       fn.type && ts.isTypePredicateNode(fn.type) && !fn.type.assertsModifier && fn.type.type ? [{ node: fn, evidence: `${name}() narrows ${text(fn.type.parameterName)} to ${text(fn.type.type)}`, subject: text(fn.type.type) }] : [],
     ),
 });
+
+catalog.push({
+  name: 'Assertion function',
+  meaning: 'A function declared with "asserts" throws when a condition fails, so the code after the call can rely on it.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => (fn.type && ts.isTypePredicateNode(fn.type) && fn.type.assertsModifier ? [{ node: fn, evidence: `${name}() throws unless ${text(fn.type.parameterName)}${fn.type.type ? ` is ${text(fn.type.type)}` : ' holds'}` }] : [])),
+});
