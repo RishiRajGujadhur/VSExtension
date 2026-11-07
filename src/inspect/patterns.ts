@@ -295,7 +295,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
     }));
   const layered = detectLayers(files.map((f) => f.fileName), root);
   if (layered.length >= 2) {
-    roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}${learnMore('Layered architecture')}`, icon: 'layers' });
+    roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}${learnMore('Layered architecture')}`, icon: 'layers', action: { kind: 'explainPattern', name: 'Layered architecture' } });
   }
   if (roots.length === 0) {
     builder.warnings.push(`No design patterns recognized in ${plural(files.length, 'file')}.`);
