@@ -229,7 +229,7 @@ export function hierarchyReport(project: VirtualProject, fileName: string, offse
       })),
     });
   }
-  return builder.finish(roots, `${plural(allSupers.length, 'supertype')}, ${plural(allSubs.length, 'subtype')}`);
+  return builder.finish(roots, allSupers.length || allSubs.length ? `${plural(allSupers.length, 'supertype')}, ${plural(allSubs.length, 'subtype')}` : 'stands alone: nothing it extends, nothing extends it');
 }
 
 /** Shows the hierarchy again from another type in it, unless that type comes from a library. */
