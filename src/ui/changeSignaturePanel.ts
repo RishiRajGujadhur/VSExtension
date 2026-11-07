@@ -233,7 +233,8 @@ ${buttonCss}
       return rest + r.name + q + type + init;
     });
     const ret = info.typed && $('returnType').value.trim() ? ': ' + $('returnType').value.trim() : '';
-    $('preview').textContent = $('name').value + '(' + params.join(', ') + ')' + ret;
+    const after = $('name').value + '(' + params.join(', ') + ')' + ret;
+    $('preview').textContent = beforeText && beforeText !== after ? 'Before: ' + beforeText + '\nAfter:  ' + after : after;
   }
   function submit(preview) {
     if (problems().length) return;
@@ -282,7 +283,9 @@ ${buttonCss}
       if (input) input.focus();
     }
   });
+  let beforeText;
   render();
+  beforeText = $('preview').textContent;
   $('name').focus();
 </script>
 </body>
