@@ -32,6 +32,16 @@ const customDocsUrl = 'https://github.com/RishiRajGujadhur/VSExtension#find-prob
 const fixAllKind = vscode.CodeActionKind.SourceFixAll.append('tsStructure');
 
 /** Analyses that explain a finding in depth, offered from its lightbulb. */
+/** Where a finding of each severity shows up, for the severity picker. */
+const severityHelp: Record<string, string> = {
+  default: 'The severity the inspection was designed with.',
+  error: 'Red squiggle; counted as an error in the Problems panel and the status bar.',
+  warning: 'Yellow squiggle; listed as a warning in the Problems panel.',
+  info: 'Blue squiggle; listed as information in the Problems panel.',
+  hint: 'Faint dots under the code only; not listed in the Problems panel.',
+  off: 'Not checked at all.',
+};
+
 const explainers: Record<string, { title: string; command: string }> = {
   missingAwait: { title: 'Trace where this promise’s rejection goes…', command: 'tsStructure.promiseRejections' },
 };
@@ -314,6 +324,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         ['default', 'error', 'warning', 'info', 'hint', 'off'].map((value) => ({
           label: `${value === current ? '$(check) ' : ''}${value}`,
           description: value === 'default' ? `as reported (${picked.inspection.defaultSeverity})` : value === 'off' ? 'not reported' : undefined,
+          detail: severityHelp[value],
           value,
         })),
         { title: picked.inspection.title, placeHolder: 'Severity' },
