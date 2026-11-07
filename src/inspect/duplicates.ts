@@ -332,5 +332,6 @@ export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options:
       },
     ],
   }));
-  return builder.finish(roots, `${plural(groups.length, 'duplicate group')} in ${plural(sourceFiles.length, 'file')}`);
+  const total = groups.reduce((n, g) => n + repeated(g), 0);
+  return builder.finish(roots, `${plural(groups.length, 'duplicate group')} in ${plural(sourceFiles.length, 'file')}${total ? `, ${plural(total, 'repeated line')}` : ''}`);
 }
