@@ -26,6 +26,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Are there import cycles?', command: 'tsStructure.findImportCycles' },
   { question: 'How did imports change on my branch?', command: 'tsStructure.dependencyGraphDiff', key: 'G' },
   { question: 'Where is this name really declared?', command: 'tsStructure.reexportChain', key: 'C' },
+  { question: 'Rewrite the code at the cursor', command: 'tsStructure.showRewrites' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];
