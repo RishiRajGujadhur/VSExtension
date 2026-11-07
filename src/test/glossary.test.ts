@@ -108,3 +108,12 @@ test('Duplicates rows explain their terms', () => {
   assert.equal(termFor('Duplicate 1: 6 lines × 2, 6 repeated', '')?.term, 'Structural duplicate');
   assert.equal(termFor('differs in total, price', '')?.term, 'Differences between copies');
 });
+
+test('Who Imports This File rows explain their terms', () => {
+  assert.equal(termFor('Import it directly', '')?.term, 'Direct importer');
+  assert.equal(termFor('Through 2 other modules', '')?.term, 'Indirect importer');
+});
+
+test('cycle rows explain import cycles', () => {
+  assert.equal(termFor('cart.ts ⇄ orders.ts', '2 modules')?.term, 'Import cycle');
+});

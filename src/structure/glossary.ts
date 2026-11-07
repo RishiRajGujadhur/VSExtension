@@ -588,7 +588,7 @@ glossary.push(
   },
   {
     term: 'Import cycle',
-    match: /^Circular:|^New import cycles$|^Cycles removed$/,
+    match: /^Circular:|^New import cycles$|^Cycles removed$| ⇄ /,
     meaning: 'Modules that import each other, directly or through others. At load time one of them sees the other half-initialized, which causes undefined imports.',
     url: 'https://en.wikipedia.org/wiki/Circular_dependency',
   },
@@ -639,5 +639,22 @@ glossary.push(
     match: /^(differs in|identical copies)\b/,
     meaning: 'What changes from one copy to the next, such as a variable name or a number. Each difference becomes a parameter when the copies are merged into one function.',
     url: 'https://en.wikipedia.org/wiki/Duplicate_code',
+  },
+);
+
+// --- Who Imports This File -----------------------------------------------------------
+glossary.push(
+  {
+    term: 'Direct importer',
+    match: /^Import it directly$/,
+    meaning: 'Modules with an import statement for this file. They break first when its exports change.',
+    example: "import { cart } from './cart';",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import',
+  },
+  {
+    term: 'Indirect importer',
+    match: /^Through \d+ other modules?$/,
+    meaning: 'Modules that reach this file through other imports. A change can still affect them, for example through a re-export or a changed return type.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules',
   },
 );
