@@ -228,3 +228,8 @@ test('Compound components are recognized', () => {
 test('Error boundary is recognized', () => {
   has('class Boundary extends React.Component { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.props.children; } }', 'Error boundary');
 });
+
+test('Controlled component is recognized', () => {
+  has('function Name() { const [v, setV] = useState(""); return <input value={v} onChange={(e) => setV(e.target.value)} />; }', 'Controlled component');
+  lacks('function Name() { return <input defaultValue="x" />; }', 'Controlled component');
+});

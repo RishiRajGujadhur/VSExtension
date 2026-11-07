@@ -789,3 +789,21 @@ catalog.push({
       return catcher ? [{ node: cls, evidence: `${className(cls)} catches errors from its children with ${nameOf(catcher)}()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Controlled component',
+  meaning: 'A form field shows a value from state and reports every change, so React state is the single source of truth.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && /^(input|select|textarea)$/.test(text(node.tagName))) {
+        const props = node.attributes.properties.map((p) => (ts.isJsxAttribute(p) ? text(p.name) : ''));
+        const shown = props.find((p) => p === 'value' || p === 'checked');
+        if (shown && props.includes('onChange')) {
+          found.push({ node, evidence: `the <${text(node.tagName)}> shows ${shown} from state and reports changes through onChange` });
+        }
+      }
+    });
+    return found;
+  },
+});
