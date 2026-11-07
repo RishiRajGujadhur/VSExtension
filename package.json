@@ -802,6 +802,16 @@
         "title": "Race Conditions",
         "category": "TypeScript Structure",
         "icon": "$(watch)"
+      },
+      {
+        "command": "tsStructure.report.flowByDirection",
+        "title": "Group Data Flow Steps Under Flows In and Out",
+        "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.flowByFunction",
+        "title": "Group Data Flow Steps by Function",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1878,6 +1888,14 @@
         {
           "command": "tsStructure.raceConditions",
           "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.report.flowByDirection",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.flowByFunction",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -2115,6 +2133,16 @@
           "command": "tsStructure.report.allButtons",
           "when": "view == tsStructure.report && config.tsStructure.results.toolbar == 'essential'",
           "group": "9_settings@5"
+        },
+        {
+          "command": "tsStructure.report.flowByDirection",
+          "when": "config.tsStructure.features.dataFlow && view == tsStructure.report && tsStructure.reportKind == dataFlow && !config.tsStructure.dataFlow.groupByDirection",
+          "group": "9_settings@6"
+        },
+        {
+          "command": "tsStructure.report.flowByFunction",
+          "when": "config.tsStructure.features.dataFlow && view == tsStructure.report && tsStructure.reportKind == dataFlow && config.tsStructure.dataFlow.groupByDirection",
+          "group": "9_settings@6"
         }
       ],
       "view/item/context": [
@@ -2617,6 +2645,11 @@
             ],
             "default": "all",
             "markdownDescription": "Which buttons the title of the **TypeScript Structure** results view shows. You can also hide a single button by right-clicking the title bar."
+          },
+          "tsStructure.dataFlow.groupByDirection": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Data Flow: put the functions that write the value under **Flows in** and those that read it under **Flows out**, so each side collapses as one. Off: one group per function after Flows in and Flows out."
           }
         }
       },

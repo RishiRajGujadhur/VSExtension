@@ -120,3 +120,18 @@ test('data flow groups a design pattern found in several places', () => {
   assert.deepEqual(rows[0].children?.map((c) => `${c.label} · ${c.description}`), ['the <input> shows value · App.tsx:5', 'the <select> shows value · Form.tsx:3']);
   assert.equal(rows[0].location, undefined);
 });
+
+test('data flow by direction puts writing code under Flows in and reading code under Flows out', () => {
+  const project = virtualProject('inspect', 'src/flow.ts');
+  const report = dataFlowReport(project, flow, offsetIn(flow, 'let to|tal'), { byDirection: true });
+  assert.deepEqual(report.roots.slice(0, 2).map((r) => r.label), ['Flows in', 'Flows out']);
+  assert.ok(!report.roots.some((r) => r.label.startsWith('checkout')));
+  const written = report.roots[0].children?.find((c) => c.label === 'Where it is written');
+  const read = report.roots[1].children?.find((c) => c.label === 'Where it is read');
+  assert.equal(written?.description, '1 function');
+  assert.equal(written?.children?.[0].description, 'flow.ts · 3 writes');
+  assert.equal(read?.children?.[0].description, 'flow.ts · 1 check, 2 hand-offs, 1 read');
+  assert.match(report.roots[0].description ?? '', /written in 1 function$/);
+  // The step at the cursor is still marked.
+  assert.ok(written?.children?.[0].children?.some((c) => c.focus));
+});

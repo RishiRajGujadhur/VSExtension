@@ -168,7 +168,7 @@ const icons: Record<FlowKind, string> = {
 };
 
 /** Data Flow Path Explorer: the variable's life grouped by the function each step happens in. */
-export function dataFlowReport(project: VirtualProject, fileName: string, offset: number): Report {
+export function dataFlowReport(project: VirtualProject, fileName: string, offset: number, options: { byDirection?: boolean } = {}): Report {
   const { name, steps, declaration } = dataFlowSteps(project, fileName, offset);
   const builder = new ReportBuilder('dataFlow', `Data flow of ${name}`);
   const groups = new Map<ts.Node | ts.SourceFile, FlowStep[]>();
@@ -180,9 +180,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   const declared = steps.find((s) => s.kind === 'declaration')?.type;
   const shownType = (s: FlowStep) => (s.kind === 'declaration' || s.type !== declared ? s.type : undefined);
   const atCursor = (s: FlowStep) => s.node.getSourceFile().fileName === project.sourceFile(fileName).fileName && s.node.getStart() <= offset && offset <= s.node.getEnd();
-  const roots: ReportNode[] = [];
-  for (const [scope, scoped] of groups) {
-    roots.push({
+  const scopeRow = (scope: ts.Node | ts.SourceFile, scoped: FlowStep[]): ReportNode => ({
       label: ts.isSourceFile(scope) ? `${baseName(scope.fileName)} (module scope)` : functionLabel(scope),
       description: `${baseName(scope.getSourceFile().fileName)} · ${stepSummary(scoped)}`,
       icon: ts.isSourceFile(scope) ? 'file-code' : 'symbol-function',
@@ -203,7 +201,16 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
         location: builder.at(s.node),
       })),
     });
-  }
+  const byDirection = options.byDirection ?? false;
+  // By direction, the code that writes the value goes under Flows in and the code that reads it under Flows out.
+  const isWrite = (s: FlowStep) => ['declaration', 'write', 'update', 'mutation', 'import'].includes(s.kind);
+  const scopeRows = (pick: (s: FlowStep) => boolean) =>
+    [...groups].map(([scope, scoped]) => [scope, scoped.filter(pick)] as const).filter(([, scoped]) => scoped.length > 0).map(([scope, scoped]) => scopeRow(scope, scoped));
+  const roots: ReportNode[] = byDirection ? [] : scopeRows(() => true);
+  const codeGroup = (label: string, icon: string, rows: ReportNode[]): ReportNode[] =>
+    rows.length ? [{ label, description: plural(rows.length, 'function'), icon, expanded: rows.length <= 3 || rows.some((r) => r.children?.some((c) => c.focus)), children: rows }] : [];
+  const written = byDirection ? scopeRows(isWrite) : [];
+  const read = byDirection ? scopeRows((s) => !isWrite(s)) : [];
   // Where the value comes from and where it goes, before the step-by-step timeline.
   const inflows = flowsIn(project, steps, name, builder);
   if (declaration && ts.isParameter(declaration) && isFunctionWithBody(declaration.parent)) {
@@ -213,9 +220,23 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     }
   }
   const outflows = flowsOut(project, steps, builder);
+  const inNote = inflows.length ? `${plural(inflows.length, 'source')} of the value` : 'no values assigned';
+  const outNote = outflows.length ? `${plural(outflows.length, 'place')} the value goes` : byDirection ? 'not passed on' : 'the value stays here';
   roots.unshift(
-    { label: 'Flows in', description: inflows.length ? `${plural(inflows.length, 'source')} of the value` : 'no values assigned', icon: 'arrow-circle-right', expanded: true, children: inflows },
-    { label: 'Flows out', description: outflows.length ? `${plural(outflows.length, 'place')} the value goes` : 'the value stays here', icon: 'arrow-circle-left', expanded: true, children: outflows },
+    {
+      label: 'Flows in',
+      description: written.length ? `${inNote}, written in ${plural(written.length, 'function')}` : inNote,
+      icon: 'arrow-circle-right',
+      expanded: true,
+      children: [...inflows, ...codeGroup('Where it is written', 'edit', written)],
+    },
+    {
+      label: 'Flows out',
+      description: read.length ? `${outNote}, read in ${plural(read.length, 'function')}` : outNote,
+      icon: 'arrow-circle-left',
+      expanded: true,
+      children: [...outflows, ...codeGroup('Where it is read', 'eye', read)],
+    },
   );
   // Types the value has: patterns about them count too, wherever they are declared.
   const checker = project.program().getTypeChecker();

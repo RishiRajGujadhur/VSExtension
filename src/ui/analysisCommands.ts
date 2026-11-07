@@ -349,6 +349,15 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
     registerCommand('tsStructure.cancelAnalysis', () => cancelRunningAnalysis()),
+    // Data Flow: steps under Flows in and Flows out, or one group per function.
+    registerCommand('tsStructure.report.flowByDirection', async () => {
+      await vscode.workspace.getConfiguration('tsStructure').update('dataFlow.groupByDirection', true, vscode.ConfigurationTarget.Global);
+      await view.rerun();
+    }),
+    registerCommand('tsStructure.report.flowByFunction', async () => {
+      await vscode.workspace.getConfiguration('tsStructure').update('dataFlow.groupByDirection', false, vscode.ConfigurationTarget.Global);
+      await view.rerun();
+    }),
     registerCommand('tsStructure.report.fewerButtons', () => vscode.workspace.getConfiguration('tsStructure').update('results.toolbar', 'essential', vscode.ConfigurationTarget.Global)),
     registerCommand('tsStructure.report.allButtons', () => vscode.workspace.getConfiguration('tsStructure').update('results.toolbar', 'all', vscode.ConfigurationTarget.Global)),
     registerCommand('tsStructure.toggleAssertionTests', async () => {
@@ -515,7 +524,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     registerCommand('tsStructure.rerunAnalysis', () => view.rerun()),
     registerCommand('tsStructure.clearReport', () => view.clear()),
-    editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset, { byDirection: vscode.workspace.getConfiguration('tsStructure').get('dataFlow.groupByDirection', true) })),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.raceConditions', 'Race Conditions', (t) => raceReport(t.project(), t.fileName, t.offset)),
