@@ -33,6 +33,10 @@ import { sourceEditor } from './refactorCommands';
 import { StructureView } from './structureView';
 import { registerCommand } from './features';
 import { explanations, guideUrl } from '../structure/explanations';
+import { relatedAnalyses } from '../structure/related';
+import { commandIcons } from '../structure/icons';
+import { featureOf } from '../structure/features';
+import { isFeatureEnabled } from './features';
 import { reportCsv } from '../structure/markdown';
 import { AnalysisError } from '../analysis/types';
 import { analyzeSymbol, offerSymbols } from './analysisActions';
@@ -210,7 +214,8 @@ const fineScopes: readonly ScopeKind[] = [...projectScopes, 'function', 'selecti
  */
 async function startingAtCursor(command: string, editor: vscode.TextEditor, compute: () => Report | Promise<Report | undefined> | undefined): Promise<Report | undefined> {
   try {
-    return await compute();
+    const report = await compute();
+    return report && withNext(report, editor);
   } catch (error) {
     if (error instanceof AnalysisError) {
       void offerSymbols(command, error.message, editor);
@@ -218,6 +223,26 @@ async function startingAtCursor(command: string, editor: vscode.TextEditor, comp
     }
     throw error;
   }
+}
+
+/** Adds a Next group: the analyses worth running on the same symbol, each a click away. */
+function withNext(report: Report, editor: vscode.TextEditor): Report {
+  const related = (relatedAnalyses[report.kind] ?? []).filter((r) => {
+    const feature = featureOf(r.command);
+    return !feature || isFeatureEnabled(feature.id);
+  });
+  if (related.length === 0) {
+    return report;
+  }
+  const file = editor.document.uri.fsPath;
+  const offset = editor.document.offsetAt(editor.selection.active);
+  report.roots.push({
+    label: 'Next',
+    description: 'run another analysis here',
+    icon: 'arrow-right',
+    children: related.map((r) => ({ label: r.title, icon: commandIcons[r.command] ?? 'play', action: { kind: 'follow', command: r.command, file, offset } })),
+  });
+  return report;
 }
 
 /** The same target after the file was edited: the cursor follows the symbol it was on. */

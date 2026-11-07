@@ -447,6 +447,9 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     if (node.location) {
       item.command = { command: 'tsStructure.openLocation', title: 'Open', arguments: [node.location] };
+    } else if (node.action?.kind === 'follow') {
+      // A Next row runs its analysis when clicked.
+      item.command = { command: 'tsStructure.report.follow', title: 'Run', arguments: [node] };
     } else if (node.action?.kind === 'explain') {
       item.command = { command: 'tsStructure.report.about', title: 'About This Analysis' };
     }
