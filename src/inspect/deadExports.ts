@@ -245,7 +245,7 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
     icon: 'debug-start',
     children: result.entries.map((e) => ({ label: path.basename(e), description: root ? path.relative(root, e).replace(/\\/g, '/') : undefined, icon: 'file', location: { file: e, line: 0, character: 0, endLine: 0, endCharacter: 0 } })),
   });
-  return builder.finish(roots, `${plural(count(unusedOnly), 'unused export')}, ${plural(result.unreachable.length, 'unreachable module')}`);
+  return builder.finish(roots, `${plural(count(unusedOnly), 'unused export')}, ${plural(result.unreachable.length, 'unreachable module')}${localOnly.length ? `, ${count(localOnly)} only used locally` : ''}`);
 }
 
 function declarationIcon(declaration: ts.Node): string {
