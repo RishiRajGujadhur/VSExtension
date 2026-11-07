@@ -271,5 +271,5 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
       }),
     })),
   });
-  return builder.finish(roots, `${plural(chain.length - 1, 'hop')} from the cursor, exported by ${plural(exported.length, 'module')}`);
+  return builder.finish(roots, `${chain.length > 1 ? plural(chain.length - 1, 'hop') + ' from the cursor' : 'no re-exports: declared where it is imported from'}, exported by ${plural(exported.length, 'module')}`);
 }
