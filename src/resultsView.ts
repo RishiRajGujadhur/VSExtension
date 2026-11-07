@@ -114,7 +114,8 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
     if (group.length === 0) {
       continue;
     }
-    items.push({ label: confidence === 'confirmed' ? 'Confirmed' : 'Possible', kind: vscode.QuickPickItemKind.Separator });
+    // The separators double as the explanation of the two confidence levels.
+    items.push({ label: confidence === 'confirmed' ? 'Confirmed: the test calls or references it' : 'Possible: reached through a module import or an interface, so it may not run it', kind: vscode.QuickPickItemKind.Separator });
     for (const impacted of group) {
       items.push({
         label: `$(${confidence === 'confirmed' ? 'beaker' : 'question'}) ${testLabel(impacted.test)}`,
