@@ -254,3 +254,8 @@ test('Forwarded ref is recognized', () => {
 test('Polymorphic component is recognized', () => {
   has('interface BoxProps { as?: React.ElementType; children?: any }', 'Polymorphic component');
 });
+
+test('Container and presentational components are recognized', () => {
+  has('function UsersContainer() { const { data } = useQuery("users"); return <UserList users={data} />; }', 'Container and presentational components');
+  lacks('function UsersContainer() { const { data } = useQuery("users"); return <ul>{data}</ul>; }', 'Container and presentational components');
+});

@@ -882,3 +882,21 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Container and presentational components',
+  meaning: 'One component loads the data and another only displays what it is given, keeping fetching apart from markup.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      if (!/^[A-Z]/.test(name) || !fn.body) {
+        return [];
+      }
+      const body = text(fn.body);
+      const loads = /\b(useQuery|useSWR|useFetch|useLoaderData)\s*\(/.test(body) || (/\buseEffect\s*\(/.test(body) && /\b(fetch|axios)\b/.test(body));
+      // It renders a single component of its own, passing the data as props, and no markup.
+      const rendered = returnsOf(fn.body).map(unwrap).filter((e) => ts.isJsxSelfClosingElement(e) || ts.isJsxElement(e));
+      const tag = (e: ts.Expression) => text(ts.isJsxElement(e) ? e.openingElement.tagName : (e as ts.JsxSelfClosingElement).tagName);
+      const shown = rendered.find((e) => /^[A-Z]/.test(tag(e)) && (ts.isJsxSelfClosingElement(e) ? e.attributes.properties.length > 0 : e.openingElement.attributes.properties.length > 0));
+      return loads && shown ? [{ node: fn, evidence: `${name} loads the data and ${tag(shown)} displays it`, subject: name }] : [];
+    }),
+});
