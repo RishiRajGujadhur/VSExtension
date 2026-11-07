@@ -29,6 +29,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Rewrite the code at the cursor', command: 'tsStructure.showRewrites' },
   { question: 'Which type assertions are risky?', command: 'tsStructure.auditTypeAssertions' },
   { question: 'Which functions in the project change shared state?', command: 'tsStructure.mutationTrackingProject' },
+  { question: 'Which tests cover my uncommitted changes?', command: 'tsImpact.analyzeChanged' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];

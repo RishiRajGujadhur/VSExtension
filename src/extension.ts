@@ -22,6 +22,8 @@ import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';
 import { tasks } from './structure/tasks';
+import * as fs from 'fs';
+import { changedFiles } from './ui/analysisScope';
 import { output } from './ui/applyRefactor';
 import { Keybinding, shortcuts } from './structure/keys';
 import { commandIcons } from './structure/icons';
@@ -176,6 +178,47 @@ export function activate(context: vscode.ExtensionContext): void {
         : tests.map((t) => `${vscode.workspace.asRelativePath(t.file)}: ${t.isFileEntry ? '(whole file)' : t.titlePath.join(' › ')}`);
       await vscode.env.clipboard.writeText(lines.join('\n'));
       void vscode.window.setStatusBarMessage(`Copied ${lines.length} ${picked.files ? 'test file' : 'test'}${lines.length === 1 ? '' : 's'}`, 3000);
+    }),
+    // Every changed source file analyzed as a module, with the tests merged into one result.
+    registerCommand('tsImpact.analyzeChanged', async () => {
+      const anchor = vscode.window.activeTextEditor?.document.uri.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const changed = anchor ? (await changedFiles(anchor))?.filter((f) => /\.[cm]?[jt]sx?$/.test(f) && fs.existsSync(f)) : undefined;
+      if (!changed?.length) {
+        void vscode.window.showInformationMessage(changed ? 'No TypeScript or JavaScript files have changed since the last commit.' : 'Changed files need a Git repository.');
+        return;
+      }
+      const merged = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Finding tests for ${changed.length} changed file${changed.length === 1 ? '' : 's'}…`, cancellable: true }, async (progress, token) => {
+        let result: ImpactResult | undefined;
+        const seen = new Set<string>();
+        for (const file of changed) {
+          if (token.isCancellationRequested) return undefined;
+          progress.report({ message: vscode.workspace.asRelativePath(file), increment: 100 / changed.length });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          try {
+            const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
+            const one = analyzeImpact(projects.load(file, folder), { fileName: file, offset: 0, scope: 'module' });
+            if (!result) {
+              result = { ...one, tests: [], target: { ...one.target, name: 'changed files' } };
+            }
+            for (const t of one.tests) {
+              const key = `${t.test.file}:${t.test.location.line}:${t.test.title}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                result.tests.push(t);
+              }
+            }
+            result.fileHashes = { ...result.fileHashes, ...one.fileHashes };
+          } catch {
+            // Files outside any project have no tests to find.
+          }
+        }
+        return result;
+      });
+      if (merged) {
+        results.set(merged);
+        if (merged.tests.length) await showResultsPicker(merged, run);
+        else void vscode.window.showInformationMessage('No tests depend on the changed files.');
+      }
     }),
     registerCommand('tsImpact.open', (location: SourceLocation) => openLocation(location)),
     registerCommand('tsImpact.clear', () => results.set(undefined)),

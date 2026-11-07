@@ -753,6 +753,12 @@
         "command": "tsStructure.toggleAssertionTests",
         "title": "Toggle Type Assertion Checks in Test Files",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsImpact.analyzeChanged",
+        "title": "Test Impact of Changed Files",
+        "category": "TypeScript Structure",
+        "icon": "$(diff-multiple)"
       }
     ],
     "viewsContainers": {
@@ -1036,6 +1042,12 @@
         "mac": "cmd+ctrl+s q",
         "command": "tsStructure.findImportCycles",
         "when": "config.tsStructure.features.dependencyPath && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s 4",
+        "mac": "cmd+ctrl+s 4",
+        "command": "tsImpact.analyzeChanged",
+        "when": "config.tsStructure.features.testImpact"
       }
     ],
     "menus": {
@@ -1769,6 +1781,10 @@
         {
           "command": "tsStructure.toggleAssertionTests",
           "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsImpact.analyzeChanged",
+          "when": "config.tsStructure.features.testImpact"
         }
       ],
       "view/title": [
@@ -1951,6 +1967,11 @@
           "command": "tsStructure.cancelAnalysis",
           "when": "view == tsStructure.report && tsStructure.running",
           "group": "navigation@-1"
+        },
+        {
+          "command": "tsImpact.analyzeChanged",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
+          "group": "navigation@0"
         }
       ],
       "view/item/context": [
@@ -2120,6 +2141,11 @@
           "command": "tsStructure.inspectChanged",
           "when": "config.tsStructure.features.inspections && scmProvider == git",
           "group": "1_tsStructure@2"
+        },
+        {
+          "command": "tsImpact.analyzeChanged",
+          "when": "config.tsStructure.features.testImpact && scmProvider == git",
+          "group": "1_tsStructure@3"
         }
       ],
       "editor/title": [
