@@ -45,6 +45,13 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   const what = plan.kind === 'file' ? plan.name : `${plan.kind} '${plan.name}'`;
   const testNote = tests > 0 ? `${tests} test${tests === 1 ? '' : 's'} depend on it (see Test Impact Analysis).` : '';
 
+  // Nothing uses it, nothing else changes and nothing outside can see it: delete without asking, if the setting allows.
+  if (blocking.length === 0 && removable === 0 && !plan.exported && tests === 0 && !vscode.workspace.getConfiguration('tsStructure').get('safeDelete.confirmUnused', true)) {
+    if (await applyRefactor(plan.result, previewEnabled())) {
+      deleted(what);
+    }
+    return;
+  }
   if (blocking.length === 0) {
     const details = [
       removable > 0 ? `${removable} import${removable === 1 ? '' : 's'} or re-export${removable === 1 ? '' : 's'} of it will also be removed.` : 'No usages were found.',

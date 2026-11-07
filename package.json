@@ -2291,6 +2291,11 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show the **Design patterns** group at the end of the Data Flow report."
+          },
+          "tsStructure.safeDelete.confirmUnused": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Ask before Safe Delete removes something nothing uses. Turn off to delete unused, unexported code straight away (Ctrl+Z still undoes it)."
           }
         }
       },
