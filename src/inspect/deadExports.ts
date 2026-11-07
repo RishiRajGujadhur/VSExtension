@@ -208,7 +208,7 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
   const fewEnough = (groups: { exports: DeadExport[] }[]) => count(groups) <= 15;
   const fileGroup = (group: { sourceFile: ts.SourceFile; exports: DeadExport[] }, expanded: boolean, note?: string): ReportNode => ({
     label: path.basename(group.sourceFile.fileName),
-    description: `${note ? `${note} · ` : ''}${relative(group.sourceFile)}`,
+    description: `${note ?? plural(group.exports.length, 'export')} · ${relative(group.sourceFile)}`,
     icon: 'file-code',
     location: builder.at(group.sourceFile),
     expanded,
