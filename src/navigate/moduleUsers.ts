@@ -128,5 +128,6 @@ export function dependentsReport(program: ts.Program, file: string, root?: strin
       children: files.sort().map((f) => ({ label: path.basename(f), description: relative(path.dirname(f), root) || '.', icon: 'file-code', location: fileLocation(f) })),
     }));
   if (roots.length === 0) builder.warnings.push(`Nothing in the project imports ${path.basename(file)}.`);
-  return builder.finish(roots, `${plural(distance.size, 'module')} depend on it`);
+  const direct = [...distance.values()].filter((d) => d === 1).length;
+  return builder.finish(roots, `${plural(distance.size, 'module')} depend on it${distance.size ? `, ${direct} directly` : ''}`);
 }
