@@ -466,6 +466,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   th { color: var(--vscode-descriptionForeground); }
   td input[type=text] { width: 100%; }
 ${buttonCss}
+  .cheats { margin: 6px 0 10px; }
+  .cheats summary { cursor: pointer; opacity: .8; }
+  .cheats ul { margin: 6px 0; padding-left: 18px; }
+  .cheats li { margin: 3px 0; opacity: .85; }
+  button.link { display: inline; min-height: 0; padding: 0 2px; background: none; border: none; color: var(--vscode-textLink-foreground); font-family: var(--vscode-editor-font-family); }
+  button.link:hover { background: none; text-decoration: underline; }
   .hint { color: var(--vscode-descriptionForeground); margin: 4px 0; }
   .error { color: var(--vscode-errorForeground); white-space: pre-wrap; }
   .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
@@ -489,6 +495,15 @@ ${buttonCss}
   <h2>Pattern${helpTip('Code to find, matched by its syntax, so spacing, quotes and comments do not matter. $name$ stands for any expression or statement.')}</h2>
   <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
   <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
+  <details class="cheats"><summary>Syntax examples</summary>
+    <ul>
+      <li><button class="link" data-pattern="$obj$.$method$($args*$)">$obj$.$method$($args*$)</button> any method call with any arguments</li>
+      <li><button class="link" data-pattern="if ($cond$) { $body*$ }">if ($cond$) { $body*$ }</button> an if with any statements</li>
+      <li><button class="link" data-pattern="$x$ === $x$">$x$ === $x$</button> the same code on both sides</li>
+      <li><button class="link" data-pattern="await $_$">await $_$</button> any awaited expression</li>
+      <li><button class="link" data-pattern="&lt;$Tag$ $props*$ /&gt;">&lt;$Tag$ $props*$ /&gt;</button> any self-closing JSX element</li>
+    </ul>
+  </details>
   <div class="row tools">
     <button id="makePlaceholder" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">${icon('add')}<span>Make Placeholder</span></button>
     <button id="fromSelection" title="Use the code selected in the editor as the pattern">${icon('copy')}<span>From Editor Selection</span></button>
@@ -538,6 +553,13 @@ ${buttonCss}
   if (!$('scope').value) $('scope').value = 'project';
 
   const templates = ${JSON.stringify(searchTemplates)};
+  // Syntax examples fill the pattern box.
+  document.querySelectorAll('.cheats button[data-pattern]').forEach((b) => b.addEventListener('click', () => {
+    const box = document.getElementById('pattern');
+    box.value = b.dataset.pattern;
+    box.dispatchEvent(new Event('input'));
+    box.focus();
+  }));
   let recent = [];
   for (const [i, t] of templates.entries()) {
     const option = document.createElement('option');
