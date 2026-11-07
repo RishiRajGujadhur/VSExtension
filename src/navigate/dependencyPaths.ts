@@ -127,7 +127,7 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
     if (reverse.length) {
       roots.push({ label: `But ${relative(target)} depends on ${relative(source)}`, icon: 'arrow-left', expanded: true, children: reverse.map(pathRow) });
     }
-    return builder.finish(roots, 'no dependency');
+    return builder.finish(roots, reverse.length ? 'no dependency (but the other way round there is)' : 'no dependency either way');
   }
   const length = paths[0].length;
   roots.push({
