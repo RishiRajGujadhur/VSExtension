@@ -242,3 +242,7 @@ test('Memoized component is recognized', () => {
 test('Lazy-loaded component is recognized', () => {
   has('const Settings = lazy(() => import("./Settings"));', 'Lazy-loaded component');
 });
+
+test('Portal is recognized', () => {
+  has('function Modal(p: { children: any }) { return createPortal(<div>{p.children}</div>, document.body); }', 'Portal');
+});

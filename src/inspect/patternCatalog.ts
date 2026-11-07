@@ -838,3 +838,17 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Portal',
+  meaning: 'A component renders into another DOM node, such as document.body, for modals and tooltips that must escape their parent.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /^(ReactDOM\.)?createPortal$/.test(text(node.expression)) && node.arguments.length >= 2) {
+        found.push({ node, evidence: `renders into ${text(node.arguments[1])} instead of its parent` });
+      }
+    });
+    return found;
+  },
+});
