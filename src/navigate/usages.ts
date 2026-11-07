@@ -135,5 +135,6 @@ export function semanticUsagesReport(project: VirtualProject, fileName: string, 
       const word = o.label.toLowerCase().split(' ')[0];
       return plural(byKind.get(o.kind)!.length, word.replace(/s$/, ''), word);
     });
-  return builder.finish(roots, `${plural(references.length, 'usage')}: ${counts.join(', ')}`);
+  const files = new Set(references.map((r) => r.getSourceFile().fileName)).size;
+  return builder.finish(roots, `${plural(references.length, 'usage')} in ${plural(files, 'file')}: ${counts.join(', ')}`);
 }
