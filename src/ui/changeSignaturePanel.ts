@@ -237,7 +237,7 @@ ${buttonCss}
     });
     const ret = info.typed && $('returnType').value.trim() ? ': ' + $('returnType').value.trim() : '';
     const after = $('name').value + '(' + params.join(', ') + ')' + ret;
-    $('preview').textContent = beforeText && beforeText !== after ? 'Before: ' + beforeText + '\nAfter:  ' + after : after;
+    $('preview').textContent = beforeText && beforeText !== after ? 'Before: ' + beforeText + '\\nAfter:  ' + after : after;
   }
   function submit(preview) {
     if (problems().length) return;
