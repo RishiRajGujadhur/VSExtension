@@ -36,6 +36,7 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `J` | Who Imports This File | `Q` | Find Import Cycles |
 | `2` | Audit Type Assertions | `3` | Mutation Tracking (Project) |
 | `4` | Test Impact of Changed Files | `5` | Next inspection problem |
+| `6` | Mutation Tracking for This Variable | `7` | Race Conditions |
 | `Escape` | Stop the running analysis | | |
 
 Refactorings: **Change Signature** `Ctrl+F6`, **Safe Delete** `Alt+Delete`, **Introduce Parameter** `Ctrl+Alt+P`.
@@ -76,11 +77,13 @@ References grouped by what they do: definitions, calls, writes, reads, type refe
 | **Nullability Path Explorer** | a variable or call | whether it can be null or undefined there, every path that makes it so, and the uses that need a guard |
 | **Side-Effect Analyzer** | a function | what it changes besides its result: arguments, shared state, I/O, timers, randomness |
 | **Mutation Tracking** | anywhere in a file | functions that change state they don't own, and who changes each piece of state. The first row explains what a mutation is |
+| **Mutation Tracking for This Variable** | a variable or property | every function that changes it across the project, marking async functions, callbacks (setTimeout, then, event handlers) and changes after an `await` |
+| **Race Conditions** | a variable or property | whether an `await` falls between reading or checking shared state and writing it (`total += await price()`, `if (!cache) cache = await load()`), and whether several async writers replace it. Data Flow shows the same findings |
 | **Promise Rejection Analyzer** | an async function | where its rejections are caught, handled or lost |
 | **Exception Flow Visualizer** | a function | what it can throw, and what each `catch` does with it |
 | **Argument Propagation** | a parameter | every value that can arrive, and where it goes |
 
-The **ⓘ** button in the results view explains the analysis on screen and the terms it uses. Each report ends with a **Next** group: click a row to run a related analysis on the same symbol, such as Nullability after Data Flow. When an analysis doesn't fit the symbol, the error offers one that does.
+The **ⓘ** button in the results view explains the analysis on screen. Rows that name a language construct, such as *destructured*, `?.`, `||`, *narrowing* or *import type*, have a **?** button: a plain explanation, an example and a link to MDN, the TypeScript handbook or react.dev. Reports that find problems end with a **How to fix** group. Each report ends with a **Next** group: click a row to run a related analysis on the same symbol, such as Nullability after Data Flow. When an analysis doesn't fit the symbol, the error offers one that does.
 
 ![Nullability of coupon](docs/images/nullability.gif)
 ![Mutations in cart.ts, starting with what a mutation is](docs/images/mutation-tracking.gif)
@@ -91,7 +94,7 @@ The **ⓘ** button in the results view explains the analysis on screen and the t
 - **Inheritance Hierarchy** and **Override Impact**: supertypes, subtypes and overrides, and what a change to a member reaches.
 - **Re-export Chain**: follow a name through barrel files to its declaration.
 - **Dependency Path Finder**: why one module imports another. **Who Imports This File**: every module that imports it, directly or through others, nearest first. **Find Import Cycles**: every group of modules that import each other at run time. **Dependency Graph Diff**: how imports changed since a Git revision, including new cycles.
-- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many. **Test Impact of Changed Files** finds the tests for every uncommitted change; **Open Impacted Test Files** opens them. It understands Jest, Vitest, Mocha, Playwright, `node:test`, Bun, AVA, tape, Deno, Cypress and Jasmine, and runs tests with pnpm, yarn or bun when the project uses them.
+- **Test Impact Analysis**: the tests that depend on a symbol or file, to run only those. The status bar shows how many. Cancel in the progress notification stops it. **Test Impact of Changed Files** finds the tests for every uncommitted change; **Open Impacted Test Files** opens them. It understands Jest, Vitest, Mocha, Playwright, `node:test`, Bun, AVA, tape, Deno, Cypress and Jasmine, and runs tests with pnpm, yarn or bun when the project uses them.
 
 **What the analyses recognize.** Side Effects knows browser APIs (storage, workers, notifications, messaging), Node modules, and packages for HTTP, databases, cloud SDKs, email, logging, telemetry, queues and payments. Exception Flow knows which library calls throw, including methods judged by their receiver's type, such as `reduce()` on an empty array or `toISOString()` on an invalid date. Nullability says why a library call can be empty, such as *undefined when nothing matches* for `find()`. Dead Exports treats framework entry points as used: Next.js pages and app routes, Remix, SvelteKit and Nuxt routes, Storybook stories, config files, test setup files and workers.
 
