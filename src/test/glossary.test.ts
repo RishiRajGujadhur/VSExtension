@@ -88,3 +88,8 @@ test('Inheritance Hierarchy rows explain their terms', () => {
 test('Re-export Chain rows explain their terms', () => {
   assert.equal(termFor('Imported through', '')?.term, 'Imported through');
 });
+
+test('Dead Exports rows explain their terms', () => {
+  assert.equal(termFor('Unused exports', '')?.term, 'Unused export');
+  assert.equal(termFor('Entry points', '')?.term, 'Entry point');
+});

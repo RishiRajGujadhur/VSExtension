@@ -534,3 +534,31 @@ glossary.push(
     url: 'https://www.typescriptlang.org/docs/handbook/2/modules.html',
   },
 );
+
+// --- Dead Exports --------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Unused export',
+    match: /^Unused exports$/,
+    meaning: 'An exported name no other module imports. Removing it (or its export keyword) shrinks the public surface of the module.',
+    url: 'https://en.wikipedia.org/wiki/Dead_code',
+  },
+  {
+    term: 'Unreachable module',
+    match: /^Unreachable modules$/,
+    meaning: 'A module that no entry point imports, directly or indirectly, so none of its code runs.',
+    url: 'https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking',
+  },
+  {
+    term: 'Used only locally',
+    match: /^Exported but only used locally$|used only inside this module/,
+    meaning: 'The name is used inside its own module but nothing imports it, so the export keyword can go.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export',
+  },
+  {
+    term: 'Entry point',
+    match: /^Entry points$/,
+    meaning: 'Files where the program starts, such as main in package.json, pages and route files, and test files. Exports reachable from them count as used.',
+    url: 'https://webpack.js.org/concepts/entry-points/',
+  },
+);
