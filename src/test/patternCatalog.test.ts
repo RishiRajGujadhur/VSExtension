@@ -224,3 +224,7 @@ test('Compound components are recognized', () => {
   has('function Tabs() { return <div />; } function Panel() { return <section />; } Tabs.Panel = Panel;', 'Compound components');
   has('function Menu() { return <ul />; } function Item() { return <li />; } export default Object.assign(Menu, { Item });', 'Compound components');
 });
+
+test('Error boundary is recognized', () => {
+  has('class Boundary extends React.Component { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.props.children; } }', 'Error boundary');
+});

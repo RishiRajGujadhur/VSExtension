@@ -779,3 +779,13 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Error boundary',
+  meaning: 'A class component catches rendering errors in the components below it and shows a fallback instead of a blank page.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const catcher = cls.members.find((m) => /^(componentDidCatch|getDerivedStateFromError)$/.test(nameOf(m) ?? ''));
+      return catcher ? [{ node: cls, evidence: `${className(cls)} catches errors from its children with ${nameOf(catcher)}()`, subject: className(cls) }] : [];
+    }),
+});
