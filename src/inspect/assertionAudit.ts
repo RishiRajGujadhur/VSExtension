@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { hashText, normalizePath } from '../analysis/paths';
 import { ReportBuilder, ReportNode, Report, plural, shorten } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { InspectionOptions, runInspections } from './inspection';
 import { typeAssertions } from './typeAssertions';
 
@@ -53,5 +54,15 @@ export function assertionAuditReport(program: ts.Program, files: readonly ts.Sou
     }));
   const total = roots.reduce((n, r) => n + r.children!.length, 0);
   const risky = roots.filter((r) => r.tone === 'error' || r.tone === 'warning').reduce((n, r) => n + r.children!.length, 0);
+  if (risky > 0) {
+    roots.push(
+      howToFix([
+        'Replace as with a check that proves the type: typeof, instanceof, \'key\' in value, or a type guard function.',
+        'Validate parsed data (JSON.parse, fetch().json()) with a schema or a hand-written guard before giving it a type.',
+        'Use satisfies instead of as to check an object literal against a type without losing its precise type.',
+        'Replace value! with a check, or with ?. and ?? when a missing value is acceptable.',
+      ]),
+    );
+  }
   return builder.finish(roots, `${plural(total, 'assertion')}, ${risky} unchecked or unsafe, in ${plural(files.length, 'file')}`);
 }

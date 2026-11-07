@@ -58,7 +58,7 @@ test('the audit groups assertions from riskiest to harmless', () => {
   const report = assertionAuditReport(program, [program.getSourceFile(file)!]);
   assert.deepEqual(
     report.roots.map((r) => `${r.label} ${r.children?.length}`),
-    ['Unsafe 2', 'Unchecked narrowing 2', 'Unverified 1', 'Non-null on a nullable value 1', 'Widening 1', 'Unnecessary 2'],
+    ['Unsafe 2', 'Unchecked narrowing 2', 'Unverified 1', 'Non-null on a nullable value 1', 'Widening 1', 'Unnecessary 2', 'How to fix 4'],
   );
   assert.equal(report.description, '9 assertions, 5 unchecked or unsafe, in 1 file');
   assert.equal(report.roots[0].children?.[0].label, 'const d = raw as unknown as Circle;');
