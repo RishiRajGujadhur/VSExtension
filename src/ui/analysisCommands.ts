@@ -7,6 +7,7 @@ import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
 import { patternMeaning, patternsReport } from '../inspect/patterns';
+import { patternLink } from '../inspect/patternLinks';
 import { cyclesReport, dependentsReport } from '../navigate/moduleUsers';
 import { mutationReport, sideEffectReport } from '../inspect/effects';
 import { assertionAuditReport } from '../inspect/assertionAudit';
@@ -364,7 +365,17 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.explainPattern', async (node: ReportNode) => {
       const name = String(node?.action?.name ?? '');
       if (name) {
-        await vscode.window.showInformationMessage(name, { modal: true, detail: `${patternMeaning(name)}\n\nIn this code: ${node.description ?? node.label}` });
+        const url = patternLink(name);
+        const choice = await vscode.window.showInformationMessage(name, { modal: true, detail: `${patternMeaning(name)}\n\nIn this code: ${node.description ?? node.label}` }, ...(url ? ['Learn More'] : []));
+        if (choice && url) {
+          await vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+      }
+    }),
+    registerCommand('tsStructure.report.learnPattern', async (node: ReportNode) => {
+      const url = patternLink(String(node?.action?.name ?? ''));
+      if (url) {
+        await vscode.env.openExternal(vscode.Uri.parse(url));
       }
     }),
     registerCommand('tsStructure.report.openFiles', async () => {

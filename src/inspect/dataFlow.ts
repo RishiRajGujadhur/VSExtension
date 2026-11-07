@@ -1,4 +1,5 @@
 import * as ts from 'typescript';
+import { learnMore } from './patternLinks';
 import { AnalysisError } from '../analysis/types';
 import { DetectedPattern, detectLayers, detectPatterns, patternMeaning } from './patterns';
 import { VirtualProject } from '../refactor/virtualProject';
@@ -228,7 +229,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       description: 'how the code this value passes through is organized',
       icon: 'library',
       expanded: true,
-      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } })),
+      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}${learnMore(p.name)}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } })),
     });
   }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;

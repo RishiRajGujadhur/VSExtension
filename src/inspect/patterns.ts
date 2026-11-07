@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 import { catalog } from './patternCatalog';
+import { learnMore } from './patternLinks';
 
 /** A design pattern or architectural style recognized from the shape of the code, never guessed from names alone. */
 export interface DetectedPattern {
@@ -262,6 +263,11 @@ export function detectLayers(fileNames: readonly string[], root?: string): strin
   return layers.filter(([pattern]) => relative.some((f) => pattern.test(`/${f}`))).map(([, layer]) => layer);
 }
 
+/** Every pattern the detectors can report. */
+export function patternNames(): string[] {
+  return [...Object.keys(meanings), ...catalog.map((e) => e.name)];
+}
+
 export function patternMeaning(name: string): string {
   return meanings[name] ?? catalog.find((e) => e.name === name)?.meaning ?? '';
 }
@@ -281,7 +287,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
     .map(([name, found]) => ({
       label: name,
       description: `${plural(found.length, 'place')}${new Set(found.map((p) => p.node.getSourceFile().fileName)).size > 1 ? ` in ${plural(new Set(found.map((p) => p.node.getSourceFile().fileName)).size, 'file')}` : ''}`,
-      tooltip: `**${name}**: ${meanings[name]}`,
+      tooltip: `**${name}**: ${patternMeaning(name)}${learnMore(name)}`,
       icon: 'symbol-namespace',
       action: { kind: 'explainPattern', name },
       expanded: byName.size <= 4,
@@ -289,7 +295,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
     }));
   const layered = detectLayers(files.map((f) => f.fileName), root);
   if (layered.length >= 2) {
-    roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}`, icon: 'layers' });
+    roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}${learnMore('Layered architecture')}`, icon: 'layers' });
   }
   if (roots.length === 0) {
     builder.warnings.push(`No design patterns recognized in ${plural(files.length, 'file')}.`);
