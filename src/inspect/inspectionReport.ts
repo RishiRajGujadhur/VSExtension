@@ -46,7 +46,7 @@ export function inspectionReport(files: readonly InspectedFile[], inspections: r
             const fixable = fixAllEdits(entry.findings);
             return {
               label: path.basename(entry.sourceFile.fileName),
-              description: `${relative(entry.sourceFile)} · ${entry.findings.length}`,
+              description: `${relative(entry.sourceFile)} · ${entry.findings.length}${fixable.length ? ' · fixable' : ''}`,
               icon: 'file-code',
               expanded: entries.length <= 5,
               action: fixable.length ? { kind: 'applyFix', file: normalizePath(entry.sourceFile.fileName), hash: hashText(entry.sourceFile.text), edits: fixable, title: `Fix ${id} in ${path.basename(entry.sourceFile.fileName)}` } : undefined,
