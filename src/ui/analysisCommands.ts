@@ -227,6 +227,9 @@ async function startingAtCursor(command: string, editor: vscode.TextEditor, comp
 
 /** Adds a Next group: the analyses worth running on the same symbol, each a click away. */
 function withNext(report: Report, editor: vscode.TextEditor): Report {
+  if (report.kind === 'dataFlow' && !vscode.workspace.getConfiguration('tsStructure', editor.document.uri).get('dataFlow.designPatterns', true)) {
+    report.roots = report.roots.filter((r) => r.label !== 'Design patterns');
+  }
   const related = (relatedAnalyses[report.kind] ?? []).filter((r) => {
     const feature = featureOf(r.command);
     return !feature || isFeatureEnabled(feature.id);
