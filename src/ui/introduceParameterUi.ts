@@ -32,8 +32,8 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     // The last choice comes first, so Enter repeats it.
     const last = memento?.get<'required' | 'optional'>(lastModeKey);
     const modes = [
-      { label: 'Required', description: `callers pass ${short}`, mode: 'required' as const },
-      { label: 'Optional', description: `default value = ${short}; callers unchanged`, mode: 'optional' as const },
+      { label: 'Required', description: `callers pass ${short}`, detail: 'Every call gets the expression as a new argument, so the function no longer computes it itself.', mode: 'required' as const },
+      { label: 'Optional', description: `default value = ${short}; callers unchanged`, detail: 'The expression becomes the default value, so existing calls keep working and new callers may pass something else.', mode: 'optional' as const },
     ].sort((a, b) => Number(b.mode === last) - Number(a.mode === last));
     const mode = fixedMode ? modes.find((m) => m.mode === fixedMode) : await vscode.window.showQuickPick(modes, { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' });
     if (!mode) {
