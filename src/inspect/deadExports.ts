@@ -5,6 +5,7 @@ import { findNode } from '../analysis/impact';
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';
 import { discoverTests } from '../analysis/testDiscovery';
 import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { programGraph, reachableFrom } from '../navigate/moduleGraph';
 
 export interface DeadExportOptions {
@@ -239,6 +240,15 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
       action: { kind: 'unexportAll' },
       children: localOnly.map((g) => ({ ...fileGroup(g, fewEnough(localOnly)), action: { kind: 'unexportAll', file: normalizePath(g.sourceFile.fileName) } })),
     });
+  }
+  if (unusedOnly.length || localOnly.length || result.unreachable.length) {
+    roots.push(
+      howToFix([
+        'Right-click an unused export and choose Safe Delete; it checks every usage before removing it.',
+        'For exports used only inside their module, Remove export keeps the code and drops the export.',
+        'If something outside the project imports it (a published package, a framework entry), mark it with Mark as Public API.',
+      ]),
+    );
   }
   roots.push({
     label: 'Entry points',
