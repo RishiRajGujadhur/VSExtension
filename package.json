@@ -1030,6 +1030,12 @@
         "mac": "cmd+ctrl+s j",
         "command": "tsStructure.whoImports",
         "when": "config.tsStructure.features.dependencyPath && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s q",
+        "mac": "cmd+ctrl+s q",
+        "command": "tsStructure.findImportCycles",
+        "when": "config.tsStructure.features.dependencyPath && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
