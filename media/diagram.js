@@ -3,7 +3,8 @@
 (function () {
   const vscode = acquireVsCodeApi();
   const svgNs = 'http://www.w3.org/2000/svg';
-  const W = 240;
+  const MIN_W = 150;
+  const MAX_W = 360;
   const H = 48;
   const GAP_X = 80;
   const GAP_Y = 14;
@@ -14,7 +15,17 @@
   let diagram;
   let view = { x: 0, y: 0, k: 1 };
 
-  const shorten = (text, max) => (text && text.length > max ? text.slice(0, max - 1) + '…' : text || '');
+  // Boxes are as wide as their text, between MIN_W and MAX_W; longer text is cut with an ellipsis.
+  const measure = document.createElement('canvas').getContext('2d');
+  const fontOf = (weight, size) => `${weight} ${size}px ${getComputedStyle(document.body).fontFamily}`;
+  const textWidth = (text, font) => { measure.font = font; return measure.measureText(text || '').width; };
+  const fitText = (text, font, max) => {
+    if (!text || textWidth(text, font) <= max) return text || '';
+    let cut = text.length;
+    while (cut > 1 && textWidth(text.slice(0, cut) + '…', font) > max) cut--;
+    return text.slice(0, cut) + '…';
+  };
+  const widthOf = (node) => Math.min(MAX_W, Math.max(MIN_W, Math.ceil(Math.max(textWidth(node.label, fontOf(600, 12)), textWidth(node.description, fontOf(400, 11))) + 30)));
   const el = (name, attrs, parent) => {
     const node = document.createElementNS(svgNs, name);
     for (const [key, value] of Object.entries(attrs || {})) {
@@ -61,16 +72,33 @@
     center.row = (rows - 1) / 2;
     center.depth = 0;
     center.side = 0;
-    const x = (n) => n.side * n.depth * (W + GAP_X) - W / 2;
-    const y = (n) => n.row * (H + GAP_Y);
-    center.px = x(center);
-    center.py = y(center);
+    // Each column is as wide as its widest box; left boxes line up on the edge facing the subject.
+    const shown = [center];
+    const collect = (nodes) => nodes.forEach((n) => { shown.push(n); collect(visible(n)); });
+    collect(diagram.left);
+    collect(diagram.right);
+    const columns = { '-1': [], '1': [] };
+    for (const n of shown) {
+      n.w = widthOf(n);
+      if (n.side) columns[n.side][n.depth] = Math.max(columns[n.side][n.depth] || 0, n.w);
+    }
+    const edge = (side, depth) => {
+      let at = center.w / 2 + GAP_X;
+      for (let d = 1; d < depth; d++) at += (columns[side][d] || 0) + GAP_X;
+      return at;
+    };
+    for (const n of shown) {
+      n.px = n.side === 0 ? -n.w / 2 : n.side > 0 ? edge(1, n.depth) : -edge(-1, n.depth) - n.w;
+      n.py = n.row * (H + GAP_Y);
+    }
+    const x = (n) => n.px;
+    const y = (n) => n.py;
 
     const edges = el('g', { class: 'edges' }, scene);
     const link = (from, to, side) => {
       // Arrows point the way the value moves: into the subject on the left, away from it on the right.
       const [a, b] = side < 0 ? [to, from] : [from, to];
-      const x1 = x(a) + W;
+      const x1 = x(a) + a.w;
       const y1 = y(a) + H / 2;
       const x2 = x(b);
       const y2 = y(b) + H / 2;
@@ -90,10 +118,10 @@
     const draw = (node) => {
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node.location ? 0 : -1 }, layer);
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
-      el('rect', { width: W, height: H, rx: 6, class: 'box' }, g);
+      el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
-      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = shorten(node.label, 32);
-      if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = shorten(node.description, 40);
+      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = fitText(node.label, fontOf(600, 12), node.w - 26);
+      if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = fitText(node.description, fontOf(400, 11), node.w - 26);
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
         g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
@@ -103,7 +131,7 @@
       }
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
-        const toggle = el('g', { class: 'toggle', transform: `translate(${node.side < 0 ? 0 : W},${H / 2})` }, g);
+        const toggle = el('g', { class: 'toggle', transform: `translate(${node.side < 0 ? 0 : node.w},${H / 2})` }, g);
         el('circle', { r: 9 }, toggle);
         el('text', { y: 4, 'text-anchor': 'middle' }, toggle).textContent = node.collapsed ? String(node.children.length) : '−';
         el('title', {}, toggle).textContent = node.collapsed ? `Show ${node.children.length} more` : 'Fold';
@@ -118,8 +146,8 @@
     const drawAll = (nodes) => nodes.forEach((n) => { draw(n); drawAll(visible(n)); });
     drawAll(diagram.left);
     drawAll(diagram.right);
-    if (diagram.leftCaption && diagram.left.length) el('text', { x: -(W + GAP_X) - W / 2, y: -14, class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
-    if (diagram.rightCaption && diagram.right.length) el('text', { x: W + GAP_X - W / 2, y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
+    if (diagram.leftCaption && diagram.left.length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
+    if (diagram.rightCaption && diagram.right.length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     apply();
   }
 
@@ -136,7 +164,7 @@
     if (k < 0.6 && diagram && !all) {
       // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
       const c = diagram.center;
-      view = { k: 0.9, x: width / 2 - (c.px + W / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
+      view = { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
     } else {
       view = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
     }
