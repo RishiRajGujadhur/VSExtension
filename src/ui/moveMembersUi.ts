@@ -43,8 +43,8 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
       const lastKeep = memento?.get<boolean>('tsStructure.moveMembers.keepReExport', false);
       const choice = await vscode.window.showQuickPick(
         [
-          { label: 'Update imports to the new module', description: 'importers and re-exports point at the new module', keep: false },
-          { label: `Also keep a re-export in ${path.basename(source)}`, description: "the source module's public API stays the same", keep: true },
+          { label: 'Update imports to the new module', description: 'importers and re-exports point at the new module', detail: 'Cleanest result; code outside this project that imports from the old module would break.', keep: false },
+          { label: `Also keep a re-export in ${path.basename(source)}`, description: "the source module's public API stays the same", detail: 'Safest for published libraries: the old import path keeps working.', keep: true },
         ].sort((a, b) => Number(b.keep === lastKeep) - Number(a.keep === lastKeep)),
         { title: `Move to ${vscode.workspace.asRelativePath(target)}` },
       );
