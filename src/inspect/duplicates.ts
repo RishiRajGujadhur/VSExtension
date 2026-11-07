@@ -315,7 +315,7 @@ export function duplicatesReport(sourceFiles: readonly ts.SourceFile[], options:
   const roots: ReportNode[] = groups.map((group, i) => ({
     label: `Duplicate ${i + 1}: ${plural(group.lines, 'line')} × ${group.fragments.length}, ${repeated(group)} repeated`,
     description: shorten(group.fragments[0].nodes[0].getText().split('\n')[0], 50),
-    tooltip: group.differences.length ? `Differs in: ${group.differences.join(', ')}` : 'Identical copies',
+    tooltip: `${group.differences.length ? `Differs in: ${group.differences.join(', ')}` : 'Identical copies'}\n\n\`\`\`ts\n${group.fragments[0].sourceFile.text.slice(group.fragments[0].start, group.fragments[0].end).split('\n').slice(0, 8).join('\n')}\n\`\`\``,
     icon: 'files',
     tone: 'warning',
     expanded: i < 5,
