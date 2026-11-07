@@ -43,20 +43,20 @@ export const features: Feature[] = [
     core: true,
     title: 'Data Flow and Mutation Tracking',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere'],
   },
   {
     id: 'sideEffects',
     title: 'Side-Effect Analyzer',
     description: 'Side-Effect Analyzer and its CodeLens.',
-    commands: ['tsStructure.sideEffects', 'tsStructure.report.showSideEffects', 'tsStructure.toggleSideEffectLens'],
+    commands: ['tsStructure.sideEffects', 'tsStructure.report.showSideEffects', 'tsStructure.toggleSideEffectLens', 'tsStructure.report.sideEffectsHere'],
   },
   {
     id: 'nullability',
     core: true,
     title: 'Nullability Path Explorer',
     description: 'Nullability Path Explorer and the "Explain why this may be undefined" action on TypeScript errors.',
-    commands: ['tsStructure.nullability'],
+    commands: ['tsStructure.nullability', 'tsStructure.report.nullabilityHere'],
   },
   {
     id: 'promiseRejections',
@@ -74,7 +74,7 @@ export const features: Feature[] = [
     id: 'exceptionFlow',
     title: 'Exception Flow Visualizer',
     description: 'Where errors are thrown, caught, transformed or swallowed.',
-    commands: ['tsStructure.exceptionFlow'],
+    commands: ['tsStructure.exceptionFlow', 'tsStructure.report.exceptionsHere'],
   },
   {
     id: 'duplicates',
@@ -123,7 +123,7 @@ export const features: Feature[] = [
     id: 'argumentFlow',
     title: 'Argument Propagation Explorer',
     description: 'Where a parameter’s values come from and where they go.',
-    commands: ['tsStructure.argumentFlow', 'tsStructure.report.traceDeeper'],
+    commands: ['tsStructure.argumentFlow', 'tsStructure.report.traceDeeper', 'tsStructure.report.argumentsHere'],
   },
 ];
 

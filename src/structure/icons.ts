@@ -49,6 +49,12 @@ export const rowCommandFeatures: Record<string, string> = {
   'tsStructure.report.compareRevision': 'tsStructure.dependencyGraphDiff',
   'tsStructure.report.usagesHere': 'tsStructure.semanticUsages',
   'tsStructure.report.dataFlowHere': 'tsStructure.dataFlow',
+  'tsStructure.report.nullabilityHere': 'tsStructure.nullability',
+  'tsStructure.report.mutationsHere': 'tsStructure.mutationTrackingVariable',
+  'tsStructure.report.racesHere': 'tsStructure.raceConditions',
+  'tsStructure.report.sideEffectsHere': 'tsStructure.sideEffects',
+  'tsStructure.report.exceptionsHere': 'tsStructure.exceptionFlow',
+  'tsStructure.report.argumentsHere': 'tsStructure.argumentFlow',
 };
 
 /** The icon of each report kind, for the history list and messages about a report. */

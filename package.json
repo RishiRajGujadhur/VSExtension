@@ -812,6 +812,42 @@
         "command": "tsStructure.report.flowByFunction",
         "title": "Group Data Flow Steps by Function",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.report.nullabilityHere",
+        "title": "Check for Null or Undefined Here",
+        "category": "TypeScript Structure",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "tsStructure.report.mutationsHere",
+        "title": "Mutation Tracking for This Variable",
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-variable)"
+      },
+      {
+        "command": "tsStructure.report.racesHere",
+        "title": "Race Conditions",
+        "category": "TypeScript Structure",
+        "icon": "$(watch)"
+      },
+      {
+        "command": "tsStructure.report.sideEffectsHere",
+        "title": "Side Effects",
+        "category": "TypeScript Structure",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "tsStructure.report.exceptionsHere",
+        "title": "Exception Flow",
+        "category": "TypeScript Structure",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "tsStructure.report.argumentsHere",
+        "title": "Argument Propagation",
+        "category": "TypeScript Structure",
+        "icon": "$(call-incoming)"
       }
     ],
     "viewsContainers": {
@@ -827,6 +863,10 @@
       {
         "id": "tsStructure.editorMenu",
         "label": "TypeScript Structure"
+      },
+      {
+        "id": "tsStructure.report.analyzeHere",
+        "label": "More Analyses Here"
       }
     ],
     "keybindings": [
@@ -1896,6 +1936,30 @@
         {
           "command": "tsStructure.report.flowByFunction",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.nullabilityHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.mutationsHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.racesHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.sideEffectsHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.exceptionsHere",
+          "when": "false"
+        },
+        {
+          "command": "tsStructure.report.argumentsHere",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -2315,6 +2379,16 @@
           "command": "tsStructure.report.explainTerm",
           "when": "view == tsStructure.report && viewItem =~ /\\bterm\\b/",
           "group": "0_explain@1"
+        },
+        {
+          "command": "tsStructure.report.nullabilityHere",
+          "when": "config.tsStructure.features.nullability && view == tsStructure.report && viewItem =~ /location/",
+          "group": "1_analyze@3"
+        },
+        {
+          "submenu": "tsStructure.report.analyzeHere",
+          "when": "view == tsStructure.report && viewItem =~ /location/",
+          "group": "1_analyze@9"
         }
       ],
       "scm/title": [
@@ -2371,6 +2445,28 @@
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "3_tsStructure@3"
+        }
+      ],
+      "tsStructure.report.analyzeHere": [
+        {
+          "command": "tsStructure.report.mutationsHere",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.report.racesHere",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.report.sideEffectsHere",
+          "when": "config.tsStructure.features.sideEffects"
+        },
+        {
+          "command": "tsStructure.report.exceptionsHere",
+          "when": "config.tsStructure.features.exceptionFlow"
+        },
+        {
+          "command": "tsStructure.report.argumentsHere",
+          "when": "config.tsStructure.features.argumentFlow"
         }
       ]
     },

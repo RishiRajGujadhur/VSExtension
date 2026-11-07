@@ -171,11 +171,36 @@ async function firstSourceFile(uris: readonly vscode.Uri[]): Promise<vscode.Uri 
 }
 
 /** Opens a row's location and runs an analysis there, such as Find Usages of the symbol a row points at. */
-async function runAt(view: StructureView, node: ReportNode | undefined, command: string): Promise<unknown> {
-  if (!node?.location) {
+/** Words that start a declaration or statement; an analysis started on one moves on to the name after it. */
+const keywords = new Set('export default async function const let var class interface type enum return await new if while for switch case throw yield void typeof delete import from public private protected static readonly abstract get set declare namespace'.split(' '));
+
+/**
+ * Runs an analysis where a row points. The row is a result row, or the context of a diagram node
+ * (which carries file, line and character itself). A row that starts on a keyword, such as a function
+ * row on `export function`, runs on the name that follows.
+ */
+async function runAt(view: StructureView, node: ReportNode | { file?: string; line?: number; character?: number } | undefined, command: string): Promise<unknown> {
+  const fromRow = (node as ReportNode | undefined)?.location;
+  const plain = node as { file?: string; line?: number; character?: number } | undefined;
+  const location = fromRow ?? (plain?.file !== undefined && plain.line !== undefined ? { file: plain.file, line: plain.line, character: plain.character ?? 0, endLine: plain.line, endCharacter: plain.character ?? 0 } : undefined);
+  if (!location) {
     return;
   }
-  await view.open(node.location);
+  await view.open(location);
+  const editor = vscode.window.activeTextEditor;
+  if (editor && editor.document.lineCount > location.line) {
+    const text = editor.document.lineAt(location.line).text;
+    const words = /[A-Za-z_$][\w$]*/g;
+    words.lastIndex = location.character;
+    let word = words.exec(text);
+    while (word && keywords.has(word[0])) {
+      word = words.exec(text);
+    }
+    if (word && word.index !== location.character) {
+      const position = new vscode.Position(location.line, word.index);
+      editor.selection = new vscode.Selection(position, position);
+    }
+  }
   return vscode.commands.executeCommand(command);
 }
 
@@ -446,6 +471,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.excludeFile', (node: ReportNode) => node?.location && vscode.commands.executeCommand('tsStructure.excludeFromAnalysis', vscode.Uri.file(node.location.file))),
     registerCommand('tsStructure.report.usagesHere', (node: ReportNode) => runAt(view, node, 'tsStructure.semanticUsages')),
     registerCommand('tsStructure.report.dataFlowHere', (node: ReportNode) => runAt(view, node, 'tsStructure.dataFlow')),
+    registerCommand('tsStructure.report.nullabilityHere', (node: ReportNode) => runAt(view, node, 'tsStructure.nullability')),
+    registerCommand('tsStructure.report.mutationsHere', (node: ReportNode) => runAt(view, node, 'tsStructure.mutationTrackingVariable')),
+    registerCommand('tsStructure.report.racesHere', (node: ReportNode) => runAt(view, node, 'tsStructure.raceConditions')),
+    registerCommand('tsStructure.report.sideEffectsHere', (node: ReportNode) => runAt(view, node, 'tsStructure.sideEffects')),
+    registerCommand('tsStructure.report.exceptionsHere', (node: ReportNode) => runAt(view, node, 'tsStructure.exceptionFlow')),
+    registerCommand('tsStructure.report.argumentsHere', (node: ReportNode) => runAt(view, node, 'tsStructure.argumentFlow')),
     // The info button: what the report on screen shows and the words it uses, such as what a mutation is.
     registerCommand('tsStructure.report.about', async () => {
       const explanation = view.report && explanations[view.report.kind];
