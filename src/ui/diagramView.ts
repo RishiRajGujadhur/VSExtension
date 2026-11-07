@@ -36,13 +36,15 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; title?: string }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
         await this.view.revealLocation(message.location);
+      } else if (message.type === 'save' && message.svg) {
+        await saveSvg(message.svg, message.title);
       }
     });
     this.panel.onDidDispose(() => (this.panel = undefined));
@@ -78,6 +80,7 @@ export class DiagramPanel {
   ${button('zoomOut', '−', 'Zoom out')}
   ${button('zoomIn', '+', 'Zoom in')}
   ${button('fit', 'Fit', 'Fit the diagram to the window')}
+  ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
 </header>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
 <svg id="canvas" class="off" role="img" aria-label="Analysis diagram">
@@ -88,5 +91,19 @@ export class DiagramPanel {
 <script src="${asset('diagram.js')}"></script>
 </body>
 </html>`;
+  }
+}
+
+/** Asks where to save the chart's SVG, offering the workspace folder and a name from the analysis title. */
+async function saveSvg(svg: string, title = 'diagram'): Promise<void> {
+  const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+  const name = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'}.svg`;
+  const target = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { 'SVG image': ['svg'] }, title: 'Save Diagram as SVG' });
+  if (!target) {
+    return;
+  }
+  await vscode.workspace.fs.writeFile(target, Buffer.from(svg, 'utf8'));
+  if ((await vscode.window.showInformationMessage(`Diagram saved to ${vscode.workspace.asRelativePath(target)}.`, 'Open')) === 'Open') {
+    await vscode.commands.executeCommand('vscode.open', target);
   }
 }

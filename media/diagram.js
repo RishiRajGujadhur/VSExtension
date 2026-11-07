@@ -358,6 +358,34 @@
     render();
     fit();
   };
+  // Save SVG: the chart as a standalone image, with the theme's colors written into it.
+  function exportSvg() {
+    if (!diagram) return;
+    const box = scene.getBBox();
+    const pad = 24;
+    const out = svg.cloneNode(true);
+    const props = ['fill', 'stroke', 'stroke-width', 'opacity', 'font-family', 'font-size', 'font-weight', 'letter-spacing'];
+    const originals = svg.querySelectorAll('*');
+    out.querySelectorAll('*').forEach((copy, i) => {
+      const style = getComputedStyle(originals[i]);
+      copy.setAttribute('style', props.map((p) => `${p}:${style.getPropertyValue(p)}`).join(';'));
+      copy.removeAttribute('data-vscode-context');
+      copy.removeAttribute('tabindex');
+    });
+    for (const side of out.querySelectorAll('.side')) side.textContent = side.textContent.toUpperCase();
+    out.removeAttribute('class');
+    out.removeAttribute('role');
+    out.setAttribute('xmlns', svgNs);
+    out.setAttribute('viewBox', `${box.x - pad} ${box.y - pad} ${box.width + 2 * pad} ${box.height + 2 * pad}`);
+    out.setAttribute('width', String(Math.ceil(box.width + 2 * pad)));
+    out.setAttribute('height', String(Math.ceil(box.height + 2 * pad)));
+    out.querySelector('#scene').removeAttribute('transform');
+    const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
+    out.insertBefore(background, out.querySelector('#scene'));
+    vscode.postMessage({ type: 'save', svg: new XMLSerializer().serializeToString(out), title: diagram.title });
+  }
+
+  document.getElementById('save').addEventListener('click', exportSvg);
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
