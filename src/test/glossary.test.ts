@@ -67,3 +67,8 @@ test('Exception Flow rows explain their terms', () => {
   assert.equal(termFor('Thrown here', '')?.term, 'throw');
   assert.equal(termFor('propagates through placeOrder', '')?.term, 'Propagation');
 });
+
+test('Argument Propagation rows explain their terms', () => {
+  assert.equal(termFor('Values that can arrive', '')?.term, 'Values that can arrive');
+  assert.equal(termFor('stored in this.handler', '')?.term, 'Storing a value');
+});

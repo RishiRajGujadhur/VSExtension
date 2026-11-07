@@ -376,3 +376,41 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof',
   },
 );
+
+// --- Argument Propagation ------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Values that can arrive',
+    match: /^Values that can arrive$/,
+    meaning: "Every argument a call site in the project passes for this parameter, including values passed on from other functions' parameters.",
+    url: 'https://developer.mozilla.org/en-US/docs/Glossary/Parameter',
+  },
+  {
+    term: 'Rest parameter',
+    match: /^\.\.\.|rest arguments/,
+    meaning: '...args collects the remaining arguments into an array.',
+    example: 'function log(...parts: string[]) { … }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/rest_parameters',
+  },
+  {
+    term: 'Default parameter',
+    match: /default\b/,
+    meaning: 'A default (= value) is used when the argument is omitted or undefined, but not when it is null.',
+    example: 'function page(size = 20) { … }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters',
+  },
+  {
+    term: 'Storing a value',
+    match: /^stored in\b/,
+    meaning: 'The parameter is assigned to a field or outer variable, so it outlives the call and other code can read it later.',
+    example: 'this.handler = handler;',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Assignment',
+  },
+  {
+    term: 'Passing a function value',
+    match: /^passed as a value:/,
+    meaning: 'The function is passed on without being called here, for example as a callback, so where it is called from cannot be followed.',
+    example: 'items.forEach(render);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions',
+  },
+);
