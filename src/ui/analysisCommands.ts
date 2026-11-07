@@ -1,4 +1,5 @@
 import * as ts from 'typescript';
+import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
@@ -369,6 +370,15 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         const choice = await vscode.window.showInformationMessage(name, { modal: true, detail: `${patternMeaning(name)}\n\nIn this code: ${node.description ?? node.label}` }, ...(url ? ['Learn More'] : []));
         if (choice && url) {
           await vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+      }
+    }),
+    registerCommand('tsStructure.report.explainTerm', async (node: ReportNode) => {
+      const term = node && termFor(node.label, node.description);
+      if (term) {
+        const detail = `${term.meaning}${term.example ? `\n\nFor example:\n${term.example}` : ''}`;
+        if ((await vscode.window.showInformationMessage(term.term, { modal: true, detail }, 'Learn More')) === 'Learn More') {
+          await vscode.env.openExternal(vscode.Uri.parse(term.url));
         }
       }
     }),

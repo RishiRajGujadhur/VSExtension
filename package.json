@@ -784,6 +784,12 @@
         "title": "Learn More About This Pattern",
         "category": "TypeScript Structure",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "tsStructure.report.explainTerm",
+        "title": "What Does This Mean?",
+        "category": "TypeScript Structure",
+        "icon": "$(question)"
       }
     ],
     "viewsContainers": {
@@ -1826,6 +1832,10 @@
         {
           "command": "tsStructure.report.learnPattern",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.report.explainTerm",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -2225,6 +2235,16 @@
           "command": "tsStructure.report.learnPattern",
           "when": "view == tsStructure.report && viewItem =~ /action:explainPattern/",
           "group": "inline@2"
+        },
+        {
+          "command": "tsStructure.report.explainTerm",
+          "when": "view == tsStructure.report && viewItem =~ /\\bterm\\b/",
+          "group": "inline@3"
+        },
+        {
+          "command": "tsStructure.report.explainTerm",
+          "when": "view == tsStructure.report && viewItem =~ /\\bterm\\b/",
+          "group": "0_explain@1"
         }
       ],
       "scm/title": [

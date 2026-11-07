@@ -1,0 +1,26 @@
+import * as assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { glossary, termFor } from '../structure/glossary';
+
+test('rows about a language construct find their explanation', () => {
+  assert.equal(termFor('destructured: ReactNode')?.term, 'Destructuring');
+  assert.equal(termFor('destructured, default null')?.term, 'Destructuring');
+  assert.equal(termFor('→ prop badge')?.term, 'Passing a prop');
+  assert.equal(termFor('→ saveOrder(id, total)')?.term, 'Passing an argument');
+});
+
+test('group rows have no explanation', () => {
+  for (const label of ['Flows in', 'Flows out', 'Design patterns', 'Next', 'Paths that produce null or undefined']) {
+    assert.equal(termFor(label), undefined, label);
+  }
+});
+
+test('every term links to documentation and has a plain meaning', () => {
+  const names = new Set<string>();
+  for (const t of glossary) {
+    assert.match(t.url, /^https:\/\//, t.term);
+    assert.ok(t.meaning.length > 20, t.term);
+    assert.ok(!names.has(t.term), `${t.term} twice`);
+    names.add(t.term);
+  }
+});

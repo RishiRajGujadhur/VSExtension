@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { hashText, pathKey } from '../analysis/paths';
@@ -460,7 +461,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     // A group with several fixes below it gets Fix All; a row already acted on loses its buttons.
     const fixAll = !done && !rowFix(node) && node.children?.length && countFixes(node, (n) => this.isDone(n)) > 1 ? 'fixAll' : '';
-    item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll].filter(Boolean).join(' ');
+    // term: the row names a language construct the ? button explains.
+    item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll, termFor(node.label, node.description) ? 'term' : ''].filter(Boolean).join(' ');
     return item;
   }
 
