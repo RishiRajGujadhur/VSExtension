@@ -197,6 +197,7 @@ export function deadExportReport(program: ts.Program, options: DeadExportOptions
       .filter(Boolean)
       .join(' · '),
     icon: declarationIcon(e.declaration),
+    tooltip: '```ts\n' + e.declaration.getText().split('\n').slice(0, 6).join('\n') + '\n```',
     tone: e.usedLocally ? 'info' : 'warning',
     location: builder.at(nameOf(e.declaration), sf),
     action: { kind: e.usedLocally ? 'unexport' : 'deadExport', file: normalizePath(sf.fileName), name: e.name },
