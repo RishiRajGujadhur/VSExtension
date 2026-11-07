@@ -234,7 +234,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     });
   }
   // Shared state read, awaited and written: the same findings as Race Conditions.
-  const races = raceFindings(variableUse(project, fileName, offset));
+  const races = raceFindings(variableUse(project, fileName, offset, { name, steps, declaration }));
   if (races.length) {
     roots.push({
       label: 'Race conditions',

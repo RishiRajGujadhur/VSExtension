@@ -39,8 +39,9 @@ export interface RaceFinding {
 }
 
 /** Every read, check, write and mutation of the variable at the offset, with its function and await position. */
-export function variableUse(project: VirtualProject, fileName: string, offset: number): VariableUse {
-  const { name, steps, declaration } = dataFlowSteps(project, fileName, offset);
+export function variableUse(project: VirtualProject, fileName: string, offset: number, known?: ReturnType<typeof dataFlowSteps>): VariableUse {
+  // Data Flow passes the references it already found.
+  const { name, steps, declaration } = known ?? dataFlowSteps(project, fileName, offset);
   const accesses = steps.flatMap(toAccesses);
   return { name, declaration, sharing: sharingOf(declaration, accesses), accesses: accesses.sort((a, b) => a.time - b.time) };
 }
