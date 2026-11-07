@@ -26,7 +26,7 @@ export class DiagramPanel {
       return;
     }
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media] });
+    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media] });
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);

@@ -9,6 +9,7 @@ import { registerRefactorings } from './ui/refactorCommands';
 import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
 import { DiagramPanel } from './ui/diagramView';
+import { Report } from './structure/report';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
 import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
 import { customInspections } from './search/customInspections';
@@ -68,10 +69,11 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCommand('tsStructure.report.showDiagram', () => diagram.show()),
     // Data Flow at the cursor, drawn as a chart.
     registerCommand('tsStructure.dataFlowDiagram', async () => {
-      await vscode.commands.executeCommand('tsStructure.dataFlow');
-      if (structureView.report?.kind === 'dataFlow') {
+      const report = await vscode.commands.executeCommand<Report | undefined>('tsStructure.dataFlow');
+      if (report?.kind === 'dataFlow') {
         diagram.show();
       }
+      return report;
     }),
   );
   registerStructuralSearch(context, projects, structureView);

@@ -19,6 +19,9 @@ test('a data flow diagram has the variable in the middle, Flows in on the left a
     assert.ok(diagram.right.some((n) => n.label === '→ applyTax(…) as amount'));
     // Next only suggests other analyses, so it is not drawn.
     assert.ok(![...diagram.left, ...diagram.right].some((n) => n.label === 'Next'));
+    // The groups that only fold the results view are not drawn; their functions are.
+    assert.ok(![...diagram.left, ...diagram.right].some((n) => n.label.startsWith('Where it is')));
+    assert.ok(diagram.right.some((n) => n.label.startsWith('checkout')));
   }
 });
 

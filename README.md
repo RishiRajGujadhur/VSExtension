@@ -37,6 +37,7 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `2` | Audit Type Assertions | `3` | Mutation Tracking (Project) |
 | `4` | Test Impact of Changed Files | `5` | Next inspection problem |
 | `6` | Mutation Tracking for This Variable | `7` | Race Conditions |
+| `8` | Data Flow Diagram | `9` | Show the results as a diagram |
 | `Escape` | Stop the running analysis | | |
 
 Refactorings: **Change Signature** `Ctrl+F6`, **Safe Delete** `Alt+Delete`, **Introduce Parameter** `Ctrl+Alt+P`.
@@ -47,9 +48,17 @@ Refactorings: **Change Signature** `Ctrl+F6`, **Safe Delete** `Alt+Delete`, **In
 
 ### Data Flow Path Explorer
 
-Where a variable, parameter or property comes from, every place it changes, and where it goes. **Design patterns** names the patterns the value passes through, such as a Strategy, Factory or Observer, recognized from the shape of the code. Hover a pattern for its **ⓘ** button (what it means) and its **Learn More** button, which opens the pattern on refactoring.guru, patterns.dev, react.dev, the TypeScript handbook or Martin Fowler's catalog. Click **Trace This Value** on a row to follow the value into a called function.
+Where a variable, parameter or property comes from, every place it changes, and where it goes. **Design patterns** names the patterns the value passes through, such as a Strategy, Factory or Observer, recognized from the shape of the code. Hover a pattern for its **ⓘ** button (what it means) and its **Learn More** button, which opens the pattern on refactoring.guru, patterns.dev, react.dev, the TypeScript handbook or Martin Fowler's catalog. Click **Trace This Value** on a row to follow the value into a called function. A pattern found in several places is one row, with the places below it.
+
+The functions that write the value sit under **Flows in** and those that read it under **Flows out**, so each side folds away as one (**Group Data Flow Steps by Function** in the **...** menu goes back to one group per function; `tsStructure.dataFlow.groupByDirection`).
 
 ![Data flow of payment in placeOrder: the values callers pass, where it goes, and the Strategy pattern of the payment classes](docs/images/data-flow.gif)
+
+#### Diagram view
+
+**Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in the middle, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more.
+
+![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
 
 ### Detect Design Patterns
 
@@ -142,7 +151,8 @@ Analyses over many files ask where to look: the whole project, a folder, the ope
 - **Back and forward** through earlier reports, **re-run** (`F5`, or `Ctrl+Alt+S L` from anywhere; the button turns into a warning when files changed).
 - **Filter** rows (`Ctrl+F`): text, `file:cart` for rows in matching files, `is:warning` (or `is:error`, `is:info`) by tone, `-test` to drop matches. Also **Limit Results to Scope…** and **Show Groups…**; `Escape` shows every row again.
 - `F4` / `Shift+F4` walk through the results; the selected row follows your cursor.
-- `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here** and more.
+- `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here**, **Check for Null or Undefined Here**, and **More Analyses Here** (Mutation Tracking, Race Conditions, Side Effects, Exception Flow, Argument Propagation).
+- Green checks mark what was found safe, such as a value that is never null or undefined.
 - Copy or export a report as Markdown, CSV or JSON, open it as a Markdown preview, or **Copy All Locations**. Remove reports from **Show Analysis History…** with their trash button.
 
 ![Usages limited to cart.ts](docs/images/limit-results.gif)

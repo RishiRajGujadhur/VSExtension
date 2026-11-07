@@ -304,7 +304,8 @@ async function analysisCommandsFlow(): Promise<void> {
   const editor = await vscode.window.showTextDocument(document);
   const at = (needle: string, delta = 1) => {
     const position = document.positionAt(document.getText().indexOf(needle) + delta);
-    editor.selection = new vscode.Selection(position, position);
+    // The diagram tab replaces the editor for a while, after which VS Code hands out a new editor object.
+    (vscode.window.activeTextEditor ?? editor).selection = new vscode.Selection(position, position);
   };
   const cases: [string, string, unknown[]?][] = [
     ['tsStructure.dataFlow', 'subtotal = '],
@@ -335,6 +336,22 @@ async function analysisCommandsFlow(): Promise<void> {
     assert.ok(report, `${command} returned no report`);
     console.log(`${command}: ${report.title} — ${report.description ?? ''} (${report.roots.length} rows)`);
   }
+  // Data Flow Diagram opens the chart in an editor tab; closing it brings the code back.
+  at('subtotal = ');
+  const drawn = await vscode.commands.executeCommand<{ kind: string }>('tsStructure.dataFlowDiagram');
+  assert.equal(drawn?.kind, 'dataFlow');
+  // The tab appears, and its title names the analysis once the chart has drawn it.
+  const active = () => vscode.window.tabGroups.activeTabGroup.activeTab;
+  for (let i = 0; i < 50 && !/^Diagram: /.test(active()?.label ?? ''); i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  const diagramTab = active();
+  assert.ok(diagramTab?.input instanceof vscode.TabInputWebview && diagramTab.input.viewType.endsWith('tsStructure.diagram'), `tabs: ${vscode.window.tabGroups.all.map((g) => g.tabs.map((t) => t.label).join(', ')).join(' | ')}`);
+  assert.match(diagramTab.label, /^Diagram: Data flow of subtotal/);
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  await vscode.window.showTextDocument(document);
+  console.log('data flow diagram ok');
+
   // From the Explorer with two files selected, the path between them, without the picker.
   const discount = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
   const between = await vscode.commands.executeCommand<{ title: string }>('tsStructure.dependencyPath', cart, [cart, discount]);

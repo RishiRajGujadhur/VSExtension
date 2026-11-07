@@ -48,13 +48,15 @@ export function reportDiagram(report: Report): Diagram {
     const flowsIn = roots.find((r) => r.label === 'Flows in');
     const flowsOut = roots.find((r) => r.label === 'Flows out');
     const rest = roots.filter((r) => r !== flowsIn && r !== flowsOut);
+    // "Where it is written" and "Where it is read" only fold the results view; the chart shows their functions directly.
+    const unwrap = (rows: ReportNode[]) => rows.flatMap((r) => (r.label === 'Where it is written' || r.label === 'Where it is read' ? (r.children ?? []) : [r]));
     // Patterns describe the surrounding code, so they start folded.
     const restNode = (r: ReportNode) => toNode(r, r.label === 'Design patterns' ? true : !r.expanded);
     return {
       title: report.title,
       center,
-      left: [...(flowsIn?.children ?? []).map((r) => toNode(r)), ...rest.filter(onlyWrites).map(restNode)],
-      right: [...(flowsOut?.children ?? []).map((r) => toNode(r)), ...rest.filter((r) => !onlyWrites(r)).map(restNode)],
+      left: [...unwrap(flowsIn?.children ?? []).map((r) => toNode(r)), ...rest.filter(onlyWrites).map(restNode)],
+      right: [...unwrap(flowsOut?.children ?? []).map((r) => toNode(r)), ...rest.filter((r) => !onlyWrites(r)).map(restNode)],
       leftCaption: 'Flows in',
       rightCaption: 'Flows out',
     };

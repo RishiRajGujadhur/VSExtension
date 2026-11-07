@@ -63,6 +63,8 @@
     center.side = 0;
     const x = (n) => n.side * n.depth * (W + GAP_X) - W / 2;
     const y = (n) => n.row * (H + GAP_Y);
+    center.px = x(center);
+    center.py = y(center);
 
     const edges = el('g', { class: 'edges' }, scene);
     const link = (from, to, side) => {
@@ -125,13 +127,19 @@
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
   }
 
-  function fit() {
+  function fit(all) {
     const box = scene.getBBox();
     const width = svg.clientWidth || 800;
     const height = svg.clientHeight || 600;
     if (!box.width || !box.height) return;
-    const k = Math.min(1.2, Math.max(0.2, Math.min((width - 40) / box.width, (height - 40) / box.height)));
-    view = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
+    const k = Math.min(1.2, (width - 40) / box.width, (height - 40) / box.height);
+    if (k < 0.6 && diagram && !all) {
+      // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
+      const c = diagram.center;
+      view = { k: 0.9, x: width / 2 - (c.px + W / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
+    } else {
+      view = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
+    }
     apply();
   }
 
@@ -170,7 +178,7 @@
     render();
     fit();
   };
-  document.getElementById('fit').addEventListener('click', fit);
+  document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
   document.getElementById('expand').addEventListener('click', () => setAll(false));
