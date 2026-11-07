@@ -101,6 +101,7 @@ export class DiagramPanel {
     <li><span class="swatch warning"></span>Needs a look, such as a value that may be undefined</li>
     <li><span class="swatch error"></span>A problem, such as an unhandled error</li>
     <li><span class="swatch info"></span>Worth knowing, such as a write</li>
+    <li><span class="swatch group"></span>A group (dashed): gathers the boxes behind it and has no code of its own</li>
     <li><span class="swatch pattern"></span>A design pattern (purple hexagon, dotted line): how the code around the value is organized, not a place the value goes</li>
     <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
     <li><span class="glyph">3</span>A folded box and how many boxes it hides; click it, or press Space, to unfold</li>

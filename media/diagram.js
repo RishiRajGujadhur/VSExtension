@@ -153,7 +153,9 @@
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
+      // A box with no code of its own only gathers the boxes behind it: drawn as a dashed outline.
+      const group = !node.location && node.children.length && !node.kind && node !== center ? ' group' : '';
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
       g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
       g.addEventListener('mouseenter', () => { highlightPath(node); showInfo(node); });

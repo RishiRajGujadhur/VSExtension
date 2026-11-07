@@ -82,3 +82,8 @@ body { position: relative; }
 .node.pattern.located:hover .box, .node.pattern:focus .box { stroke-width: 2.5; }
 .edge.relation { stroke: var(--vscode-charts-purple, #b180d7); stroke-dasharray: 4 4; }
 #legend .swatch.pattern { border-width: 0; background: var(--vscode-charts-purple, #b180d7); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+
+/* Groups: no code of their own, so they recede behind the boxes that have code. */
+.node.group .box { fill: transparent; stroke-dasharray: 4 3; }
+.node.group .label { fill: var(--vscode-descriptionForeground); font-weight: 600; }
+#legend .swatch.group { border-style: dashed; background: transparent; }
