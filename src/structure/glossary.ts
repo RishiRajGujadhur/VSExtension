@@ -686,3 +686,13 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules',
   },
 );
+
+// --- Design Patterns -----------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Design pattern',
+    match: /^Design patterns$/,
+    meaning: 'A well-known, reusable way of organizing code for a common problem, such as Strategy for interchangeable behavior. Naming the pattern tells readers how the parts fit together.',
+    url: 'https://refactoring.guru/design-patterns/what-is-pattern',
+  },
+);

@@ -10,7 +10,7 @@ test('rows about a language construct find their explanation', () => {
 });
 
 test('group rows have no explanation', () => {
-  for (const label of ['Flows in', 'Flows out', 'Design patterns', 'Next', 'Paths that produce null or undefined']) {
+  for (const label of ['Flows in', 'Flows out', 'Next', 'Paths that produce null or undefined']) {
     assert.equal(termFor(label), undefined, label);
   }
 });
@@ -121,4 +121,8 @@ test('cycle rows explain import cycles', () => {
 test('Dependency Graph Diff rows explain their terms', () => {
   assert.equal(termFor('Added imports', '')?.term, 'Added import');
   assert.equal(termFor('Biggest changes in importers', '')?.term, 'Importer changes');
+});
+
+test('Design Patterns rows explain their terms', () => {
+  assert.equal(termFor('Design patterns', 'how the code this value passes through is organized')?.term, 'Design pattern');
 });
