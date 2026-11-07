@@ -759,6 +759,12 @@
         "title": "Test Impact of Changed Files",
         "category": "TypeScript Structure",
         "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "tsImpact.openTestFiles",
+        "title": "Open Impacted Test Files",
+        "category": "TypeScript Structure",
+        "icon": "$(file-code)"
       }
     ],
     "viewsContainers": {
@@ -1785,6 +1791,10 @@
         {
           "command": "tsImpact.analyzeChanged",
           "when": "config.tsStructure.features.testImpact"
+        },
+        {
+          "command": "tsImpact.openTestFiles",
+          "when": "config.tsStructure.features.testImpact"
         }
       ],
       "view/title": [
@@ -1972,6 +1982,11 @@
           "command": "tsImpact.analyzeChanged",
           "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
           "group": "navigation@0"
+        },
+        {
+          "command": "tsImpact.openTestFiles",
+          "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
+          "group": "1_tsImpact@1"
         }
       ],
       "view/item/context": [

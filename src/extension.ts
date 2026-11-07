@@ -220,6 +220,17 @@ export function activate(context: vscode.ExtensionContext): void {
         else void vscode.window.showInformationMessage('No tests depend on the changed files.');
       }
     }),
+    registerCommand('tsImpact.openTestFiles', async () => {
+      const files = [...new Set((results.result?.tests ?? []).map((t) => t.test.file))];
+      if (files.length === 0) {
+        void vscode.window.showInformationMessage('There are no impacted tests. Run the analysis first.');
+        return;
+      }
+      for (const file of files.slice(0, 10)) {
+        await vscode.window.showTextDocument(vscode.Uri.file(file), { preview: false, preserveFocus: true });
+      }
+      if (files.length > 10) void vscode.window.showInformationMessage(`Opened the first 10 of ${files.length} test files.`);
+    }),
     registerCommand('tsImpact.open', (location: SourceLocation) => openLocation(location)),
     registerCommand('tsImpact.clear', () => results.set(undefined)),
   );
