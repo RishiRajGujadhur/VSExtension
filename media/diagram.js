@@ -21,6 +21,7 @@
   let matchIndex = -1;
   let shownNodes = [];
   let focused;
+  let selected;
 
   // Boxes are as wide as their text, between MIN_W and MAX_W; longer text is cut with an ellipsis.
   const measure = document.createElement('canvas').getContext('2d');
@@ -127,7 +128,7 @@
 
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
-      const found = query ? (isMatch(node) ? ' match' : ' dim') : '';
+      const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
       g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
@@ -179,7 +180,7 @@
     const strong = document.createElement('strong');
     strong.textContent = node.label;
     info.appendChild(strong);
-    const parts = [node.description, node.location ? `${node.location.file.split(/[\/]/).pop()}:${node.location.line + 1}` : ''];
+    const parts = [node.description, node.location ? `${node.location.file.split(/[\\/]/).pop()}:${node.location.line + 1}` : ''];
     const actions = [node.location ? 'Enter or click: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : ''];
     const rest = document.createElement('span');
     rest.textContent = [...parts, actions.filter(Boolean).join(', ')].filter(Boolean).map((t) => ` · ${t}`).join('');
@@ -346,10 +347,30 @@
   document.getElementById('expand').addEventListener('click', () => setAll(false));
   document.getElementById('collapse').addEventListener('click', () => setAll(true));
 
+  const sameLocation = (a, b) => !!a && !!b && a.file === b.file && a.line === b.line && a.character === b.character;
+
+  // The row selected in the results view: unfold to its box, mark it and bring it into view.
+  function select(location) {
+    const node = allNodes().find((n) => sameLocation(n.location, location));
+    if (!node) return;
+    let unfolded = false;
+    for (let p = node.parent; p; p = p.parent) {
+      if (p.collapsed) { p.collapsed = false; unfolded = true; }
+    }
+    selected = node;
+    if (unfolded) render();
+    allNodes().forEach((n) => n.el && n.el.classList.toggle('selected', n === node));
+    highlightPath(node);
+    showInfo(node);
+    ensureVisible(node);
+  }
+
   window.addEventListener('message', (event) => {
+    if (event.data.type === 'select') return select(event.data.location);
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
     focused = undefined;
+    selected = undefined;
     showInfo(undefined);
     if (diagram) linkParents([...diagram.left, ...diagram.right], undefined);
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;

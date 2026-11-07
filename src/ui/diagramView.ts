@@ -17,6 +17,12 @@ export class DiagramPanel {
     private readonly view: StructureView,
   ) {
     view.onDidChangeReport((report) => this.panel && this.post(report));
+    // The row selected in the results view is marked in the chart, and a box clicked in the chart selects its row.
+    view.view.onDidChangeSelection((e) => {
+      if (this.panel && this.ready && e.selection[0]?.location) {
+        void this.panel.webview.postMessage({ type: 'select', location: e.selection[0].location });
+      }
+    });
   }
 
   show(): void {
@@ -36,6 +42,7 @@ export class DiagramPanel {
         this.post(this.view.report);
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
+        await this.view.revealLocation(message.location);
       }
     });
     this.panel.onDidDispose(() => (this.panel = undefined));

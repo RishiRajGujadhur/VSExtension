@@ -577,6 +577,14 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   /** Opens a row's location unless its file changed after the analysis, which would make the position unreliable. */
+  /** Selects the row that points at the location, such as the box clicked in the diagram. */
+  async revealLocation(location: ReportLocation): Promise<void> {
+    const row = this.located.find((n) => n.location?.file === location.file && n.location.line === location.line && n.location.character === location.character);
+    if (row) {
+      await Promise.resolve(this.view.reveal(row, { select: true, focus: false, expand: true })).catch(() => undefined);
+    }
+  }
+
   async open(location: ReportLocation, sideBySide = false): Promise<void> {
     const expected = this.findHash(location.file);
     const uri = vscode.Uri.file(location.file);
