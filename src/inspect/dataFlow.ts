@@ -415,7 +415,8 @@ function sourcesOf(checker: ts.TypeChecker, expression: ts.Expression, name: str
 type Outflow =
   | { kind: 'into'; target: ts.Node }
   | { kind: 'argument'; call: ts.CallExpression | ts.NewExpression; index: number }
-  | { kind: 'return'; fn: ts.Node | undefined };
+  | { kind: 'return'; fn: ts.Node | undefined }
+  | { kind: 'prop'; attribute: ts.JsxAttribute };
 
 function isAssignment(node: ts.Node): node is ts.BinaryExpression {
   return ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
@@ -440,6 +441,10 @@ function outflowOf(node: ts.Node): Outflow | undefined {
     }
     if (ts.isArrowFunction(parent) && parent.body === current) {
       return { kind: 'return', fn: parent };
+    }
+    // `<Price amount={total} />`: the value becomes a prop of the component.
+    if (ts.isJsxExpression(parent) && ts.isJsxAttribute(parent.parent)) {
+      return { kind: 'prop', attribute: parent.parent };
     }
     // Operators, templates, object literals and `await` pass the value on to whatever encloses them.
     const passesThrough =
@@ -487,6 +492,19 @@ function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBui
         location: builder.at(step.node),
         action: parameter && ts.isIdentifier(parameter.name) ? followFlow(parameter.name) : undefined,
       });
+    } else if (flow.kind === 'prop') {
+      const element = flow.attribute.parent.parent;
+      const prop = flow.attribute.name.getText();
+      const target = propBinding(checker, element.tagName, prop);
+      rows.push({
+        label: `→ prop ${prop} of <${nodeText(element.tagName)}>`,
+        description,
+        tooltip: target ? `Becomes ${prop} inside ${nodeText(element.tagName)}; Trace This Value follows it there.` : undefined,
+        icon: 'symbol-property',
+        role: 'read',
+        location: builder.at(step.node),
+        action: target ? followFlow(target) : undefined,
+      });
     } else {
       rows.push({
         label: `returned from ${functionLabel(flow.fn)}`,
@@ -500,6 +518,24 @@ function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBui
     }
   }
   return rows;
+}
+
+/** The name a component gives a prop, such as `amount` in `function Price({ amount })` or `props` in `Price(props)`. */
+function propBinding(checker: ts.TypeChecker, tagName: ts.JsxTagNameExpression, prop: string): ts.Node | undefined {
+  let symbol = checker.getSymbolAtLocation(tagName);
+  if (symbol && symbol.flags & ts.SymbolFlags.Alias) {
+    symbol = checker.getAliasedSymbol(symbol);
+  }
+  const declaration = symbol?.valueDeclaration;
+  const fn = declaration && ts.isVariableDeclaration(declaration) ? declaration.initializer : declaration;
+  if (!fn || !isFunctionWithBody(fn) || fn.getSourceFile().isDeclarationFile) {
+    return undefined;
+  }
+  const props = fn.parameters[0];
+  if (props && ts.isObjectBindingPattern(props.name)) {
+    return props.name.elements.find((e) => (e.propertyName ?? e.name).getText() === prop)?.name;
+  }
+  return props && ts.isIdentifier(props.name) ? props.name : undefined;
 }
 
 /** What callers do with a function's result: the variables that receive it, or where it goes next. */

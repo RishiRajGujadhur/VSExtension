@@ -160,3 +160,12 @@ test('flows in of a destructured prop or option lists what each call site passes
   const steps = dataFlowReport(project, state, offsetIn(state, 'Price({ am|ount')).roots.flatMap((r) => r.children ?? []).map((c) => c.label);
   assert.ok(steps.includes('set by <Price amount=count>'), steps.join(', '));
 });
+
+test('flows out include JSX props, which can be followed into the component', () => {
+  const report = dataFlowReport(virtualProject('navigate', 'src/state.tsx'), state, offsetIn(state, 'const [co|unt'));
+  const prop = report.roots.find((r) => r.label === 'Flows out')?.children?.[0];
+  assert.equal(prop?.label, '→ prop amount of <Price>');
+  const action = prop?.action as { kind: string; offset: number };
+  assert.equal(action.kind, 'traceValue');
+  assert.equal(action.offset, offsetIn(state, 'Price({ |amount'));
+});
