@@ -15,7 +15,8 @@ interface Row {
 
 type Message =
   | { type: 'submit'; preview: boolean; name: string; returnType: string; rows: Row[] }
-  | { type: 'cancel'; dirty?: boolean };
+  | { type: 'cancel'; dirty?: boolean }
+  | { type: 'copy'; text: string };
 
 /** Opens the Change Signature dialog for the function at the cursor. */
 export async function openChangeSignature(context: vscode.ExtensionContext, projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
@@ -38,6 +39,11 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
   panel.webview.html = html(panel.webview, info);
   panel.webview.onDidReceiveMessage(
     async (message: Message) => {
+      if (message.type === 'copy') {
+        await vscode.env.clipboard.writeText(message.text);
+        void vscode.window.setStatusBarMessage('Copied the new signature', 3000);
+        return;
+      }
       if (message.type === 'cancel') {
         if (message.dirty && (await vscode.window.showWarningMessage('Discard your changes to the signature?', { modal: true }, 'Discard')) !== 'Discard') {
           return;
@@ -134,6 +140,7 @@ ${buttonCss}
   <button class="primary" id="previewBtn" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview Changes</span></button>
   <button id="apply" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
   <span class="spacer"></span>
+  <button id="copy" title="Copy the signature shown in the preview">${icon('copy')}<span>Copy Signature</span></button>
   <button id="reset" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
   <button id="cancel" title="Close without changing anything (Escape)">${icon('close')}<span>Cancel</span></button>
 </div>
@@ -257,6 +264,8 @@ ${buttonCss}
   $('apply').addEventListener('click', () => submit(false));
   const isDirty = () => JSON.stringify(rows) !== initialRows || $('name').value !== info.name || $('returnType').value !== info.returnType;
   $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel', dirty: isDirty() }));
+  // The last line of the preview is the new signature.
+  $('copy').addEventListener('click', () => vscode.postMessage({ type: 'copy', text: $('preview').textContent.split('\\n').pop().replace(/^After:\\s+/, '') }));
   $('reset').addEventListener('click', () => {
     rows.splice(0, rows.length, ...JSON.parse(initialRows));
     $('name').value = info.name;
