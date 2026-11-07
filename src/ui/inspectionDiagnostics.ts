@@ -95,6 +95,21 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.configureInspections', () => this.configureInspections()),
       registerCommand('tsStructure.inspectionsMenu', () => this.menu()),
+      // The next finding after the cursor, wrapping to the first: only this extension's problems, unlike F8.
+      registerCommand('tsStructure.nextProblem', async () => {
+        const editor = vscode.window.activeTextEditor;
+        const findings = editor && [...(this.findingsFor(editor.document) ?? [])].sort((a, b) => a.start - b.start);
+        if (!editor || !findings?.length) {
+          void vscode.window.setStatusBarMessage('No TypeScript Structure problems in this file', 3000);
+          return;
+        }
+        const offset = editor.document.offsetAt(editor.selection.active);
+        const next = findings.find((f) => f.start > offset) ?? findings[0];
+        const range = new vscode.Range(editor.document.positionAt(next.start), editor.document.positionAt(next.end));
+        editor.selection = new vscode.Selection(range.start, range.end);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        void vscode.window.setStatusBarMessage(`$(${next.severity === 'error' ? 'error' : next.severity === 'warning' ? 'warning' : 'info'}) ${next.message}`, 5000);
+      }),
       registerCommand('tsStructure.copyProblems', async () => {
         const document = vscode.window.activeTextEditor?.document;
         const findings = document && this.findingsFor(document);

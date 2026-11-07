@@ -730,6 +730,12 @@
         "title": "Copy Problems in This File",
         "category": "TypeScript Structure",
         "icon": "$(copy)"
+      },
+      {
+        "command": "tsStructure.nextProblem",
+        "title": "Go to Next Inspection Problem",
+        "category": "TypeScript Structure",
+        "icon": "$(arrow-down)"
       }
     ],
     "viewsContainers": {
@@ -983,6 +989,12 @@
         "mac": "cmd+ctrl+s w",
         "command": "tsStructure.showRewrites",
         "when": "config.tsStructure.features.intentions && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s 5",
+        "mac": "cmd+ctrl+s 5",
+        "command": "tsStructure.nextProblem",
+        "when": "config.tsStructure.features.inspections && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1699,6 +1711,10 @@
         },
         {
           "command": "tsStructure.copyProblems",
+          "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.nextProblem",
           "when": "config.tsStructure.features.inspections"
         }
       ],
