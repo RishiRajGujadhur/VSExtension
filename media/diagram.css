@@ -44,3 +44,8 @@ header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outl
 .node.dim { opacity: .35; }
 .node.match .box { stroke: var(--vscode-editor-findMatchHighlightBorder, #ea5c00); stroke: var(--vscode-editorOverviewRuler-findMatchForeground, #d18616); stroke-width: 2; }
 .node.match.current .box { stroke-width: 3; }
+
+/* The way from the hovered or focused box to the subject. */
+.edge.onpath { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.4; }
+#arrowOn path { fill: var(--vscode-focusBorder, #007fd4); }
+.node.onpath .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; }

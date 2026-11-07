@@ -113,11 +113,11 @@
       const x2 = x(b);
       const y2 = y(b) + H / 2;
       const mid = (x1 + x2) / 2;
-      el('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2 - 2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, edges);
+      return el('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2 - 2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, edges);
     };
     const linkAll = (parent, nodes, side) => {
       for (const node of nodes) {
-        link(parent, node, side);
+        node.edgeEl = link(parent, node, side);
         linkAll(node, visible(node), side);
       }
     };
@@ -129,7 +129,9 @@
       const found = query ? (isMatch(node) ? ' match' : ' dim') : '';
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
-      g.addEventListener('focus', () => { focused = node; });
+      g.addEventListener('focus', () => { focused = node; highlightPath(node); });
+      g.addEventListener('mouseenter', () => highlightPath(node));
+      g.addEventListener('mouseleave', () => highlightPath(focused));
       g.addEventListener('keydown', (e) => onNodeKey(e, node));
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
       el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
@@ -161,8 +163,29 @@
     drawAll(diagram.right);
     if (diagram.leftCaption && diagram.left.length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
     if (diagram.rightCaption && diagram.right.length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
+    highlighted = [];
     apply();
     if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
+  }
+
+  // The way from a box to the subject stands out while the box is hovered or focused.
+  let highlighted = [];
+  function highlightPath(node) {
+    for (const item of highlighted) {
+      item.classList.remove('onpath');
+      if (item.classList.contains('edge')) item.setAttribute('marker-end', 'url(#arrow)');
+    }
+    highlighted = [];
+    if (!node || !diagram || node === diagram.center) return;
+    for (let n = node; n; n = n.parent) {
+      if (n.el) highlighted.push(n.el);
+      if (n.edgeEl) highlighted.push(n.edgeEl);
+    }
+    if (diagram.center.el) highlighted.push(diagram.center.el);
+    for (const item of highlighted) {
+      item.classList.add('onpath');
+      if (item.classList.contains('edge')) item.setAttribute('marker-end', 'url(#arrowOn)');
+    }
   }
 
   // Arrow keys walk the chart: outward to the first child, inward to the parent, up and down within a column.
