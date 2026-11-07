@@ -46,8 +46,8 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
       const lastAll = memento?.get<boolean>('tsStructure.introduceParameter.replaceAll', true);
       const choice = await vscode.window.showQuickPick(
         [
-          { label: `Replace all ${info.occurrences} occurrences`, all: true },
-          { label: 'Replace this occurrence only', all: false },
+          { label: `Replace all ${info.occurrences} occurrences`, detail: 'Every copy of the expression in the function becomes the parameter.', all: true },
+          { label: 'Replace this occurrence only', detail: 'Only the selected expression; the other copies stay as they are.', all: false },
         ].sort((a, b) => Number(b.all === lastAll) - Number(a.all === lastAll)),
         { title: `${short} occurs ${info.occurrences} times in ${info.functionName}` },
       );
