@@ -25,7 +25,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     const selected = editor.selection.isEmpty ? [] : members.filter((m) => m.endLine >= start.line && m.line <= end.line);
     const atCursor = selected.length ? selected : [...members].reverse().filter((m) => m.line <= start.line).slice(0, 1);
     const picked = await vscode.window.showQuickPick(
-      members.map((m) => ({ label: m.name, description: `${m.kind}${m.exported ? '' : ' · not exported'} · line ${m.line + 1}`, picked: atCursor.includes(m), member: m })),
+      members.map((m) => ({ label: m.name, description: `${m.kind}${m.exported ? '' : ' · not exported'} · line ${m.line + 1}${atCursor.includes(m) ? ' · at cursor' : ''}`, picked: atCursor.includes(m), member: m })),
       { title: `Move members of ${path.basename(source)}`, placeHolder: 'Select the declarations to move', canPickMany: true },
     );
     if (!picked || picked.length === 0) {
