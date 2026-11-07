@@ -960,6 +960,12 @@
         "mac": "cmd+ctrl+s escape",
         "command": "tsStructure.cancelAnalysis",
         "when": "tsStructure.running"
+      },
+      {
+        "key": "ctrl+alt+s b",
+        "mac": "cmd+ctrl+s b",
+        "command": "tsStructure.moveMembers",
+        "when": "config.tsStructure.features.refactorings && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
