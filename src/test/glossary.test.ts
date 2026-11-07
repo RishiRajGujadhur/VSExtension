@@ -49,3 +49,9 @@ test('Mutation Tracking rows explain their terms', () => {
   assert.equal(termFor('Mutates captured variables', '')?.term, 'Captured variable');
   assert.equal(termFor('total', 'module-level: every caller shares one value')?.term, 'Module state');
 });
+
+test('Race Conditions rows explain their terms', () => {
+  assert.equal(termFor('Lost update', 'addToTotal')?.term, 'Lost update');
+  assert.equal(termFor('waits here: await load()', 'line 26')?.term, 'await');
+  assert.equal(termFor('counter = before + 1', 'line 35 · write · after an await')?.term, 'await');
+});

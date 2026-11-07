@@ -275,3 +275,35 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures',
   },
 );
+
+// --- Race Conditions -----------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Lost update',
+    match: /^Lost update$/,
+    meaning: 'A function reads shared state, waits at an await, then writes it back. Another call that changed the state during the wait has its change overwritten. Read the value after the await instead.',
+    example: 'total += await price(id); // reads total before waiting\nconst p = await price(id); total += p; // safe',
+    url: 'https://en.wikipedia.org/wiki/Race_condition',
+  },
+  {
+    term: 'Check, then act',
+    match: /^Check, then act$/,
+    meaning: 'A function checks shared state, awaits, then acts on the check. Two calls can both pass the check before either acts, for example loading the same thing twice. Keep the pending promise instead.',
+    example: 'if (!cache) cache = await load();\n// instead: cachePromise ??= load();',
+    url: 'https://en.wikipedia.org/wiki/Race_condition',
+  },
+  {
+    term: 'Several async writers',
+    match: /^Several async writers$/,
+    meaning: 'Several async functions or callbacks replace the value, and they can finish in any order, so the final value depends on timing.',
+    example: 'onSearch: results = await search(q); // an older search can finish last',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await',
+  },
+  {
+    term: 'await',
+    match: /^waits here:|after an await/,
+    meaning: 'await pauses the async function until the promise settles. Other code, including other calls of the same function, runs during the pause.',
+    example: 'const user = await loadUser(id);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await',
+  },
+);
