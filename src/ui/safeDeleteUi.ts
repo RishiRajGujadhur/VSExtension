@@ -62,10 +62,11 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     return;
   }
 
-  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages'; usage?: SafeDeletePlan['usages'][number] };
+  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages' | 'copy'; usage?: SafeDeletePlan['usages'][number] };
   const items: Item[] = [
     { label: '$(trash) Delete Anyway', description: 'The usages listed below will no longer compile', action: 'delete' },
     ...(showUsages ? [{ label: '$(references) Show Usages in Results View', description: 'Keep the list open while you remove them', action: 'usages' as const }] : []),
+    { label: '$(copy) Copy Usage Locations', description: 'file:line of each, for a ticket or a note', action: 'copy' },
     { label: '$(close) Cancel', action: 'cancel' },
     { label: `Usages that block deletion (${blocking.length})`, kind: vscode.QuickPickItemKind.Separator },
     ...blocking.map((usage) => usageItem(usage)),
@@ -83,6 +84,9 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     if (await applyRefactor(plan.result, previewEnabled())) {
       deleted(what);
     }
+  } else if (picked?.action === 'copy') {
+    await vscode.env.clipboard.writeText(blocking.map((u) => `${vscode.workspace.asRelativePath(u.location.file)}:${u.location.line + 1}  ${u.lineText}`).join('\n'));
+    void vscode.window.setStatusBarMessage(`Copied ${blocking.length} usage location${blocking.length === 1 ? '' : 's'}`, 3000);
   } else if (picked?.action === 'usages') {
     await showUsages?.();
   } else if (picked?.usage) {
