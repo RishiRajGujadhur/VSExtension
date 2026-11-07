@@ -246,3 +246,7 @@ test('Lazy-loaded component is recognized', () => {
 test('Portal is recognized', () => {
   has('function Modal(p: { children: any }) { return createPortal(<div>{p.children}</div>, document.body); }', 'Portal');
 });
+
+test('Forwarded ref is recognized', () => {
+  has('const Field = forwardRef<HTMLInputElement, {}>((props, ref) => <input ref={ref} />);', 'Forwarded ref');
+});

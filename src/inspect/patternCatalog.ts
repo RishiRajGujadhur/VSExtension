@@ -852,3 +852,18 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Forwarded ref',
+  meaning: 'A component passes the ref it receives on to an inner element, so parents can focus or measure it.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /^(React\.)?forwardRef$/.test(text(node.expression))) {
+        const name = ts.isVariableDeclaration(node.parent) ? nameOf(node.parent) : undefined;
+        found.push({ node, evidence: `${name ?? 'a component'} hands its ref to an inner element`, subject: name });
+      }
+    });
+    return found;
+  },
+});
