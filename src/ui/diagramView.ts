@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { reportDiagram } from '../structure/diagram';
+import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report, ReportLocation } from '../structure/report';
 import { StructureView } from './structureView';
 
@@ -36,13 +36,16 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; title?: string }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; title?: string; diagram?: Diagram }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
         await this.view.revealLocation(message.location);
+      } else if (message.type === 'mermaid' && message.diagram) {
+        await vscode.env.clipboard.writeText(['```mermaid', diagramMermaid(message.diagram), '```', ''].join('\n'));
+        void vscode.window.setStatusBarMessage('Copied the chart as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
       } else if (message.type === 'save' && message.svg) {
         await saveSvg(message.svg, message.title);
       }
@@ -80,6 +83,7 @@ export class DiagramPanel {
   ${button('zoomOut', '−', 'Zoom out')}
   ${button('zoomIn', '+', 'Zoom in')}
   ${button('fit', 'Fit', 'Fit the diagram to the window')}
+  ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
 </header>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>

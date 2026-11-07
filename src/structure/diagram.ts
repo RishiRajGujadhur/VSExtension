@@ -63,3 +63,41 @@ export function reportDiagram(report: Report): Diagram {
   }
   return { title: report.title, center, left: [], right: roots.map((r) => toNode(r)) };
 }
+
+/**
+ * The chart as a Mermaid flowchart, for Markdown, GitHub issues and pull requests. Folded boxes keep their
+ * place and say how many boxes they hide; arrows run the way the chart draws them.
+ */
+export function diagramMermaid(diagram: Diagram): string {
+  const lines = ['flowchart LR'];
+  const tones: Record<string, string[]> = {};
+  let next = 0;
+  const escape = (text: string) => text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;');
+  const declare = (node: DiagramNode): string => {
+    const id = `n${next++}`;
+    const hidden = node.collapsed && node.children.length ? `${node.children.length} more folded` : '';
+    lines.push(`  ${id}["${[node.label, node.description, hidden].filter(Boolean).map((t) => escape(t!)).join('<br/>')}"]`);
+    if (node.tone) {
+      (tones[node.tone] ??= []).push(id);
+    }
+    return id;
+  };
+  const center = declare(diagram.center);
+  const walk = (parent: string, nodes: DiagramNode[], side: number) => {
+    for (const node of nodes) {
+      const id = declare(node);
+      lines.push(side < 0 ? `  ${id} --> ${parent}` : `  ${parent} --> ${id}`);
+      if (!node.collapsed) {
+        walk(id, node.children, side);
+      }
+    }
+  };
+  walk(center, diagram.left, -1);
+  walk(center, diagram.right, 1);
+  lines.push(`  style ${center} stroke-width:3px`);
+  const colors: Record<string, string> = { ok: '#2ea043', warning: '#d29922', error: '#f85149', info: '#3794ff' };
+  for (const [tone, ids] of Object.entries(tones)) {
+    lines.push(`  classDef ${tone} stroke:${colors[tone]},stroke-width:2px`, `  class ${ids.join(',')} ${tone}`);
+  }
+  return lines.join('\n');
+}

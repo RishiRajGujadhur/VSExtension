@@ -385,6 +385,14 @@
     vscode.postMessage({ type: 'save', svg: new XMLSerializer().serializeToString(out), title: diagram.title });
   }
 
+  // Copy Mermaid: the chart as it is folded now, as text for Markdown and GitHub.
+  function copyMermaid() {
+    if (!diagram) return;
+    const plain = (n) => ({ label: n.label, description: n.description, tone: n.tone, collapsed: n.collapsed && n !== diagram.center, children: n.children.map(plain) });
+    vscode.postMessage({ type: 'mermaid', diagram: { title: diagram.title, center: plain(diagram.center), left: diagram.left.map(plain), right: diagram.right.map(plain) } });
+  }
+
+  document.getElementById('mermaid').addEventListener('click', copyMermaid);
   document.getElementById('save').addEventListener('click', exportSvg);
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));

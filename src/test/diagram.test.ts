@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
 import { dataFlowReport } from '../inspect/dataFlow';
-import { reportDiagram } from '../structure/diagram';
+import { diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report } from '../structure/report';
 import { fixtures, offsetIn, virtualProject } from './helpers';
 
@@ -56,4 +56,27 @@ test('other analyses hang every row to the right of their subject', () => {
   assert.deepEqual(diagram.left, []);
   assert.deepEqual(diagram.right.map((n) => n.label), ['Reads']);
   assert.deepEqual(diagram.right[0].children.map((n) => n.label), ['cart.total']);
+});
+
+test('the chart copies as a Mermaid flowchart with arrows in the direction of the flow', () => {
+  const leaf = (label: string, extra = {}) => ({ label, collapsed: false, children: [], ...extra });
+  const text = diagramMermaid({
+    title: 'Data flow of total',
+    center: leaf('total', { description: '2 definitions' }),
+    left: [leaf('= price * 2')],
+    right: [leaf('→ <Cart> "items"', { tone: 'warning' as const }), leaf('show()', { collapsed: true, children: [leaf('read'), leaf('read again')] })],
+  });
+  assert.deepEqual(text.split('\n'), [
+    'flowchart LR',
+    '  n0["total<br/>2 definitions"]',
+    '  n1["= price * 2"]',
+    '  n1 --> n0',
+    '  n2["→ #lt;Cart#gt; #quot;items#quot;"]',
+    '  n0 --> n2',
+    '  n3["show()<br/>2 more folded"]',
+    '  n0 --> n3',
+    '  style n0 stroke-width:3px',
+    '  classDef warning stroke:#d29922,stroke-width:2px',
+    '  class n2 warning',
+  ]);
 });
