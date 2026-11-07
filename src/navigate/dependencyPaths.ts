@@ -3,6 +3,7 @@ import * as ts from 'typescript';
 import { normalizePath } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { ReportBuilder, ReportNode, Report, codeContextAt, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { ImportEdge, ModuleGraph, programGraph, reverseEdges } from './moduleGraph';
 
 /** Distances, in imports, from every file that can reach `to`. */
@@ -148,6 +149,7 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
     builder.warnings.push(`Circular dependency: ${relative(target)} also depends on ${relative(source)} at runtime, so one of them sees the other half-initialized while loading.`);
     roots.push({ label: `Circular: ${relative(target)} depends back on ${relative(source)}`, description: plural(back.length, 'path'), icon: 'sync', tone: 'error', expanded: true, children: back.map(pathRow) });
   }
+  const circular = runtime.length > 0 && back.length > 0;
   roots.push({ label: 'Shortest paths', description: paths.length >= 20 ? 'first 20 paths' : plural(paths.length, 'path'), icon: 'git-merge', expanded: true, children: paths.map(pathRow) });
   const lastHops = new Map<string, ImportEdge>();
   for (const p of paths) {
@@ -159,5 +161,14 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
     icon: 'call-incoming',
     children: [...lastHops.values()].map((edge) => ({ label: relative(edge.from), description: describeEdge(edge), icon: 'file-code', location: builder.span(program.getSourceFile(edge.from)!, edge.start, edge.end) })),
   });
+  if (circular) {
+    roots.push(
+      howToFix([
+        'Move what both modules need into a third module that imports neither.',
+        'Change imports that only bring in types to import type; they disappear at run time.',
+        'Load one side lazily with import() inside the function that needs it.',
+      ]),
+    );
+  }
   return builder.finish(roots, `${plural(paths.length, 'shortest path')} of ${plural(length, 'import')}`);
 }
