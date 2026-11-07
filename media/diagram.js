@@ -139,6 +139,11 @@
     const linkAll = (parent, nodes, side) => {
       for (const node of nodes) {
         node.edgeEl = link(parent, node, side);
+        if (node.kind === 'pattern') {
+          // A pattern describes the code around the value; it is not where the value goes, so no arrow.
+          node.edgeEl.classList.add('relation');
+          node.edgeEl.removeAttribute('marker-end');
+        }
         linkAll(node, visible(node), side);
       }
     };
@@ -148,14 +153,20 @@
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
       g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
       g.addEventListener('mouseenter', () => { highlightPath(node); showInfo(node); });
       g.addEventListener('mouseleave', () => { highlightPath(focused); showInfo(focused); });
       g.addEventListener('keydown', (e) => onNodeKey(e, node));
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
-      el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
+      if (node.kind === 'pattern') {
+        // Hexagon: a design pattern, not a step of the value.
+        const w = node.w;
+        el('path', { d: `M12,0 H${w - 12} L${w},${H / 2} L${w - 12},${H} H12 L0,${H / 2} Z`, class: 'box' }, g);
+      } else {
+        el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
+      }
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
       el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = fitText(node.label, fontOf(600, 12), node.w - 26);
       if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = fitText(node.description, fontOf(400, 11), node.w - 26);
@@ -211,7 +222,7 @@
   function highlightPath(node) {
     for (const item of highlighted) {
       item.classList.remove('onpath');
-      if (item.classList.contains('edge')) item.setAttribute('marker-end', 'url(#arrow)');
+      if (item.classList.contains('edge') && !item.classList.contains('relation')) item.setAttribute('marker-end', 'url(#arrow)');
     }
     highlighted = [];
     if (!node || !diagram || node === diagram.center) return;
@@ -222,7 +233,7 @@
     if (diagram.center.el) highlighted.push(diagram.center.el);
     for (const item of highlighted) {
       item.classList.add('onpath');
-      if (item.classList.contains('edge')) item.setAttribute('marker-end', 'url(#arrowOn)');
+      if (item.classList.contains('edge') && !item.classList.contains('relation')) item.setAttribute('marker-end', 'url(#arrowOn)');
     }
   }
 
@@ -368,7 +379,7 @@
     const box = scene.getBBox();
     const pad = 24;
     const out = svg.cloneNode(true);
-    const props = ['fill', 'stroke', 'stroke-width', 'opacity', 'font-family', 'font-size', 'font-weight', 'letter-spacing'];
+    const props = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight', 'letter-spacing'];
     const originals = svg.querySelectorAll('*');
     out.querySelectorAll('*').forEach((copy, i) => {
       const style = getComputedStyle(originals[i]);
@@ -392,7 +403,7 @@
   // Copy Mermaid: the chart as it is folded now, as text for Markdown and GitHub.
   function copyMermaid() {
     if (!diagram) return;
-    const plain = (n) => ({ label: n.label, description: n.description, tone: n.tone, collapsed: n.collapsed && n !== diagram.center, children: n.children.map(plain) });
+    const plain = (n) => ({ label: n.label, description: n.description, tone: n.tone, kind: n.kind, collapsed: n.collapsed && n !== diagram.center, children: n.children.map(plain) });
     vscode.postMessage({ type: 'mermaid', diagram: { title: diagram.title, center: plain(diagram.center), left: diagram.left.map(plain), right: diagram.right.map(plain) } });
   }
 

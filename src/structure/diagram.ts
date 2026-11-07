@@ -6,6 +6,8 @@ export interface DiagramNode {
   description?: string;
   tone?: Tone;
   location?: ReportLocation;
+  /** What the box stands for: a design pattern describes the surrounding code rather than carrying the value. */
+  kind?: 'pattern';
   /** Folded: the children are hidden until the node's button is clicked. */
   collapsed: boolean;
   children: DiagramNode[];
@@ -26,9 +28,15 @@ export interface Diagram {
 /** Rows that suggest what to do next rather than describe the code. */
 const skipped = new Set(['Next', 'How to fix']);
 
-function toNode(row: ReportNode, collapsed = !row.expanded): DiagramNode {
-  const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c));
-  return { label: row.label, description: row.description, tone: row.tone, location: row.location, collapsed: children.length > 0 && collapsed, children };
+/** The Design patterns group and pattern rows (those with the pattern info action); everything below them is too. */
+function isPattern(row: ReportNode): boolean {
+  return row.label === 'Design patterns' || row.action?.kind === 'explainPattern';
+}
+
+function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramNode['kind']): DiagramNode {
+  const kind = inherited ?? (isPattern(row) ? 'pattern' : undefined);
+  const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind));
+  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), collapsed: children.length > 0 && collapsed, children };
 }
 
 /** A function row whose steps only give the value something: it belongs on the incoming side. */
@@ -76,7 +84,12 @@ export function diagramMermaid(diagram: Diagram): string {
   const declare = (node: DiagramNode): string => {
     const id = `n${next++}`;
     const hidden = node.collapsed && node.children.length ? `${node.children.length} more folded` : '';
-    lines.push(`  ${id}["${[node.label, node.description, hidden].filter(Boolean).map((t) => escape(t!)).join('<br/>')}"]`);
+    const text = `"${[node.label, node.description, hidden].filter(Boolean).map((t) => escape(t!)).join('<br/>')}"`;
+    // Patterns are hexagons, like in the chart.
+    lines.push(node.kind === 'pattern' ? `  ${id}{{${text}}}` : `  ${id}[${text}]`);
+    if (node.kind === 'pattern') {
+      (tones.pattern ??= []).push(id);
+    }
     if (node.tone) {
       (tones[node.tone] ??= []).push(id);
     }
@@ -86,7 +99,8 @@ export function diagramMermaid(diagram: Diagram): string {
   const walk = (parent: string, nodes: DiagramNode[], side: number) => {
     for (const node of nodes) {
       const id = declare(node);
-      lines.push(side < 0 ? `  ${id} --> ${parent}` : `  ${parent} --> ${id}`);
+      // A pattern is related to the code, not reached by the value: a dotted line without an arrow.
+      lines.push(node.kind === 'pattern' ? `  ${parent} -.- ${id}` : side < 0 ? `  ${id} --> ${parent}` : `  ${parent} --> ${id}`);
       if (!node.collapsed) {
         walk(id, node.children, side);
       }
@@ -95,7 +109,7 @@ export function diagramMermaid(diagram: Diagram): string {
   walk(center, diagram.left, -1);
   walk(center, diagram.right, 1);
   lines.push(`  style ${center} stroke-width:3px`);
-  const colors: Record<string, string> = { ok: '#2ea043', warning: '#d29922', error: '#f85149', info: '#3794ff' };
+  const colors: Record<string, string> = { ok: '#2ea043', warning: '#d29922', error: '#f85149', info: '#3794ff', pattern: '#b180d7' };
   for (const [tone, ids] of Object.entries(tones)) {
     lines.push(`  classDef ${tone} stroke:${colors[tone]},stroke-width:2px`, `  class ${ids.join(',')} ${tone}`);
   }

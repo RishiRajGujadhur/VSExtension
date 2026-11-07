@@ -75,3 +75,10 @@ body { position: relative; }
 #legend .swatch.info { border-color: var(--vscode-problemsInfoIcon-foreground, #3794ff); }
 #legend .glyph { flex: none; width: 18px; text-align: center; font-weight: 600; }
 #legend kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, #555); border-radius: 3px; background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); font-family: inherit; font-size: 11px; }
+
+/* Design patterns: purple hexagons on dotted lines, so they never read as steps of the value. */
+.node.pattern .box { fill: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 16%, var(--vscode-editorWidget-background, #252526)); stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 1.5; }
+.node.pattern .label { fill: var(--vscode-charts-purple, #b180d7); }
+.node.pattern.located:hover .box, .node.pattern:focus .box { stroke-width: 2.5; }
+.edge.relation { stroke: var(--vscode-charts-purple, #b180d7); stroke-dasharray: 4 4; }
+#legend .swatch.pattern { border-width: 0; background: var(--vscode-charts-purple, #b180d7); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }

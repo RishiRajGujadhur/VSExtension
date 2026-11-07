@@ -48,6 +48,30 @@ test('by function, a function that only writes the value is drawn on the incomin
   assert.equal(diagram.right[0].collapsed, true);
 });
 
+test('design patterns are drawn as patterns, not as places the value goes', () => {
+  const report: Report = {
+    kind: 'dataFlow',
+    title: 'Data flow of payment',
+    roots: [
+      { label: 'Flows in', children: [] },
+      { label: 'Flows out', children: [{ label: '→ receipt' }] },
+      { label: 'Design patterns', expanded: true, children: [{ label: 'Strategy', action: { kind: 'explainPattern', name: 'Strategy' }, children: [{ label: 'CardPayment' }] }] },
+    ],
+    warnings: [],
+    fileHashes: {},
+  };
+  const diagram = reportDiagram(report);
+  const patterns = diagram.right.find((n) => n.label === 'Design patterns')!;
+  assert.equal(diagram.right[0].kind, undefined);
+  assert.equal(patterns.kind, 'pattern');
+  assert.equal(patterns.children[0].kind, 'pattern');
+  assert.equal(patterns.children[0].children[0].kind, 'pattern');
+  const mermaid = diagramMermaid({ ...diagram, right: [{ ...patterns, collapsed: true }] });
+  assert.match(mermaid, /n1\{\{"Design patterns<br\/>1 more folded"\}\}/);
+  assert.match(mermaid, /n0 -\.- n1/);
+  assert.match(mermaid, /class n1 pattern/);
+});
+
 test('other analyses hang every row to the right of their subject', () => {
   const report: Report = { kind: 'usages', title: 'Usages of cart', description: '3 usages', roots: [{ label: 'Reads', expanded: true, children: [{ label: 'cart.total' }] }, { label: 'How to fix', children: [] }], warnings: [], fileHashes: {} };
   const diagram = reportDiagram(report);
