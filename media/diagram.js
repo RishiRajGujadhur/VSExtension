@@ -18,6 +18,8 @@
   let view = { x: 0, y: 0, k: 1 };
   let query = '';
   let matchIndex = -1;
+  let shownNodes = [];
+  let focused;
 
   // Boxes are as wide as their text, between MIN_W and MAX_W; longer text is cut with an ellipsis.
   const measure = document.createElement('canvas').getContext('2d');
@@ -84,6 +86,7 @@
     const collect = (nodes) => nodes.forEach((n) => { shown.push(n); collect(visible(n)); });
     collect(diagram.left);
     collect(diagram.right);
+    shownNodes = shown;
     const columns = { '-1': [], '1': [] };
     for (const n of shown) {
       n.w = widthOf(n);
@@ -124,8 +127,10 @@
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
       const found = query ? (isMatch(node) ? ' match' : ' dim') : '';
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node.location ? 0 : -1 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
+      g.addEventListener('focus', () => { focused = node; });
+      g.addEventListener('keydown', (e) => onNodeKey(e, node));
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
       el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
@@ -136,7 +141,6 @@
         g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
         const open = () => vscode.postMessage({ type: 'open', location: node.location });
         g.addEventListener('click', open);
-        g.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
       }
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
@@ -158,7 +162,49 @@
     if (diagram.leftCaption && diagram.left.length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
     if (diagram.rightCaption && diagram.right.length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     apply();
+    if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
   }
+
+  // Arrow keys walk the chart: outward to the first child, inward to the parent, up and down within a column.
+  function neighbor(node, key) {
+    const center = diagram.center;
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+      const column = shownNodes.filter((n) => n.side === node.side && n.depth === node.depth).sort((a, b) => a.row - b.row);
+      return column[column.indexOf(node) + (key === 'ArrowDown' ? 1 : -1)];
+    }
+    if (node === center) return key === 'ArrowRight' ? diagram.right[0] : diagram.left[0];
+    const outward = node.side > 0 ? 'ArrowRight' : 'ArrowLeft';
+    return key === outward ? visible(node)[0] : node.parent || center;
+  }
+
+  function ensureVisible(node) {
+    const left = view.x + node.px * view.k;
+    const top = view.y + node.py * view.k;
+    if (left < 10 || top < 10 || left + node.w * view.k > svg.clientWidth - 10 || top + H * view.k > svg.clientHeight - 10) centerOn(node);
+  }
+
+  function onNodeKey(e, node) {
+    if (e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const next = neighbor(node, e.key);
+      if (next && next.el) { next.el.focus({ preventScroll: true }); ensureVisible(next); }
+    } else if (e.key === 'Enter' && node.location) {
+      vscode.postMessage({ type: 'open', location: node.location });
+    } else if (e.key === ' ' && node.children.length && node !== diagram.center) {
+      e.preventDefault();
+      node.collapsed = !node.collapsed;
+      render();
+    }
+  }
+
+  // Zoom with + and -, 0 fits everything, Home returns to the subject. Not while typing in Find.
+  window.addEventListener('keydown', (e) => {
+    if (!diagram || e.target === searchBox || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '+' || e.key === '=') zoom(1.2);
+    else if (e.key === '-') zoom(1 / 1.2);
+    else if (e.key === '0') fit(true);
+    else if (e.key === 'Home') { e.preventDefault(); centerOn(diagram.center); diagram.center.el.focus({ preventScroll: true }); }
+  });
 
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
@@ -262,6 +308,7 @@
   window.addEventListener('message', (event) => {
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
+    focused = undefined;
     if (diagram) linkParents([...diagram.left, ...diagram.right], undefined);
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
