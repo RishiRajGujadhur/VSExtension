@@ -43,7 +43,12 @@ export async function showRewritesHere(): Promise<void> {
   const disabled = new Set(vscode.workspace.getConfiguration('tsStructure').get<string[]>('intentions.disabled', []));
   const rewrites = intentionsAtCursor(editor, disabled);
   if (!editor || rewrites.length === 0) {
-    void vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.');
+    const more = disabled.size ? `Choose Rewrites (${disabled.size} off)…` : undefined;
+    if (more && (await vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.', more)) === more) {
+      await vscode.commands.executeCommand('tsStructure.chooseIntentions');
+    } else if (!more) {
+      void vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.');
+    }
     return;
   }
   // The detail line shows the start of the new code, so the result is visible before applying it.
