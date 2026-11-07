@@ -43,7 +43,12 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
       }
     }),
     registerCommand('tsStructure.chooseIntentions', chooseIntentions),
-    registerCommand('tsStructure.safeDeleteFile', (uri?: vscode.Uri) => safeDeleteFile(projects, uri)),
+    // With several files selected in the Explorer, each is checked and deleted in turn.
+    registerCommand('tsStructure.safeDeleteFile', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
+      for (const file of selected?.length ? selected : [uri]) {
+        await safeDeleteFile(projects, file);
+      }
+    }),
     registerCommand('tsStructure.moveMembers', () => {
       const editor = sourceEditor();
       if (editor) {
