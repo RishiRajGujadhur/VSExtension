@@ -50,3 +50,9 @@ relatedAnalyses.reexports = [
   { command: 'tsStructure.semanticUsages', title: 'Every usage under any name (Find Usages)' },
   { command: 'tsStructure.whoImports', title: 'Which files import this one' },
 ];
+
+relatedAnalyses.usages = [
+  { command: 'tsStructure.dataFlow', title: 'How the value moves (Data Flow)' },
+  { command: 'tsStructure.reexportChain', title: 'Which paths it is imported through (Re-export Chain)' },
+  { command: 'tsImpact.analyze', title: 'Tests that use it (Test Impact)' },
+];
