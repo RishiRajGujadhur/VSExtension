@@ -38,6 +38,7 @@ export function inspectionReport(files: readonly InspectedFile[], inspections: r
         node: {
           label: inspections.find((i) => i.id === id)?.title ?? id,
           description: `${id} · ${plural(count, 'problem')}`,
+          tooltip: `To skip one line, put // ts-structure-ignore-next-line ${id} above it; for a whole file, // ts-structure-ignore-file ${id}. Configure Inspections changes its severity or turns it off.`,
           icon: 'checklist',
           tone: worst === 'error' ? 'error' : worst === 'warning' ? 'warning' : 'info',
           expanded: byInspection.size <= 4,
