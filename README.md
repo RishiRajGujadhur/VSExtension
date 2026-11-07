@@ -58,12 +58,14 @@ The functions that write the value sit under **Flows in** and those that read it
 
 **Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in the middle, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more.
 
-- Boxes are as wide as their text; the bar under the chart shows the whole text, file and line of the box under the mouse.
+- Boxes are as wide as their text; the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
+- Design patterns are purple hexagons on dotted lines, since they describe the code rather than carry the value. Boxes that only group others are dashed outlines.
+- Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
 - Hovering a box highlights its way to the subject. Selecting a row in the results view marks its box, and clicking a box selects its row.
 - Keys: `Tab` to the subject, arrow keys between boxes, `Enter` to open, `Space` to fold, `+` `−` to zoom, `0` to fit, `Home` to return.
 - Zoom, position and folding are kept when the same analysis runs again.
-- **Copy Mermaid** copies the chart as a Mermaid flowchart for Markdown, GitHub issues and pull requests; **Save SVG** saves it as an image.
+- **Copy Mermaid** copies the chart as a Mermaid flowchart for Markdown, GitHub issues and pull requests; **Save SVG** and **Save PNG** save it as an image.
 - **?** explains the colors, arrows and keys.
 
 ![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
