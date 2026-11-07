@@ -72,3 +72,9 @@ test('Argument Propagation rows explain their terms', () => {
   assert.equal(termFor('Values that can arrive', '')?.term, 'Values that can arrive');
   assert.equal(termFor('stored in this.handler', '')?.term, 'Storing a value');
 });
+
+test('Find Usages rows explain their terms', () => {
+  assert.equal(termFor('Calls', '')?.term, 'Call');
+  assert.equal(termFor('Type references', '')?.term, 'Type reference');
+  assert.equal(termFor('JSX usages', '')?.term, 'JSX usage');
+});

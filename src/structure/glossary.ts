@@ -414,3 +414,69 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions',
   },
 );
+
+// --- Find Usages ---------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Definition',
+    match: /^Definitions$/,
+    meaning: 'Where the name is declared: its function, class, variable or type declaration, including overloads and merged declarations.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let',
+  },
+  {
+    term: 'Write',
+    match: /^Writes$/,
+    meaning: 'Places that assign a new value with =, +=, ++ or destructuring.',
+    example: 'total = 0;',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Assignment',
+  },
+  {
+    term: 'Read',
+    match: /^Reads$/,
+    meaning: 'Places that use the current value without changing it or calling it.',
+    example: 'console.log(total);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors',
+  },
+  {
+    term: 'Call',
+    match: /^Calls$/,
+    meaning: 'Places that call the function or method, including new for classes.',
+    example: 'calculateSubtotal(items);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions',
+  },
+  {
+    term: 'JSX usage',
+    match: /^JSX usages$/,
+    meaning: 'Places that render the component as a JSX element.',
+    example: '<Card title="Hi" />',
+    url: 'https://react.dev/learn/writing-markup-with-jsx',
+  },
+  {
+    term: 'Type reference',
+    match: /^Type references$/,
+    meaning: 'Places that use the name as a type, such as an annotation or generic argument. They disappear when TypeScript compiles to JavaScript.',
+    example: 'let item: LineItem;',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/everyday-types.html',
+  },
+  {
+    term: 'Extended or implemented',
+    match: /^Extended or implemented$/,
+    meaning: 'Classes and interfaces that build on this one with extends or implements.',
+    example: 'class GiftCard extends CardPayment { … }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/extends',
+  },
+  {
+    term: 'Import',
+    match: /^Imports$/,
+    meaning: 'import statements that bring the name into another module.',
+    example: "import { calculateSubtotal } from './cart';",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import',
+  },
+  {
+    term: 'Re-export',
+    match: /^Exports and re-exports$|^Exported as$/,
+    meaning: "export statements, including export { x } from './y', which pass a name on so it can be imported from another module.",
+    example: "export { calculateSubtotal } from './cart';",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export',
+  },
+);
