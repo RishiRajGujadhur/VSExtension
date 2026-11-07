@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { FunctionWithBody, callSitesOf, calledFunction, enclosingFunction, forEachInFunction, functionAtOffset, functionLabel, nodeText } from '../structure/util';
 import { isAsync } from './missingAwait';
 import { RejectionTracer, classifyCatch, enclosingCatch, unhandledPaths, worst } from './rejections';
@@ -275,6 +276,15 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
     if (uncaught.length > 0) {
       roots.unshift({ label: 'Uncaught', description: plural(uncaught.length, 'path'), icon: 'error', tone: 'error', expanded: true, children: uncaught });
     }
+  }
+  if (roots.some((r) => r.label === 'Uncaught')) {
+    roots.push(
+      howToFix([
+        'Catch the error where something useful can happen: show a message, retry, or return a fallback value.',
+        'Catch specific errors with instanceof and rethrow the rest, so unexpected bugs still surface.',
+        'Put clean-up such as closing files or hiding spinners in finally, so it runs on every exit.',
+      ]),
+    );
   }
   return builder.finish(roots, `${plural(raised.length, 'error source')}, ${escaping.length} escaping`);
 }
