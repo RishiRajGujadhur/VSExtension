@@ -562,3 +562,34 @@ glossary.push(
     url: 'https://webpack.js.org/concepts/entry-points/',
   },
 );
+
+// --- Dependency Path -----------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Type-only import',
+    match: /: import type\b/,
+    meaning: 'import type is erased when TypeScript compiles, so it creates no dependency at run time.',
+    example: "import type { Order } from './models';",
+    url: 'https://www.typescriptlang.org/docs/handbook/2/modules.html',
+  },
+  {
+    term: 'Dynamic import',
+    match: /: import\(/,
+    meaning: "import('…') loads a module on demand and returns a promise, so the dependency only exists when that code runs.",
+    example: "const { chart } = await import('./chart');",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import',
+  },
+  {
+    term: 'CommonJS require',
+    match: /: require\(/,
+    meaning: "require() is Node's older module loader; it loads the module synchronously when the line runs.",
+    example: "const fs = require('fs');",
+    url: 'https://nodejs.org/api/modules.html',
+  },
+  {
+    term: 'Import cycle',
+    match: /^Circular:|^New import cycles$|^Cycles removed$/,
+    meaning: 'Modules that import each other, directly or through others. At load time one of them sees the other half-initialized, which causes undefined imports.',
+    url: 'https://en.wikipedia.org/wiki/Circular_dependency',
+  },
+);
