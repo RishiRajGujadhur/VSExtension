@@ -674,3 +674,20 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Exhaustive check',
+  meaning: 'A value is assigned to "never" where every case should be handled, so adding a case without handling it is a compile error.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isVariableDeclaration(node) && node.type?.kind === ts.SyntaxKind.NeverKeyword && node.initializer) {
+        found.push({ node, evidence: `${text(node.initializer)} must be never here, so every case is handled` });
+      } else if ((ts.isFunctionDeclaration(node) || ts.isArrowFunction(node)) && node.parameters.length === 1 && node.parameters[0].type?.kind === ts.SyntaxKind.NeverKeyword) {
+        const name = ts.isFunctionDeclaration(node) ? nameOf(node) : ts.isVariableDeclaration(node.parent) ? nameOf(node.parent) : undefined;
+        found.push({ node, evidence: `${name ?? 'a function'}() accepts only never, so calling it marks the cases as all handled` });
+      }
+    });
+    return found;
+  },
+});

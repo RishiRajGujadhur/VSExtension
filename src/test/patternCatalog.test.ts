@@ -197,3 +197,8 @@ test('Constant object as enum is recognized', () => {
   has("const Role = { Admin: 'admin', User: 'user' } as const; type Role = (typeof Role)[keyof typeof Role];", 'Constant object as enum');
   lacks("const Role = { Admin: 'admin' } as const;", 'Constant object as enum');
 });
+
+test('Exhaustive check is recognized', () => {
+  has('function area(s: Shape) { switch (s.kind) { default: { const unhandled: never = s; return unhandled; } } }', 'Exhaustive check');
+  has('function assertNever(x: never): never { throw new Error(String(x)); }', 'Exhaustive check');
+});
