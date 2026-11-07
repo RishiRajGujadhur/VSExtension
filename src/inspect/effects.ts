@@ -634,7 +634,8 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
   }
   const known = effects.filter((e) => e.kind !== 'unknown').length;
   const unfollowed = effects.length - known;
-  return builder.finish(roots, [known ? plural(known, 'side effect') : unfollowed ? 'no known side effects' : 'pure', unfollowed ? plural(unfollowed, 'call') + ' not followed' : ''].filter(Boolean).join(', '));
+  const kinds = [...new Set(effects.filter((e) => e.kind !== 'unknown').map((e) => kindLabels[e.kind].toLowerCase()))];
+  return builder.finish(roots, [known ? `${plural(known, 'side effect')} (${kinds.join(', ')})` : unfollowed ? 'no known side effects' : 'pure', unfollowed ? plural(unfollowed, 'call') + ' not followed' : ''].filter(Boolean).join(', '));
 }
 
 /** The declaration of the state named at the offset (for `cart.items`, of `cart`), if the cursor is on a name. */
