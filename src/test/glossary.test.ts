@@ -55,3 +55,9 @@ test('Race Conditions rows explain their terms', () => {
   assert.equal(termFor('waits here: await load()', 'line 26')?.term, 'await');
   assert.equal(termFor('counter = before + 1', 'line 35 · write · after an await')?.term, 'await');
 });
+
+test('Promise Rejections rows explain their terms', () => {
+  assert.equal(termFor('Unhandled', '')?.term, 'Unhandled rejection');
+  assert.equal(termFor('.catch(console.error)', '')?.term, '.catch()');
+  assert.equal(termFor('caught in submitSafely', '')?.term, 'catch block');
+});

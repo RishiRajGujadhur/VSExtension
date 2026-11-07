@@ -68,7 +68,7 @@ glossary.push(
   },
   {
     term: 'Mutation',
-    match: /^(mutated\b|\.\w+\()/,
+    match: /^(mutated\b|\.(push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin|set|add|delete|clear)\()/,
     meaning: 'The object is changed in place, for example by push() or by setting a property. Every variable that refers to the same object sees the change.',
     example: 'cart.items.push(item);\nuser.name = "Ada";',
     url: 'https://developer.mozilla.org/en-US/docs/Glossary/Mutable',
@@ -305,5 +305,37 @@ glossary.push(
     meaning: 'await pauses the async function until the promise settles. Other code, including other calls of the same function, runs during the pause.',
     example: 'const user = await loadUser(id);',
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await',
+  },
+);
+
+// --- Promise Rejections --------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Unhandled rejection',
+    match: /^Unhandled$/,
+    meaning: 'A rejected promise that nothing awaits in a try block or handles with .catch(). Node.js stops the process by default; browsers log an error and the failure is lost.',
+    example: 'save(order); // not awaited, no .catch()',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/API/Window/unhandledrejection_event',
+  },
+  {
+    term: '.catch()',
+    match: /^\.catch\(/,
+    meaning: ".catch(handler) runs the handler when the promise rejects and returns a new promise that fulfills with the handler's result, so the error stops there unless the handler rethrows.",
+    example: 'load().catch((e) => report(e));',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch',
+  },
+  {
+    term: 'catch block',
+    match: /^catch\b|^caught in\b/,
+    meaning: 'An error thrown in a try block, or a rejection awaited there, goes to its catch block. Without a rethrow, it ends there.',
+    example: 'try { await save(); } catch (e) { show(e); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch',
+  },
+  {
+    term: 'Rejection source',
+    match: /^Rejection sources$/,
+    meaning: 'What can make the promise reject: throw statements and awaited calls that can reject, outside any try/catch.',
+    example: 'async function f() { await fetch(url); throw new Error(); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise',
   },
 );
