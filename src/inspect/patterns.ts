@@ -280,7 +280,7 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
     .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
     .map(([name, found]) => ({
       label: name,
-      description: plural(found.length, 'place'),
+      description: `${plural(found.length, 'place')}${new Set(found.map((p) => p.node.getSourceFile().fileName)).size > 1 ? ` in ${plural(new Set(found.map((p) => p.node.getSourceFile().fileName)).size, 'file')}` : ''}`,
       tooltip: `**${name}**: ${meanings[name]}`,
       icon: 'symbol-namespace',
       action: { kind: 'explainPattern', name },
