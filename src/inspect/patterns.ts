@@ -294,5 +294,6 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
   if (roots.length === 0) {
     builder.warnings.push(`No design patterns recognized in ${plural(files.length, 'file')}.`);
   }
-  return builder.finish(roots, `${plural(roots.length, 'pattern')} in ${plural(files.length, 'file')}`);
+  const top = [...byName].sort((a, b) => b[1].length - a[1].length)[0];
+  return builder.finish(roots, `${plural(roots.length, 'pattern')} in ${plural(files.length, 'file')}${top && byName.size > 1 ? `, mostly ${top[0]}` : ''}`);
 }
