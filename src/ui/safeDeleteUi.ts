@@ -71,8 +71,8 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
 
   type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages' | 'copy'; usage?: SafeDeletePlan['usages'][number] };
   const items: Item[] = [
-    { label: '$(trash) Delete Anyway', description: 'The usages listed below will no longer compile', action: 'delete' },
-    ...(showUsages ? [{ label: '$(references) Show Usages in Results View', description: 'Keep the list open while you remove them', action: 'usages' as const }] : []),
+    { label: '$(trash) Delete Anyway', description: 'The usages listed below will no longer compile', detail: 'Use this when you will fix the usages next; Ctrl+Z undoes the delete.', action: 'delete' },
+    ...(showUsages ? [{ label: '$(references) Show Usages in Results View', description: 'Keep the list open while you remove them', detail: 'Then run Safe Delete again once nothing uses it.', action: 'usages' as const }] : []),
     { label: '$(copy) Copy Usage Locations', description: 'file:line of each, for a ticket or a note', action: 'copy' },
     { label: '$(close) Cancel', action: 'cancel' },
     { label: `Usages that block deletion (${blocking.length})`, kind: vscode.QuickPickItemKind.Separator },
