@@ -123,3 +123,77 @@ glossary.push(
     url: mdn('Guide/Functions'),
   },
 );
+
+// --- Nullability ---------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Index lookup',
+    match: /^index lookup\b/,
+    meaning: 'Reading array[i] or record[key] gives undefined when there is no item at that index or key, even when the type does not say so. The noUncheckedIndexedAccess option makes TypeScript include undefined.',
+    example: 'const first = items[0]; // undefined when items is empty',
+    url: 'https://www.typescriptlang.org/tsconfig/#noUncheckedIndexedAccess',
+  },
+  {
+    term: 'Optional property or parameter',
+    match: /is an optional (property|parameter)\b|omits the argument/,
+    meaning: 'A name declared with ? may be left out, and is then undefined. Callers that omit the argument, and objects without the property, produce undefined.',
+    example: 'function greet(name?: string) { … }\ninterface Props { badge?: ReactNode }',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/objects.html',
+  },
+  {
+    term: 'Type that includes null or undefined',
+    match: /^declared as\b/,
+    meaning: 'The declared type is a union with null or undefined, such as string | undefined, so TypeScript requires a check before use.',
+    example: 'let user: User | null = null;',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/everyday-types.html',
+  },
+  {
+    term: 'Declared without a value',
+    match: /declared without a value|^no initializer/,
+    meaning: 'A variable declared without = starts as undefined until something assigns it.',
+    example: 'let total: number; // undefined here',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let',
+  },
+  {
+    term: 'Falsy value',
+    match: /is falsy$/,
+    meaning: 'false, 0, "", null, undefined and NaN count as false in a condition, so a || b uses b for all of them, not only for null and undefined.',
+    example: 'count || 10 // 10 also when count is 0',
+    url: 'https://developer.mozilla.org/en-US/docs/Glossary/Falsy',
+  },
+  {
+    term: 'Nullish coalescing (??)',
+    match: /\?\?/,
+    meaning: 'a ?? b gives b only when a is null or undefined. Unlike ||, it keeps 0, "" and false.',
+    example: 'const size = options.size ?? 10;',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing',
+  },
+  {
+    term: 'Optional chaining (?.)',
+    match: /\?\./,
+    meaning: 'a?.b gives undefined instead of throwing when a is null or undefined; the rest of the chain is skipped.',
+    example: 'user?.address?.city',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining',
+  },
+  {
+    term: 'Logical OR (||)',
+    match: /\|\|/,
+    meaning: 'a || b gives b when a is falsy (null, undefined, 0, "", false). Use ?? to fall back only on null and undefined.',
+    example: "const label = badge || 'none';",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR',
+  },
+  {
+    term: 'Non-null assertion (!)',
+    match: /\w!($|[.\[)])/,
+    meaning: 'value! tells TypeScript the value is not null or undefined without checking. If it is, the next property access throws at run time.',
+    example: 'document.getElementById("app")!.focus();',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#non-null-assertion-operator-postfix-',
+  },
+  {
+    term: 'JSX expression',
+    match: /^\{.+\}$/,
+    meaning: 'Curly braces in JSX insert a JavaScript value into the markup. null and undefined render nothing, which can hide a missing value.',
+    example: '<span>{badge}</span>',
+    url: 'https://react.dev/learn/javascript-in-jsx-with-curly-braces',
+  },
+);

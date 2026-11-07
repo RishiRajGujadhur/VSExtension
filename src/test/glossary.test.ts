@@ -28,3 +28,12 @@ test('every term links to documentation and has a plain meaning', () => {
 test('import rows that start with an arrow are not arguments', () => {
   assert.equal(termFor('→ src/cart.ts'), undefined);
 });
+
+test('Nullability rows explain their terms', () => {
+  assert.equal(termFor('index lookup items[0] may be missing', '')?.term, 'Index lookup');
+  assert.equal(termFor('badge is an optional property', '')?.term, 'Optional property or parameter');
+  assert.equal(termFor('badge || actions', 'line 24')?.term, 'Logical OR (||)');
+  assert.equal(termFor('{badge}', 'line 26')?.term, 'JSX expression');
+  assert.equal(termFor('user?.name', '')?.term, 'Optional chaining (?.)');
+  assert.equal(termFor('el!.focus()', '')?.term, 'Non-null assertion (!)');
+});
