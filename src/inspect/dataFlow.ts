@@ -230,7 +230,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       description: 'how the code this value passes through is organized',
       icon: 'library',
       expanded: true,
-      children: patterns.map((p) => ({ label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}${learnMore(p.name)}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } })),
+      children: groupPatterns(patterns.map((p) => ({ name: p.name, row: { label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}${learnMore(p.name)}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } } }))),
     });
   }
   // Shared state read, awaited and written: the same findings as Race Conditions.
@@ -516,4 +516,35 @@ export function patternsAlong(steps: readonly { node: ts.Node }[], types: readon
   }
   // One row per pattern and place.
   return found.filter((p, i) => found.findIndex((q) => q.name === p.name && q.node === p.node) === i);
+}
+
+/**
+ * One row per pattern. A pattern found in several places becomes a group ("Controlled component · 7 places")
+ * with one row per place, so a long list of the same pattern reads as a single entry.
+ */
+export function groupPatterns(found: readonly { name: string; row: ReportNode }[]): ReportNode[] {
+  const byName = new Map<string, ReportNode[]>();
+  for (const { name, row } of found) {
+    byName.set(name, [...(byName.get(name) ?? []), row]);
+  }
+  return [...byName].map(([name, rows]) => {
+    if (rows.length === 1) {
+      return rows[0];
+    }
+    const files = new Set(rows.map((r) => r.location?.file).filter(Boolean)).size;
+    return {
+      ...rows[0],
+      label: name,
+      description: `${plural(rows.length, 'place')}${files > 1 ? ` in ${plural(files, 'file')}` : ''}`,
+      location: undefined,
+      expanded: rows.length <= 3,
+      children: rows.map((r) => ({
+        label: r.description ?? r.label,
+        description: r.location ? `${baseName(r.location.file)}:${r.location.line + 1}` : undefined,
+        tooltip: r.tooltip,
+        icon: 'symbol-namespace',
+        location: r.location,
+      })),
+    };
+  });
 }

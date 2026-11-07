@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
-import { dataFlowReport, dataFlowSteps } from '../inspect/dataFlow';
+import { dataFlowReport, dataFlowSteps, groupPatterns } from '../inspect/dataFlow';
 import { fixtures, offsetIn, virtualProject } from './helpers';
 
 const flow = path.join(fixtures, 'inspect/src/flow.ts');
@@ -107,4 +107,16 @@ test('flows out lists the variables, calls and callers the value reaches', () =>
   const returned = amount.roots.find((r) => r.label === 'Flows out')?.children?.[0];
   assert.equal(returned?.label, 'returned from applyTax');
   assert.deepEqual(returned?.children?.map((c) => c.label), ['returned again from checkout', 'returned again from run']);
+});
+
+test('data flow groups a design pattern found in several places', () => {
+  const at = (file: string, line: number) => ({ file, line, character: 0, endLine: line, endCharacter: 1 });
+  const rows = groupPatterns([
+    { name: 'Controlled component', row: { label: 'Controlled component', description: 'the <input> shows value', location: at('/a/App.tsx', 4) } },
+    { name: 'Portal', row: { label: 'Portal', description: 'renders into slot', location: at('/a/App.tsx', 9) } },
+    { name: 'Controlled component', row: { label: 'Controlled component', description: 'the <select> shows value', location: at('/a/Form.tsx', 2) } },
+  ]);
+  assert.deepEqual(rows.map((r) => `${r.label} · ${r.description}`), ['Controlled component · 2 places in 2 files', 'Portal · renders into slot']);
+  assert.deepEqual(rows[0].children?.map((c) => `${c.label} · ${c.description}`), ['the <input> shows value · App.tsx:5', 'the <select> shows value · Form.tsx:3']);
+  assert.equal(rows[0].location, undefined);
 });
