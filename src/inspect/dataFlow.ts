@@ -229,7 +229,8 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     }
   }
   const outflows = flowsOut(project, steps, builder);
-  const inNote = inflows.length ? `${plural(inflows.length, 'source')} of the value` : 'no values assigned';
+  const risky = inflows.filter((r) => r.tone === 'warning').length;
+  const inNote = inflows.length ? `${plural(inflows.length, 'source')} of the value${risky ? `, ${risky} may be null or undefined` : ''}` : 'no values assigned';
   const outNote = outflows.length ? `${plural(outflows.length, 'place')} the value goes` : byDirection ? 'not passed on' : 'the value stays here';
   roots.unshift(
     {
@@ -306,10 +307,14 @@ function flowsIn(project: VirtualProject, steps: FlowStep[], name: string, build
       continue;
     }
     const forOf = ts.isForOfStatement(value.parent) && value.parent.expression === value;
+    // A value that may be null or undefined is flagged where it comes in, before anything reads it.
+    const nullish = forOf || step.kind === 'update' ? undefined : nullishNote(checker, value);
     rows.push({
       label: forOf ? `each item of ${nodeText(value)}` : step.kind === 'update' ? step.label : `= ${nodeText(value)}`,
-      description: `line ${lineOf(step.node)} · ${functionLabel(enclosingFunction(step.node))}`,
-      icon: step.kind === 'declaration' ? 'symbol-variable' : 'edit',
+      description: [`line ${lineOf(step.node)} · ${functionLabel(enclosingFunction(step.node))}`, nullish].filter(Boolean).join(' · '),
+      tone: nullish ? 'warning' : undefined,
+      tooltip: nullish ? `This value ${nullish}: check it before using it, or run Nullability for where it comes from.` : undefined,
+      icon: nullish ? 'warning' : step.kind === 'declaration' ? 'symbol-variable' : 'edit',
       role: 'write',
       location: builder.at(step.node),
       children: sourcesOf(checker, value, name, builder),
@@ -349,9 +354,11 @@ function stateInflows(project: VirtualProject, declaration: ts.Declaration | und
     const value = use.arguments[0];
     // A function passed to the setter computes the next state from the previous one.
     const updater = ts.isArrowFunction(value) || ts.isFunctionExpression(value);
+    const nullish = updater ? undefined : nullishNote(checker, value);
     rows.push({
       label: `${setter.name.text}(${nodeText(value)})`,
-      description: `line ${lineOf(use)} · ${functionLabel(enclosingFunction(use))}${updater ? ' · from the previous state' : ''}`,
+      tone: nullish ? 'warning' : undefined,
+      description: [`line ${lineOf(use)} · ${functionLabel(enclosingFunction(use))}`, updater ? 'from the previous state' : '', nullish].filter(Boolean).join(' · '),
       tooltip: updater ? 'An updater function: React calls it with the current state and stores what it returns.' : `Stores ${nodeText(value)} as the next ${name}.`,
       icon: 'edit',
       role: 'write',
@@ -360,6 +367,14 @@ function stateInflows(project: VirtualProject, declaration: ts.Declaration | und
     });
   }
   return rows;
+}
+
+/** "may be undefined" when the value's type includes null or undefined. */
+function nullishNote(checker: ts.TypeChecker, value: ts.Node): string | undefined {
+  const type = checker.getTypeAtLocation(value);
+  const parts = type.isUnion() ? type.types : [type];
+  const words = [parts.some((t) => t.flags & ts.TypeFlags.Null) ? 'null' : '', parts.some((t) => t.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Void)) ? 'undefined' : ''].filter(Boolean);
+  return words.length ? `may be ${words.join(' or ')}` : undefined;
 }
 
 /** The expression a declaration, assignment or loop gives the variable. */

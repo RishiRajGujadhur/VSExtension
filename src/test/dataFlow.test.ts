@@ -169,3 +169,14 @@ test('flows out include JSX props, which can be followed into the component', ()
   assert.equal(action.kind, 'traceValue');
   assert.equal(action.offset, offsetIn(state, 'Price({ |amount'));
 });
+
+test('flows in flags values that may be null or undefined', () => {
+  const report = dataFlowReport(virtualProject('navigate', 'src/state.tsx'), state, offsetIn(state, 'const na|me = find'));
+  const inflows = report.roots.find((r) => r.label === 'Flows in');
+  assert.equal(inflows?.description, '1 source of the value, 1 may be null or undefined');
+  assert.equal(inflows?.children?.[0].tone, 'warning');
+  assert.equal(inflows?.children?.[0].description, 'line 32 · lookup · may be undefined');
+  // A plain number is not flagged.
+  const count = dataFlowReport(virtualProject('navigate', 'src/state.tsx'), state, offsetIn(state, 'const [co|unt'));
+  assert.ok(!count.roots.find((r) => r.label === 'Flows in')?.children?.some((c) => c.tone === 'warning'));
+});
