@@ -232,11 +232,14 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
     });
   }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;
-  const names = [...new Set(patterns.map((p) => p.name))];
-  return builder.finish(
-    roots,
-    `${plural(count(['write', 'update', 'declaration']), 'definition')}, ${plural(count(['mutation']), 'mutation')}, ${plural(count(['condition']), 'check')}, ${plural(count(['argument']), 'hand-off')}${names.length ? ` · ${names.join(', ')}` : ''}`,
-  );
+  // Only the counts that aren't zero; the patterns have their own group.
+  const counts = [
+    [count(['write', 'update', 'declaration']), 'definition'],
+    [count(['mutation']), 'mutation'],
+    [count(['condition']), 'check'],
+    [count(['argument']), 'hand-off'],
+  ] as const;
+  return builder.finish(roots, counts.filter(([n]) => n > 0).map(([n, what]) => plural(n, what)).join(', ') || 'no definitions found');
 }
 
 type Follow = { kind: 'traceValue'; command: string; file: string; offset: number };

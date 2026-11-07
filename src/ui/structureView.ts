@@ -582,10 +582,12 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 }
 
-/** "total · 3 definitions, 1 check · 12 ms": what the report is about, its summary and how long it took. */
+/** "total (12 ms)" over "3 definitions, 1 check": what the report is about and how long it took, then its summary. */
 function summaryLine(report: Report): string {
   const timing = report.durationMs === undefined ? '' : report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`;
-  return [titleParts(report).subject, report.description, timing].filter(Boolean).join(' · ');
+  const subject = titleParts(report).subject;
+  const heading = subject && timing ? `${subject} (${timing})` : subject || timing;
+  return [heading, report.description].filter(Boolean).join('\n');
 }
 
 /** A row's identity across re-renders, which copy rows when filtering or limiting. */
