@@ -346,6 +346,12 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
     registerCommand('tsStructure.cancelAnalysis', () => cancelRunningAnalysis()),
+    registerCommand('tsStructure.toggleAssertionTests', async () => {
+      const config = vscode.workspace.getConfiguration('tsStructure');
+      const skip = !config.get('typeAssertion.ignoreTestFiles', false);
+      await config.update('typeAssertion.ignoreTestFiles', skip, vscode.ConfigurationTarget.Workspace);
+      void vscode.window.setStatusBarMessage(skip ? 'Type assertions in test files are now skipped' : 'Type assertions in test files are checked again', 4000);
+    }),
     registerCommand('tsStructure.inspectOpen', () => vscode.commands.executeCommand('tsStructure.inspectCode', 'open')),
     registerCommand('tsStructure.inspectChanged', () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed')),
     registerCommand('tsStructure.analyzeSymbol', () => {
