@@ -36,7 +36,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Inspections',
     description: 'Live inspections in the Problems panel, Inspect Code and Audit Type Assertions.',
-    commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix', 'tsStructure.configureInspections', 'tsStructure.inspectionsMenu', 'tsStructure.report.applyAllFixes', 'tsStructure.toggleLiveInspections'],
+    commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix', 'tsStructure.configureInspections', 'tsStructure.inspectionsMenu', 'tsStructure.report.applyAllFixes', 'tsStructure.toggleLiveInspections', 'tsStructure.copyProblems'],
   },
   {
     id: 'dataFlow',

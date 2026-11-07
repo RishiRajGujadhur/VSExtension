@@ -95,6 +95,17 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       registerCommand('tsStructure.turnOffInspection', (id: string, uri?: vscode.Uri) => turnOffInspection(id, uri)),
       registerCommand('tsStructure.configureInspections', () => this.configureInspections()),
       registerCommand('tsStructure.inspectionsMenu', () => this.menu()),
+      registerCommand('tsStructure.copyProblems', async () => {
+        const document = vscode.window.activeTextEditor?.document;
+        const findings = document && this.findingsFor(document);
+        if (!document || !findings?.length) {
+          void vscode.window.showInformationMessage('No TypeScript Structure problems in this file.');
+          return;
+        }
+        const file = vscode.workspace.asRelativePath(document.uri);
+        await vscode.env.clipboard.writeText(findings.map((f) => `${file}:${document.positionAt(f.start).line + 1}  ${f.severity}  ${f.message} (${f.inspection})`).join('\n'));
+        void vscode.window.setStatusBarMessage(`Copied ${findings.length} problem${findings.length === 1 ? '' : 's'}`, 3000);
+      }),
       registerCommand('tsStructure.explainFinding', async (uri: vscode.Uri, offset: number, command: string) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);

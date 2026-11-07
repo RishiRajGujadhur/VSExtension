@@ -724,6 +724,12 @@
         "command": "tsStructure.showRewrites",
         "title": "Show Rewrites Here…",
         "category": "TypeScript Structure"
+      },
+      {
+        "command": "tsStructure.copyProblems",
+        "title": "Copy Problems in This File",
+        "category": "TypeScript Structure",
+        "icon": "$(copy)"
       }
     ],
     "viewsContainers": {
@@ -1690,6 +1696,10 @@
         {
           "command": "tsStructure.showRewrites",
           "when": "config.tsStructure.features.intentions"
+        },
+        {
+          "command": "tsStructure.copyProblems",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "view/title": [
