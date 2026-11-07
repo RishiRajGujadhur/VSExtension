@@ -22,7 +22,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Refactorings',
     description: 'Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries.',
-    commands: ['tsStructure.changeSignature', 'tsStructure.safeDelete', 'tsStructure.safeDeleteFile', 'tsStructure.introduceParameter', 'tsStructure.moveMembers', 'tsStructure.report.safeDelete', 'tsStructure.report.safeDeleteFile', 'tsStructure.togglePreview'],
+    commands: ['tsStructure.changeSignature', 'tsStructure.safeDelete', 'tsStructure.safeDeleteFile', 'tsStructure.introduceParameter', 'tsStructure.moveMembers', 'tsStructure.report.safeDelete', 'tsStructure.report.safeDeleteFile', 'tsStructure.togglePreview', 'tsStructure.introduceOptionalParameter'],
   },
   {
     id: 'intentions',

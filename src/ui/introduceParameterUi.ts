@@ -7,7 +7,7 @@ import { previewEnabled } from './refactorCommands';
 
 const lastModeKey = 'tsStructure.introduceParameter.mode';
 
-export async function runIntroduceParameter(projects: ProjectService, editor: vscode.TextEditor, memento?: vscode.Memento): Promise<void> {
+export async function runIntroduceParameter(projects: ProjectService, editor: vscode.TextEditor, memento?: vscode.Memento, fixedMode?: 'required' | 'optional'): Promise<void> {
   const document = editor.document;
   const start = document.offsetAt(editor.selection.start);
   const end = document.offsetAt(editor.selection.end);
@@ -35,7 +35,7 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
       { label: 'Required', description: `callers pass ${short}`, mode: 'required' as const },
       { label: 'Optional', description: `default value = ${short}; callers unchanged`, mode: 'optional' as const },
     ].sort((a, b) => Number(b.mode === last) - Number(a.mode === last));
-    const mode = await vscode.window.showQuickPick(modes, { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' });
+    const mode = fixedMode ? modes.find((m) => m.mode === fixedMode) : await vscode.window.showQuickPick(modes, { title: `Introduce Parameter '${name.trim()}'`, placeHolder: 'How should existing callers supply the value?' });
     if (!mode) {
       return;
     }

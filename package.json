@@ -714,6 +714,11 @@
         "title": "Stop the Running Analysis",
         "category": "TypeScript Structure",
         "icon": "$(debug-stop)"
+      },
+      {
+        "command": "tsStructure.introduceOptionalParameter",
+        "title": "Introduce Optional Parameter…",
+        "category": "TypeScript Structure"
       }
     ],
     "viewsContainers": {
@@ -1141,6 +1146,11 @@
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath",
           "group": "4_navigate@6"
+        },
+        {
+          "command": "tsStructure.introduceOptionalParameter",
+          "when": "config.tsStructure.features.refactorings",
+          "group": "1_refactor@3"
         }
       ],
       "explorer/context": [
@@ -1650,6 +1660,10 @@
         {
           "command": "tsStructure.cancelAnalysis",
           "when": "tsStructure.running"
+        },
+        {
+          "command": "tsStructure.introduceOptionalParameter",
+          "when": "config.tsStructure.features.refactorings"
         }
       ],
       "view/title": [

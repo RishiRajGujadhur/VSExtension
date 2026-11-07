@@ -55,6 +55,12 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
         return runMoveMembers(projects, editor, context.workspaceState);
       }
     }),
+    registerCommand('tsStructure.introduceOptionalParameter', () => {
+      const editor = sourceEditor();
+      if (editor) {
+        return runIntroduceParameter(projects, editor, context.workspaceState, 'optional');
+      }
+    }),
     registerCommand('tsStructure.introduceParameter', () => {
       const editor = sourceEditor();
       if (editor) {
