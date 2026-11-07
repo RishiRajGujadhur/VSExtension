@@ -34,3 +34,8 @@ relatedAnalyses.argumentFlow = [
   { command: 'tsStructure.nullability', title: 'Can it be undefined? (Nullability)' },
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
 ];
+
+relatedAnalyses.hierarchy = [
+  { command: 'tsStructure.overrideImpact', title: 'What changing a member reaches (Override Impact)' },
+  { command: 'tsStructure.semanticUsages', title: 'Where the type is used (Find Usages)' },
+];
