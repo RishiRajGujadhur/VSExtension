@@ -135,3 +135,14 @@ test('data flow by direction puts writing code under Flows in and reading code u
   // The step at the cursor is still marked.
   assert.ok(written?.children?.[0].children?.some((c) => c.focus));
 });
+
+const state = path.join(fixtures, 'navigate/src/state.tsx');
+
+test('flows in of React state lists the initial value and every setter call', () => {
+  const report = dataFlowReport(virtualProject('navigate', 'src/state.tsx'), state, offsetIn(state, 'const [co|unt'));
+  const inflows = report.roots.find((r) => r.label === 'Flows in');
+  assert.deepEqual(
+    inflows?.children?.map((c) => `${c.label} · ${c.description}`),
+    ['initial state 0 · line 8 · Counter', 'setCount(0) · line 9 · reset', 'setCount((c) => c + step) · line 10 · add · from the previous state'],
+  );
+});

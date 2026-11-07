@@ -212,7 +212,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
   const written = byDirection ? scopeRows(isWrite) : [];
   const read = byDirection ? scopeRows((s) => !isWrite(s)) : [];
   // Where the value comes from and where it goes, before the step-by-step timeline.
-  const inflows = flowsIn(project, steps, name, builder);
+  const inflows = [...flowsIn(project, steps, name, builder), ...stateInflows(project, declaration, name, builder)];
   if (declaration && ts.isParameter(declaration) && isFunctionWithBody(declaration.parent)) {
     const incoming = incomingValues(project, declaration, builder);
     if (incoming.length > 0) {
@@ -304,6 +304,50 @@ function flowsIn(project: VirtualProject, steps: FlowStep[], name: string, build
       role: 'write',
       location: builder.at(step.node),
       children: sourcesOf(checker, value, name, builder),
+    });
+  }
+  return rows;
+}
+
+/**
+ * React state: `const [count, setCount] = useState(0)` gets its values from the initial value and from every
+ * `setCount(…)` call, which are not assignments to `count` itself.
+ */
+function stateInflows(project: VirtualProject, declaration: ts.Declaration | undefined, name: string, builder: ReportBuilder): ReportNode[] {
+  if (!declaration || !ts.isBindingElement(declaration) || !ts.isArrayBindingPattern(declaration.parent) || declaration.parent.elements[0] !== declaration) {
+    return [];
+  }
+  const variable = declaration.parent.parent;
+  const call = ts.isVariableDeclaration(variable) && variable.initializer && skipParentheses(variable.initializer);
+  if (!call || !ts.isCallExpression(call) || !/(^|\.)use(State|Reducer)$/.test(call.expression.getText())) {
+    return [];
+  }
+  const checker = project.program().getTypeChecker();
+  const rows: ReportNode[] = [];
+  const initial = call.arguments[0];
+  if (initial) {
+    rows.push({ label: `initial state ${nodeText(initial)}`, description: `line ${lineOf(initial)} · ${functionLabel(enclosingFunction(call))}`, icon: 'symbol-variable', role: 'write', location: builder.at(initial), children: sourcesOf(checker, initial, name, builder) });
+  }
+  const setter = declaration.parent.elements[1];
+  if (!setter || !ts.isBindingElement(setter) || !ts.isIdentifier(setter.name)) {
+    return rows;
+  }
+  for (const reference of referencesAt(project.service, setter.getSourceFile().fileName, setter.name.getStart())) {
+    const use = reference.parent;
+    if (!ts.isCallExpression(use) || use.expression !== reference || !use.arguments[0]) {
+      continue;
+    }
+    const value = use.arguments[0];
+    // A function passed to the setter computes the next state from the previous one.
+    const updater = ts.isArrowFunction(value) || ts.isFunctionExpression(value);
+    rows.push({
+      label: `${setter.name.text}(${nodeText(value)})`,
+      description: `line ${lineOf(use)} · ${functionLabel(enclosingFunction(use))}${updater ? ' · from the previous state' : ''}`,
+      tooltip: updater ? 'An updater function: React calls it with the current state and stores what it returns.' : `Stores ${nodeText(value)} as the next ${name}.`,
+      icon: 'edit',
+      role: 'write',
+      location: builder.at(use),
+      children: updater ? [] : sourcesOf(checker, value, name, builder),
     });
   }
   return rows;
