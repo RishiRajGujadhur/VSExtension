@@ -199,7 +199,7 @@ ${buttonCss}
       tools.style.whiteSpace = 'nowrap';
       tools.appendChild(button('up', 'Move up (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); }));
       tools.appendChild(button('down', 'Move down (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); }));
-      tools.appendChild(button('remove', 'Remove parameter', false, () => { rows.splice(i, 1); render(); }));
+      tools.appendChild(button('remove', 'Remove parameter (Ctrl+Delete)', false, () => { rows.splice(i, 1); render(); }));
       tr.appendChild(tools);
       body.appendChild(tr);
     });
@@ -270,6 +270,14 @@ ${buttonCss}
       submit(!e.shiftKey);
     } else if (e.key === 'Escape') {
       vscode.postMessage({ type: 'cancel', dirty: isDirty() });
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Delete') {
+      const tr = e.target.closest && e.target.closest('tr');
+      const i = tr ? Array.prototype.indexOf.call($('rows').children, tr) : -1;
+      if (i >= 0) {
+        e.preventDefault();
+        rows.splice(i, 1);
+        render();
+      }
     } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
       e.preventDefault();
       $('add').click();
