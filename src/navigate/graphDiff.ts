@@ -4,6 +4,7 @@ import * as ts from 'typescript';
 import { isSourceFileName, normalizePath } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { ReportBuilder, ReportNode, Report, plural } from '../structure/report';
+import { howToFix } from '../structure/howToFix';
 import { ImportEdge, ModuleGraph, buildModuleGraph, scriptKind } from './moduleGraph';
 
 const excluded = /(^|\/)(node_modules|dist|out|build|coverage|\.git)\//;
@@ -329,6 +330,14 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
         };
       }),
     });
+  }
+  if (diff.newCycles.length) {
+    roots.push(
+      howToFix([
+        'Look at the imports listed under each new cycle: usually one of them was added on this branch and can point elsewhere.',
+        'Move shared code into a module both sides import, or change type-only imports to import type.',
+      ]),
+    );
   }
   if (!diff.addedEdges.length && !diff.removedEdges.length) {
     return builder.finish(roots, 'imports unchanged');
