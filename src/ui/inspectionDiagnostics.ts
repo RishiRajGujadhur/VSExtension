@@ -286,7 +286,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
             run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
           },
     ];
-    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action' : undefined, matchOnDescription: true });
+    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action (Ctrl+Alt+S 5 jumps to the next one)' : undefined, matchOnDescription: true });
     await picked?.run?.();
   }
 
