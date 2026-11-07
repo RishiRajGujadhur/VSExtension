@@ -46,7 +46,9 @@ export async function showRewritesHere(): Promise<void> {
     void vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.');
     return;
   }
-  const picked = await vscode.window.showQuickPick(rewrites.map((r) => ({ label: `$(wand) ${r.title}`, rewrite: r })), { title: 'Rewrites Here', placeHolder: 'Pick a rewrite to apply' });
+  // The detail line shows the start of the new code, so the result is visible before applying it.
+  const preview = (r: (typeof rewrites)[number]) => r.edits.map((e) => e.text).join(' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+  const picked = await vscode.window.showQuickPick(rewrites.map((r) => ({ label: `$(wand) ${r.title}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, rewrite: r })), { title: 'Rewrites Here', placeHolder: 'Pick a rewrite to apply' });
   if (picked) {
     const edit = new vscode.WorkspaceEdit();
     for (const e of picked.rewrite.edits) {
