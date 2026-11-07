@@ -37,3 +37,9 @@ test('Nullability rows explain their terms', () => {
   assert.equal(termFor('user?.name', '')?.term, 'Optional chaining (?.)');
   assert.equal(termFor('el!.focus()', '')?.term, 'Non-null assertion (!)');
 });
+
+test('Side Effects rows explain their terms', () => {
+  assert.equal(termFor('Input/output', '')?.term, 'Input/output');
+  assert.equal(termFor('Schedules work', '')?.term, 'Scheduled work');
+  assert.equal(termFor('Writes globals', '')?.term, 'Global state');
+});

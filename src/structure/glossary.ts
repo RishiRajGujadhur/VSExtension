@@ -197,3 +197,42 @@ glossary.push(
     url: 'https://react.dev/learn/javascript-in-jsx-with-curly-braces',
   },
 );
+
+// --- Side Effects --------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'Input/output',
+    match: /^Input\/output$/,
+    meaning: 'The function talks to the world outside the program: network, files, storage, the console or the DOM. Results can differ between runs, and calls may be slow or fail.',
+    example: 'await fetch("/api/orders");\nlocalStorage.setItem("cart", json);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API',
+  },
+  {
+    term: 'Scheduled work',
+    match: /^Schedules work$/,
+    meaning: 'The function asks for code to run later with setTimeout, setInterval or requestAnimationFrame. That code runs after the function has returned.',
+    example: 'setTimeout(() => save(), 500);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout',
+  },
+  {
+    term: 'Nondeterministic',
+    match: /^Nondeterministic$/,
+    meaning: 'The result can differ between calls with the same arguments, for example because of Math.random(), Date.now() or new Date(). Tests need to control these values.',
+    example: 'const id = Math.random().toString(36);',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random',
+  },
+  {
+    term: 'Global state',
+    match: /^(Uses global state|Writes globals)$/,
+    meaning: 'window, globalThis, document and similar objects are shared by all code on the page; reading them couples the function to that state, writing them affects everyone.',
+    example: 'window.currentUser = user;',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis',
+  },
+  {
+    term: 'Calls it could not follow',
+    match: /^Calls it could not follow$/,
+    meaning: 'Calls to functions whose code is not in the project or cannot be resolved, such as a callback passed in. They may have side effects of their own.',
+    example: 'options.onDone(result);',
+    url: 'https://en.wikipedia.org/wiki/Side_effect_%28computer_science%29',
+  },
+);
