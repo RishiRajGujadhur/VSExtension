@@ -259,3 +259,7 @@ test('Container and presentational components are recognized', () => {
   has('function UsersContainer() { const { data } = useQuery("users"); return <UserList users={data} />; }', 'Container and presentational components');
   lacks('function UsersContainer() { const { data } = useQuery("users"); return <ul>{data}</ul>; }', 'Container and presentational components');
 });
+
+test('Reducer with context is recognized', () => {
+  has('function CartProvider(p: { children: any }) { const [cart, dispatch] = useReducer(reduce, []); return <CartContext.Provider value={{ cart, dispatch }}>{p.children}</CartContext.Provider>; }', 'Reducer with context');
+});

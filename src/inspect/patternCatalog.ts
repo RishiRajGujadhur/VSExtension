@@ -900,3 +900,16 @@ catalog.push({
       return loads && shown ? [{ node: fn, evidence: `${name} loads the data and ${tag(shown)} displays it`, subject: name }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Reducer with context',
+  meaning: 'State from useReducer is shared through context, so deep components can read it and dispatch actions without passing props down.',
+  detect: (sf) =>
+    functionsIn(sf).flatMap(({ name, fn }) => {
+      const body = text(fn.body);
+      const reducer = /\[\s*(\w+)\s*,\s*(\w+)\s*\]\s*=\s*(React\.)?useReducer\s*\(/.exec(body);
+      return reducer && new RegExp(`\\.Provider[^>]*value=\\{[^}]*\\b(${reducer[1]}|${reducer[2]})\\b`).test(body)
+        ? [{ node: fn, evidence: `${name} shares ${reducer[1]} and ${reducer[2]} from useReducer through context`, subject: name }]
+        : [];
+    }),
+});
