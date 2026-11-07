@@ -64,6 +64,8 @@ export class DiagramPanel {
 <body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
 <header>
   <span id="caption"></span>
+  <input id="search" type="search" placeholder="Find a box (Ctrl+F)" aria-label="Find a box" title="Highlights boxes whose text contains this; Enter goes to the next, Shift+Enter to the previous">
+  <span id="searchCount" aria-live="polite"></span>
   ${button('collapse', 'Fold All', 'Show only the rows next to the subject')}
   ${button('expand', 'Unfold All', 'Show every row')}
   ${button('zoomOut', '−', 'Zoom out')}

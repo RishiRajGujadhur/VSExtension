@@ -12,8 +12,12 @@
   const scene = document.getElementById('scene');
   const empty = document.getElementById('empty');
   const caption = document.getElementById('caption');
+  const searchBox = document.getElementById('search');
+  const searchCount = document.getElementById('searchCount');
   let diagram;
   let view = { x: 0, y: 0, k: 1 };
+  let query = '';
+  let matchIndex = -1;
 
   // Boxes are as wide as their text, between MIN_W and MAX_W; longer text is cut with an ellipsis.
   const measure = document.createElement('canvas').getContext('2d');
@@ -36,6 +40,9 @@
   };
   const visible = (node) => (node.collapsed ? [] : node.children);
   const forEach = (nodes, visit) => nodes.forEach((n) => { visit(n); forEach(n.children, visit); });
+  const linkParents = (nodes, parent) => nodes.forEach((n) => { n.parent = parent; linkParents(n.children, n); });
+  const isMatch = (n) => !!query && `${n.label} ${n.description || ''}`.toLowerCase().includes(query);
+  const allNodes = () => (diagram ? [diagram.center, ...(() => { const out = []; forEach([...diagram.left, ...diagram.right], (n) => out.push(n)); return out; })()] : []);
 
   // Tidy tree: each leaf takes the next row, each parent sits between its first and last child.
   function place(nodes, depth, side, rows) {
@@ -116,7 +123,9 @@
 
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node.location ? 0 : -1 }, layer);
+      const found = query ? (isMatch(node) ? ' match' : ' dim') : '';
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node.location ? 0 : -1 }, layer);
+      node.el = g;
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
       el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
@@ -171,6 +180,44 @@
     apply();
   }
 
+  /** Pans so the box is in the middle of the window, at the current zoom. */
+  function centerOn(node) {
+    view = { k: view.k, x: svg.clientWidth / 2 - (node.px + node.w / 2) * view.k, y: svg.clientHeight / 2 - (node.py + H / 2) * view.k };
+    apply();
+  }
+
+  // Find: matching boxes stand out, the rest fade; folded boxes holding a match unfold. Enter goes to the next match.
+  function search(text) {
+    query = text.trim().toLowerCase();
+    matchIndex = -1;
+    for (const n of allNodes().filter(isMatch)) {
+      for (let p = n.parent; p; p = p.parent) p.collapsed = false;
+    }
+    render();
+    const count = allNodes().filter(isMatch).length;
+    searchCount.textContent = query ? (count ? `${count} found` : 'No boxes match') : '';
+  }
+
+  function nextMatch(step) {
+    const found = allNodes().filter(isMatch);
+    if (!found.length) return;
+    matchIndex = (matchIndex + step + found.length) % found.length;
+    const node = found[matchIndex];
+    searchCount.textContent = `${matchIndex + 1} of ${found.length}`;
+    centerOn(node);
+    allNodes().forEach((n) => n.el && n.el.classList.remove('current'));
+    if (node.el) node.el.classList.add('current');
+  }
+
+  searchBox.addEventListener('input', () => search(searchBox.value));
+  searchBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); nextMatch(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Escape') { searchBox.value = ''; search(''); svg.focus(); }
+  });
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); searchBox.focus(); searchBox.select(); }
+  });
+
   function zoom(factor, cx, cy) {
     const k = Math.min(3, Math.max(0.15, view.k * factor));
     const px = cx === undefined ? svg.clientWidth / 2 : cx;
@@ -215,6 +262,8 @@
   window.addEventListener('message', (event) => {
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
+    if (diagram) linkParents([...diagram.left, ...diagram.right], undefined);
+    if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
     svg.classList.toggle('off', !diagram);
     caption.textContent = diagram ? [diagram.title, diagram.center.description].filter(Boolean).join(' · ') : '';

@@ -35,3 +35,12 @@ header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outl
 .toggle text { fill: var(--vscode-badge-foreground, #fff); font-size: 10px; font-weight: 600; }
 .side { fill: var(--vscode-descriptionForeground); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 #canvas.off { display: none; }
+
+/* Find */
+#search { width: 180px; min-height: 22px; padding: 2px 6px; box-sizing: border-box; border: 1px solid var(--vscode-input-border, transparent); border-radius: 2px;
+  background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-family: inherit; font-size: inherit; }
+#search:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+#searchCount { min-width: 60px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.node.dim { opacity: .35; }
+.node.match .box { stroke: var(--vscode-editor-findMatchHighlightBorder, #ea5c00); stroke: var(--vscode-editorOverviewRuler-findMatchForeground, #d18616); stroke-width: 2; }
+.node.match.current .box { stroke-width: 3; }
