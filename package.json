@@ -736,6 +736,12 @@
         "title": "Go to Next Inspection Problem",
         "category": "TypeScript Structure",
         "icon": "$(arrow-down)"
+      },
+      {
+        "command": "tsStructure.inspectChanged",
+        "title": "Inspect Changed Files",
+        "category": "TypeScript Structure",
+        "icon": "$(diff-multiple)"
       }
     ],
     "viewsContainers": {
@@ -1716,6 +1722,10 @@
         {
           "command": "tsStructure.nextProblem",
           "when": "config.tsStructure.features.inspections"
+        },
+        {
+          "command": "tsStructure.inspectChanged",
+          "when": "config.tsStructure.features.inspections"
         }
       ],
       "view/title": [
@@ -2062,6 +2072,11 @@
           "command": "tsStructure.dependencyGraphDiff",
           "when": "config.tsStructure.features.graphDiff && scmProvider == git",
           "group": "1_tsStructure@1"
+        },
+        {
+          "command": "tsStructure.inspectChanged",
+          "when": "config.tsStructure.features.inspections && scmProvider == git",
+          "group": "1_tsStructure@2"
         }
       ],
       "editor/title": [
