@@ -61,3 +61,9 @@ test('Promise Rejections rows explain their terms', () => {
   assert.equal(termFor('.catch(console.error)', '')?.term, '.catch()');
   assert.equal(termFor('caught in submitSafely', '')?.term, 'catch block');
 });
+
+test('Exception Flow rows explain their terms', () => {
+  assert.equal(termFor('finally block runs on every exit', '')?.term, 'finally');
+  assert.equal(termFor('Thrown here', '')?.term, 'throw');
+  assert.equal(termFor('propagates through placeOrder', '')?.term, 'Propagation');
+});

@@ -339,3 +339,40 @@ glossary.push(
     url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise',
   },
 );
+
+// --- Exception Flow ------------------------------------------------------------------
+glossary.push(
+  {
+    term: 'finally',
+    match: /^finally block\b/,
+    meaning: 'A finally block runs whether the try block finishes, returns or throws, so it suits clean-up such as closing a file or hiding a spinner.',
+    example: 'try { … } finally { setLoading(false); }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch',
+  },
+  {
+    term: 'throw',
+    match: /^Thrown (here|by called functions)$/,
+    meaning: 'throw stops the function and hands the value to the nearest enclosing catch, in this function or a caller. Throwing Error objects keeps a stack trace.',
+    example: "throw new OrderError('Order total must be positive');",
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw',
+  },
+  {
+    term: 'Uncaught error',
+    match: /^Uncaught$|errors are uncaught|^Escaping errors/,
+    meaning: 'An error no catch block handles. It reaches the caller, and at the top it stops the script, fails the request or shows the error overlay.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error',
+  },
+  {
+    term: 'Propagation',
+    match: /^propagates (through|into)\b/,
+    meaning: 'An error not caught in a function passes on to the function that called it. In an async caller it becomes a rejected promise.',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw',
+  },
+  {
+    term: 'Error type',
+    match: /^Error types$/,
+    meaning: 'The classes of the thrown values. Checking them with instanceof in a catch block handles one kind and rethrows the rest.',
+    example: 'catch (e) { if (e instanceof OrderError) … else throw e; }',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof',
+  },
+);
