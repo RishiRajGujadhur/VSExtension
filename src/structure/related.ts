@@ -17,3 +17,8 @@ relatedAnalyses.sideEffects = [
   { command: 'tsStructure.mutationTracking', title: 'Who else changes shared state in this file? (Mutation Tracking)' },
   { command: 'tsStructure.semanticUsages', title: 'Who calls it? (Find Usages)' },
 ];
+
+relatedAnalyses.rejections = [
+  { command: 'tsStructure.exceptionFlow', title: 'What it throws synchronously (Exception Flow)' },
+  { command: 'tsStructure.sideEffects', title: 'What else it does (Side Effects)' },
+];
