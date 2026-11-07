@@ -593,3 +593,35 @@ glossary.push(
     url: 'https://en.wikipedia.org/wiki/Circular_dependency',
   },
 );
+
+// --- Audit Type Assertions -----------------------------------------------------------
+glossary.push(
+  {
+    term: 'Unsafe assertion',
+    match: /^Unsafe$/,
+    meaning: 'as any, or two assertions in a row (as unknown as T), turn type checking off for that value: the compiler checks nothing.',
+    example: 'const user = data as unknown as User;',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions',
+  },
+  {
+    term: 'Unchecked narrowing',
+    match: /^Unchecked narrowing$/,
+    meaning: 'An assertion to a more specific type than the value has, without a check that it really is that type. A type guard or instanceof check is safer.',
+    example: 'const input = event.target as HTMLInputElement;',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/narrowing.html',
+  },
+  {
+    term: 'Unverified any',
+    match: /^Unverified$/,
+    meaning: 'Asserting a value typed any, such as the result of JSON.parse(), gives it a type nobody verified. Validate it first.',
+    example: 'const config = JSON.parse(text) as Config;',
+    url: 'https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions',
+  },
+  {
+    term: 'Widening',
+    match: /^Widening$/,
+    meaning: 'Asserting to a wider type is safe, but satisfies checks the value and keeps its precise type.',
+    example: 'const theme = { dark: true } satisfies Theme;',
+    url: 'https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html',
+  },
+);

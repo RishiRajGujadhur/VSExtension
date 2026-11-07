@@ -98,3 +98,8 @@ test('Dependency Path rows explain their terms', () => {
   assert.equal(termFor("cart.ts: import type { Order } from './models'", '')?.term, 'Type-only import');
   assert.equal(termFor('New import cycles', '')?.term, 'Import cycle');
 });
+
+test('Audit Type Assertions rows explain their terms', () => {
+  assert.equal(termFor('Unsafe', '')?.term, 'Unsafe assertion');
+  assert.equal(termFor('Widening', '')?.term, 'Widening');
+});
