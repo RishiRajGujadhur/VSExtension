@@ -45,3 +45,8 @@ relatedAnalyses.overrideImpact = [
   { command: 'tsStructure.semanticUsages', title: 'Every call (Find Usages)' },
   { command: 'tsImpact.analyze', title: 'Tests to run after the change (Test Impact)' },
 ];
+
+relatedAnalyses.reexports = [
+  { command: 'tsStructure.semanticUsages', title: 'Every usage under any name (Find Usages)' },
+  { command: 'tsStructure.whoImports', title: 'Which files import this one' },
+];
