@@ -1,0 +1,37 @@
+html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
+header #caption { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vscode-descriptionForeground); }
+header button { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 2px 8px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; cursor: pointer;
+  background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); font-family: inherit; font-size: inherit; }
+header button:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
+header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+#canvas { width: 100%; height: calc(100% - 40px); cursor: grab; }
+#canvas.dragging { cursor: grabbing; }
+#empty { padding: 24px; color: var(--vscode-descriptionForeground); }
+
+.edge { fill: none; stroke: var(--vscode-editorLineNumber-foreground, #858585); stroke-width: 1.4; }
+#arrow path { fill: var(--vscode-editorLineNumber-foreground, #858585); }
+
+.node .box { fill: var(--vscode-editorWidget-background, #252526); stroke: var(--vscode-editorWidget-border, #454545); stroke-width: 1; }
+.node.located { cursor: pointer; }
+.node.located:hover .box, .node:focus .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; }
+.node:focus { outline: none; }
+.node .label { fill: var(--vscode-foreground); font-size: 12px; font-weight: 600; }
+.node .description { fill: var(--vscode-descriptionForeground); font-size: 11px; }
+.node.center .box { fill: var(--vscode-button-background, #0e639c); stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2; }
+.node.center .label, .node.center .description { fill: var(--vscode-button-foreground, #fff); }
+
+/* The colored bar and border say what the row found, like the icon colors in the results view. */
+.node.ok .tone { fill: var(--vscode-testing-iconPassed, #73c991); }
+.node.ok .box { stroke: var(--vscode-testing-iconPassed, #73c991); }
+.node.warning .tone { fill: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+.node.warning .box { stroke: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+.node.error .tone { fill: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+.node.error .box { stroke: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+.node.info .tone { fill: var(--vscode-problemsInfoIcon-foreground, #3794ff); }
+
+.toggle { cursor: pointer; }
+.toggle circle { fill: var(--vscode-badge-background, #4d4d4d); stroke: var(--vscode-editor-background); stroke-width: 2; }
+.toggle text { fill: var(--vscode-badge-foreground, #fff); font-size: 10px; font-weight: 600; }
+.side { fill: var(--vscode-descriptionForeground); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+#canvas.off { display: none; }

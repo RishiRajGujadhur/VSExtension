@@ -8,6 +8,7 @@ import { runTests } from './runner';
 import { registerRefactorings } from './ui/refactorCommands';
 import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
+import { DiagramPanel } from './ui/diagramView';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
 import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
 import { customInspections } from './search/customInspections';
@@ -62,6 +63,17 @@ export function activate(context: vscode.ExtensionContext): void {
   registerRefactorings(context, projects);
   const structureView = new StructureView(context.workspaceState, context.extensionUri);
   registerAnalyses(context, projects, structureView);
+  const diagram = new DiagramPanel(context.extensionUri, structureView);
+  context.subscriptions.push(
+    registerCommand('tsStructure.report.showDiagram', () => diagram.show()),
+    // Data Flow at the cursor, drawn as a chart.
+    registerCommand('tsStructure.dataFlowDiagram', async () => {
+      await vscode.commands.executeCommand('tsStructure.dataFlow');
+      if (structureView.report?.kind === 'dataFlow') {
+        diagram.show();
+      }
+    }),
+  );
   registerStructuralSearch(context, projects, structureView);
   registerGraphDiff(context, projects, structureView);
   new SideEffectLens(projects).register(context);

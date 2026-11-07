@@ -46,6 +46,9 @@ const settingsOf: Record<string, string[]> = {
 export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private readonly changed = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.changed.event;
+  private readonly reportChanged = new vscode.EventEmitter<Report | undefined>();
+  /** Fires when another report is shown, such as a new analysis or one from the history. */
+  readonly onDidChangeReport = this.reportChanged.event;
   readonly view: vscode.TreeView<ReportNode>;
   private history: Entry[] = [];
   private position = -1;
@@ -329,6 +332,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     void vscode.commands.executeCommand('setContext', 'tsStructure.limited', !!this.limit);
     void vscode.commands.executeCommand('setContext', 'tsStructure.narrowed', !!this.filter || !!this.limit || this.hidden.size > 0);
     void vscode.commands.executeCommand('setContext', 'tsStructure.reportKind', report?.kind);
+    this.reportChanged.fire(report);
     this.changed.fire();
     this.highlight();
   }
@@ -591,7 +595,10 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       }
     }
     const selection = new vscode.Range(location.line, location.character, location.endLine, location.endCharacter);
-    await vscode.window.showTextDocument(uri, { selection, preview: !sideBySide, viewColumn: sideBySide ? vscode.ViewColumn.Beside : undefined });
+    // From a diagram tab, the code opens in another editor group so the diagram stays in view.
+    const fromWebview = vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputWebview;
+    const other = fromWebview ? (vscode.window.tabGroups.all.find((g) => g !== vscode.window.tabGroups.activeTabGroup)?.viewColumn ?? vscode.ViewColumn.Beside) : undefined;
+    await vscode.window.showTextDocument(uri, { selection, preview: !sideBySide, viewColumn: sideBySide ? vscode.ViewColumn.Beside : other });
   }
 }
 
