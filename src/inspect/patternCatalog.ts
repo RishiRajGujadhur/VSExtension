@@ -762,3 +762,20 @@ catalog.push({
     });
   },
 });
+
+catalog.push({
+  name: 'Compound components',
+  meaning: 'A component exposes its parts as properties, such as Tabs.Panel, which work together through shared state.',
+  detect: (sf) => {
+    const components = new Set(functionsIn(sf).map((f) => f.name).filter((n) => /^[A-Z]/.test(n)));
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isPropertyAccessExpression(node.left) && /^[A-Z]/.test(node.left.name.text) && components.has(text(node.left.expression))) {
+        found.push({ node, evidence: `${text(node.left)} is a part of ${text(node.left.expression)}`, subject: text(node.left.expression) });
+      } else if (ts.isCallExpression(node) && text(node.expression) === 'Object.assign' && node.arguments.length === 2 && components.has(text(node.arguments[0])) && ts.isObjectLiteralExpression(node.arguments[1])) {
+        found.push({ node, evidence: `${text(node.arguments[0])} carries its parts ${node.arguments[1].properties.map((p) => nameOf(p) ?? text(p)).join(', ')}`, subject: text(node.arguments[0]) });
+      }
+    });
+    return found;
+  },
+});

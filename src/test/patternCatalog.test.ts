@@ -219,3 +219,8 @@ test('Flyweight is recognized', () => {
 test('Bridge is recognized', () => {
   has('interface Device { on(): void } class Tv implements Device { on() {} } class Radio implements Device { on() {} } class Remote { constructor(protected device: Device) {} power() { this.device.on(); } } class AdvancedRemote extends Remote { mute() {} }', 'Bridge');
 });
+
+test('Compound components are recognized', () => {
+  has('function Tabs() { return <div />; } function Panel() { return <section />; } Tabs.Panel = Panel;', 'Compound components');
+  has('function Menu() { return <ul />; } function Item() { return <li />; } export default Object.assign(Menu, { Item });', 'Compound components');
+});
