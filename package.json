@@ -796,6 +796,12 @@
         "title": "Mutation Tracking for This Variable",
         "category": "TypeScript Structure",
         "icon": "$(symbol-variable)"
+      },
+      {
+        "command": "tsStructure.raceConditions",
+        "title": "Race Conditions",
+        "category": "TypeScript Structure",
+        "icon": "$(watch)"
       }
     ],
     "viewsContainers": {
@@ -1091,6 +1097,12 @@
         "mac": "cmd+ctrl+s 6",
         "command": "tsStructure.mutationTrackingVariable",
         "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s 7",
+        "mac": "cmd+ctrl+s 7",
+        "command": "tsStructure.raceConditions",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1290,6 +1302,11 @@
         },
         {
           "command": "tsStructure.mutationTrackingVariable",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@3"
+        },
+        {
+          "command": "tsStructure.raceConditions",
           "when": "config.tsStructure.features.dataFlow",
           "group": "3_analysis@3"
         }
@@ -1856,6 +1873,10 @@
         },
         {
           "command": "tsStructure.mutationTrackingVariable",
+          "when": "config.tsStructure.features.dataFlow"
+        },
+        {
+          "command": "tsStructure.raceConditions",
           "when": "config.tsStructure.features.dataFlow"
         }
       ],

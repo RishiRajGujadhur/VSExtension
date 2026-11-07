@@ -65,6 +65,12 @@ relatedAnalyses.mutations = [
 ];
 
 relatedAnalyses.variableMutations = [
+  { command: 'tsStructure.raceConditions', title: 'Can async code interleave? (Race Conditions)' },
   { command: 'tsStructure.dataFlow', title: 'Where its values come from (Data Flow)' },
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
+];
+
+relatedAnalyses.races = [
+  { command: 'tsStructure.mutationTrackingVariable', title: 'Every change to it (Mutation Tracking for This Variable)' },
+  { command: 'tsStructure.dataFlow', title: 'Its whole data flow (Data Flow)' },
 ];

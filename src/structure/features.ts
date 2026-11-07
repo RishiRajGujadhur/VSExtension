@@ -43,7 +43,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Data Flow and Mutation Tracking',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions'],
   },
   {
     id: 'sideEffects',

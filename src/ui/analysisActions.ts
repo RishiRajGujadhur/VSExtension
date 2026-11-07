@@ -21,6 +21,7 @@ const qualified = (s: FileSymbol) => (s.container && s.kind === 'member' ? `${s.
 const analyses: readonly CursorAnalysis[] = [
   { command: 'tsStructure.dataFlow', feature: 'dataFlow', kinds: ['variable', 'parameter', 'member'], accepts: notMethod, lightbulb: (s) => `Show data flow of '${s.name}'` },
   { command: 'tsStructure.mutationTrackingVariable', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Track every change to '${s.name}'` },
+  { command: 'tsStructure.raceConditions', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Check '${s.name}' for race conditions` },
   { command: 'tsStructure.nullability', feature: 'nullability', kinds: ['variable', 'parameter', 'member', 'function'] },
   { command: 'tsStructure.argumentFlow', feature: 'argumentFlow', kinds: ['parameter'], lightbulb: (s) => `Trace values of parameter '${s.name}'` },
   { command: 'tsStructure.sideEffects', feature: 'sideEffects', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show side effects of ${qualified(s)}()` },
@@ -142,6 +143,7 @@ const titles: Record<string, string> = {
   'tsStructure.dataFlow': 'Data Flow',
   'tsStructure.nullability': 'Nullability',
   'tsStructure.mutationTrackingVariable': 'Mutation Tracking',
+  'tsStructure.raceConditions': 'Race Conditions',
   'tsStructure.argumentFlow': 'Argument Propagation',
   'tsStructure.sideEffects': 'Side Effects',
   'tsStructure.exceptionFlow': 'Exception Flow',

@@ -31,6 +31,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Which functions in the project change shared state?', command: 'tsStructure.mutationTrackingProject', key: '3' },
   { question: 'Which tests cover my uncommitted changes?', command: 'tsImpact.analyzeChanged', key: '4' },
   { question: 'Who changes this variable, and when?', command: 'tsStructure.mutationTrackingVariable', key: '6' },
+  { question: 'Can async code change this variable at the wrong time?', command: 'tsStructure.raceConditions', key: '7' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];
