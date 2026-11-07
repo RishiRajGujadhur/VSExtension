@@ -15,6 +15,9 @@
   const searchBox = document.getElementById('search');
   const searchCount = document.getElementById('searchCount');
   const info = document.getElementById('info');
+  const zoomLevel = document.getElementById('zoomLevel');
+  const legend = document.getElementById('legend');
+  const legendButton = document.getElementById('legendButton');
   let diagram;
   let view = { x: 0, y: 0, k: 1 };
   let query = '';
@@ -266,6 +269,7 @@
 
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
     remember();
   }
 
@@ -393,6 +397,14 @@
   }
 
   document.getElementById('mermaid').addEventListener('click', copyMermaid);
+  zoomLevel.addEventListener('click', () => zoom(1 / view.k));
+  // The legend: what colors, arrows and buttons mean, and the keys. Escape closes it.
+  const showLegend = (open) => {
+    legend.hidden = !open;
+    legendButton.setAttribute('aria-expanded', String(open));
+  };
+  legendButton.addEventListener('click', () => showLegend(legend.hidden));
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !legend.hidden) showLegend(false); });
   document.getElementById('save').addEventListener('click', exportSvg);
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));

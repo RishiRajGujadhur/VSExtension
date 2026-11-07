@@ -1,5 +1,5 @@
 html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
 header #caption { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vscode-descriptionForeground); }
 header button { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 2px 8px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; cursor: pointer;
   background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); font-family: inherit; font-size: inherit; }
@@ -57,3 +57,21 @@ body { display: flex; flex-direction: column; }
 
 /* The row selected in the results view. */
 .node.selected .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.5; }
+
+/* Zoom level and legend */
+#zoomLevel { min-width: 52px; justify-content: center; }
+body { position: relative; }
+#legend { position: absolute; top: 44px; right: 12px; z-index: 2; max-width: 360px; padding: 8px 14px; border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545)); border-radius: 4px;
+  background: var(--vscode-editorWidget-background, #252526); box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); font-size: 12px; }
+#legend[hidden] { display: none; }
+#legend h2 { margin: 6px 0 4px; font-size: 12px; font-weight: 600; }
+#legend ul { margin: 0 0 6px; padding: 0; list-style: none; }
+#legend li { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+#legend .swatch { flex: none; width: 18px; height: 12px; border-radius: 3px; border: 2px solid var(--vscode-editorWidget-border, #454545); box-sizing: border-box; }
+#legend .swatch.subject { background: var(--vscode-button-background, #0e639c); border-color: var(--vscode-focusBorder, #007fd4); }
+#legend .swatch.ok { border-color: var(--vscode-testing-iconPassed, #73c991); }
+#legend .swatch.warning { border-color: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+#legend .swatch.error { border-color: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+#legend .swatch.info { border-color: var(--vscode-problemsInfoIcon-foreground, #3794ff); }
+#legend .glyph { flex: none; width: 18px; text-align: center; font-weight: 600; }
+#legend kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, #555); border-radius: 3px; background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); font-family: inherit; font-size: 11px; }

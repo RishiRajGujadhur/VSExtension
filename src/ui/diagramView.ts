@@ -80,17 +80,39 @@ export class DiagramPanel {
   <span id="searchCount" aria-live="polite"></span>
   ${button('collapse', 'Fold All', 'Show only the rows next to the subject')}
   ${button('expand', 'Unfold All', 'Show every row')}
-  ${button('zoomOut', '−', 'Zoom out')}
-  ${button('zoomIn', '+', 'Zoom in')}
+  ${button('zoomOut', '−', 'Zoom out (−)')}
+  <button id="zoomLevel" title="Zoom level; click for 100%">100%</button>
+  ${button('zoomIn', '+', 'Zoom in (+)')}
   ${button('fit', 'Fit', 'Fit the diagram to the window')}
   ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
+  <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend">?</button>
 </header>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
 <svg id="canvas" class="off" role="img" aria-label="Analysis diagram">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>
 </svg>
+<aside id="legend" hidden>
+  <h2>Reading the chart</h2>
+  <ul>
+    <li><span class="swatch subject"></span>The subject of the analysis, such as the variable</li>
+    <li><span class="swatch ok"></span>Safe or handled</li>
+    <li><span class="swatch warning"></span>Needs a look, such as a value that may be undefined</li>
+    <li><span class="swatch error"></span>A problem, such as an unhandled error</li>
+    <li><span class="swatch info"></span>Worth knowing, such as a write</li>
+    <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
+    <li><span class="glyph">3</span>A folded box and how many boxes it hides; click it, or press Space, to unfold</li>
+  </ul>
+  <h2>Keys</h2>
+  <ul>
+    <li><kbd>Tab</kbd> then arrow keys: move between boxes</li>
+    <li><kbd>Enter</kbd> open the code · <kbd>Space</kbd> fold or unfold</li>
+    <li><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>0</kbd> fit · <kbd>Home</kbd> back to the subject</li>
+    <li><kbd>Ctrl+F</kbd> find a box · <kbd>Enter</kbd> next match</li>
+    <li>Right-click a box: Check for Null, Find Usages, Data Flow and more</li>
+  </ul>
+</aside>
 <footer id="info" aria-live="polite"></footer>
 <script src="${asset('diagram.js')}"></script>
 </body>
