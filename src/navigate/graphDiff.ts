@@ -330,5 +330,8 @@ export function graphDiffReport(diff: GraphDiff, afterFiles: Map<string, string>
       }),
     });
   }
+  if (!diff.addedEdges.length && !diff.removedEdges.length) {
+    return builder.finish(roots, 'imports unchanged');
+  }
   return builder.finish(roots, `+${diff.addedEdges.length} −${diff.removedEdges.length} imports, ${plural(diff.newCycles.length, 'new cycle')}`);
 }
