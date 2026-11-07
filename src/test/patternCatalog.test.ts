@@ -250,3 +250,7 @@ test('Portal is recognized', () => {
 test('Forwarded ref is recognized', () => {
   has('const Field = forwardRef<HTMLInputElement, {}>((props, ref) => <input ref={ref} />);', 'Forwarded ref');
 });
+
+test('Polymorphic component is recognized', () => {
+  has('interface BoxProps { as?: React.ElementType; children?: any }', 'Polymorphic component');
+});

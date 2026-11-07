@@ -867,3 +867,18 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Polymorphic component',
+  meaning: 'An "as" prop chooses which element or component is rendered, such as a Button rendered as a link.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isPropertySignature(node) && text(node.name) === 'as' && node.type && /ElementType|IntrinsicElements|ComponentType/.test(text(node.type))) {
+        const owner = ts.isTypeLiteralNode(node.parent) && ts.isTypeAliasDeclaration(node.parent.parent) ? node.parent.parent.name.text : ts.isInterfaceDeclaration(node.parent) ? node.parent.name.text : undefined;
+        found.push({ node, evidence: `${owner ?? 'the props'} let the caller choose the rendered element with as` });
+      }
+    });
+    return found;
+  },
+});
