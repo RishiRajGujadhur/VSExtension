@@ -64,7 +64,9 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     }
     const options: IntroduceParameterOptions = { name: name.trim(), mode: mode.mode, replaceAll };
     const result = introduceParameter(projects.createVirtualProject(document.uri.fsPath, root), document.uri.fsPath, start, end, options);
-    await applyRefactor(result, previewEnabled());
+    if (await applyRefactor(result, previewEnabled())) {
+      void vscode.window.setStatusBarMessage(`Added parameter ${options.name} to ${info.functionName}`, 4000);
+    }
   } catch (error) {
     reportError(error, 'Introduce Parameter');
   }
