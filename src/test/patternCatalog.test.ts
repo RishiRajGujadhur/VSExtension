@@ -238,3 +238,7 @@ test('Memoized component is recognized', () => {
   has('const Row = memo(function Row(p: { id: string }) { return <li>{p.id}</li>; });', 'Memoized component');
   has('export default React.memo(List);', 'Memoized component');
 });
+
+test('Lazy-loaded component is recognized', () => {
+  has('const Settings = lazy(() => import("./Settings"));', 'Lazy-loaded component');
+});

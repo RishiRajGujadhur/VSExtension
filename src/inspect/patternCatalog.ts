@@ -822,3 +822,19 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Lazy-loaded component',
+  meaning: 'A component is loaded only when first rendered, keeping it out of the initial bundle; Suspense shows a fallback meanwhile.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /^(React\.)?lazy$/.test(text(node.expression)) && /\bimport\(/.test(text(node.arguments[0]))) {
+        const name = ts.isVariableDeclaration(node.parent) ? nameOf(node.parent) : undefined;
+        const from = /import\(\s*(['"`][^'"`]+['"`])/.exec(text(node.arguments[0]))?.[1];
+        found.push({ node, evidence: `${name ?? 'a component'} loads ${from ?? 'its module'} on first render`, subject: name });
+      }
+    });
+    return found;
+  },
+});
