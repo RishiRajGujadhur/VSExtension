@@ -96,6 +96,7 @@ export class DiagramPanel {
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
   <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend">?</button>
 </header>
+<div id="branch" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
 <svg id="canvas" class="off" role="img" aria-label="Analysis diagram">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
@@ -119,6 +120,7 @@ export class DiagramPanel {
     <li><kbd>Tab</kbd> then arrow keys: move between boxes</li>
     <li><kbd>Enter</kbd> open the code · <kbd>Space</kbd> fold or unfold</li>
     <li><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>0</kbd> fit · <kbd>Home</kbd> back to the subject</li>
+    <li>Double-click a box, or <kbd>B</kbd>: show only its branch · <kbd>Escape</kbd> the whole chart again</li>
     <li><kbd>Ctrl+F</kbd> find a box · <kbd>Enter</kbd> next match</li>
     <li>Right-click a box: Check for Null, Find Usages, Data Flow and more</li>
   </ul>

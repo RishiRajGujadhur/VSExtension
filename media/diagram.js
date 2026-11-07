@@ -45,7 +45,14 @@
     if (parent) parent.appendChild(node);
     return node;
   };
-  const visible = (node) => (node.collapsed ? [] : node.children);
+  // Branch focus: after a double-click only the box, the boxes between it and the subject, and what is behind it are drawn.
+  let isolated;
+  let chain = new Set();
+  const visible = (node) => {
+    if (node.collapsed) return [];
+    return isolated && chain.has(node) && node !== isolated ? node.children.filter((c) => chain.has(c)) : node.children;
+  };
+  const roots = (nodes) => (isolated ? nodes.filter((n) => chain.has(n)) : nodes);
   const forEach = (nodes, visit) => nodes.forEach((n) => { visit(n); forEach(n.children, visit); });
   // Each box gets its parent and a key made of the labels on its way to the subject, which survives a re-run.
   const linkParents = (nodes, parent, side) => nodes.forEach((n) => { n.parent = parent; n.key = `${parent ? parent.key : side}/${n.label}`; linkParents(n.children, n, side); });
@@ -93,11 +100,11 @@
   function render() {
     scene.textContent = '';
     if (!diagram) return;
-    const leftRows = place(diagram.left, 1, -1, { next: 0 });
-    const rightRows = place(diagram.right, 1, 1, { next: 0 });
+    const leftRows = place(roots(diagram.left), 1, -1, { next: 0 });
+    const rightRows = place(roots(diagram.right), 1, 1, { next: 0 });
     const rows = Math.max(leftRows, rightRows, 1);
-    shift(diagram.left, (rows - leftRows) / 2);
-    shift(diagram.right, (rows - rightRows) / 2);
+    shift(roots(diagram.left), (rows - leftRows) / 2);
+    shift(roots(diagram.right), (rows - rightRows) / 2);
     const center = diagram.center;
     center.row = (rows - 1) / 2;
     center.depth = 0;
@@ -105,8 +112,8 @@
     // Each column is as wide as its widest box; left boxes line up on the edge facing the subject.
     const shown = [center];
     const collect = (nodes) => nodes.forEach((n) => { shown.push(n); collect(visible(n)); });
-    collect(diagram.left);
-    collect(diagram.right);
+    collect(roots(diagram.left));
+    collect(roots(diagram.right));
     shownNodes = shown;
     const columns = { '-1': [], '1': [] };
     for (const n of shown) {
@@ -147,8 +154,8 @@
         linkAll(node, visible(node), side);
       }
     };
-    linkAll(center, diagram.left, -1);
-    linkAll(center, diagram.right, 1);
+    linkAll(center, roots(diagram.left), -1);
+    linkAll(center, roots(diagram.right), 1);
 
     const layer = el('g', { class: 'nodes' }, scene);
     const draw = (node) => {
@@ -161,6 +168,7 @@
       g.addEventListener('mouseenter', () => { highlightPath(node); showInfo(node); });
       g.addEventListener('mouseleave', () => { highlightPath(focused); showInfo(focused); });
       g.addEventListener('keydown', (e) => onNodeKey(e, node));
+      g.addEventListener('dblclick', (e) => { e.stopPropagation(); if (node !== center) isolate(node); });
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
       if (node.kind === 'pattern') {
         // Hexagon: a design pattern, not a step of the value.
@@ -175,8 +183,13 @@
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
         g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
-        const open = () => vscode.postMessage({ type: 'open', location: node.location });
-        g.addEventListener('click', open);
+        // A single click opens the code; a double-click focuses on the branch instead, so the click waits a moment.
+        let pending;
+        g.addEventListener('click', () => {
+          clearTimeout(pending);
+          pending = setTimeout(() => vscode.postMessage({ type: 'open', location: node.location }), 220);
+        });
+        g.addEventListener('dblclick', () => clearTimeout(pending));
       }
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
@@ -193,14 +206,34 @@
     };
     draw(center);
     const drawAll = (nodes) => nodes.forEach((n) => { draw(n); drawAll(visible(n)); });
-    drawAll(diagram.left);
-    drawAll(diagram.right);
-    if (diagram.leftCaption && diagram.left.length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
-    if (diagram.rightCaption && diagram.right.length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
+    drawAll(roots(diagram.left));
+    drawAll(roots(diagram.right));
+    if (diagram.leftCaption && roots(diagram.left).length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
+    if (diagram.rightCaption && roots(diagram.right).length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     highlighted = [];
     apply();
     if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
   }
+
+  const branchBar = document.getElementById('branch');
+  function isolate(node) {
+    isolated = node;
+    chain = new Set();
+    if (node) {
+      for (let p = node; p; p = p.parent) chain.add(p);
+      for (let p = node.parent; p; p = p.parent) p.collapsed = false;
+      node.collapsed = false;
+    }
+    branchBar.hidden = !node;
+    if (node) document.getElementById('branchLabel').textContent = `Showing only ${node.label}`;
+    render();
+    fit();
+    if (node && node.el) node.el.focus({ preventScroll: true });
+  }
+  document.getElementById('wholeChart').addEventListener('click', () => isolate(undefined));
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isolated && e.target !== searchBox && legend.hidden) isolate(undefined);
+  });
 
   // The bar under the chart shows the whole text of the hovered or focused box, where it is, and what can be done with it.
   function showInfo(node) {
@@ -213,7 +246,7 @@
     strong.textContent = node.label;
     info.appendChild(strong);
     const parts = [node.description, node.location ? `${node.location.file.split(/[\\/]/).pop()}:${node.location.line + 1}` : ''];
-    const actions = [node.location ? 'Enter or click: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : ''];
+    const actions = [node.location ? 'Enter or click: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : '', node !== diagram.center && node !== isolated ? 'double-click or B: only this branch' : ''];
     const rest = document.createElement('span');
     rest.textContent = [...parts, actions.filter(Boolean).join(', ')].filter(Boolean).map((t) => ` · ${t}`).join('');
     info.appendChild(rest);
@@ -259,7 +292,7 @@
       const column = shownNodes.filter((n) => n.side === node.side && n.depth === node.depth).sort((a, b) => a.row - b.row);
       return column[column.indexOf(node) + (key === 'ArrowDown' ? 1 : -1)];
     }
-    if (node === center) return key === 'ArrowRight' ? diagram.right[0] : diagram.left[0];
+    if (node === center) return key === 'ArrowRight' ? roots(diagram.right)[0] : roots(diagram.left)[0];
     const outward = node.side > 0 ? 'ArrowRight' : 'ArrowLeft';
     return key === outward ? visible(node)[0] : node.parent || center;
   }
@@ -277,6 +310,8 @@
       if (next && next.el) { next.el.focus({ preventScroll: true }); ensureVisible(next); }
     } else if (e.key === 'Enter' && node.location) {
       vscode.postMessage({ type: 'open', location: node.location });
+    } else if ((e.key === 'b' || e.key === 'B') && node !== diagram.center) {
+      isolate(node === isolated ? undefined : node);
     } else if (e.key === ' ' && node.children.length && node !== diagram.center) {
       e.preventDefault();
       node.collapsed = !node.collapsed;
@@ -470,6 +505,9 @@
     selected = undefined;
     showInfo(undefined);
     if (diagram) {
+      isolated = undefined;
+      chain = new Set();
+      branchBar.hidden = true;
       linkParents(diagram.left, undefined, 'in');
       linkParents(diagram.right, undefined, 'out');
     }
