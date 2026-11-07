@@ -596,3 +596,28 @@ catalog.push({
       return names.includes('commit') && names.includes('rollback') ? [{ node: cls, evidence: `${className(cls)} saves its changes together with commit() or drops them with rollback()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Discriminated union',
+  meaning: 'A union of object types told apart by one literal field, such as kind, so a switch on it narrows to the right shape.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (!ts.isTypeAliasDeclaration(node) || !ts.isUnionTypeNode(node.type) || node.type.types.length < 2) {
+        return;
+      }
+      const shapes = node.type.types.filter(ts.isTypeLiteralNode);
+      if (shapes.length !== node.type.types.length) {
+        return;
+      }
+      // A field every member has, each time with a literal type.
+      const literalFields = (shape: ts.TypeLiteralNode) =>
+        shape.members.filter((m): m is ts.PropertySignature => ts.isPropertySignature(m) && !!m.type && ts.isLiteralTypeNode(m.type)).map((m) => text(m.name));
+      const tag = literalFields(shapes[0]).find((field) => shapes.every((s) => literalFields(s).includes(field)));
+      if (tag) {
+        found.push({ node, evidence: `${node.name.text} is told apart by its ${tag} field`, subject: node.name.text });
+      }
+    });
+    return found;
+  },
+});

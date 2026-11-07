@@ -172,3 +172,8 @@ test('Design patterns: recognize Specification', () => {
 test('Design patterns: recognize Unit of work', () => {
   has('class UnitOfWork { commit() {} rollback() {} }', 'Unit of work');
 });
+
+test('Discriminated union is recognized', () => {
+  has("type Shape = { kind: 'circle'; r: number } | { kind: 'square'; side: number };", 'Discriminated union');
+  lacks('type Id = { a: string } | { b: number };', 'Discriminated union');
+});
