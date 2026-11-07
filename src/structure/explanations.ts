@@ -16,6 +16,21 @@ export const explanations: Record<string, Explanation> = {
       'This report lists the functions that mutate state, and, turned around, each piece of shared state with every function that writes it.',
     anchor: 'nullability-side-effects-mutations-errors-and-arguments',
   },
+  variableMutations: {
+    title: 'Mutation Tracking for one variable',
+    text:
+      'Every function in the project that assigns or changes this variable, in source order. Async functions, callbacks such as setTimeout or event handlers, and changes made after an await are marked, ' +
+      'because those can run interleaved with other code. The first row says how widely the variable is shared: module-level and object properties are shared by every caller, a local variable is not.',
+    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+  },
+  races: {
+    title: 'What is a race condition?',
+    text:
+      'JavaScript runs one thing at a time, but an await pauses a function and lets other code run before it continues. ' +
+      'If a function reads or checks shared state, awaits, and then writes it, another call can change the state during the wait and that change is lost (a lost update), ' +
+      'or two calls can both pass the check before either acts (check, then act). Fix it by reading after the await, by keeping one pending promise (for caches), or by queuing the work.',
+    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+  },
   dataFlow: {
     title: 'Data Flow',
     text: 'Every place the value is defined, changed, checked, passed on and read, grouped by function. Flows in shows what it is computed from, Flows out where it goes, and Design patterns how the code around it is organized.',

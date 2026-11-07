@@ -790,6 +790,12 @@
         "title": "What Does This Mean?",
         "category": "TypeScript Structure",
         "icon": "$(question)"
+      },
+      {
+        "command": "tsStructure.mutationTrackingVariable",
+        "title": "Mutation Tracking for This Variable",
+        "category": "TypeScript Structure",
+        "icon": "$(symbol-variable)"
       }
     ],
     "viewsContainers": {
@@ -1079,6 +1085,12 @@
         "mac": "cmd+ctrl+s 4",
         "command": "tsImpact.analyzeChanged",
         "when": "config.tsStructure.features.testImpact"
+      },
+      {
+        "key": "ctrl+alt+s 6",
+        "mac": "cmd+ctrl+s 6",
+        "command": "tsStructure.mutationTrackingVariable",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1275,6 +1287,11 @@
           "command": "tsStructure.showRewrites",
           "when": "config.tsStructure.features.intentions",
           "group": "1_refactor@9"
+        },
+        {
+          "command": "tsStructure.mutationTrackingVariable",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@3"
         }
       ],
       "explorer/context": [
@@ -1836,6 +1853,10 @@
         {
           "command": "tsStructure.report.explainTerm",
           "when": "false"
+        },
+        {
+          "command": "tsStructure.mutationTrackingVariable",
+          "when": "config.tsStructure.features.dataFlow"
         }
       ],
       "view/title": [

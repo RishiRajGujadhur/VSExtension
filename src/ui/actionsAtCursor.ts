@@ -33,6 +33,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.sideEffects', label: 'Side Effects', detail: 'What this function changes or reads besides its result' },
       { command: 'tsStructure.detectPatterns', label: 'Detect Design Patterns…', detail: 'Factories, observers, strategies, singletons and other patterns in the code' },
       { command: 'tsStructure.mutationTracking', label: 'Mutation Tracking', detail: 'Functions in this file that mutate shared state' },
+      { command: 'tsStructure.mutationTrackingVariable', label: 'Mutation Tracking for This Variable', detail: 'Every change to the variable at the cursor, and whether it runs after an await' },
       { command: 'tsStructure.mutationTrackingProject', label: 'Mutation Tracking (Project)', detail: 'Every function in the project that mutates shared state' },
       { command: 'tsStructure.promiseRejections', label: 'Promise Rejections', detail: 'Where this function’s rejections are handled or lost' },
       { command: 'tsStructure.exceptionFlow', label: 'Exception Flow', detail: 'Where errors are thrown, caught, transformed or swallowed' },

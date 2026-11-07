@@ -2,6 +2,7 @@
 export const relatedAnalyses: Record<string, { command: string; title: string }[]> = {};
 
 relatedAnalyses.dataFlow = [
+  { command: 'tsStructure.mutationTrackingVariable', title: 'Who changes it, and when (Mutation Tracking for This Variable)' },
   { command: 'tsStructure.nullability', title: 'Can it be null or undefined? (Nullability)' },
   { command: 'tsStructure.argumentFlow', title: 'What values can it receive? (Argument Propagation)' },
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
@@ -58,6 +59,12 @@ relatedAnalyses.usages = [
 ];
 
 relatedAnalyses.mutations = [
+  { command: 'tsStructure.mutationTrackingVariable', title: 'Only the variable at the cursor (Mutation Tracking for This Variable)' },
   { command: 'tsStructure.sideEffects', title: 'Everything the function at the cursor does (Side Effects)' },
   { command: 'tsStructure.mutationTrackingProject', title: 'Mutations across the project' },
+];
+
+relatedAnalyses.variableMutations = [
+  { command: 'tsStructure.dataFlow', title: 'Where its values come from (Data Flow)' },
+  { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
 ];

@@ -30,6 +30,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Which type assertions are risky?', command: 'tsStructure.auditTypeAssertions', key: '2' },
   { question: 'Which functions in the project change shared state?', command: 'tsStructure.mutationTrackingProject', key: '3' },
   { question: 'Which tests cover my uncommitted changes?', command: 'tsImpact.analyzeChanged', key: '4' },
+  { question: 'Who changes this variable, and when?', command: 'tsStructure.mutationTrackingVariable', key: '6' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];

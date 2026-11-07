@@ -7,6 +7,7 @@ import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportLocation, ReportNode } from '../structure/report';
 import { retarget } from '../structure/retarget';
 import { dataFlowReport } from '../inspect/dataFlow';
+import { raceReport, variableMutationReport } from '../inspect/races';
 import { patternMeaning, patternsReport } from '../inspect/patterns';
 import { patternLink } from '../inspect/patternLinks';
 import { cyclesReport, dependentsReport } from '../navigate/moduleUsers';
@@ -516,6 +517,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
+    editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', { id: 'mutations', kinds: projectScopes.filter((k) => k !== 'file') }, (t, scope) => {
       const program = t.project().program();
       const { files, note } = filesIn(program, scope);
