@@ -207,3 +207,7 @@ test('Mediator is recognized', () => {
   has('class Dialog { constructor(private title: TextBox, private ok: Button) {} notify(sender: object, event: string) { if (event === "change") this.ok.enable(); } }', 'Mediator');
   lacks('class Dialog { constructor(private title: TextBox) {} notify(sender: object, event: string) {} }', 'Mediator');
 });
+
+test('Memento is recognized', () => {
+  has('class Editor { private text = ""; snapshot() { return { text: this.text }; } restore(s: { text: string }) { this.text = s.text; } }', 'Memento');
+});

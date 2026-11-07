@@ -703,3 +703,15 @@ catalog.push({
       return colleagues.length >= 2 && notify ? [{ node: cls, evidence: `${className(cls)} coordinates ${colleagues.map((c) => c.name).join(', ')} through ${nameOf(notify)}()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Memento',
+  meaning: 'An object can save a snapshot of its state and restore it later, as for undo, without exposing its internals.',
+  detect: (sf) =>
+    classesIn(sf).flatMap((cls) => {
+      const methods = methodsOf(cls);
+      const save = methods.find((m) => /^(save|snapshot|createMemento|capture|checkpoint)$/.test(nameOf(m) ?? '') && returnsOf(m.body).length > 0);
+      const restore = methods.find((m) => /^(restore|undo|rollbackTo|restoreFrom)$/.test(nameOf(m) ?? '') && m.parameters.length === 1);
+      return save && restore ? [{ node: cls, evidence: `${className(cls)} saves its state with ${nameOf(save)}() and restores it with ${nameOf(restore)}()`, subject: className(cls) }] : [];
+    }),
+});
