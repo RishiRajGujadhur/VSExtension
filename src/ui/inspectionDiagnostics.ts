@@ -327,7 +327,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     const count = (severity: Severity) => result.findings.filter((f) => f.severity === severity).length;
     const problems = result.findings.filter((f) => f.severity !== 'hint').length;
-    this.status.text = problems ? `$(checklist) ${problems}` : '$(pass) TS Structure';
+    this.status.text = problems ? [count('error') ? `$(error) ${count('error')}` : '', count('warning') ? `$(warning) ${count('warning')}` : '', count('info') ? `$(info) ${count('info')}` : ''].filter(Boolean).join(' ') : '$(pass) TS Structure';
     // Which inspections report what in this file, as a table in the hover.
     const byInspection = new Map<string, number>();
     for (const finding of result.findings) {
