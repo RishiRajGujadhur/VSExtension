@@ -309,6 +309,8 @@ async function analysisCommandsFlow(): Promise<void> {
   const cases: [string, string, unknown[]?][] = [
     ['tsStructure.dataFlow', 'subtotal = '],
     ['tsStructure.mutationTracking', 'calculateTotal'],
+    ['tsStructure.mutationTrackingVariable', 'subtotal = '],
+    ['tsStructure.raceConditions', 'subtotal = '],
     ['tsStructure.sideEffects', 'calculateTotal'],
     ['tsStructure.nullability', 'coupon);'],
     ['tsStructure.promiseRejections', 'calculateTotal'],
