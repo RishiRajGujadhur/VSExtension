@@ -2030,11 +2030,11 @@
     "viewsWelcome": [
       {
         "view": "tsStructure.report",
-        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[Find Usages](command:tsStructure.semanticUsages)\n[Data Flow](command:tsStructure.dataFlow)\n[Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNot sure where to start? [How Do I…?](command:tsStructure.howDoI), [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
+        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[$(list-tree) Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[$(references) Find Usages](command:tsStructure.semanticUsages)\n[$(pulse) Data Flow](command:tsStructure.dataFlow)\n[$(checklist) Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNot sure where to start? [How Do I…?](command:tsStructure.howDoI), [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
       },
       {
         "view": "tsImpact.results",
-        "contents": "Place the cursor on a function, class, method or symbol and run the analysis.\n[Test Impact Analysis](command:tsImpact.analyze)"
+        "contents": "Place the cursor on a function, class, method or symbol and run the analysis.\n[$(beaker) Test Impact Analysis](command:tsImpact.analyze)"
       }
     ],
     "taskDefinitions": [
