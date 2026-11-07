@@ -346,6 +346,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
     registerCommand('tsStructure.cancelAnalysis', () => cancelRunningAnalysis()),
+    registerCommand('tsStructure.inspectOpen', () => vscode.commands.executeCommand('tsStructure.inspectCode', 'open')),
     registerCommand('tsStructure.inspectChanged', () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed')),
     registerCommand('tsStructure.analyzeSymbol', () => {
       const editor = sourceEditor();
