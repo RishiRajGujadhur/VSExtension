@@ -36,7 +36,7 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; title?: string; diagram?: Diagram }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; title?: string; diagram?: Diagram }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
@@ -55,7 +55,9 @@ export class DiagramPanel {
         await vscode.env.clipboard.writeText(['```mermaid', diagramMermaid(message.diagram), '```', ''].join('\n'));
         void vscode.window.setStatusBarMessage('Copied the chart as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
       } else if (message.type === 'save' && message.svg) {
-        await saveSvg(message.svg, message.title);
+        await saveImage(Buffer.from(message.svg, 'utf8'), 'svg', message.title);
+      } else if (message.type === 'savePng' && message.png) {
+        await saveImage(Buffer.from(message.png, 'base64'), 'png', message.title);
       }
     });
     this.panel.onDidDispose(() => (this.panel = undefined));
@@ -76,7 +78,7 @@ export class DiagramPanel {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource};">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource}; img-src data:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="${asset('diagram.css')}">
 <title>Analysis Diagram</title>
@@ -94,6 +96,7 @@ export class DiagramPanel {
   ${button('fit', 'Fit', 'Fit the diagram to the window')}
   ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
+  ${button('savePng', 'Save PNG', 'Save the chart as a PNG picture at twice the size, for chats and slides')}
   <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend">?</button>
 </header>
 <div id="branch" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
@@ -133,15 +136,16 @@ export class DiagramPanel {
   }
 }
 
-/** Asks where to save the chart's SVG, offering the workspace folder and a name from the analysis title. */
-async function saveSvg(svg: string, title = 'diagram'): Promise<void> {
+/** Asks where to save the chart's image, offering the workspace folder and a name from the analysis title. */
+async function saveImage(content: Buffer, extension: 'svg' | 'png', title = 'diagram'): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
-  const name = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'}.svg`;
-  const target = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { 'SVG image': ['svg'] }, title: 'Save Diagram as SVG' });
+  const name = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'}.${extension}`;
+  const kind = extension.toUpperCase();
+  const target = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { [`${kind} image`]: [extension] }, title: `Save Diagram as ${kind}` });
   if (!target) {
     return;
   }
-  await vscode.workspace.fs.writeFile(target, Buffer.from(svg, 'utf8'));
+  await vscode.workspace.fs.writeFile(target, content);
   if ((await vscode.window.showInformationMessage(`Diagram saved to ${vscode.workspace.asRelativePath(target)}.`, 'Open')) === 'Open') {
     await vscode.commands.executeCommand('vscode.open', target);
   }

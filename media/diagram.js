@@ -500,7 +500,30 @@
     out.querySelector('#scene').removeAttribute('transform');
     const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
     out.insertBefore(background, out.querySelector('#scene'));
-    vscode.postMessage({ type: 'save', svg: new XMLSerializer().serializeToString(out), title: diagram.title });
+    return { text: new XMLSerializer().serializeToString(out), width: box.width + 2 * pad, height: box.height + 2 * pad };
+  }
+
+  function saveSvg() {
+    const image = exportSvg();
+    if (image) vscode.postMessage({ type: 'save', svg: image.text, title: diagram.title });
+  }
+
+  // Save PNG: the same image drawn at twice the size, for chats and slides that do not show SVG.
+  function savePng() {
+    const image = exportSvg();
+    if (!image) return;
+    const picture = new Image();
+    picture.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(image.width * scale);
+      canvas.height = Math.ceil(image.height * scale);
+      const context = canvas.getContext('2d');
+      context.scale(scale, scale);
+      context.drawImage(picture, 0, 0, image.width, image.height);
+      vscode.postMessage({ type: 'savePng', png: canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''), title: diagram.title });
+    };
+    picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(image.text);
   }
 
   // Copy Mermaid: the chart as it is folded now, as text for Markdown and GitHub.
@@ -519,7 +542,8 @@
   };
   legendButton.addEventListener('click', () => showLegend(legend.hidden));
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !legend.hidden) showLegend(false); });
-  document.getElementById('save').addEventListener('click', exportSvg);
+  document.getElementById('save').addEventListener('click', saveSvg);
+  document.getElementById('savePng').addEventListener('click', savePng);
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
