@@ -70,7 +70,10 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     definition: vscode.window.createTextEditorDecorationType({ border: '1px solid', borderColor: new vscode.ThemeColor('editor.wordHighlightTextBorder'), fontWeight: 'bold' }),
   };
 
-  constructor(private readonly memento?: vscode.Memento) {
+  constructor(
+    private readonly memento?: vscode.Memento,
+    private readonly extensionUri?: vscode.Uri,
+  ) {
     this.view = vscode.window.createTreeView('tsStructure.report', { treeDataProvider: this, showCollapseAll: true, canSelectMany: true });
     const saved = memento?.get<{ reports: Report[]; position: number }>(historyKey);
     const legacy = memento?.get<Report>(legacyStateKey);
@@ -439,7 +442,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       item.tooltip.appendCodeblock(code, /\.[jt]sx?$/.exec(node.location!.file)?.[0].slice(1) ?? 'ts');
     }
     if (node.icon) {
-      item.iconPath = new vscode.ThemeIcon(node.icon, node.tone ? new vscode.ThemeColor(toneColors[node.tone]) : undefined);
+      item.iconPath = node.tone === 'ok' && node.icon.startsWith('pass') ? this.greenCheck() : new vscode.ThemeIcon(node.icon, node.tone ? new vscode.ThemeColor(toneColors[node.tone]) : undefined);
     }
     // File rows get the file's icon from the icon theme.
     if ((node.icon === 'file-code' || node.icon === 'file') && node.location) {
@@ -457,13 +460,21 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     const done = this.done.get(rowKey(node));
     if (done) {
       item.description = [done, node.description].filter(Boolean).join(' · ');
-      item.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor(toneColors.ok));
+      item.iconPath = this.greenCheck();
     }
     // A group with several fixes below it gets Fix All; a row already acted on loses its buttons.
     const fixAll = !done && !rowFix(node) && node.children?.length && countFixes(node, (n) => this.isDone(n)) > 1 ? 'fixAll' : '';
     // term: the row names a language construct the ? button explains.
     item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll, termFor(node.label, node.description) ? 'term' : ''].filter(Boolean).join(' ');
     return item;
+  }
+
+  /** A green check that stays green on a selected row, where theme icons turn the selection color. */
+  private greenCheck(): vscode.TreeItem['iconPath'] {
+    if (!this.extensionUri) {
+      return new vscode.ThemeIcon('pass', new vscode.ThemeColor(toneColors.ok));
+    }
+    return { light: vscode.Uri.joinPath(this.extensionUri, 'media', 'pass-light.svg'), dark: vscode.Uri.joinPath(this.extensionUri, 'media', 'pass-dark.svg') };
   }
 
   /** Expands every row that has children. */
