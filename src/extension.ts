@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ProjectService } from './analysis/project';
-import { analyzeImpact } from './analysis/impact';
+import { analyzeImpactAsync } from './analysis/impact';
 import { AnalysisError, AnalysisScope, ImpactResult, SourceLocation, TestCase } from './analysis/types';
 import { pathKey } from './analysis/paths';
 import { ResultsProvider, countLabel, openLocation, showResultsPicker, trackResult } from './resultsView';
@@ -109,19 +109,25 @@ export function activate(context: vscode.ExtensionContext): void {
       const config = vscode.workspace.getConfiguration('tsImpact', document.uri);
 
       try {
+        // Cancel stops the analysis between files and declarations; the editor stays usable meanwhile.
         const result = await vscode.window.withProgress(
-          { location: vscode.ProgressLocation.Notification, title: 'Analyzing test impact…' },
-          async () => {
-            // Let the progress notification render before the synchronous analysis starts.
+          { location: vscode.ProgressLocation.Notification, title: 'Analyzing test impact…', cancellable: true },
+          async (_progress, token) => {
+            // Let the progress notification render before loading the project.
             await new Promise((resolve) => setTimeout(resolve, 0));
             const project = projects.load(document.uri.fsPath, folder?.uri.fsPath);
-            return analyzeImpact(
+            return analyzeImpactAsync(
               project,
               { fileName: document.uri.fsPath, offset, scope },
               { maxDepth: config.get('maxDepth'), includeInheritedMembers: config.get('includeInheritedMembers') },
+              token,
             );
           },
         );
+        if (!result) {
+          void vscode.window.setStatusBarMessage('$(debug-stop) Test impact analysis cancelled', 3000);
+          return;
+        }
         results.set(result);
         if (result.tests.length === 0) {
           void vscode.window.showInformationMessage(
@@ -196,7 +202,8 @@ export function activate(context: vscode.ExtensionContext): void {
           await new Promise((resolve) => setTimeout(resolve, 0));
           try {
             const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
-            const one = analyzeImpact(projects.load(file, folder), { fileName: file, offset: 0, scope: 'module' });
+            const one = await analyzeImpactAsync(projects.load(file, folder), { fileName: file, offset: 0, scope: 'module' }, {}, token);
+            if (!one) return undefined;
             if (!result) {
               result = { ...one, tests: [], target: { ...one.target, name: 'changed files' } };
             }

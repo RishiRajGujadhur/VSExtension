@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as ts from 'typescript';
 import { ProjectService } from '../analysis/project';
-import { analyzeImpact } from '../analysis/impact';
+import { analyzeImpact, analyzeImpactAsync } from '../analysis/impact';
 import { discoverTests } from '../analysis/testDiscovery';
 import { AnalysisError, AnalysisScope, ImpactResult } from '../analysis/types';
 
@@ -161,4 +161,13 @@ test('a test file excluded from every config reports how to fix it', () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('the cancellable analysis finds the same tests, and stops when cancelled', async () => {
+  const fileName = path.join(sample, 'src/impactSource.ts');
+  const offset = fs.readFileSync(fileName, 'utf8').indexOf('formatImpactLabel');
+  const fresh = new ProjectService();
+  const result = await analyzeImpactAsync(fresh.load(fileName), { fileName, offset, scope: 'symbol' });
+  assert.deepEqual(titles(result!), titles(analyze(fileName, 'function |formatImpactLabel')));
+  assert.equal(await analyzeImpactAsync(new ProjectService().load(fileName), { fileName, offset, scope: 'symbol' }, {}, { isCancellationRequested: true }), undefined);
 });

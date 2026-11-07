@@ -32,6 +32,41 @@ interface QueueItem {
 }
 
 export function analyzeImpact(project: LoadedProject, request: ImpactRequest, options: ImpactOptions = {}): ImpactResult {
+  const steps = impactSteps(project, request, options);
+  for (let step = steps.next(); ; step = steps.next()) {
+    if (step.done) {
+      return step.value;
+    }
+  }
+}
+
+/**
+ * The same analysis, pausing every few milliseconds so the editor stays responsive and a Cancel click is seen.
+ * Returns undefined once the token is cancelled.
+ */
+export async function analyzeImpactAsync(
+  project: LoadedProject,
+  request: ImpactRequest,
+  options: ImpactOptions = {},
+  token?: { readonly isCancellationRequested: boolean },
+): Promise<ImpactResult | undefined> {
+  const steps = impactSteps(project, request, options);
+  let slice = Date.now();
+  for (let step = steps.next(); ; step = steps.next()) {
+    if (step.done) {
+      return step.value;
+    }
+    if (Date.now() - slice > 30) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      slice = Date.now();
+    }
+    if (token?.isCancellationRequested) {
+      return undefined;
+    }
+  }
+}
+
+function* impactSteps(project: LoadedProject, request: ImpactRequest, options: ImpactOptions): Generator<void, ImpactResult> {
   const started = Date.now();
   const { program, checker } = project;
   const sourceFile = program.getSourceFiles().find((sf) => pathKey(sf.fileName) === pathKey(request.fileName));
@@ -39,7 +74,7 @@ export function analyzeImpact(project: LoadedProject, request: ImpactRequest, op
     throw new AnalysisError(`${path.basename(request.fileName)} isn't in the compiler project.`);
   }
   if (!project.index) {
-    project.index = new ReferenceIndex(program, checker);
+    project.index = yield* ReferenceIndex.building(program, checker);
   }
   const tracer = new Tracer(project.index, checker, options);
   const seeds = request.scope === 'module' ? moduleSeeds(sourceFile) : symbolSeeds(checker, sourceFile, request.offset);
@@ -49,7 +84,7 @@ export function analyzeImpact(project: LoadedProject, request: ImpactRequest, op
       : seeds.declarations.length > 0
         ? describe(seeds.declarations[0])
         : { ...stepForTest(seeds.directTests[0]) };
-  tracer.trace(seeds.declarations);
+  yield* tracer.tracing(seeds.declarations);
   for (const test of seeds.directTests) {
     tracer.record(test, [stepForTest(test)], 'confirmed', request.scope === 'module' ? 'Defined in the selected module' : 'The cursor is inside this test');
   }
@@ -107,8 +142,8 @@ class Tracer {
     this.includeInherited = options.includeInheritedMembers ?? true;
   }
 
-  /** Breadth-first over callers, so each test keeps its shortest explanation. Visited declarations end cycles. */
-  trace(seeds: ts.Node[]): void {
+  /** Breadth-first over callers, so each test keeps its shortest explanation. Visited declarations end cycles. Yields after each declaration. */
+  *tracing(seeds: ts.Node[]): Generator<void, void> {
     const visited = new Set<ts.Node>();
     const queue: QueueItem[] = [];
     const enqueue = (item: QueueItem) => {
@@ -137,6 +172,7 @@ class Tracer {
           enqueue({ declaration: related.declaration, path: [...item.path, step], confidence: 'possible' });
         }
       }
+      yield;
     }
     if (truncated) {
       this.warnings.push(`Some dependency chains were longer than ${this.maxDepth} steps and were not followed further.`);

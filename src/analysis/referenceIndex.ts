@@ -9,14 +9,29 @@ import * as ts from 'typescript';
  */
 export class ReferenceIndex {
   private readonly references = new Map<ts.Node, ts.Node[]>();
-  readonly filesIndexed: number;
+  filesIndexed = 0;
 
-  constructor(program: ts.Program, private readonly checker: ts.TypeChecker) {
-    const files = projectSourceFiles(program);
-    for (const sourceFile of files) {
-      this.indexFile(sourceFile);
+  constructor(program: ts.Program, private readonly checker: ts.TypeChecker, index = true) {
+    if (index) {
+      for (const _ of this.indexing(program)) {
+        // Indexes every file at once.
+      }
     }
-    this.filesIndexed = files.length;
+  }
+
+  /** Builds the index one file at a time, yielding after each, so a caller can pause or stop between files. */
+  static *building(program: ts.Program, checker: ts.TypeChecker): Generator<void, ReferenceIndex> {
+    const index = new ReferenceIndex(program, checker, false);
+    yield* index.indexing(program);
+    return index;
+  }
+
+  private *indexing(program: ts.Program): Generator<void, void> {
+    for (const sourceFile of projectSourceFiles(program)) {
+      this.indexFile(sourceFile);
+      this.filesIndexed++;
+      yield;
+    }
   }
 
   referencesTo(declaration: ts.Node): readonly ts.Node[] {
