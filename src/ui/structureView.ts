@@ -329,8 +329,20 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.highlight();
   }
 
+  private runningTitle: string | undefined;
+
+  /** Shows that an analysis is running (or stopped running), above the previous report. */
+  setRunning(title: string | undefined): void {
+    this.runningTitle = title;
+    this.updateMessage();
+  }
+
   private updateMessage(): void {
     const report = this.report;
+    if (this.runningTitle) {
+      this.view.message = `Running ${this.runningTitle}… The stop button in the title cancels it.`;
+      return;
+    }
     // The title's Re-run button turns into a warning while the results are out of date.
     void vscode.commands.executeCommand('setContext', 'tsStructure.stale', this.stale || this.settingsChanged);
     const messages = [

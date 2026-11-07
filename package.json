@@ -708,6 +708,12 @@
         "title": "Who Imports This File",
         "category": "TypeScript Structure",
         "icon": "$(arrow-circle-up)"
+      },
+      {
+        "command": "tsStructure.cancelAnalysis",
+        "title": "Stop the Running Analysis",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-stop)"
       }
     ],
     "viewsContainers": {
@@ -943,6 +949,12 @@
         "mac": "cmd+ctrl+s y",
         "command": "tsStructure.detectPatterns",
         "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s escape",
+        "mac": "cmd+ctrl+s escape",
+        "command": "tsStructure.cancelAnalysis",
+        "when": "tsStructure.running"
       }
     ],
     "menus": {
@@ -1629,6 +1641,10 @@
         {
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath"
+        },
+        {
+          "command": "tsStructure.cancelAnalysis",
+          "when": "tsStructure.running"
         }
       ],
       "view/title": [
@@ -1806,6 +1822,11 @@
           "command": "tsStructure.report.toggleRerunOnSave",
           "when": "view == tsStructure.report",
           "group": "0_view@5"
+        },
+        {
+          "command": "tsStructure.cancelAnalysis",
+          "when": "view == tsStructure.report && tsStructure.running",
+          "group": "navigation@-1"
         }
       ],
       "view/item/context": [

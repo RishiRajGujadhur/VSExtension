@@ -48,22 +48,63 @@ export interface AnalysisTarget {
 
 type Compute = (target: AnalysisTarget) => Report | Promise<Report | undefined> | undefined;
 
+/** The analysis running now, which the results view's Stop button cancels. */
+let running: vscode.CancellationTokenSource | undefined;
+
+/** Stops the running analysis: its result is not shown, and Inspect Code stops between files. */
+export function cancelRunningAnalysis(): void {
+  running?.cancel();
+}
+
+/**
+ * Runs work while the results view shows a progress bar, a "Running …" message and a Stop button.
+ * The token is cancelled by Stop or by starting another analysis.
+ */
+export async function withRunning<T>(view: StructureView, title: string, work: (token: vscode.CancellationToken) => Thenable<T>): Promise<T | undefined> {
+  running?.cancel();
+  const source = new vscode.CancellationTokenSource();
+  running = source;
+  view.setRunning(title);
+  void vscode.commands.executeCommand('setContext', 'tsStructure.running', true);
+  try {
+    const result = await vscode.window.withProgress({ location: { viewId: 'tsStructure.report' } }, () => work(source.token));
+    if (source.token.isCancellationRequested) {
+      void vscode.window.setStatusBarMessage(`$(debug-stop) ${title} cancelled`, 3000);
+      return undefined;
+    }
+    return result;
+  } finally {
+    if (running === source) {
+      running = undefined;
+      view.setRunning(undefined);
+      void vscode.commands.executeCommand('setContext', 'tsStructure.running', false);
+    }
+    source.dispose();
+  }
+}
+
 /** Runs an analysis with progress and shows its report, keeping a closure to re-run it. */
 export async function runAnalysis(view: StructureView, title: string, compute: () => Report | Promise<Report | undefined> | undefined): Promise<Report | undefined> {
   const run = async () => {
     try {
       // A spinner in the status bar by default; a notification when tsStructure.results.progress asks for one.
       const location = vscode.workspace.getConfiguration('tsStructure.results').get<string>('progress', 'statusBar') === 'notification' ? vscode.ProgressLocation.Notification : vscode.ProgressLocation.Window;
-      return await vscode.window.withProgress({ location, title: `${title}…` }, async () => {
-        // Let the notification render before the synchronous analysis starts.
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        const started = Date.now();
-        const report = await compute();
-        if (report) {
-          report.durationMs = Date.now() - started;
-        }
-        return report;
-      });
+      return await withRunning(view, title, (token) =>
+        vscode.window.withProgress({ location, title: `${title}…`, cancellable: location === vscode.ProgressLocation.Notification }, async (_progress, notificationToken) => {
+          notificationToken.onCancellationRequested(() => cancelRunningAnalysis());
+          // Let the progress render before the synchronous analysis starts.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (token.isCancellationRequested) {
+            return undefined;
+          }
+          const started = Date.now();
+          const report = await compute();
+          if (report) {
+            report.durationMs = Date.now() - started;
+          }
+          return report;
+        }),
+      );
     } catch (error) {
       reportError(error, title);
       return undefined;
@@ -276,6 +317,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     registerCommand('tsStructure.report.clearLimit', () => view.limitTo(undefined)),
     registerCommand('tsStructure.report.clearFilters', () => view.clearFilters()),
+    registerCommand('tsStructure.cancelAnalysis', () => cancelRunningAnalysis()),
     registerCommand('tsStructure.analyzeSymbol', () => {
       const editor = sourceEditor();
       return editor && analyzeSymbol(editor);

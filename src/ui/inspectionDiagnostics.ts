@@ -16,6 +16,7 @@ import { isExcluded, scopedFiles, withNote } from './exclude';
 import { ScopeKind, chooseScope } from './analysisScope';
 import { ScopeSpec, scopeFilter } from '../structure/scope';
 import { registerCommand } from './features';
+import { withRunning } from './analysisCommands';
 import { isFeatureEnabled } from './features';
 
 const severities: Record<Severity, vscode.DiagnosticSeverity> = {
@@ -382,7 +383,10 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     const fileName = anchor.fsPath;
     const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
     const run = () =>
-      vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Inspecting code', cancellable: true }, async (progress, token) => {
+      withRunning(view, 'Inspect Code', (stop) =>
+      vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Inspecting code', cancellable: true }, async (progress, notificationToken) => {
+        // Either the notification's Cancel or the results view's stop button ends it between files.
+        const token = { get isCancellationRequested() { return notificationToken.isCancellationRequested || stop.isCancellationRequested; } };
         const started = Date.now();
         const project = this.projects.load(fileName, folder);
         const candidates = projectSourceFiles(project.program).filter((sf) => !include || include(sf.fileName));
@@ -410,7 +414,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         }
         report.durationMs = Date.now() - started;
         return report;
-      });
+      }));
     const report = await run();
     if (report) {
       await view.show(report, run);
