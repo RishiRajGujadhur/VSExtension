@@ -233,3 +233,8 @@ test('Controlled component is recognized', () => {
   has('function Name() { const [v, setV] = useState(""); return <input value={v} onChange={(e) => setV(e.target.value)} />; }', 'Controlled component');
   lacks('function Name() { return <input defaultValue="x" />; }', 'Controlled component');
 });
+
+test('Memoized component is recognized', () => {
+  has('const Row = memo(function Row(p: { id: string }) { return <li>{p.id}</li>; });', 'Memoized component');
+  has('export default React.memo(List);', 'Memoized component');
+});

@@ -807,3 +807,18 @@ catalog.push({
     return found;
   },
 });
+
+catalog.push({
+  name: 'Memoized component',
+  meaning: 'A component wrapped in memo() skips re-rendering when its props have not changed.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      if (ts.isCallExpression(node) && /^(React\.)?memo$/.test(text(node.expression)) && node.arguments.length >= 1) {
+        const name = ts.isVariableDeclaration(node.parent) ? nameOf(node.parent) : undefined;
+        found.push({ node, evidence: `${name ?? text(node.arguments[0]).slice(0, 30)} re-renders only when its props change`, subject: name });
+      }
+    });
+    return found;
+  },
+});
