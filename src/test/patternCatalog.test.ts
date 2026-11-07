@@ -211,3 +211,7 @@ test('Mediator is recognized', () => {
 test('Memento is recognized', () => {
   has('class Editor { private text = ""; snapshot() { return { text: this.text }; } restore(s: { text: string }) { this.text = s.text; } }', 'Memento');
 });
+
+test('Flyweight is recognized', () => {
+  has('class Glyphs { private cache = new Map<string, Glyph>(); get(c: string) { if (!this.cache.has(c)) this.cache.set(c, new Glyph(c)); return this.cache.get(c)!; } }', 'Flyweight');
+});

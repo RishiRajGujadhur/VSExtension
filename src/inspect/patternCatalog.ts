@@ -715,3 +715,31 @@ catalog.push({
       return save && restore ? [{ node: cls, evidence: `${className(cls)} saves its state with ${nameOf(save)}() and restores it with ${nameOf(restore)}()`, subject: className(cls) }] : [];
     }),
 });
+
+catalog.push({
+  name: 'Flyweight',
+  meaning: 'Identical objects are created once and shared by key, so many uses cost one instance.',
+  detect: (sf) => {
+    const found: Found[] = [];
+    walk(sf, (node) => {
+      // cache.set(key, new Glyph(...)) next to cache.get(key): one instance per key, handed out again.
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'set' && node.arguments.length === 2 && ts.isNewExpression(node.arguments[1])) {
+        const owner = text(node.expression.expression);
+        const fn = enclosing(node);
+        if (fn && new RegExp(`${owner.replace(/[.$]/g, '\\$&')}\\.get\\(`).test(text(fn))) {
+          found.push({ node, evidence: `${text(node.arguments[1].expression)} instances are shared by key through ${owner}`, subject: text(node.arguments[1].expression) });
+        }
+      }
+    });
+    return found;
+  },
+});
+
+function enclosing(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
+  for (let n: ts.Node | undefined = node.parent; n; n = n.parent) {
+    if (ts.isFunctionLike(n) && (n as ts.FunctionLikeDeclaration).body) {
+      return n as ts.FunctionLikeDeclaration;
+    }
+  }
+  return undefined;
+}
