@@ -28,3 +28,9 @@ relatedAnalyses.exceptions = [
   { command: 'tsStructure.sideEffects', title: 'What else it does (Side Effects)' },
   { command: 'tsStructure.semanticUsages', title: 'Who calls it? (Find Usages)' },
 ];
+
+relatedAnalyses.argumentFlow = [
+  { command: 'tsStructure.dataFlow', title: 'Its whole data flow (Data Flow)' },
+  { command: 'tsStructure.nullability', title: 'Can it be undefined? (Nullability)' },
+  { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
+];
