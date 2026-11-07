@@ -1024,6 +1024,12 @@
         "mac": "cmd+ctrl+s 3",
         "command": "tsStructure.mutationTrackingProject",
         "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s j",
+        "mac": "cmd+ctrl+s j",
+        "command": "tsStructure.whoImports",
+        "when": "config.tsStructure.features.dependencyPath && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
