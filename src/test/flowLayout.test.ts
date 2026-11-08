@@ -1,0 +1,67 @@
+import * as assert from 'node:assert/strict';
+import * as path from 'path';
+import { test } from 'node:test';
+import { buildCfg } from '../inspect/controlFlow';
+import { layoutFlow } from '../structure/flowLayout';
+import { functionAtOffset } from '../structure/util';
+import { fixtures, offsetIn, virtualProject } from './helpers';
+
+const file = path.join(fixtures, 'inspect/src/control.ts');
+
+function layoutOf(marker: string) {
+  const project = virtualProject('inspect', 'src/control.ts');
+  const cfg = buildCfg(functionAtOffset(project.sourceFile(file), offsetIn(file, marker), project.program().getTypeChecker()));
+  const layout = layoutFlow(
+    cfg.nodes.map((n) => ({ id: n.id, width: 40 + Math.max(...n.lines.map((l) => l.length)) * 7, height: 20 + n.lines.length * 17 })),
+    cfg.edges.map((e) => ({ from: e.from, to: e.to, back: e.kind === 'back' || e.kind === 'continue' })),
+    cfg.start,
+    cfg.end,
+  );
+  return { cfg, layout };
+}
+
+test('a flowchart runs top to bottom: every forward edge goes down, the end is last', () => {
+  for (const marker of ['function getPer|mission', 'function tot|al', 'function gra|de', 'function fi|nd', 'function par|se', 'function ret|ry']) {
+    const { cfg, layout } = layoutOf(marker);
+    for (const edge of cfg.edges.filter((e) => e.kind !== 'back' && e.kind !== 'continue')) {
+      assert.ok(layout.nodes.get(edge.to)!.row > layout.nodes.get(edge.from)!.row, `${marker}: ${cfg.nodes[edge.from].lines[0]} → ${cfg.nodes[edge.to].lines[0]}`);
+    }
+    const end = layout.nodes.get(cfg.end)!;
+    assert.ok([...layout.nodes.values()].every((p) => p.row <= end.row), marker);
+    assert.equal(layout.nodes.get(cfg.start)!.row, 0);
+  }
+});
+
+test('boxes in the same row never overlap', () => {
+  for (const marker of ['function getPer|mission', 'function gra|de', 'function par|se']) {
+    const { layout } = layoutOf(marker);
+    const placed = [...layout.nodes.values()];
+    for (const a of placed) {
+      for (const b of placed) {
+        if (a !== b && a.row === b.row) assert.ok(a.x + a.width <= b.x || b.x + b.width <= a.x, marker);
+      }
+    }
+    assert.ok(placed.every((p) => p.x >= 0 && p.x + p.width <= layout.width), marker);
+  }
+});
+
+test('loop edges go back up along the right side', () => {
+  const { cfg, layout } = layoutOf('function tot|al');
+  const back = cfg.edges.map((e, i) => ({ e, route: layout.routes[i] })).filter(({ e }) => e.kind === 'back' || e.kind === 'continue');
+  assert.equal(back.length, 2);
+  for (const { e, route } of back) {
+    assert.equal(route.points.length, 4);
+    const lane = route.points[1].x;
+    // The lane is right of both ends, and the edge ends at the loop header.
+    assert.ok(lane >= layout.nodes.get(e.from)!.x + layout.nodes.get(e.from)!.width);
+    assert.ok(lane >= layout.nodes.get(e.to)!.x + layout.nodes.get(e.to)!.width);
+    assert.equal(cfg.nodes[e.to].kind, 'loop');
+  }
+});
+
+test('the two branches of a decision leave from separate points', () => {
+  const { cfg, layout } = layoutOf('function getPer|mission');
+  const decision = cfg.nodes.find((n) => n.lines[0] === '!user.active')!;
+  const starts = cfg.edges.map((e, i) => ({ e, r: layout.routes[i] })).filter(({ e }) => e.from === decision.id).map(({ r }) => r.points[0].x);
+  assert.equal(new Set(starts).size, 2);
+});
