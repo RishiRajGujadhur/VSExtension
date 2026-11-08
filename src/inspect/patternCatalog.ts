@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 
 /** What a catalog detector found: the node that shows the pattern and how. */
 export interface Found {

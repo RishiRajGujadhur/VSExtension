@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 
 const libs = new Map<string, ts.SourceFile | undefined>();
 const options: ts.CompilerOptions = { strict: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, noEmit: true, types: [] };

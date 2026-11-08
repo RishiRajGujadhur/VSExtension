@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { ProjectService } from '../analysis/project';
 import { analyzeImpact, analyzeImpactAsync } from '../analysis/impact';
 import { discoverTests } from '../analysis/testDiscovery';

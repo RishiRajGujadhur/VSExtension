@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { Finding, Inspection, InspectionContext } from './inspection';
 import { FunctionWithBody, calledFunction, enclosingFunction, forEachDescendant, forEachInFunction, functionLabel, isThenable, nodeText, skipOuterExpressions, symbolAt, containsNullish } from '../structure/util';
 

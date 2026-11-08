@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { AnalysisError, AnalysisScope, Confidence, ImpactedTest, ImpactResult, ImpactTarget, PathStep, SourceLocation, TestCase } from './types';
 import { LoadedProject } from './project';
 import { ReferenceIndex, projectSourceFiles, resolveAlias } from './referenceIndex';

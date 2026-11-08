@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { hashText, normalizePath, pathKey } from '../analysis/paths';
 import { SourceLocation } from '../analysis/types';
 import { FileChange } from './types';

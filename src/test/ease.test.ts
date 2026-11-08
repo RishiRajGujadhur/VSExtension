@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { test } from 'node:test';
 import { FixLedger, RowFix, countFixes, fixesUnder, mergeEdits } from '../structure/fixes';
 import { fileSymbols, symbolAt } from '../structure/symbols';

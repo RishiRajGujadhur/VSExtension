@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { learnMore } from './patternLinks';
 import { raceFindings, variableUse } from './races';
 import { AnalysisError } from '../analysis/types';

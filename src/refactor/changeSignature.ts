@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { normalizePath } from '../analysis/paths';
 import { SourceLocation } from '../analysis/types';
 import { EditCollector, FunctionNode, FunctionTarget, applyFileEdits, functionAt, introducedErrors, isValidIdentifier, usagesOf } from './common';

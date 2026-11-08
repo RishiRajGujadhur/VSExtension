@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { AnalysisError } from '../analysis/types';
 import { resolveAlias } from '../analysis/referenceIndex';
 import { VirtualProject } from '../refactor/virtualProject';

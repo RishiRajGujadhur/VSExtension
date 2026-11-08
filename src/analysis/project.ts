@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { AnalysisError } from './types';
 import { normalizePath, pathKey } from './paths';
 import { ReferenceIndex } from './referenceIndex';

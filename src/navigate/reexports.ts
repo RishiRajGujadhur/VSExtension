@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';
 import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';

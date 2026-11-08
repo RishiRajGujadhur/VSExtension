@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { findNode } from '../analysis/impact';
 import { normalizePath } from '../analysis/paths';
 import { resolveAlias } from '../analysis/referenceIndex';

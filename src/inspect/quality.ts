@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { Finding, Fix, Inspection, Severity } from './inspection';
 
 /** Inspections for common slips: what is wrong in a few words and, where it is clear, the fix. */

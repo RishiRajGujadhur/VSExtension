@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { Framework, TestCase } from './types';
 import { normalizePath } from './paths';
 

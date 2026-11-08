@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { hashText, normalizePath } from '../analysis/paths';
 
 /** Zero-based range, matching both the TypeScript API and VS Code. */

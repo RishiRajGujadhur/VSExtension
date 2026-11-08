@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { isSourceFileName, pathKey } from '../analysis/paths';

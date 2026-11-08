@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { discoverTests } from '../analysis/testDiscovery';
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, codeContext, lineSnippet, plural } from '../structure/report';

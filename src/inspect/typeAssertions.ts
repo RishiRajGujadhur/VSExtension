@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { TextEdit } from '../intentions/intentions';
 import { Finding, Inspection, InspectionContext } from './inspection';
 import { containsNullish, nodeText, typeText } from '../structure/util';

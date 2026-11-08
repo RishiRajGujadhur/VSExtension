@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { normalizePath, pathKey } from '../analysis/paths';
 import { introducedErrors, EditCollector, applyFileEdits } from './common';
 import { replace } from './edits';

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { createHash } from 'crypto';
 
 /** Absolute path with forward slashes, the form the TypeScript API uses. */

@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';

@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import type { IntentionAction, TextEdit } from './intentions';
 import { binaryPrecedence, containsInScope, endsWithJump, indentLines, negate, precedence, statementLines, unparen, wrap } from './syntax';
 

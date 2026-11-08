@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { VirtualProject } from '../refactor/virtualProject';
 import { Report, ReportBuilder, ReportNode, nodeSnippet, plural } from '../structure/report';
 import { howToFix } from '../structure/howToFix';

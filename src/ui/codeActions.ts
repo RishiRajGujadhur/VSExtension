@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import * as vscode from 'vscode';
 import { findNode } from '../analysis/impact';
 import { isFeatureEnabled } from './features';

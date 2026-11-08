@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 import { catalog } from './patternCatalog';
 import { learnMore } from './patternLinks';

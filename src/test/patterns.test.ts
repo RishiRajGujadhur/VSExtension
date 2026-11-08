@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { test } from 'node:test';
 import { detectLayers, detectPatterns } from '../inspect/patterns';
 import { patternsAlong } from '../inspect/dataFlow';

@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 
 /** What a named thing in a file is, for choosing what an analysis can start from. */
 export type SymbolKind = 'variable' | 'function' | 'class' | 'interface' | 'member' | 'parameter' | 'import';

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { test } from 'node:test';
 import { qualityInspections } from '../inspect/quality';
 import { applyTextEdits } from '../intentions/intentions';

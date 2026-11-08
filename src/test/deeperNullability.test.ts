@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { test } from 'node:test';
 import { libraryReason } from '../inspect/nullability';
 import { compile, functionNamed } from './inMemory';

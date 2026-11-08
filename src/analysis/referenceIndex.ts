@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 
 /**
  * Maps each declaration in the project to the places that reference it at runtime.

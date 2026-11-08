@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { pathKey } from '../analysis/paths';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { introducedErrors } from '../refactor/common';

@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { TextEdit } from '../intentions/intentions';
 
 export type Severity = 'error' | 'warning' | 'info' | 'hint';

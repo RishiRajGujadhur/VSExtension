@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { normalizePath } from '../analysis/paths';
 import { findNode } from '../analysis/impact';
 import { projectSourceFiles, resolveAlias } from '../analysis/referenceIndex';

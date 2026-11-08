@@ -1,6 +1,6 @@
 import { execFileSync } from 'child_process';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import * as vscode from 'vscode';
 import { findNode } from '../analysis/impact';
 import { ReportNode } from '../structure/report';

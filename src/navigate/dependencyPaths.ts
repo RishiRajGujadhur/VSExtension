@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { normalizePath } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { ReportBuilder, ReportNode, Report, codeContextAt, plural } from '../structure/report';

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { hashText, normalizePath, pathKey } from '../analysis/paths';

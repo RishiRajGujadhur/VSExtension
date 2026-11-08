@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 
 /** Binding strength of an expression's outermost operator; higher binds tighter. */
 export function precedence(node: ts.Expression): number {

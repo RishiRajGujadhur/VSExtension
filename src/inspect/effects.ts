@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { ReportBuilder, ReportNode, Report, nodeSnippet, plural } from '../structure/report';
 import {
   FunctionWithBody,

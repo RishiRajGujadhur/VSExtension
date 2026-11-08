@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { applyTextEdits, intentionsAt } from '../intentions/intentions';
 
 /** Applies the intention `id` at the `¦` in `code`, or undefined when it is not offered there. */

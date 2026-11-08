@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';

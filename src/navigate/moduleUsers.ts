@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts = require('typescript');
 import { ModuleGraph, programGraph } from './moduleGraph';
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 import { howToFix } from '../structure/howToFix';
