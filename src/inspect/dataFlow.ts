@@ -74,7 +74,18 @@ function classify(node: ts.Node, checker: ts.TypeChecker): FlowStep {
     const value = parent.initializer && ts.isJsxExpression(parent.initializer) ? parent.initializer.expression : parent.initializer;
     return step('write', `set by <${nodeText(parent.parent.parent.tagName)} ${node.getText()}=${value ? nodeText(value) : 'true'}>`, value);
   }
-  if ((parent as ts.NamedDeclaration).name === node) {
+  if (ts.isShorthandPropertyAssignment(parent)) {
+    // `({ m } = next)` assigns m; `{ m }` anywhere else reads it.
+    return isDestructuringTarget(parent.parent)
+      ? step('write', `assigned by destructuring ${nodeSnippet(parent.parent.parent, 40)}`, undefined)
+      : step('read', `object property ${nodeSnippet(parent.parent, 40)}`);
+  }
+  if (ts.isPropertySignature(parent) && parent.name === node) {
+    const owner = ts.isInterfaceDeclaration(parent.parent) ? parent.parent.name.text : ts.isTypeLiteralNode(parent.parent) && ts.isTypeAliasDeclaration(parent.parent.parent) ? parent.parent.parent.name.text : 'a type';
+    return step('declaration', `declared in ${owner}`);
+  }
+  // `order.id` and `Geo.origin` also have a `name`, but they read the property: not declarations.
+  if ((parent as ts.NamedDeclaration).name === node && !ts.isPropertyAccessExpression(parent) && !ts.isQualifiedName(parent)) {
     if (ts.isVariableDeclaration(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertyAssignment(parent) || ts.isParameter(parent) || ts.isBindingElement(parent)) {
       const initializer = (parent as ts.VariableDeclaration).initializer;
       if (ts.isParameter(parent)) {
@@ -90,10 +101,6 @@ function classify(node: ts.Node, checker: ts.TypeChecker): FlowStep {
     }
     return step('declaration', 'declared');
   }
-  if (ts.isShorthandPropertyAssignment(parent)) {
-    return step('read', `object property ${nodeSnippet(parent.parent, 40)}`);
-  }
-
   const expression = accessExpression(node);
   const write = writeOf(expression);
   if (write) {
@@ -148,7 +155,33 @@ function classify(node: ts.Node, checker: ts.TypeChecker): FlowStep {
   if (ts.isVariableDeclaration(outerParent) && outerParent.initializer === outer) {
     return step('read', `copied to ${outerParent.name.getText()}`);
   }
+  if (ts.isTemplateSpan(outerParent)) {
+    return step('read', `read in ${nodeSnippet(outerParent.parent, 50)}`);
+  }
   return step('read', `read: ${nodeSnippet(outerParent, 50)}`);
+}
+
+/** The object or array literal on the left of `=`, such as `{ m }` in `({ m } = next)`. */
+function isDestructuringTarget(literal: ts.Node): boolean {
+  let node = literal;
+  while (ts.isObjectLiteralExpression(node.parent) || ts.isArrayLiteralExpression(node.parent) || ts.isPropertyAssignment(node.parent) || ts.isParenthesizedExpression(node.parent)) {
+    node = node.parent;
+  }
+  return ts.isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && node.parent.left === node;
+}
+
+/** Whether a destructuring target such as `[m]` or `{ m }` assigns the name. */
+function patternHolds(target: ts.Node, name: string): boolean {
+  if (!ts.isArrayLiteralExpression(target) && !ts.isObjectLiteralExpression(target)) {
+    return false;
+  }
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    found ||= ts.isIdentifier(node) && node.text === name;
+    ts.forEachChild(node, visit);
+  };
+  visit(target);
+  return found;
 }
 
 function safeType(checker: ts.TypeChecker, node: ts.Node): string | undefined {
@@ -490,7 +523,7 @@ function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBui
       continue;
     }
     const description = `line ${lineOf(step.node)} · ${functionLabel(enclosingFunction(step.node))}`;
-    if (flow.kind === 'into' && flow.target.getText() === accessExpression(step.node).getText()) {
+    if (flow.kind === 'into' && (flow.target.getText() === accessExpression(step.node).getText() || patternHolds(flow.target, accessExpression(step.node).getText()))) {
       // `total = total * 0.9` updates the variable itself; that is a flow in.
       continue;
     }

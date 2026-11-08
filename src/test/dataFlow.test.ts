@@ -191,3 +191,19 @@ test('flows out show, folded under each receiving variable, where it sends the v
   // Only one hop: the rows below have no further hops of their own.
   assert.ok(!copy?.children?.some((c) => c.label.startsWith('→') && c.children?.length));
 });
+
+const syntax = path.join(fixtures, 'inspect/src/syntax.ts');
+
+test('destructuring assignments write the variable, and template reads show the template', () => {
+  const project = virtualProject('inspect', 'src/syntax.ts');
+  const report = dataFlowReport(project, syntax, offsetIn(syntax, 'let |m'));
+  const steps = report.roots.filter((r) => !r.label.startsWith('Flows ')).flatMap((r) => r.children ?? []).map((c) => c.label);
+  assert.deepEqual(steps, ['= start', 'assigned by [m]', 'read: m + 1', 'assigned by destructuring { m } = { m }', 'object property { m }', 'returned from chain']);
+  // [m] = [m + 1] updates m itself; it is not a place the value goes.
+  assert.deepEqual(report.roots.find((r) => r.label === 'Flows out')?.children?.map((c) => c.label), ['returned from chain']);
+
+  const id = dataFlowReport(project, syntax, offsetIn(syntax, '  i|d: string'));
+  const idSteps = id.roots.filter((r) => !r.label.startsWith('Flows ')).flatMap((r) => r.children ?? []).map((c) => c.label);
+  assert.ok(idSteps.includes('declared in Order'), idSteps.join(', '));
+  assert.ok(idSteps.includes('read in `#${order.id}`'), idSteps.join(', '));
+});
