@@ -358,7 +358,9 @@ function usesOf(project: VirtualProject, explorer: NullabilityExplorer, builder:
   for (const reference of referencesAt(project.service, name.getSourceFile().fileName, name.getStart())) {
     const access = accessExpression(reference);
     const parent = reference.parent;
-    if ((parent as ts.NamedDeclaration).name === reference || writeOf(access) || uses.length >= maxUses) {
+    // `user.nickname` has a name like a declaration does, but it is a read.
+    const declares = (parent as ts.NamedDeclaration).name === reference && !ts.isPropertyAccessExpression(parent) && !ts.isQualifiedName(parent);
+    if (declares || writeOf(access) || uses.length >= maxUses) {
       continue;
     }
     const check = isNullCheck(access as ts.Expression);

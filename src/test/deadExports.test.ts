@@ -68,3 +68,10 @@ test('exports unused from the entry points are dead; re-exports and export * kee
     dead: ['lib.ts:localOnly (local)', 'lib.ts:unused', 'util.ts:Unused', 'util.ts:testedOnly'],
   });
 });
+
+test('an export used only through a namespace import is alive', () => {
+  // index.ts calls ns.viaNamespace() after import * as ns from './ns'.
+  const program = virtualProject('deadexports', 'src/index.ts').program();
+  const entryPoints = defaultEntryPoints(root, programGraph(program).files);
+  assert.ok(!summary(findDeadExports(program, { entryPoints, testsAreEntryPoints: true })).dead.some((d) => d.startsWith('ns.ts')));
+});

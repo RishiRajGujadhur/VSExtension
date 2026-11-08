@@ -82,3 +82,11 @@ test('an optional parameter lists call sites that omit it or pass undefined', ()
     '    undefined literal',
   ]);
 });
+
+test('uses of a property list its reads', () => {
+  const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '  nick|name?: string'));
+  const uses = report.roots.find((r) => r.label === 'Uses');
+  assert.equal(uses?.children?.length, 1);
+  assert.match(uses?.children?.[0].label ?? '', /user\.nickname/);
+  assert.match(uses?.children?.[0].description ?? '', /may be undefined/);
+});
