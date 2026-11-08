@@ -73,6 +73,20 @@
   // Branch focus: after a double-click only the box, the boxes between it and the subject, and what is behind it are drawn.
   let isolated;
   let chain = new Set();
+  const toneGlyphs = { ok: '✓', warning: '!', error: '✕', info: 'i' };
+  const toneWords = { ok: 'Safe', warning: 'Warning', error: 'Problem', info: 'Note' };
+  /** What a screen reader says for a box: tone, text, side, kind and folding. */
+  function spokenLabel(node) {
+    const text = [node.label, node.description].filter(Boolean).join(', ');
+    const parts = [`${node.tone ? `${toneWords[node.tone]}: ` : ''}${text}`];
+    if (diagram && node === diagram.center) parts.push('the subject');
+    else if (node.side < 0 && diagram.leftCaption) parts.push(diagram.leftCaption);
+    else if (node.side > 0 && diagram.rightCaption) parts.push(diagram.rightCaption);
+    if (node.kind === 'pattern') parts.push('design pattern');
+    if (node.children.length && node.collapsed && node !== diagram.center) parts.push(`${node.children.length} folded`);
+    if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
+    return parts.join('. ');
+  }
   const visible = (node) => {
     if (node.collapsed) return [];
     return isolated && chain.has(node) && node !== isolated ? node.children.filter((c) => chain.has(c)) : node.children;
@@ -223,7 +237,8 @@
       }
     }
 
-    const layer = el('g', { class: 'nodes' }, scene);
+    edges.setAttribute('aria-hidden', 'true');
+    const layer = el('g', { class: 'nodes', role: 'none' }, scene);
     for (const node of shownNodes) {
       if (!overlaps(node.px, node.py, node.px + node.w, node.py + H)) continue;
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
@@ -232,6 +247,11 @@
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
       g.diagramNode = node;
+      g.setAttribute('role', 'treeitem');
+      g.setAttribute('aria-level', String(node.depth + 1));
+      g.setAttribute('aria-label', spokenLabel(node));
+      if (node.children.length && node !== center) g.setAttribute('aria-expanded', String(!node.collapsed));
+      if (node === selected) g.setAttribute('aria-selected', 'true');
       if (node.kind === 'pattern') {
         // Hexagon: a design pattern, not a step of the value.
         const w = node.w;
@@ -245,11 +265,14 @@
         g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
       }
       if (!detail) continue;
-      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = fitText(node.label, fontOf(600, 12), node.w - 26);
-      if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = fitText(node.description, fontOf(400, 11), node.w - 26);
+      const room = node.w - (node.tone ? 40 : 26);
+      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label', 'aria-hidden': 'true' }, g).textContent = fitText(node.label, fontOf(600, 12), room);
+      if (node.description) el('text', { x: 14, y: 37, class: 'description', 'aria-hidden': 'true' }, g).textContent = fitText(node.description, fontOf(400, 11), room);
+      if (node.tone) el('text', { x: node.w - 16, y: 18, class: 'glyph', 'text-anchor': 'middle', 'aria-hidden': 'true' }, g).textContent = toneGlyphs[node.tone];
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
-        const toggle = el('g', { class: 'toggle', transform: `translate(${node.side < 0 ? 0 : node.w},${H / 2})` }, g);
+        const toggle = el('g', { class: 'toggle', 'aria-hidden': 'true', transform: `translate(${node.side < 0 ? 0 : node.w},${H / 2})` }, g);
+        el('circle', { r: 12, class: 'hit' }, toggle);
         el('circle', { r: 9 }, toggle);
         el('text', { y: 4, 'text-anchor': 'middle' }, toggle).textContent = node.collapsed ? String(node.children.length) : '−';
         el('title', {}, toggle).textContent = node.collapsed ? `Show ${node.children.length} more` : 'Fold';
@@ -470,6 +493,7 @@
     paint(false);
     if (grid) grid.wake();
     zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
+    zoomLevel.setAttribute('aria-label', `Zoom ${Math.round(view.k * 100)}%, reset to 100%`);
     updateMinimapView();
     remember();
   }

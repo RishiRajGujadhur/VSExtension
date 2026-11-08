@@ -86,40 +86,40 @@ export class DiagramPanel {
 <title>Analysis Diagram</title>
 </head>
 <body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-<header>
+<header aria-label="Chart tools">
   <span id="caption"></span>
   <input id="search" type="search" placeholder="Find a box (Ctrl+F)" aria-label="Find a box" title="Highlights boxes whose text contains this; Enter goes to the next, Shift+Enter to the previous">
   <span id="searchCount" aria-live="polite"></span>
   ${button('collapse', 'Fold All', 'Show only the rows next to the subject')}
   ${button('expand', 'Unfold All', 'Show every row')}
-  ${button('zoomOut', '−', 'Zoom out (−)')}
-  <button id="zoomLevel" title="Zoom level; click for 100%">100%</button>
-  ${button('zoomIn', '+', 'Zoom in (+)')}
+  <button id="zoomOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
+  <button id="zoomLevel" title="Zoom level; click for 100%" aria-label="Zoom 100%, reset to 100%">100%</button>
+  <button id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
   ${button('fit', 'Fit', 'Fit the diagram to the window')}
   ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
   ${button('savePng', 'Save PNG', 'Save the chart as a PNG picture at twice the size, for chats and slides')}
   <button id="effects" class="toggle-button" aria-pressed="true" title="The animated dot grid behind the chart, which follows the pointer">Grid</button>
   <button id="flowToggle" class="toggle-button" aria-pressed="true" title="Clicking a box animates the lines between it and the subject; click the background or press Escape to stop">Flow</button>
-  <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend">?</button>
+  <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend" aria-label="Legend: what the colors, arrows and keys mean">?</button>
 </header>
-<div id="branch" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
+<div id="branch" role="status" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
-<div id="stage">
+<main id="stage" aria-label="Chart">
 <canvas id="grid" aria-hidden="true"></canvas>
-<svg id="canvas" class="off" role="img" aria-label="Analysis diagram">
+<svg id="canvas" class="off" role="tree" aria-label="Analysis diagram. Tab to the subject, then use the arrow keys to move between boxes.">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>
 </svg>
-</div>
+</main>
 <aside id="legend" hidden>
   <h2>Reading the chart</h2>
   <ul>
     <li><span class="swatch subject"></span>The subject of the analysis, such as the variable</li>
-    <li><span class="swatch ok"></span>Safe or handled</li>
-    <li><span class="swatch warning"></span>Needs a look, such as a value that may be undefined</li>
-    <li><span class="swatch error"></span>A problem, such as an unhandled error</li>
-    <li><span class="swatch info"></span>Worth knowing, such as a write</li>
+    <li><span class="swatch ok">✓</span>Safe or handled</li>
+    <li><span class="swatch warning">!</span>Needs a look, such as a value that may be undefined</li>
+    <li><span class="swatch error">✕</span>A problem, such as an unhandled error</li>
+    <li><span class="swatch info">i</span>Worth knowing, such as a write</li>
     <li><span class="swatch group"></span>A group (dashed): gathers the boxes behind it and has no code of its own</li>
     <li><span class="swatch pattern"></span>A design pattern (purple hexagon, dotted line): how the code around the value is organized, not a place the value goes</li>
     <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
@@ -136,8 +136,8 @@ export class DiagramPanel {
     <li>Right-click a box: Check for Null, Find Usages, Data Flow and more</li>
   </ul>
 </aside>
-<svg id="minimap" class="off" aria-label="Overview of the whole chart; click to move there" role="img"><g id="miniScene"></g><rect id="miniView"/></svg>
-<footer id="info" aria-live="polite"></footer>
+<svg id="minimap" class="off" aria-hidden="true"><g id="miniScene"></g><rect id="miniView"/></svg>
+<footer id="info"></footer>
 <script src="${asset('diagramGrid.js')}"></script>
 <script src="${asset('diagram.js')}"></script>
 </body>

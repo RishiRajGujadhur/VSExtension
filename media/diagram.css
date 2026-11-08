@@ -122,3 +122,30 @@ header button.toggle-button[aria-pressed="true"] { background: var(--vscode-butt
 @media (prefers-reduced-motion: reduce) {
   .flow { animation: none; stroke-dasharray: none; opacity: .75; }
 }
+
+/* Tone symbols, so the tone is not shown by color alone. */
+.node .glyph { font-size: 12px; font-weight: 700; }
+.node.ok .glyph { fill: var(--vscode-testing-iconPassed, #73c991); }
+.node.warning .glyph { fill: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+.node.error .glyph { fill: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+.node.info .glyph { fill: var(--vscode-problemsInfoIcon-foreground, #3794ff); }
+#legend .swatch { display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; line-height: 1; }
+.toggle .hit { fill: transparent; stroke: none; }
+/* A clearly visible keyboard focus on boxes. */
+.node:focus-visible .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.5; }
+
+/* Windows high contrast and other forced color modes: system colors, no decorative grid. */
+@media (forced-colors: active) {
+  #grid { display: none; }
+  .node .box, .node.center .box, .node.pattern .box { fill: Canvas; stroke: CanvasText; }
+  .node.center .box { stroke: Highlight; stroke-width: 3; }
+  .node .label, .node .description, .node.center .label, .node.center .description, .node.pattern .label, .node .glyph, .side { fill: CanvasText; }
+  .node .tone { fill: CanvasText; }
+  .edge, .edge.relation, .edge.onpath { stroke: CanvasText; }
+  #arrow path, #arrowOn path { fill: CanvasText; }
+  .flow { stroke: Highlight; filter: none; }
+  .node:focus .box, .node:focus-visible .box, .node.selected .box, .node.onpath .box, .node.match .box { stroke: Highlight; stroke-width: 3; }
+  .toggle circle:not(.hit) { fill: ButtonFace; stroke: ButtonText; }
+  .toggle text { fill: ButtonText; }
+  #minimap .mini, #miniView { fill: CanvasText; stroke: CanvasText; }
+}
