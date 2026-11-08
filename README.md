@@ -1,6 +1,15 @@
 # Code X-Ray
 
-Refactorings, inspections and code navigation for TypeScript, JavaScript and React in VS Code, in the style of WebStorm. Everything is offline static analysis with the TypeScript compiler: no AI, no network.
+See inside your TypeScript, JavaScript and React code in VS Code: where values come from and where they go, every path a function can take, which tests a change affects, what can be null, and much more, with refactorings, inspections and structural search in the style of WebStorm. Everything is offline static analysis with the TypeScript compiler: no AI, no network, and nothing leaves your machine.
+
+**At a glance**
+
+- **Understand values**: Data Flow with a live diagram, Explain Value Path (*why does this variable have this value here?*), backward and forward slices, Nullability, Mutation Tracking and Race Conditions.
+- **Understand control flow**: a flowchart of any function with a Path Explorer that lists, compares and filters every path, expands calls in place and flags impossible paths.
+- **Know what a change affects**: Test Impact (also for uncommitted changes), Find Usages grouped by reads, writes and calls, Override Impact, Who Imports This File and the Dependency Graph Diff.
+- **Change code safely**: Change Signature, Introduce Parameter, Move Members, Safe Delete, 70 rewrites and structural search and replace.
+- **Find problems**: live inspections (missing await, unsafe type assertions and more), duplicates, dead exports, import cycles and design patterns.
+- **Built to be used**: an Actions view with search and Most Used, a shortcut for every analysis, interactive charts you can export as Mermaid, SVG or PNG, and screen reader, keyboard and high contrast support.
 
 ![Analyze or Refactor This: every refactoring and analysis for the cursor in one list, each with its shortcut](docs/images/actions-at-cursor.gif)
 
@@ -84,6 +93,8 @@ The **Path Explorer** lists every path through the function with the branches it
 - **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.
 - **Slices**: **What Affects This Value** (backward slice) lights up the statements and decisions a variable depends on at the cursor; **What This Value Affects** (forward slice) lights up everything it flows into or decides.
 - **Export**: copy the chart as a Mermaid flowchart (with the picked path drawn thick) or save it as SVG.
+
+The chart has the same animated grid as the Data Flow diagram, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
 
 Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
 

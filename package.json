@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
-  "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.29.0",
+  "description": "See inside TypeScript, JavaScript and React code: data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, WebStorm-style refactorings, inspections and structural search. Deterministic, offline, no AI.",
+  "version": "0.30.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -13,20 +13,26 @@
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Testing",
     "Programming Languages",
+    "Testing",
+    "Visualization",
+    "Linters",
     "Other"
   ],
   "keywords": [
+    "data flow",
+    "control flow",
+    "code visualization",
+    "flowchart",
+    "test impact",
     "refactoring",
     "change signature",
     "typescript",
     "react",
     "webstorm",
-    "test impact",
     "inspections",
     "structural search",
-    "data flow",
+    "nullability",
     "dead code",
     "dependency graph"
   ],
