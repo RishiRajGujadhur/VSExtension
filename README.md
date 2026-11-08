@@ -168,6 +168,15 @@ Analyses over many files ask where to look: the whole project, a folder, the ope
 
 ![Usages limited to cart.ts](docs/images/limit-results.gif)
 
+## Accessibility
+
+The extension follows the W3C's Web Content Accessibility Guidelines (WCAG 2.2) where it draws its own interface:
+
+- **Screen readers** hear what colors and icons show: result rows say "Warning:", "Safe:" or "Problem:", their file and line, and whether a fix or an explanation is available; Test Impact rows say whether a test is confirmed or possible; the status bar items read as counts with their kind.
+- **The diagram** is a tree of boxes you can walk with the arrow keys, each with a spoken label; toned boxes also show a symbol (✓ ! ✕ i), fold buttons are 24 pixels, and Windows high contrast uses system colors.
+- **Change Signature** and **Structural Search** name every field, mark invalid input, announce problems and result counts without interrupting, keep keyboard focus when rows move, and open search results with Enter.
+- Animations stop when your system asks for reduced motion.
+
 ## Settings
 
 Run **TypeScript Structure: Open Settings**. The ones you are most likely to change:
