@@ -6,7 +6,11 @@ header button { display: inline-flex; align-items: center; gap: 4px; min-height:
 header button:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
 header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
 body { display: flex; flex-direction: column; }
-#canvas { width: 100%; flex: 1; min-height: 0; cursor: grab; }
+#stage { position: relative; flex: 1; min-height: 0; }
+#grid, #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#grid { pointer-events: none; }
+#grid[hidden] { display: none; }
+#canvas { cursor: grab; }
 #canvas.dragging { cursor: grabbing; }
 #empty { padding: 24px; color: var(--vscode-descriptionForeground); }
 
@@ -107,3 +111,14 @@ body { position: relative; }
 #minimap .mini.error { fill: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
 #minimap .mini.ok { fill: var(--vscode-testing-iconPassed, #73c991); }
 #miniView { fill: var(--vscode-focusBorder, #007fd4); fill-opacity: .12; stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+
+/* Grid and Flow toggles: pressed looks like VS Code's toggled buttons. */
+header button.toggle-button[aria-pressed="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+
+/* Flow animation: pulses moving along the lines in the direction the value travels. */
+.flow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 8 32; pointer-events: none;
+  animation: flow 1.1s linear infinite; filter: drop-shadow(0 0 3px var(--vscode-charts-blue, #00c8ff)); }
+@keyframes flow { to { stroke-dashoffset: -40; } }
+@media (prefers-reduced-motion: reduce) {
+  .flow { animation: none; stroke-dasharray: none; opacity: .75; }
+}

@@ -99,14 +99,19 @@ export class DiagramPanel {
   ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
   ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
   ${button('savePng', 'Save PNG', 'Save the chart as a PNG picture at twice the size, for chats and slides')}
+  <button id="effects" class="toggle-button" aria-pressed="true" title="The animated dot grid behind the chart, which follows the pointer">Grid</button>
+  <button id="flowToggle" class="toggle-button" aria-pressed="true" title="Clicking a box animates the lines between it and the subject; click the background or press Escape to stop">Flow</button>
   <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend">?</button>
 </header>
 <div id="branch" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
+<div id="stage">
+<canvas id="grid" aria-hidden="true"></canvas>
 <svg id="canvas" class="off" role="img" aria-label="Analysis diagram">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>
 </svg>
+</div>
 <aside id="legend" hidden>
   <h2>Reading the chart</h2>
   <ul>
@@ -126,12 +131,14 @@ export class DiagramPanel {
     <li><kbd>Enter</kbd> open the code · <kbd>Space</kbd> fold or unfold</li>
     <li><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>0</kbd> fit · <kbd>Home</kbd> back to the subject</li>
     <li>Double-click a box, or <kbd>B</kbd>: show only its branch · <kbd>Escape</kbd> the whole chart again</li>
+    <li>Click a box: pulses flow along the lines between it and the subject (the <b>Flow</b> button turns this off) · click the background or <kbd>Escape</kbd> to stop</li>
     <li><kbd>Ctrl+F</kbd> find a box · <kbd>Enter</kbd> next match</li>
     <li>Right-click a box: Check for Null, Find Usages, Data Flow and more</li>
   </ul>
 </aside>
 <svg id="minimap" class="off" aria-label="Overview of the whole chart; click to move there" role="img"><g id="miniScene"></g><rect id="miniView"/></svg>
 <footer id="info" aria-live="polite"></footer>
+<script src="${asset('diagramGrid.js')}"></script>
 <script src="${asset('diagram.js')}"></script>
 </body>
 </html>`;

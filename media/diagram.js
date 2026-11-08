@@ -20,6 +20,10 @@
   const legendButton = document.getElementById('legendButton');
   let diagram;
   let view = { x: 0, y: 0, k: 1 };
+  // The animated grid behind the chart (diagramGrid.js), the box under the pointer, and the box whose flow is shown.
+  let grid;
+  let hovered;
+  let flowing;
   let query = '';
   let matchIndex = -1;
   let shownNodes = [];
@@ -58,7 +62,11 @@
   const linkParents = (nodes, parent, side) => nodes.forEach((n) => { n.parent = parent; n.key = `${parent ? parent.key : side}/${n.label}`; linkParents(n.children, n, side); });
 
   // Zoom, position and folding are remembered per analysis title (the 20 most recent), also after the tab is reloaded.
-  const saved = (vscode.getState() || {}).memory || {};
+  const state = vscode.getState() || {};
+  const saved = state.memory || {};
+  // Viewer preferences: the animated grid and the flow animation on click, both on unless turned off.
+  const prefs = { effects: true, flow: true, ...(state.prefs || {}) };
+  const saveState = () => vscode.setState({ memory: saved, prefs });
   let rememberTimer;
   function remember() {
     clearTimeout(rememberTimer);
@@ -68,7 +76,7 @@
       forEach([...diagram.left, ...diagram.right], (n) => { if (n.children.length) collapsed[n.key] = n.collapsed; });
       saved[diagram.title] = { view, collapsed, at: Date.now() };
       Object.keys(saved).sort((a, b) => saved[b].at - saved[a].at).slice(20).forEach((title) => delete saved[title]);
-      vscode.setState({ memory: saved });
+      saveState();
     }, 300);
   }
   const isMatch = (n) => !!query && `${n.label} ${n.description || ''}`.toLowerCase().includes(query);
@@ -165,8 +173,16 @@
       const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
       g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
-      g.addEventListener('mouseenter', () => { highlightPath(node); showInfo(node); });
-      g.addEventListener('mouseleave', () => { highlightPath(focused); showInfo(focused); });
+      g.addEventListener('mouseenter', () => { hovered = node; highlightPath(node); showInfo(node); if (grid) grid.wake(); });
+      g.addEventListener('mouseleave', () => { hovered = undefined; highlightPath(focused); showInfo(focused); if (grid) grid.wake(); });
+      // Clicking a box sends a wave through the grid and, with Flow animation on, animates the lines along its path.
+      g.addEventListener('click', () => {
+        if (grid) grid.pulse(view.x + (node.px + node.w / 2) * view.k, view.y + (node.py + H / 2) * view.k);
+        if (prefs.flow) {
+          flowing = node;
+          drawFlows();
+        }
+      });
       g.addEventListener('keydown', (e) => onNodeKey(e, node));
       g.addEventListener('dblclick', (e) => { e.stopPropagation(); if (node !== center) isolate(node); });
       el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
@@ -213,6 +229,7 @@
     if (diagram.leftCaption && roots(diagram.left).length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
     if (diagram.rightCaption && roots(diagram.right).length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     highlighted = [];
+    drawFlows();
     drawMinimap();
     apply();
     if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
@@ -235,7 +252,8 @@
   }
   document.getElementById('wholeChart').addEventListener('click', () => isolate(undefined));
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isolated && e.target !== searchBox && legend.hidden) isolate(undefined);
+    if (e.key === 'Escape' && e.target !== searchBox && legend.hidden && flowing) stopFlow();
+    else if (e.key === 'Escape' && isolated && e.target !== searchBox && legend.hidden) isolate(undefined);
   });
 
   // Minimap: the whole chart in the corner with the visible part outlined, shown when the chart is bigger than the
@@ -382,8 +400,36 @@
     else if (e.key === 'Home') { e.preventDefault(); centerOn(diagram.center); diagram.center.el.focus({ preventScroll: true }); }
   });
 
+  // The lines between the clicked box and the subject, and those behind the box, carry moving pulses in the
+  // direction the value travels. Clicking the background or pressing Escape stops them.
+  function drawFlows() {
+    const old = scene.querySelector('.flows');
+    if (old) old.remove();
+    if (!flowing || !prefs.flow || !diagram || !shownNodes.includes(flowing)) return;
+    const edges = [];
+    if (flowing === diagram.center) {
+      shownNodes.forEach((n) => n.edgeEl && edges.push(n.edgeEl));
+    } else {
+      for (let n = flowing; n; n = n.parent) if (n.edgeEl) edges.push(n.edgeEl);
+      const behind = (n) => visible(n).forEach((c) => { if (c.edgeEl) edges.push(c.edgeEl); behind(c); });
+      behind(flowing);
+    }
+    const layer = el('g', { class: 'flows' });
+    scene.insertBefore(layer, scene.querySelector('.nodes'));
+    for (const edge of edges) {
+      if (!edge.classList.contains('relation')) el('path', { d: edge.getAttribute('d'), class: 'flow' }, layer);
+    }
+  }
+
+  function stopFlow() {
+    if (!flowing) return;
+    flowing = undefined;
+    drawFlows();
+  }
+
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    if (grid) grid.wake();
     zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
     updateMinimapView();
     remember();
@@ -457,17 +503,27 @@
   let drag;
   svg.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || e.target.closest('.node')) return;
-    drag = { x: e.clientX - view.x, y: e.clientY - view.y };
+    drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('dragging');
   });
   svg.addEventListener('pointermove', (e) => {
+    if (grid) {
+      const rect = svg.getBoundingClientRect();
+      grid.pointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    }
     if (!drag) return;
     view.x = e.clientX - drag.x;
     view.y = e.clientY - drag.y;
     apply();
   });
-  svg.addEventListener('pointerup', () => { drag = undefined; svg.classList.remove('dragging'); });
+  svg.addEventListener('pointerup', (e) => {
+    // A click on the background, not a drag, stops the flow animation.
+    if (drag && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4) stopFlow();
+    drag = undefined;
+    svg.classList.remove('dragging');
+  });
+  svg.addEventListener('pointerleave', () => { if (grid) grid.pointer(undefined); });
   svg.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = svg.getBoundingClientRect();
@@ -502,6 +558,7 @@
     out.setAttribute('width', String(Math.ceil(box.width + 2 * pad)));
     out.setAttribute('height', String(Math.ceil(box.height + 2 * pad)));
     out.querySelector('#scene').removeAttribute('transform');
+    out.querySelectorAll('.flows').forEach((layer) => layer.remove());
     const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
     out.insertBefore(background, out.querySelector('#scene'));
     return { text: new XMLSerializer().serializeToString(out), width: box.width + 2 * pad, height: box.height + 2 * pad };
@@ -588,6 +645,7 @@
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
     focused = undefined;
+    flowing = undefined;
     selected = undefined;
     showInfo(undefined);
     if (diagram) {
@@ -611,5 +669,26 @@
       fit();
     }
   });
+  // The grid and the two toggles in the header.
+  const effectsButton = document.getElementById('effects');
+  const flowButton = document.getElementById('flowToggle');
+  grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
+    panX: view.x,
+    panY: view.y,
+    box: hovered && hovered.px !== undefined ? { x: view.x + hovered.px * view.k, y: view.y + hovered.py * view.k, w: hovered.w * view.k, h: H * view.k } : undefined,
+  }));
+  const showPrefs = () => {
+    effectsButton.setAttribute('aria-pressed', String(prefs.effects));
+    flowButton.setAttribute('aria-pressed', String(prefs.flow));
+    grid.setEnabled(prefs.effects);
+  };
+  effectsButton.addEventListener('click', () => { prefs.effects = !prefs.effects; showPrefs(); saveState(); });
+  flowButton.addEventListener('click', () => {
+    prefs.flow = !prefs.flow;
+    if (!prefs.flow) stopFlow();
+    showPrefs();
+    saveState();
+  });
+  showPrefs();
   vscode.postMessage({ type: 'ready' });
 })();
