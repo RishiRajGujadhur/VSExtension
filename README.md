@@ -1,6 +1,6 @@
 # Code X-Ray
 
-See inside your TypeScript, JavaScript and React code in VS Code: where values come from and where they go, every path a function can take, which tests a change affects, what can be null, and much more, with refactorings, inspections and structural search in the style of WebStorm. Everything is offline static analysis with the TypeScript compiler: no AI, no network, and nothing leaves your machine.
+See inside your TypeScript, JavaScript and React code in VS Code: where values come from and where they go, every path a function can take, which tests a change affects, what can be null, and much more, with refactorings, inspections and structural search. Everything is offline static analysis with the TypeScript compiler: no AI, no network, and nothing leaves your machine.
 
 **At a glance**
 
@@ -88,7 +88,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - Zoom, position and folding are kept when the same analysis runs again.
 - **Copy Mermaid** copies the chart as a Mermaid flowchart for Markdown, GitHub issues and pull requests; **Save SVG** and **Save PNG** save it as an image.
 - **?** explains the colors, arrows and keys.
-- An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Every line is a blue wire with soft cyan pulses travelling along it the way the value goes; clicking a box keeps the pulses to the lines between it and the subject (clicking the background brings them all back). Boxes are rounded cards with a soft shadow, their border brightening on hover. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid, the flowing lines and the box style follow [robot-components](https://github.com/dashrobotco/robot-components)' node grid, MIT.)
+- An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Every line is a blue wire with soft cyan pulses travelling along it the way the value goes; clicking a box keeps the pulses to the lines between it and the subject (clicking the background brings them all back). Boxes are rounded cards with a soft shadow, their border brightening on hover. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid, the flowing lines and the box style are adapted from [robot-components](https://github.com/dashrobotco/robot-components); see Credits.)
 
 ![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
 
@@ -261,3 +261,7 @@ VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots        # record the do
 ```
 
 The analysis engine (`src/analysis`, `src/refactor`, `src/intentions`, `src/inspect`, `src/navigate`, `src/search`, `src/structure`) has no `vscode` dependency and is unit-tested directly; `src/ui` is the VS Code layer. The extension ships as one esbuild bundle (`scripts/bundle.js`), with TypeScript kept as its own dependency, so it loads in a fraction of the time of the compiled files.
+
+## Credits
+
+The animated graphs (the dot grid behind the charts, the flowing lines and the box style) are adapted from the node grid demo of [robot-components](https://github.com/dashrobotco/robot-components) by Robot FZCO, used under the MIT License. Its copyright and license notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.

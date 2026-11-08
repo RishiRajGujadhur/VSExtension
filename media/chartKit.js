@@ -1,5 +1,9 @@
 // Shared by the analysis diagram and the Control Flow view: SVG elements, flowing lines, export as a standalone SVG,
 // and the Grid and Flow toggles with their remembered setting.
+//
+// The flowing lines (attachFlowLines) are adapted from the node grid of robot-components
+// (https://github.com/dashrobotco/robot-components, app/nodegrid/page.tsx). MIT License, Copyright (c) 2026 Robot FZCO;
+// the full notice is in THIRD_PARTY_NOTICES.md.
 (function () {
   const svgNs = 'http://www.w3.org/2000/svg';
 
