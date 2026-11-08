@@ -88,3 +88,26 @@ test('a do…while runs its body, then loops back while the condition holds', ()
   assert.ok(edges.includes('do … while (attempts < 3) → attempts++ [yes]'));
   assert.ok(edges.includes('do … while (attempts < 3) → return attempts [no]'));
 });
+
+test('expanding a call splices the called function in, its returns leading to what follows the call', async () => {
+  const { controlFlowChart } = await import('../inspect/controlFlowChart');
+  const project = virtualProject('inspect', 'src/control.ts');
+  const folded = controlFlowChart(project, file, offsetIn(file, 'function bad|ge'));
+  const call = folded.nodes.find((n) => n.calls.length)!;
+  assert.deepEqual(call.calls.map((c) => `${c.name} ${c.expanded}`), ['getPermission false']);
+  assert.equal(folded.paths.length, 1);
+
+  const open = controlFlowChart(project, file, offsetIn(file, 'function bad|ge'), new Set([call.calls[0].key]));
+  const name = (id: number) => open.nodes[id].lines[0];
+  const edges = open.edges.map((e) => `${name(e.from)} → ${name(e.to)}${e.label ? ` [${e.label}]` : ''}`);
+  assert.ok(edges.includes('const permission = getPermission(user, false) → !user.active [calls getPermission]'), edges.join('\n'));
+  assert.ok(edges.includes("return 'blocked' → return permission.toUpperCase() [returns]"));
+  assert.ok(edges.includes('return permission → return permission.toUpperCase() [returns]'));
+  // The spliced boxes belong to getPermission and point into its code; its start and end boxes are left out.
+  assert.ok(open.nodes.filter((n) => n.owner === 'getPermission').length >= 8);
+  assert.ok(!open.nodes.some((n) => n.owner && (n.kind === 'start' || n.kind === 'end')));
+  // Paths now run through the called function.
+  assert.equal(open.paths.length, 5);
+  assert.ok(open.paths.every((p) => p.ending === 'returns permission.toUpperCase()'));
+  assert.equal(open.nodes.find((n) => n.calls.length)!.calls[0].expanded, true);
+});

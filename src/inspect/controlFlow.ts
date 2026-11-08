@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { FunctionWithBody, functionLabel } from '../structure/util';
+import { FunctionWithBody, calledFunction, functionLabel, isFunctionWithBody } from '../structure/util';
 
 /**
  * Control flow of one function: the statements and decisions execution can pass through and the edges between
@@ -19,9 +19,11 @@ export interface CfgNode {
   nodes: ts.Node[];
   /** No edge leads here: code after a return, throw, break or continue. */
   unreachable?: boolean;
+  /** For a node spliced in by expanding a call: the function it belongs to. */
+  owner?: string;
 }
 
-export type CfgEdgeKind = 'next' | 'true' | 'false' | 'case' | 'default' | 'back' | 'break' | 'continue' | 'return' | 'throw' | 'exit';
+export type CfgEdgeKind = 'next' | 'true' | 'false' | 'case' | 'default' | 'back' | 'break' | 'continue' | 'return' | 'throw' | 'exit' | 'call';
 
 export interface CfgEdge {
   from: number;
@@ -312,4 +314,78 @@ export function buildCfg(fn: FunctionWithBody): Cfg {
     if (!reached.has(node.id) && node.id !== end) node.unreachable = true;
   }
   return { name: functionLabel(fn), fn, nodes, edges, start, end };
+}
+
+/** A call in a node to a function of the project, which can be expanded in place. */
+export interface CallTarget {
+  /** File and offset of the call, which identify it across rebuilds: "path:offset". */
+  key: string;
+  name: string;
+  fn: FunctionWithBody;
+}
+
+/** Calls in a statement or return node to functions with a body in the project, in source order. */
+export function callTargets(node: CfgNode, checker: ts.TypeChecker): CallTarget[] {
+  if (node.kind !== 'statement' && node.kind !== 'return') return [];
+  const found: CallTarget[] = [];
+  const visit = (n: ts.Node): void => {
+    if (isFunctionWithBody(n) || ts.isClassLike(n)) return;
+    ts.forEachChild(n, visit);
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      const fn = calledFunction(checker, n);
+      if (fn && fn.body) found.push({ key: `${n.getSourceFile().fileName}:${n.getStart()}`, name: functionLabel(fn), fn });
+    }
+  };
+  node.nodes.forEach(visit);
+  return found;
+}
+
+/** Deepest nesting of expanded calls, so recursion and long call chains stay readable. */
+const maxExpansionDepth = 3;
+
+/**
+ * Splices the flowcharts of the chosen calls into the graph: the calling node leads into the called function,
+ * whose returns lead to what followed the call and whose throws go to the end. Calls inside spliced functions can be
+ * expanded too, up to three levels; a function already being expanded (recursion) is not expanded again.
+ */
+export function expandCalls(cfg: Cfg, checker: ts.TypeChecker, keys: ReadonlySet<string>, depth = 0, chain: FunctionWithBody[] = [cfg.fn]): Cfg {
+  if (keys.size === 0 || depth >= maxExpansionDepth) return cfg;
+  const nodes = cfg.nodes.map((n) => ({ ...n }));
+  let edges = cfg.edges.map((e) => ({ ...e }));
+  for (const node of cfg.nodes) {
+    const calls = callTargets(node, checker).filter((c) => keys.has(c.key) && !chain.includes(c.fn));
+    if (calls.length === 0) continue;
+    const outs = edges.filter((e) => e.from === node.id);
+    edges = edges.filter((e) => e.from !== node.id);
+    // Edges waiting for the next target: first the call itself, then each callee's returns.
+    let tail: { from: number; label: string }[] = [{ from: node.id, label: `calls ${calls[0].name}` }];
+    calls.forEach((call, i) => {
+      const sub = expandCalls(buildCfg(call.fn), checker, keys, depth + 1, [...chain, call.fn]);
+      const base = nodes.length;
+      const id = (old: number) => base + old;
+      for (const n of sub.nodes) nodes.push({ ...n, id: id(n.id), owner: n.owner ?? sub.name });
+      const entries = sub.edges.filter((e) => e.from === sub.start).map((e) => e.to);
+      for (const t of tail) for (const to of entries) edges.push({ from: t.from, to: id(to), kind: 'call', label: i === 0 ? t.label : `calls ${call.name}` });
+      const next: { from: number; label: string }[] = [];
+      for (const e of sub.edges) {
+        if (e.from === sub.start) continue;
+        if (e.to === sub.end && e.kind !== 'throw') next.push({ from: id(e.from), label: 'returns' });
+        else if (e.to === sub.end) edges.push({ ...e, from: id(e.from), to: cfg.end });
+        else edges.push({ ...e, from: id(e.from), to: id(e.to) });
+      }
+      tail = next;
+    });
+    for (const out of outs) for (const t of tail) edges.push({ ...out, from: t.from, label: out.label ?? t.label });
+  }
+  // The spliced functions' own start and end boxes are not needed: the call edge and the returns stand for them.
+  const unused = new Set(nodes.filter((n) => n.owner && (n.kind === 'start' || n.kind === 'end')).map((n) => n.id));
+  const kept = nodes.filter((n) => !unused.has(n.id));
+  const renumber = new Map(kept.map((n, i) => [n.id, i]));
+  return {
+    ...cfg,
+    nodes: kept.map((n) => ({ ...n, id: renumber.get(n.id)! })),
+    edges: edges.filter((e) => renumber.has(e.from) && renumber.has(e.to)).map((e) => ({ ...e, from: renumber.get(e.from)!, to: renumber.get(e.to)! })),
+    start: renumber.get(cfg.start)!,
+    end: renumber.get(cfg.end)!,
+  };
 }

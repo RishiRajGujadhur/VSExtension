@@ -84,6 +84,19 @@
         el('title', {}, label).textContent = 'Click to keep only the paths through this branch';
       }
     });
+    // A frame around each spliced-in function, behind its boxes.
+    const frames = el('g', { class: 'frames' });
+    scene.insertBefore(frames, edges);
+    const owners = new Map();
+    for (const n of chart.nodes) if (n.owner) owners.set(n.owner, [...(owners.get(n.owner) || []), n]);
+    for (const [owner, members] of owners) {
+      const x0 = Math.min(...members.map((n) => n.x)) - 12;
+      const y0 = Math.min(...members.map((n) => n.y)) - 24;
+      const x1 = Math.max(...members.map((n) => n.x + n.width)) + 12;
+      const y1 = Math.max(...members.map((n) => n.y + n.height)) + 10;
+      el('rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 8, class: 'frame' }, frames);
+      el('text', { x: x0 + 8, y: y0 + 15, class: 'frame-label' }, frames).textContent = `↳ ${owner}()`;
+    }
     const nodes = el('g', { class: 'nodes' }, scene);
     for (const n of chart.nodes) {
       const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: 0, role: 'button' }, nodes);
@@ -96,6 +109,17 @@
       });
       if (n.kind === 'loop') el('text', { x: 10, y: n.height / 2 + 4, class: 'glyph' }, g).textContent = '↻';
       if (n.unreachable) el('title', {}, g).textContent = 'Unreachable: nothing leads here';
+      if (n.calls && n.calls.length) {
+        // Expand the called functions in place (or fold them back).
+        const open = n.calls.every((c) => c.expanded);
+        const names = [...new Set(n.calls.map((c) => c.name))].join(', ');
+        const button = el('g', { class: 'expand', transform: `translate(${n.width - 2},${-2})`, role: 'button', tabindex: 0, 'aria-label': `${open ? 'Fold' : 'Expand'} the call to ${names}` }, g);
+        el('rect', { x: -22, y: -8, width: 26, height: 16, rx: 8 }, button);
+        el('text', { x: -9, y: 4, 'text-anchor': 'middle' }, button).textContent = open ? 'ƒ−' : 'ƒ+';
+        el('title', {}, button).textContent = `${open ? 'Fold' : 'Expand'} ${names}() here`;
+        button.dataset.keys = JSON.stringify(n.calls.map((c) => c.key));
+        button.dataset.open = String(open);
+      }
     }
     highlight();
   }
@@ -194,8 +218,15 @@
     });
   }
 
-  // Clicks: a box opens its code; a branch label or line pins that branch.
+  // Clicks: a box opens its code; a branch label or line pins that branch; ƒ+ expands a call.
+  const toggleCalls = (button) => vscode.postMessage({ type: 'expand', keys: JSON.parse(button.dataset.keys), expand: button.dataset.open !== 'true' });
   scene.addEventListener('click', (e) => {
+    const expand = e.target.closest('.expand');
+    if (expand) {
+      e.stopPropagation();
+      toggleCalls(expand);
+      return;
+    }
     const edge = e.target.closest('.edge');
     if (edge) {
       const i = Number(edge.dataset.edge);
@@ -208,6 +239,13 @@
     if (g) open(chart.nodes[Number(g.dataset.node)]);
   });
   scene.addEventListener('keydown', (e) => {
+    const expand = e.target.closest('.expand');
+    if (expand && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleCalls(expand);
+      return;
+    }
     const g = e.target.closest('.node');
     if (g && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();

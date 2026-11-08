@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { Cfg, CfgNode, buildCfg } from './controlFlow';
+import { Cfg, CfgNode, buildCfg, callTargets, expandCalls } from './controlFlow';
 import { cfgPaths, describeChoice } from './paths';
 import { layoutFlow } from '../structure/flowLayout';
 import { ReportLocation } from '../structure/report';
@@ -18,6 +18,10 @@ export interface ControlFlowChart {
     kind: CfgNode['kind'];
     lines: string[];
     unreachable: boolean;
+    /** The function a spliced-in node belongs to. */
+    owner?: string;
+    /** Calls in this box that can be expanded in place, and whether they are. */
+    calls: { key: string; name: string; expanded: boolean }[];
     location?: ReportLocation;
     x: number;
     y: number;
@@ -50,13 +54,15 @@ function size(kind: CfgNode['kind'], lines: string[]): { width: number; height: 
   return { width: Math.max(80, text + 26), height };
 }
 
-export function controlFlowChart(project: VirtualProject, fileName: string, offset: number): ControlFlowChart {
+export function controlFlowChart(project: VirtualProject, fileName: string, offset: number, expanded: ReadonlySet<string> = new Set()): ControlFlowChart {
   const sourceFile = project.sourceFile(fileName);
-  const fn = functionAtOffset(sourceFile, offset, project.program().getTypeChecker());
-  return chartOf(buildCfg(fn), fn.getSourceFile());
+  const checker = project.program().getTypeChecker();
+  const fn = functionAtOffset(sourceFile, offset, checker);
+  const cfg = expandCalls(buildCfg(fn), checker, expanded);
+  return chartOf(cfg, fn.getSourceFile(), (node) => callTargets(node, checker).map((c) => ({ key: c.key, name: c.name, expanded: expanded.has(c.key) })));
 }
 
-export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile): ControlFlowChart {
+export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => []): ControlFlowChart {
   const lines = cfg.nodes.map(shownLines);
   const layout = layoutFlow(
     cfg.nodes.map((n, i) => ({ id: n.id, ...size(n.kind, lines[i]) })),
@@ -68,7 +74,9 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile): ControlFlowChart {
     if (!node.nodes.length || node.kind === 'start' || node.kind === 'end') {
       return node.kind === 'start' ? place(sourceFile, cfg.fn.getStart(sourceFile), cfg.fn.getStart(sourceFile)) : undefined;
     }
-    return place(sourceFile, node.nodes[0].getStart(sourceFile), node.nodes[node.nodes.length - 1].end);
+    // A spliced-in node points into the file of its own function.
+    const file = node.nodes[0].getSourceFile();
+    return place(file, node.nodes[0].getStart(file), node.nodes[node.nodes.length - 1].end);
   };
   const { paths, truncated } = cfgPaths(cfg);
   const describeEnding = (p: (typeof paths)[number]) => (p.ending.kind === 'return' ? (p.ending.text ? `returns ${p.ending.text}` : 'returns') : p.ending.kind === 'throw' ? `throws ${p.ending.text}` : 'reaches the end');
@@ -78,7 +86,7 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile): ControlFlowChart {
     anchor: cfg.fn.getStart(sourceFile),
     nodes: cfg.nodes.map((n, i) => {
       const p = layout.nodes.get(n.id)!;
-      return { id: n.id, kind: n.kind, lines: lines[i], unreachable: !!n.unreachable, location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
+      return { id: n.id, kind: n.kind, lines: lines[i], unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
     }),
     edges: cfg.edges.map((e, i) => ({
       from: e.from,
@@ -112,7 +120,8 @@ function place(sourceFile: ts.SourceFile, start: number, end: number): ReportLoc
 /** The node whose code holds the offset, innermost first, for following the editor's cursor. */
 export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile, offset: number): number | undefined {
   const { line, character } = sourceFile.getLineAndCharacterOfPosition(offset);
-  const inside = chart.nodes.filter((n) => n.location && n.kind !== 'start' && (line > n.location.line || (line === n.location.line && character >= n.location.character)) && (line < n.location.endLine || (line === n.location.endLine && character <= n.location.endCharacter)));
+  const file = normalizePath(sourceFile.fileName);
+  const inside = chart.nodes.filter((n) => n.location && n.location.file === file && n.kind !== 'start' && (line > n.location.line || (line === n.location.line && character >= n.location.character)) && (line < n.location.endLine || (line === n.location.endLine && character <= n.location.endCharacter)));
   const sizeOf = (n: (typeof inside)[number]) => (n.location!.endLine - n.location!.line) * 1000 + (n.location!.endCharacter - n.location!.character);
   return inside.sort((a, b) => sizeOf(a) - sizeOf(b))[0]?.id;
 }

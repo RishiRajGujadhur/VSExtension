@@ -17,6 +17,8 @@ export class ControlFlowPanel {
   /** The file and the function's offset in it, moved along with edits above it. */
   private target: { uri: vscode.Uri; anchor: number; folder?: string } | undefined;
   private refresh: NodeJS.Timeout | undefined;
+  /** Calls expanded in place, by "file:offset"; cleared when another function is shown. */
+  private expanded = new Set<string>();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -46,6 +48,7 @@ export class ControlFlowPanel {
   /** Opens the view for the function at the editor's cursor (or the function called there). */
   show(editor: vscode.TextEditor): void {
     const uri = editor.document.uri;
+    this.expanded.clear();
     this.target = { uri, anchor: editor.document.offsetAt(editor.selection.active), folder: vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath };
     if (!this.build(true)) return;
     if (this.panel) {
@@ -58,12 +61,19 @@ export class ControlFlowPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = html(this.panel.webview, media, codicons);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; path?: { nodes: number[]; edges: number[] } }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post();
       } else if (message.type === 'open' && message.location) {
         await openBeside(message.location);
+      } else if (message.type === 'expand' && message.keys) {
+        // Expand or collapse the calls of a box, then redraw with the called functions spliced in.
+        for (const key of message.keys) {
+          if (message.expand) this.expanded.add(key);
+          else this.expanded.delete(key);
+        }
+        this.build();
       } else if (message.type === 'mermaid' && this.chart) {
         // The picked path, if any, is drawn thick in the copy too.
         await vscode.env.clipboard.writeText(['```mermaid', chartMermaid(this.chart, message.path), '```', ''].join('\n'));
@@ -83,7 +93,7 @@ export class ControlFlowPanel {
     if (!this.target) return false;
     try {
       const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
-      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor);
+      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, this.expanded);
       // Follow the function itself from now on, not the cursor position it was found from.
       this.target.anchor = this.chart.anchor;
       this.post();

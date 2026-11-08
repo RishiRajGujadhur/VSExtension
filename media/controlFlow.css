@@ -91,3 +91,14 @@ li.selected .path-steps { color: inherit; }
   #stage { min-height: 0; flex: 1 1 60%; }
   #explorer { width: auto; flex: 0 1 40%; min-height: 140px; border-left: 0; border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); }
 }
+
+/* Expanding calls in place */
+.expand { cursor: pointer; }
+.expand rect { fill: var(--vscode-button-secondaryBackground, #3a3d41); stroke: var(--vscode-focusBorder, #007fd4); }
+.expand text { fill: var(--vscode-button-secondaryForeground, #fff); font-size: 10px; font-weight: 700; }
+.expand:hover rect, .expand:focus rect { fill: var(--vscode-button-background); }
+.expand:focus { outline: none; }
+.frame { fill: color-mix(in srgb, var(--vscode-charts-blue, #3794ff) 7%, transparent); stroke: var(--vscode-charts-blue, #3794ff); stroke-dasharray: 6 4; }
+.frame-label { fill: var(--vscode-charts-blue, #3794ff); font-size: 11px; font-weight: 600; font-family: var(--vscode-editor-font-family, monospace); }
+.edge.call .line { stroke: var(--vscode-charts-blue, #3794ff); }
+.edge.call .edge-label text { fill: var(--vscode-charts-blue, #3794ff); }

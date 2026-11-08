@@ -102,3 +102,8 @@ export function twice(flag: boolean): string {
   }
   return label;
 }
+
+export function badge(user: { active: boolean; role: Role }): string {
+  const permission = getPermission(user, false);
+  return permission.toUpperCase();
+}
