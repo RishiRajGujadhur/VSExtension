@@ -4,7 +4,8 @@ sample/**
 docs/**
 test-fixtures/**
 scripts/**
-out/test/**
+# The extension runs from the bundle in dist/; the compiled files in out/ are for the tests.
+out/**
 **/*.map
 tsconfig.json
 .gitignore

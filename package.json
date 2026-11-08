@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, WebStorm-style refactorings, inspections and structural search. Deterministic, offline, no AI.",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -42,7 +42,7 @@
     "onLanguage:javascript",
     "onLanguage:javascriptreact"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -3317,7 +3317,8 @@
     "test:integration": "npm run compile && node scripts/integration.js",
     "screenshots": "npm run compile && node scripts/screenshots.js",
     "package": "vsce package",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile && node scripts/bundle.js --production",
+    "bundle": "node scripts/bundle.js"
   },
   "dependencies": {
     "@vscode/codicons": "0.0.45",
@@ -3326,7 +3327,8 @@
   "devDependencies": {
     "@types/node": "22.20.5",
     "@types/vscode": "1.90.0",
-    "@vscode/vsce": "4.1.0"
+    "@vscode/vsce": "4.1.0",
+    "esbuild": "0.28.2"
   },
   "icon": "media/icon.png"
 }

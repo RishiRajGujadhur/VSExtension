@@ -3,6 +3,8 @@
 const { spawnSync } = require('child_process');
 const os = require('os');
 const path = require('path');
+// VS Code loads the bundle (package.json main), so build it first.
+require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'bundle.js')], { stdio: 'inherit' });
 
 const executable = process.env.VSCODE_EXECUTABLE;
 if (!executable) {
