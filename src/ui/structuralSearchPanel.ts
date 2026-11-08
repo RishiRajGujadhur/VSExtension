@@ -467,9 +467,12 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   td input[type=text] { width: 100%; }
 ${buttonCss}
   .cheats { margin: 6px 0 10px; }
-  .cheats summary { cursor: pointer; opacity: .8; }
+  .cheats summary { cursor: pointer; color: var(--vscode-descriptionForeground); }
   .cheats ul { margin: 6px 0; padding-left: 18px; }
-  .cheats li { margin: 3px 0; opacity: .85; }
+  .cheats li { margin: 3px 0; color: var(--vscode-descriptionForeground); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  li:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+  [aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
   button.link { display: inline; min-height: 0; padding: 0 2px; background: none; border: none; color: var(--vscode-textLink-foreground); font-family: var(--vscode-editor-font-family); }
   button.link:hover { background: none; text-decoration: underline; }
   .hint { color: var(--vscode-descriptionForeground); margin: 4px 0; }
@@ -488,13 +491,14 @@ ${buttonCss}
 </style>
 </head>
 <body>
+  <h1 class="visually-hidden">Structural Search and Replace</h1>
   <div class="row">
-    <select id="templates"><option value="">Start from an example…</option></select>
-    <select id="history"><option value="">Recent searches…</option></select>
+    <select id="templates" aria-label="Start from an example"><option value="">Start from an example…</option></select>
+    <select id="history" aria-label="Recent searches"><option value="">Recent searches…</option></select>
   </div>
-  <h2>Pattern${helpTip('Code to find, matched by its syntax, so spacing, quotes and comments do not matter. $name$ stands for any expression or statement.')}</h2>
-  <p class="hint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
-  <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)"></textarea>
+  <h2 id="patternHeading">Pattern${helpTip('Code to find, matched by its syntax, so spacing, quotes and comments do not matter. $name$ stands for any expression or statement.')}</h2>
+  <p class="hint" id="patternHint">Write code with <code>$name$</code> placeholders. <code>$name*$</code> matches any number of arguments, elements or statements; reusing a name requires the same code; <code>$_$</code> matches anything.</p>
+  <textarea id="pattern" spellcheck="false" placeholder="$list$.forEach($callback$)" aria-labelledby="patternHeading" aria-describedby="patternHint patternProblem"></textarea>
   <details class="cheats"><summary>Syntax examples</summary>
     <ul>
       <li><button class="link" data-pattern="$obj$.$method$($args*$)">$obj$.$method$($args*$)</button> any method call with any arguments</li>
@@ -509,20 +513,20 @@ ${buttonCss}
     <button id="fromSelection" title="Use the code selected in the editor as the pattern">${icon('copy')}<span>From Editor Selection</span></button>
     <button id="clear" title="Empty the pattern, constraints, replacement and results">${icon('close')}<span>Clear</span></button>
   </div>
-  <div id="patternProblem" class="error"></div>
+  <div id="patternProblem" class="error" aria-live="polite"></div>
   <h2>Placeholder constraints${helpTip('Optional regular expressions per placeholder. Type is tested against the TypeScript type of what it matched; Text against its source. Invert keeps matches that do not fit.')}</h2>
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
-  <table id="constraints"><thead><tr><th>Placeholder</th><th>Type</th><th>Text</th><th>Invert</th></tr></thead><tbody></tbody></table>
+  <table id="constraints"><caption class="visually-hidden">Constraints for each placeholder</caption><thead><tr><th scope="col">Placeholder</th><th scope="col">Type</th><th scope="col">Text</th><th scope="col">Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option><option value="open">Open editors</option><option value="changed">Changed files</option><option value="pickFolder">Choose folder…</option></select></label>
     <button id="search" class="primary" title="Ctrl+Enter in the pattern">${icon('search')}<span>Search</span></button>
-    <span id="count" class="hint"></span>
+    <span id="count" class="hint" role="status" aria-live="polite"></span>
     <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as Keybinding</span></button>
   </div>
-  <h2>Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
-  <p class="hint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
-  <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)"></textarea>
-  <div id="templateProblem" class="error"></div>
+  <h2 id="templateHeading">Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
+  <p class="hint" id="templateHint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
+  <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)" aria-labelledby="templateHeading" aria-describedby="templateHint templateProblem"></textarea>
+  <div id="templateProblem" class="error" aria-live="polite"></div>
   <div class="row">
     <button id="copyPattern" title="Start the replacement from the pattern, to edit only what changes">${icon('copy')}<span>Copy Pattern</span></button>
     <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview Replacements</span></button>
@@ -531,16 +535,16 @@ ${buttonCss}
   <h2>Save as inspection${helpTip('Keeps the pattern as your own inspection: matches are underlined in open files and listed in the Problems panel, with the replacement as a quick fix.')}</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
-    <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()">
-    <input id="include" type="text" style="width: 160px" placeholder="all files, or src/**" title="Only inspect files whose path matches this glob, such as src/** or **/*.tsx">
-    <select id="severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
+    <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()" aria-label="Inspection message" aria-describedby="messageProblem">
+    <input id="include" type="text" style="width: 160px" placeholder="all files, or src/**" title="Only inspect files whose path matches this glob, such as src/** or **/*.tsx" aria-label="Files to inspect, as a glob such as src/**">
+    <select id="severity" aria-label="Severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
     <button id="saveInspection">${icon('save')}<span>Save as Inspection</span></button>
   </div>
   <div class="row tools" id="messagePlaceholders"></div>
-  <div id="messageProblem" class="error"></div>
-  <div id="error" class="error"></div>
+  <div id="messageProblem" class="error" aria-live="polite"></div>
+  <div id="error" class="error" role="alert"></div>
   <h2 id="summary"></h2>
-  <ul id="results"></ul>
+  <ul id="results" aria-labelledby="summary"></ul>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const $ = (id) => document.getElementById(id);
@@ -606,6 +610,8 @@ ${buttonCss}
       const c = state.constraints[name] || {};
       const tr = document.createElement('tr');
       tr.innerHTML = '<td><code>$' + name + '$</code></td><td><input type="text" data-k="type"></td><td><input type="text" data-k="text"></td><td><input type="checkbox" data-k="negate"></td>';
+      const labels = { type: 'Type pattern for $' + name + '$', text: 'Text pattern for $' + name + '$', negate: 'Invert the constraints of $' + name + '$' };
+      for (const field of tr.querySelectorAll('input')) field.setAttribute('aria-label', labels[field.dataset.k]);
       for (const input of tr.querySelectorAll('input')) {
         const key = input.dataset.k;
         if (input.type === 'checkbox') input.checked = !!c[key]; else input.value = c[key] || '';
@@ -759,6 +765,18 @@ ${buttonCss}
     $('summary').textContent = 'Searching…';
     vscode.postMessage({ type: 'search', spec: spec(), scope: $('scope').value });
   });
+  /** A result row that Tab reaches and Enter or Space opens, like a click. */
+  function keyboardOpen(li, label) {
+    li.tabIndex = 0;
+    li.setAttribute('aria-label', label + '. Press Enter to open it.');
+    li.addEventListener('keydown', (event) => {
+      if (event.target === li && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        li.click();
+      }
+    });
+  }
+  const scrollBehavior = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'prefill') { $('pattern').value = message.pattern; save(); renderConstraints(); renderMessageTools(); checkTemplate(); validate(); }
@@ -788,9 +806,10 @@ ${buttonCss}
         });
         // Clicking the match opens it, as in the search results.
         li.addEventListener('click', () => vscode.postMessage({ type: 'openReplacement', index }));
+        keyboardOpen(li, 'Replace ' + item.before + ' with ' + item.after + ', at ' + item.where);
         list.appendChild(li);
       }
-      $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('summary').scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     }
     if (message.type === 'load') {
       loadPreset({ ...message.inspection, message: message.inspection.message || '', severity: message.inspection.severity || 'warning' });
@@ -815,7 +834,7 @@ ${buttonCss}
       $('summary').textContent = message.count + (message.count === 1 ? ' match' : ' matches') + (message.count > message.items.length ? ' (first ' + message.items.length + ' shown)' : '');
       // The count by the button answers "did it match?" without scrolling; the list is brought into view.
       $('count').textContent = message.count === 0 ? 'No matches' : message.count === 1 ? '1 match' : message.count + ' matches';
-      if (message.count > 0) $('summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (message.count > 0) $('summary').scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       const list = $('results');
       list.innerHTML = '';
       for (const item of message.items) {
@@ -825,6 +844,7 @@ ${buttonCss}
         li.querySelector('.where').textContent = item.where;
         li.querySelector('.bindings').textContent = item.bindings;
         li.addEventListener('click', () => vscode.postMessage({ type: 'open', index: item.index }));
+        keyboardOpen(li, item.text + ', at ' + item.where + (item.bindings ? ', ' + item.bindings : ''));
         list.appendChild(li);
       }
     }
