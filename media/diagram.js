@@ -202,6 +202,8 @@
           node.collapsed = !node.collapsed;
           render();
         });
+        // Clicking the button twice quickly folds and unfolds; it is not a double-click on the box.
+        toggle.addEventListener('dblclick', (e) => e.stopPropagation());
       }
     };
     draw(center);
@@ -417,12 +419,14 @@
       for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     }
     render();
-    const count = allNodes().filter(isMatch).length;
-    searchCount.textContent = query ? (count ? `${count} found` : 'No boxes match') : '';
+    // Only drawn boxes count: in the one-branch view, matches in other branches are mentioned, not jumped to.
+    const count = shownNodes.filter(isMatch).length;
+    const elsewhere = allNodes().filter(isMatch).length - count;
+    searchCount.textContent = query ? (count ? `${count} found` : 'No boxes match') + (elsewhere ? `, ${elsewhere} in other branches` : '') : '';
   }
 
   function nextMatch(step) {
-    const found = allNodes().filter(isMatch);
+    const found = shownNodes.filter(isMatch);
     if (!found.length) return;
     matchIndex = (matchIndex + step + found.length) % found.length;
     const node = found[matchIndex];
@@ -523,6 +527,7 @@
       context.drawImage(picture, 0, 0, image.width, image.height);
       vscode.postMessage({ type: 'savePng', png: canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''), title: diagram.title });
     };
+    picture.onerror = () => vscode.postMessage({ type: 'error', text: 'The chart could not be drawn as a PNG. Save SVG still works.' });
     picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(image.text);
   }
 
@@ -561,7 +566,11 @@
       if (p.collapsed) { p.collapsed = false; unfolded = true; }
     }
     selected = node;
-    if (unfolded) render();
+    // A row outside the branch on its own brings the whole chart back, so its box can be shown.
+    let inBranch = !isolated;
+    for (let p = node; p && !inBranch; p = p.parent) inBranch = p === isolated;
+    if (!inBranch) isolate(undefined);
+    else if (unfolded) render();
     allNodes().forEach((n) => n.el && n.el.classList.toggle('selected', n === node));
     highlightPath(node);
     showInfo(node);

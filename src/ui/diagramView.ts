@@ -36,7 +36,7 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; title?: string; diagram?: Diagram }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
@@ -56,6 +56,8 @@ export class DiagramPanel {
         void vscode.window.setStatusBarMessage('Copied the chart as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
       } else if (message.type === 'save' && message.svg) {
         await saveImage(Buffer.from(message.svg, 'utf8'), 'svg', message.title);
+      } else if (message.type === 'error' && message.text) {
+        void vscode.window.showWarningMessage(message.text);
       } else if (message.type === 'savePng' && message.png) {
         await saveImage(Buffer.from(message.png, 'base64'), 'png', message.title);
       }
