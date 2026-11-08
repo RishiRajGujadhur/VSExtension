@@ -36,6 +36,17 @@
     return i;
   };
 
+  // Where a searched word is found in a text: at the start of a word, or anywhere for three letters or more, so a
+  // single letter doesn't light up every word that has it.
+  const startsWord = (lower, i) => i === 0 || !/[a-z0-9]/.test(lower[i - 1]);
+  function hitsOf(lower, w) {
+    const hits = [];
+    for (let i = lower.indexOf(w); i >= 0; i = lower.indexOf(w, i + 1)) {
+      if (w.length >= 3 || startsWord(lower, i)) hits.push([i, i + w.length]);
+    }
+    return hits;
+  }
+
   // Text with the searched words marked.
   function marked(text, words) {
     const span = document.createDocumentFragment();
@@ -44,10 +55,7 @@
       return span;
     }
     const lower = text.toLowerCase();
-    const hits = [];
-    for (const w of words) {
-      for (let i = lower.indexOf(w); i >= 0; i = lower.indexOf(w, i + w.length)) hits.push([i, i + w.length]);
-    }
+    const hits = words.flatMap((w) => hitsOf(lower, w));
     hits.sort((x, y) => x[0] - y[0]);
     let at = 0;
     for (const [from, to] of hits) {
@@ -102,9 +110,10 @@
     run.addEventListener('click', () => vscode.postMessage({ type: 'run', command: action.command }));
     li.append(run);
 
-    if (inSearch) {
-      const where = make('span', 'where', isHidden(action) ? 'Hidden' : data.tabs.find((t) => t.id === action.tab).label);
-      li.append(where);
+    // A hidden action found by search is dimmed, with a crossed-out eye on its tile.
+    if (isHidden(action)) {
+      li.classList.add('is-hidden');
+      tile.append(make('i', 'codicon codicon-eye-closed badge'));
     }
 
     // Shown on hover or focus: the full shortcut over the tools.
@@ -274,7 +283,7 @@
   // Every word must appear in the label, description, category, keywords or shortcut.
   const matches = (action, words) => {
     const text = `${action.label} ${action.detail} ${action.info} ${action.category} ${action.keywords || ''} ${action.key || ''}`.toLowerCase();
-    return words.every((w) => text.includes(w));
+    return words.every((w) => hitsOf(text, w).length > 0);
   };
 
   function render() {

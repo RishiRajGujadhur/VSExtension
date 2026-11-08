@@ -41,3 +41,38 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
   #grid { display: none; }
   .flow { stroke: Highlight; filter: none; }
 }
+
+/* The minimap (chartKit.minimap): the whole chart in the corner with the visible part outlined. */
+#minimap { position: absolute; right: 12px; bottom: 44px; width: 200px; height: 120px; z-index: 1; cursor: pointer; border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545)); border-radius: 4px;
+  background: var(--vscode-editorWidget-background, #252526); box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); }
+#minimap.off { display: none; }
+#minimap .mini { fill: var(--vscode-editorLineNumber-foreground, #858585); opacity: .55; }
+#minimap .mini.center { fill: var(--vscode-button-background, #0e639c); opacity: 1; }
+#minimap .mini.pattern { fill: var(--vscode-charts-purple, #b180d7); }
+#minimap .mini.warning { fill: var(--vscode-problemsWarningIcon-foreground, #cca700); }
+#minimap .mini.error { fill: var(--vscode-problemsErrorIcon-foreground, #f14c4c); }
+#minimap .mini.ok { fill: var(--vscode-testing-iconPassed, #73c991); }
+#miniView { fill: var(--vscode-focusBorder, #007fd4); fill-opacity: .12; stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+#boxMenu { position: fixed; z-index: 5; min-width: 230px; padding: 4px 0; border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, #454545)); border-radius: 5px;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background, #252526)); color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); font-size: 13px; }
+#boxMenu[hidden] { display: none; }
+#boxMenu [role="menuitem"] { display: flex; align-items: center; gap: 8px; width: calc(100% - 8px); margin: 0 4px; min-height: 26px; padding: 2px 10px; border: 0; border-radius: 3px;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#boxMenu [role="menuitem"]:hover, #boxMenu [role="menuitem"]:focus { background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground)); outline: none; }
+#boxMenu [role="menuitem"]:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+#boxMenu .codicon { flex: none; width: 16px; font-size: 16px; }
+#boxMenu .menu-label { flex: 1; }
+#boxMenu .menu-keys { color: var(--vscode-descriptionForeground); font-size: 12px; }
+#boxMenu .separator { height: 1px; margin: 4px 0; background: var(--vscode-menu-separatorBackground, var(--vscode-widget-border, #454545)); }
+#boxMenu .menu-heading { padding: 4px 14px 2px; color: var(--vscode-descriptionForeground); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+#minimap .mini.decision { fill: var(--vscode-charts-yellow, #cca700); }
+#minimap .mini.loop { fill: var(--vscode-charts-purple, #b180d7); }
+#minimap .mini.terminal { fill: var(--vscode-button-background, #0e639c); opacity: 1; }
+#minimap .mini.on { fill: var(--vscode-focusBorder, #007fd4); opacity: 1; }
+@media (forced-colors: active) {
+  #minimap .mini, #miniView { fill: CanvasText; stroke: CanvasText; }
+}
+
+/* Codicon glyphs inside SVG (chartKit.glyph). */
+.glyph-icon { font-family: codicon; font-size: 14px; font-weight: normal; dominant-baseline: central; text-anchor: middle; pointer-events: none; }

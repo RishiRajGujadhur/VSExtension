@@ -6,6 +6,9 @@
   const MIN_W = 150;
   const MAX_W = 360;
   const H = 48;
+  // The subject is drawn as a circle, between these sizes; values come in on its left and go out on its right.
+  const CENTER_MIN = 104;
+  const CENTER_MAX = 176;
   const GAP_X = 80;
   const GAP_Y = 14;
   const svg = document.getElementById('canvas');
@@ -61,12 +64,16 @@
     }
     return text.slice(0, low) + '…';
   };
-  const widthOf = (node) => Math.min(MAX_W, Math.max(MIN_W, Math.ceil(Math.max(textWidth(node.label, fontOf(600, 12)), textWidth(node.description, fontOf(400, 11))) + 30)));
+  const textOf = (node) => Math.max(textWidth(node.label, fontOf(600, 12)), textWidth(node.description, fontOf(400, 11)));
+  const widthOf = (node) => (diagram && node === diagram.center
+    ? Math.min(CENTER_MAX, Math.max(CENTER_MIN, Math.ceil(textOf(node) + 36)))
+    : Math.min(MAX_W, Math.max(MIN_W, Math.ceil(textOf(node) + 30 + (node.icon ? 20 : 0)))));
   const { el } = window.chartKit;
   // Branch focus: after a double-click only the box, the boxes between it and the subject, and what is behind it are drawn.
   let isolated;
   let chain = new Set();
   const toneGlyphs = { ok: '✓', warning: '!', error: '✕', info: 'i' };
+  const toneIcons = { ok: 'pass', warning: 'warning', error: 'error', info: 'info' };
   const toneWords = { ok: 'Safe', warning: 'Warning', error: 'Problem', info: 'Note' };
   /** What a screen reader says for a box: tone, text, side, kind and folding. */
   function spokenLabel(node) {
@@ -245,7 +252,14 @@
       g.setAttribute('aria-label', spokenLabel(node));
       if (node.children.length && node !== center) g.setAttribute('aria-expanded', String(!node.collapsed));
       if (node === selected) g.setAttribute('aria-selected', 'true');
-      if (node.kind === 'pattern') {
+      if (node === center) {
+        // The subject: a circle, with a port where values come in and one where they go out.
+        const r = node.w / 2;
+        el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'halo' }, g);
+        el('circle', { cx: r, cy: H / 2, r, class: 'box' }, g);
+        if (captions.left !== undefined) el('circle', { cx: 0, cy: H / 2, r: 5, class: 'port in' }, g);
+        if (captions.right !== undefined) el('circle', { cx: node.w, cy: H / 2, r: 5, class: 'port out' }, g);
+      } else if (node.kind === 'pattern') {
         // Hexagon: a design pattern, not a step of the value.
         const w = node.w;
         el('path', { d: `M12,0 H${w - 12} L${w},${H / 2} L${w - 12},${H} H12 L0,${H / 2} Z`, class: 'box' }, g);
@@ -258,10 +272,22 @@
         g.setAttribute('aria-haspopup', 'menu');
       }
       if (!detail) continue;
-      const room = node.w - (node.tone ? 40 : 26);
-      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label', 'aria-hidden': 'true' }, g).textContent = fitText(node.label, fontOf(600, 12), room);
-      if (node.description) el('text', { x: 14, y: 37, class: 'description', 'aria-hidden': 'true' }, g).textContent = fitText(node.description, fontOf(400, 11), room);
-      if (node.tone) el('text', { x: node.w - 16, y: 18, class: 'glyph', 'text-anchor': 'middle', 'aria-hidden': 'true' }, g).textContent = toneGlyphs[node.tone];
+      if (node === center) {
+        // Centered in the circle: its icon, the name and what it is.
+        const mid = node.w / 2;
+        const room = node.w - 24;
+        window.chartKit.icon(g, node.icon || 'symbol-variable', mid, H / 2 - (node.description ? 24 : 16), 'box-icon');
+        el('text', { x: mid, y: node.description ? H / 2 + 2 : H / 2 + 6, 'text-anchor': 'middle', class: 'label', 'aria-hidden': 'true' }, g).textContent = fitText(node.label, fontOf(600, 12), room);
+        if (node.description) el('text', { x: mid, y: H / 2 + 18, 'text-anchor': 'middle', class: 'description', 'aria-hidden': 'true' }, g).textContent = fitText(node.description, fontOf(400, 11), room - 8);
+        continue;
+      }
+      const iconName = node.icon || (node.kind === 'pattern' ? 'library' : undefined);
+      const textX = iconName ? 32 : 14;
+      const room = node.w - (node.tone ? 40 : 26) - (iconName ? 18 : 0);
+      if (iconName) window.chartKit.icon(g, iconName, node.kind === 'pattern' ? 22 : 19, H / 2, 'box-icon');
+      el('text', { x: textX, y: node.description ? 20 : H / 2 + 4, class: 'label', 'aria-hidden': 'true' }, g).textContent = fitText(node.label, fontOf(600, 12), room);
+      if (node.description) el('text', { x: textX, y: 37, class: 'description', 'aria-hidden': 'true' }, g).textContent = fitText(node.description, fontOf(400, 11), room);
+      if (node.tone && !window.chartKit.icon(g, toneIcons[node.tone], node.w - 16, 14, 'glyph')) el('text', { x: node.w - 16, y: 18, class: 'glyph', 'text-anchor': 'middle', 'aria-hidden': 'true' }, g).textContent = toneGlyphs[node.tone];
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
         const toggle = el('g', { class: 'toggle', 'aria-hidden': 'true', transform: `translate(${node.side < 0 ? 0 : node.w},${H / 2})` }, g);
@@ -271,8 +297,14 @@
         el('title', {}, toggle).textContent = node.collapsed ? `Show ${node.children.length} more` : 'Fold';
       }
     }
-    if (captions.left !== undefined) el('text', { x: captions.left, y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
-    if (captions.right !== undefined) el('text', { x: captions.right, y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
+    if (captions.left !== undefined) {
+      el('text', { x: captions.left - 18, y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption;
+      window.chartKit.icon(scene, 'arrow-circle-right', captions.left - 6, -18, 'side-icon');
+    }
+    if (captions.right !== undefined) {
+      window.chartKit.icon(scene, 'arrow-circle-right', captions.right + 6, -18, 'side-icon');
+      el('text', { x: captions.right + 18, y: -14, class: 'side' }, scene).textContent = diagram.rightCaption;
+    }
     highlighted = [];
     drawFlows();
     if (pathNode) highlightPath(pathNode);
@@ -300,60 +332,15 @@
     else if (e.key === 'Escape' && isolated && e.target !== searchBox && legend.hidden) isolate(undefined);
   });
 
-  // Minimap: the whole chart in the corner with the visible part outlined, shown when the chart is bigger than the
-  // window. Click or drag in it to move there.
-  const minimap = document.getElementById('minimap');
-  const miniScene = document.getElementById('miniScene');
-  const miniView = document.getElementById('miniView');
-  let bounds;
+  // Minimap (chartKit.minimap): the whole chart in the corner, shown when it is bigger than the window.
+  const map = window.chartKit.minimap(document.getElementById('minimap'), svg, () => view, (v) => { view = v; apply(); });
   function drawMinimap() {
-    miniScene.textContent = '';
-    bounds = undefined;
-    if (!diagram || !shownNodes.length) return;
-    const pad = 20;
-    const left = Math.min(...shownNodes.map((n) => n.px)) - pad;
-    const top = Math.min(...shownNodes.map((n) => n.py)) - pad;
-    const right = Math.max(...shownNodes.map((n) => n.px + n.w)) + pad;
-    const bottom = Math.max(...shownNodes.map((n) => n.py + H)) + pad;
-    bounds = { x: left, y: top, w: right - left, h: bottom - top };
-    minimap.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
-    // A few paths, one per color, rather than an element per box.
-    const shapes = {};
-    for (const n of shownNodes) {
-      const kind = n === diagram.center ? 'center' : n.kind || n.tone || 'plain';
-      (shapes[kind] = shapes[kind] || []).push(`M${n.px},${n.py}h${n.w}v${H}h${-n.w}z`);
-    }
-    for (const [kind, parts] of Object.entries(shapes)) el('path', { d: parts.join(''), class: `mini ${kind}` }, miniScene);
+    if (!diagram || !shownNodes.length) return map.draw([]);
+    map.draw(shownNodes.map((n) => (n === diagram.center
+      ? { x: n.px, y: n.py + H / 2 - n.w / 2, w: n.w, h: n.w, kind: 'center', round: true }
+      : { x: n.px, y: n.py, w: n.w, h: H, kind: n.kind || n.tone || 'plain' })));
   }
-  function updateMinimapView() {
-    if (!bounds) {
-      minimap.classList.add('off');
-      return;
-    }
-    const vx = -view.x / view.k;
-    const vy = -view.y / view.k;
-    const vw = svg.clientWidth / view.k;
-    const vh = svg.clientHeight / view.k;
-    miniView.setAttribute('x', vx);
-    miniView.setAttribute('y', vy);
-    miniView.setAttribute('width', vw);
-    miniView.setAttribute('height', vh);
-    const fits = vx <= bounds.x && vy <= bounds.y && vx + vw >= bounds.x + bounds.w && vy + vh >= bounds.y + bounds.h;
-    minimap.classList.toggle('off', fits);
-  }
-  let miniDrag = false;
-  const moveTo = (e) => {
-    const point = minimap.createSVGPoint();
-    point.x = e.clientX;
-    point.y = e.clientY;
-    const at = point.matrixTransform(minimap.getScreenCTM().inverse());
-    view = { k: view.k, x: svg.clientWidth / 2 - at.x * view.k, y: svg.clientHeight / 2 - at.y * view.k };
-    apply();
-  };
-  minimap.addEventListener('pointerdown', (e) => { miniDrag = true; minimap.setPointerCapture(e.pointerId); moveTo(e); });
-  minimap.addEventListener('pointermove', (e) => { if (miniDrag) moveTo(e); });
-  minimap.addEventListener('pointerup', () => { miniDrag = false; });
-  window.addEventListener('resize', () => updateMinimapView());
+  const updateMinimapView = () => map.update();
 
   // The bar under the chart shows the whole text of the hovered or focused box, where it is, and what can be done with it.
   function showInfo(node) {
@@ -494,6 +481,7 @@
   }
 
   function fit(all) {
+    const bounds = map.bounds;
     if (!bounds) return;
     const box = { x: bounds.x, y: bounds.y - 30, width: bounds.w, height: bounds.h + 30 };
     const width = svg.clientWidth || 800;
@@ -626,65 +614,14 @@
       items.push('-', { icon: 'filter', label: node === isolated ? 'Show Whole Chart' : 'Show Only This Branch', keys: 'B', run: () => isolate(node === isolated ? undefined : node) });
       if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? `Unfold (${node.children.length})` : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
     }
-    return items.filter((item, i, all) => item !== '-' || (i > 0 && all[i - 1] !== '-'));
+    return items;
   }
+  const menu = window.chartKit.menu(boxMenu);
   function openMenu(node, x, y) {
     menuFor = node;
-    boxMenu.textContent = '';
-    for (const item of menuItems(node)) {
-      if (item === '-') {
-        boxMenu.appendChild(Object.assign(document.createElement('div'), { className: 'separator', role: 'separator' }));
-        continue;
-      }
-      if (item.heading) {
-        const heading = document.createElement('div');
-        heading.className = 'menu-heading';
-        heading.setAttribute('role', 'presentation');
-        heading.textContent = item.heading;
-        boxMenu.appendChild(heading);
-        continue;
-      }
-      const button = document.createElement('button');
-      button.setAttribute('role', 'menuitem');
-      button.tabIndex = -1;
-      button.innerHTML = `<i class="codicon codicon-${item.icon}" aria-hidden="true"></i><span class="menu-label"></span>${item.keys ? '<span class="menu-keys"></span>' : ''}`;
-      button.querySelector('.menu-label').textContent = item.label;
-      if (item.keys) button.querySelector('.menu-keys').textContent = item.keys;
-      button.addEventListener('click', () => {
-        closeMenu(false);
-        item.run();
-      });
-      boxMenu.appendChild(button);
-    }
-    boxMenu.hidden = false;
-    // Kept inside the window.
-    const width = boxMenu.offsetWidth;
-    const height = boxMenu.offsetHeight;
-    boxMenu.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`;
-    boxMenu.style.top = `${Math.max(4, Math.min(y, window.innerHeight - height - 4))}px`;
-    const first = boxMenu.querySelector('[role="menuitem"]');
-    if (first) first.focus();
+    menu.open(menuItems(node), x, y, node.el);
   }
-  function closeMenu(refocus) {
-    if (boxMenu.hidden) return;
-    boxMenu.hidden = true;
-    if (refocus && menuFor && menuFor.el) menuFor.el.focus({ preventScroll: true });
-  }
-  boxMenu.addEventListener('keydown', (e) => {
-    const items = [...boxMenu.querySelectorAll('[role="menuitem"]')];
-    const at = items.indexOf(document.activeElement);
-    const move = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
-    if (move !== undefined) {
-      e.preventDefault();
-      items[(move + items.length) % items.length].focus();
-    } else if (e.key === 'Escape' || e.key === 'Tab') {
-      e.preventDefault();
-      e.stopPropagation();
-      closeMenu(true);
-    }
-  });
-  boxMenu.addEventListener('focusout', (e) => { if (!boxMenu.contains(e.relatedTarget)) closeMenu(false); });
-  window.addEventListener('pointerdown', (e) => { if (!boxMenu.contains(e.target)) closeMenu(false); }, true);
+  const closeMenu = (refocus) => menu.close(refocus);
   svg.addEventListener('contextmenu', (e) => {
     const node = boxOf(e.target);
     e.preventDefault();
@@ -757,19 +694,11 @@
   function savePng() {
     const image = exportSvg();
     if (!image) return;
-    const picture = new Image();
-    picture.onload = () => {
-      const scale = 2;
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.ceil(image.width * scale);
-      canvas.height = Math.ceil(image.height * scale);
-      const context = canvas.getContext('2d');
-      context.scale(scale, scale);
-      context.drawImage(picture, 0, 0, image.width, image.height);
-      vscode.postMessage({ type: 'savePng', png: canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''), title: diagram.title });
-    };
-    picture.onerror = () => vscode.postMessage({ type: 'error', text: 'The chart could not be drawn as a PNG. Save SVG still works.' });
-    picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(image.text);
+    window.chartKit.toPng(
+      image,
+      (png) => vscode.postMessage({ type: 'savePng', png, title: diagram.title }),
+      () => vscode.postMessage({ type: 'error', text: 'The chart could not be drawn as a PNG. Save SVG still works.' }),
+    );
   }
 
   // Copy Mermaid: the chart as it is folded now, as text for Markdown and GitHub.

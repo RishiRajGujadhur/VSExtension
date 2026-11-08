@@ -87,7 +87,7 @@ test('the control flow copies as a Mermaid flowchart, with a picked path drawn t
   const text = chartMermaid(chart, { nodes: chart.paths[0].nodes, edges: chart.paths[0].edges });
   const lines = text.split('\n');
   assert.equal(lines[0], 'flowchart TD');
-  assert.ok(lines.includes('  n0(["total"])'));
+  assert.ok(lines.includes('  n0(("total"))'), text);
   assert.ok(lines.includes('  n3{{"for (const item of items)"}}'), text);
   assert.ok(lines.some((l) => / -- each item --> /.test(l)));
   // Loop edges are dotted.

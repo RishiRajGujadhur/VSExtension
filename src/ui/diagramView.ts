@@ -8,7 +8,7 @@ import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
 
 /** The analyses a box's right-click menu offers, with the icon each has everywhere else. */
-const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
+export const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
   { command: 'tsStructure.report.usagesHere', runs: 'tsStructure.semanticUsages', label: 'Find Usages Here' },
   { command: 'tsStructure.report.dataFlowHere', runs: 'tsStructure.dataFlow', label: 'Data Flow Here' },
   { command: 'tsStructure.report.nullabilityHere', runs: 'tsStructure.nullability', label: 'Check for Null or Undefined Here' },
@@ -18,6 +18,16 @@ const boxAnalyses: { command: string; runs: string; label: string; more?: boolea
   { command: 'tsStructure.report.exceptionsHere', runs: 'tsStructure.exceptionFlow', label: 'Exception Flow', more: true },
   { command: 'tsStructure.report.argumentsHere', runs: 'tsStructure.argumentFlow', label: 'Argument Propagation', more: true },
 ];
+
+/** The box analyses whose features are on, with their icons, for a chart's right-click menu. */
+export function menuAnalyses(): { command: string; label: string; icon: string; more: boolean }[] {
+  return boxAnalyses
+    .filter((a) => {
+      const feature = featureOf(a.command);
+      return !feature || isFeatureEnabled(feature.id);
+    })
+    .map((a) => ({ command: a.command, label: a.label, icon: commandIcons[a.runs], more: !!a.more }));
+}
 
 /**
  * The analysis on screen as a flow chart in an editor tab. It follows the results view: each new
@@ -90,12 +100,7 @@ export class DiagramPanel {
     }
     this.panel.title = report ? `Diagram: ${report.title}` : 'Analysis Diagram';
     // Only the analyses whose features are turned on appear in the right-click menu.
-    const analyses = boxAnalyses
-      .filter((a) => {
-        const feature = featureOf(a.command);
-        return !feature || isFeatureEnabled(feature.id);
-      })
-      .map((a) => ({ command: a.command, label: a.label, icon: commandIcons[a.runs], more: !!a.more }));
+    const analyses = menuAnalyses();
     void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses });
   }
 

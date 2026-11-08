@@ -37,7 +37,7 @@
       node.removeAttribute('data-vscode-context');
       node.removeAttribute('tabindex');
     });
-    copy.querySelectorAll(['.flows', 'title', ...(leaveOut || [])].join(',')).forEach((node) => node.remove());
+    copy.querySelectorAll(['.flows', 'title', '.glyph-icon', ...(leaveOut || [])].join(',')).forEach((node) => node.remove());
     if (adjust) adjust(copy);
     copy.removeAttribute('class');
     copy.removeAttribute('role');
@@ -73,5 +73,198 @@
     show();
   }
 
-  window.chartKit = { el, drawFlows, exportSvg, bindToggles };
+  /**
+   * The character of a codicon, read from VS Code's icon font stylesheet, so SVG text can draw the same icons as the
+   * rest of VS Code (with the `glyph-icon` class, which sets the font).
+   */
+  const glyphs = new Map();
+  function glyph(name) {
+    if (!glyphs.has(name)) {
+      const probe = document.createElement('i');
+      probe.className = `codicon codicon-${name}`;
+      probe.style.position = 'absolute';
+      probe.style.visibility = 'hidden';
+      document.body.appendChild(probe);
+      const content = getComputedStyle(probe, '::before').content;
+      probe.remove();
+      glyphs.set(name, content && content !== 'none' ? content.replace(/^["']|["']$/g, '') : '');
+    }
+    return glyphs.get(name);
+  }
+
+  /** An icon drawn in SVG at (x, y), its center; nothing when the icon is unknown. */
+  function icon(parent, name, x, y, className) {
+    const char = glyph(name);
+    if (!char) return undefined;
+    const text = el('text', { x, y, class: `glyph-icon${className ? ' ' + className : ''}`, 'aria-hidden': 'true' }, parent);
+    text.textContent = char;
+    return text;
+  }
+
+  /**
+   * A right-click menu drawn by the page, so it can show icons; it works like a menu from the keyboard too (the
+   * WAI-ARIA menu pattern). Items are '-' for a separator, { heading } or { icon, label, keys, run }.
+   */
+  function menu(element) {
+    let returnTo;
+    function close(refocus) {
+      if (element.hidden) return;
+      element.hidden = true;
+      if (refocus && returnTo && document.contains(returnTo)) returnTo.focus({ preventScroll: true });
+    }
+    function open(items, x, y, from) {
+      returnTo = from;
+      element.textContent = '';
+      const tidy = items.filter((item, i, all) => item !== '-' || (i > 0 && i < all.length - 1 && all[i - 1] !== '-'));
+      for (const item of tidy) {
+        if (item === '-') {
+          element.appendChild(Object.assign(document.createElement('div'), { className: 'separator', role: 'separator' }));
+          continue;
+        }
+        if (item.heading) {
+          const heading = document.createElement('div');
+          heading.className = 'menu-heading';
+          heading.setAttribute('role', 'presentation');
+          heading.textContent = item.heading;
+          element.appendChild(heading);
+          continue;
+        }
+        const button = document.createElement('button');
+        button.setAttribute('role', 'menuitem');
+        button.tabIndex = -1;
+        const i = document.createElement('i');
+        i.className = `codicon codicon-${item.icon || 'blank'}`;
+        i.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'menu-label';
+        label.textContent = item.label;
+        button.append(i, label);
+        if (item.keys) {
+          const keys = document.createElement('span');
+          keys.className = 'menu-keys';
+          keys.textContent = item.keys;
+          button.appendChild(keys);
+        }
+        button.addEventListener('click', () => {
+          close(false);
+          item.run();
+        });
+        element.appendChild(button);
+      }
+      element.hidden = false;
+      // Kept inside the window.
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      element.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`;
+      element.style.top = `${Math.max(4, Math.min(y, window.innerHeight - height - 4))}px`;
+      const first = element.querySelector('[role="menuitem"]');
+      if (first) first.focus();
+    }
+    element.addEventListener('keydown', (e) => {
+      const items = [...element.querySelectorAll('[role="menuitem"]')];
+      const at = items.indexOf(document.activeElement);
+      const move = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
+      if (move !== undefined) {
+        e.preventDefault();
+        items[(move + items.length) % items.length].focus();
+      } else if (e.key === 'Escape' || e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        close(true);
+      } else if (e.key.length === 1 && /\S/.test(e.key)) {
+        // A letter moves to the next item starting with it.
+        const next = [...items.slice(at + 1), ...items.slice(0, at + 1)].find((b) => b.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase()));
+        if (next) next.focus();
+      }
+    });
+    element.addEventListener('focusout', (e) => { if (!element.contains(e.relatedTarget)) close(false); });
+    window.addEventListener('pointerdown', (e) => { if (!element.contains(e.target)) close(false); }, true);
+    window.addEventListener('blur', () => close(false));
+    return { open, close, get isOpen() { return !element.hidden; } };
+  }
+
+  /**
+   * The minimap: the whole chart in the corner with the visible part outlined, shown only when the chart is bigger
+   * than the window. Click or drag in it to move there. `getView` and `setView` read and move the chart's view
+   * ({ x, y, k }); `draw` takes the boxes as { x, y, w, h, kind, round }, one path per kind.
+   */
+  function minimap(map, svg, getView, setView) {
+    const scene = map.querySelector('.mini-scene') || map.querySelector('g');
+    const frame = map.querySelector('rect');
+    let bounds;
+    function draw(boxes, pad = 20) {
+      scene.textContent = '';
+      bounds = undefined;
+      if (!boxes.length) {
+        update();
+        return;
+      }
+      const left = Math.min(...boxes.map((b) => b.x)) - pad;
+      const top = Math.min(...boxes.map((b) => b.y)) - pad;
+      const right = Math.max(...boxes.map((b) => b.x + b.w)) + pad;
+      const bottom = Math.max(...boxes.map((b) => b.y + b.h)) + pad;
+      bounds = { x: left, y: top, w: right - left, h: bottom - top };
+      map.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
+      const shapes = {};
+      for (const b of boxes) {
+        const r = b.round ? Math.min(b.w, b.h) / 2 : 0;
+        const d = r
+          ? `M${b.x + r},${b.y}h${b.w - 2 * r}a${r},${r} 0 0 1 0,${b.h}h${-(b.w - 2 * r)}a${r},${r} 0 0 1 0,${-b.h}z`
+          : `M${b.x},${b.y}h${b.w}v${b.h}h${-b.w}z`;
+        (shapes[b.kind || 'plain'] = shapes[b.kind || 'plain'] || []).push(d);
+      }
+      for (const [kind, parts] of Object.entries(shapes)) el('path', { d: parts.join(''), class: `mini ${kind}` }, scene);
+      update();
+    }
+    function update() {
+      if (!bounds) {
+        map.classList.add('off');
+        return;
+      }
+      const view = getView();
+      const vx = -view.x / view.k;
+      const vy = -view.y / view.k;
+      const vw = svg.clientWidth / view.k;
+      const vh = svg.clientHeight / view.k;
+      frame.setAttribute('x', vx);
+      frame.setAttribute('y', vy);
+      frame.setAttribute('width', vw);
+      frame.setAttribute('height', vh);
+      const fits = vx <= bounds.x && vy <= bounds.y && vx + vw >= bounds.x + bounds.w && vy + vh >= bounds.y + bounds.h;
+      map.classList.toggle('off', fits);
+    }
+    let dragging = false;
+    const moveTo = (e) => {
+      const point = map.createSVGPoint();
+      point.x = e.clientX;
+      point.y = e.clientY;
+      const at = point.matrixTransform(map.getScreenCTM().inverse());
+      const k = getView().k;
+      setView({ k, x: svg.clientWidth / 2 - at.x * k, y: svg.clientHeight / 2 - at.y * k });
+    };
+    map.addEventListener('pointerdown', (e) => { dragging = true; map.setPointerCapture(e.pointerId); moveTo(e); });
+    map.addEventListener('pointermove', (e) => { if (dragging) moveTo(e); });
+    map.addEventListener('pointerup', () => { dragging = false; });
+    window.addEventListener('resize', update);
+    return { draw, update, get bounds() { return bounds; } };
+  }
+
+  /** An exported SVG (from exportSvg) drawn at twice its size as a PNG, given to `done` as base64. */
+  function toPng(image, done, fail) {
+    const picture = new Image();
+    picture.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(image.width * scale);
+      canvas.height = Math.ceil(image.height * scale);
+      const context = canvas.getContext('2d');
+      context.scale(scale, scale);
+      context.drawImage(picture, 0, 0, image.width, image.height);
+      done(canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''));
+    };
+    picture.onerror = fail;
+    picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(image.text);
+  }
+
+  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, menu, minimap, toPng };
 })();

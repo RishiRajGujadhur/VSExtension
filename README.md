@@ -75,9 +75,9 @@ The functions that write the value sit under **Flows in** and those that read it
 
 #### Diagram view
 
-**Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in the middle, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more. Large charts stay quick: only what is on screen is drawn, and a chart of more than 150 boxes opens with its deepest levels folded.
+**Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in a circle in the middle, with a port where values come in and one where they go out, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more. Large charts stay quick: only what is on screen is drawn, and a chart of more than 150 boxes opens with its deepest levels folded.
 
-- Boxes are as wide as their text; the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
+- Boxes are as wide as their text and carry the same icon as their row in the results view (a pencil for a write, an eye for a read, books for design patterns); the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
 - Design patterns are purple hexagons on dotted lines, since they describe the code rather than carry the value. Boxes that only group others are dashed outlines.
 - Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
@@ -101,7 +101,17 @@ The **Path Explorer** lists every path through the function with the branches it
 - **Expand calls in place**: a box that calls a function of your project has an **ƒ+** button. It splices the called function into the chart, in a labeled frame, with its returns leading on to what followed the call; paths then run through it.
 - **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.
 - **Slices**: **What Affects This Value** (backward slice) lights up the statements and decisions a variable depends on at the cursor; **What This Value Affects** (forward slice) lights up everything it flows into or decides.
-- **Export**: copy the chart as a Mermaid flowchart (with the picked path drawn thick) or save it as SVG.
+- **Export**: copy the chart as a Mermaid flowchart (with the picked path drawn thick) or save it as SVG or PNG.
+
+Finding your way around a large function:
+
+- **Start and end are circles**: start is a filled circle with a play mark and the function's name beside it, end a ring around a dot. Each box shows the line it starts on, and an icon for its kind: **?** for a decision, a loop arrow, a return arrow, an error mark for a throw. Yes and no labels carry a ✓ and ✕ as well as their color.
+- **Right-click** a box to open its code, animate the paths through it, keep only the paths through it, zoom to it, expand or fold its calls, see what affects it or what it affects, run Data Flow, Find Usages or another analysis there, or copy its code. Right-click a branch label to filter by it or go to either end, a path in the list to pick, compare or copy it (as text or Mermaid), and the background to fit, expand or fold every call, go to unreachable code, or export.
+- A **minimap** appears when the function is bigger than the window, with the picked path lit up; click or drag in it to move.
+- **Find** (`Ctrl+F`) outlines the boxes whose code matches and fades the rest; `Enter` goes to the next match.
+- The bar under the chart shows the hovered or focused box: its kind, line, how many paths pass through it, and its code in full. Hovering a path in the list previews its route.
+- Keys: `Tab` to the chart, `↑` `↓` to follow the flow, `←` `→` along a row, `Enter` to open, `F` to animate, `T` to filter by the box, `Shift+F10` for its menu, `C` for the box at the editor's cursor, `P` to show or hide the Path Explorer, `Home` and `End` for start and end. Shift+wheel scrolls sideways, double-click zooms to a box, and **?** explains every shape, color and key.
+- Zoom and position are kept per function, as is whether the Path Explorer is open.
 
 The chart has the same animated grid as the Data Flow diagram, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
 

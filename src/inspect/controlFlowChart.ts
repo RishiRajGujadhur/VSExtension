@@ -18,6 +18,8 @@ export interface ControlFlowChart {
     id: number;
     kind: CfgNode['kind'];
     lines: string[];
+    /** All of the box's code, for the info bar and tooltips, up to a limit. */
+    text: string;
     unreachable: boolean;
     /** The function a spliced-in node belongs to. */
     owner?: string;
@@ -47,11 +49,21 @@ function shownLines(node: CfgNode): string[] {
   return lines.length > MAX_LINES ? [...lines.slice(0, MAX_LINES - 1), `… ${lines.length - MAX_LINES + 1} more`] : lines;
 }
 
+/** Start and end are circles of this size; the function's name is written beside the start circle. */
+export const TERMINAL = 34;
+const MAX_TEXT = 60;
+
+/** A box's code in full (within limits), for the info bar. */
+function fullText(node: CfgNode): string {
+  const lines = node.lines.length > MAX_TEXT ? [...node.lines.slice(0, MAX_TEXT), `… ${node.lines.length - MAX_TEXT} more lines`] : node.lines;
+  return lines.join('\n');
+}
+
 function size(kind: CfgNode['kind'], lines: string[]): { width: number; height: number } {
+  if (kind === 'start' || kind === 'end') return { width: TERMINAL, height: TERMINAL };
   const text = Math.max(...lines.map((l) => l.length)) * CHAR;
   const height = lines.length * LINE + 16;
   if (kind === 'decision' || kind === 'switch' || kind === 'loop') return { width: Math.max(90, text + 52), height: height + 4 };
-  if (kind === 'start' || kind === 'end') return { width: Math.max(70, text + 34), height: 30 };
   return { width: Math.max(80, text + 26), height };
 }
 
@@ -87,7 +99,7 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
     anchor: cfg.fn.getStart(sourceFile),
     nodes: cfg.nodes.map((n, i) => {
       const p = layout.nodes.get(n.id)!;
-      return { id: n.id, kind: n.kind, lines: lines[i], unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
+      return { id: n.id, kind: n.kind, lines: lines[i], text: fullText(n), unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
     }),
     edges: cfg.edges.map((e, i) => ({
       from: e.from,
@@ -107,7 +119,8 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
       reason: p.reason,
     })),
     truncated,
-    width: layout.width,
+    // Room for the function's name, written to the right of the start circle.
+    width: Math.max(layout.width, ...cfg.nodes.filter((n) => n.kind === 'start').map((n) => layout.nodes.get(n.id)!.x + TERMINAL + 10 + cfg.name.length * CHAR)),
     height: layout.height,
   };
 }
@@ -128,7 +141,7 @@ export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile,
 }
 
 /**
- * The control flow as a Mermaid flowchart (top to bottom): decisions as hexagons, start and end as stadiums,
+ * The control flow as a Mermaid flowchart (top to bottom): decisions as hexagons, start and end as circles,
  * loop edges dotted, unreachable code dashed, a highlighted path drawn thick.
  */
 export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: number[]; edges: number[] }): string {
@@ -136,7 +149,7 @@ export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: numbe
   const lines = ['flowchart TD'];
   for (const n of chart.nodes) {
     const text = `"${n.lines.map(escape).join('<br/>')}"`;
-    const shape = n.kind === 'decision' || n.kind === 'switch' || n.kind === 'loop' ? `{{${text}}}` : n.kind === 'start' || n.kind === 'end' ? `([${text}])` : `[${text}]`;
+    const shape = n.kind === 'decision' || n.kind === 'switch' || n.kind === 'loop' ? `{{${text}}}` : n.kind === 'start' || n.kind === 'end' ? `((${text}))` : `[${text}]`;
     lines.push(`  n${n.id}${shape}`);
   }
   chart.edges.forEach((e) => {

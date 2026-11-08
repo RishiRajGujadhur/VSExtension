@@ -8,6 +8,8 @@ export interface DiagramNode {
   location?: ReportLocation;
   /** What the box stands for: a design pattern describes the surrounding code rather than carrying the value. */
   kind?: 'pattern';
+  /** The codicon its row has in the results view, or one for common groups such as Design patterns. */
+  icon?: string;
   /** Folded: the children are hidden until the node's button is clicked. */
   collapsed: boolean;
   children: DiagramNode[];
@@ -39,7 +41,26 @@ function isPattern(row: ReportNode): boolean {
 function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramNode['kind']): DiagramNode {
   const kind = inherited ?? (isPattern(row) ? 'pattern' : undefined);
   const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind));
-  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), collapsed: children.length > 0 && collapsed, children };
+  const icon = boxIcon(row, kind);
+  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), collapsed: children.length > 0 && collapsed, children };
+}
+
+/** Icons for groups that appear in many analyses, used when their row has none of its own. */
+export const groupIcons: Record<string, string> = {
+  'Design patterns': 'library',
+  'Race conditions': 'debug-disconnect',
+  'Incoming values from call sites': 'call-incoming',
+  'Flows in': 'arrow-right',
+  'Flows out': 'arrow-right',
+};
+
+/** The icon of a box: its row's own, a group's, or by what the row does with the value. */
+export function boxIcon(row: ReportNode, kind?: DiagramNode['kind']): string | undefined {
+  if (row.icon) return row.icon;
+  if (groupIcons[row.label]) return groupIcons[row.label];
+  if (kind === 'pattern') return 'symbol-class';
+  const roles: Record<string, string> = { write: 'edit', definition: 'symbol-variable', read: 'eye', call: 'symbol-method' };
+  return row.role ? roles[row.role] : undefined;
 }
 
 /** A function row whose steps only give the value something: it belongs on the incoming side. */
