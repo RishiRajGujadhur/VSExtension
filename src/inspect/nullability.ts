@@ -311,7 +311,8 @@ function returnsValue(body: ts.Block): boolean {
 /** Conditions before the expression that rule out null, explaining why it is safe here. */
 function guardsBefore(expression: ts.Node, name: string): ts.Node[] {
   const guards: ts.Node[] = [];
-  const mentions = (node: ts.Node) => new RegExp(`(^|[^\\w$.])${name.replace(/[$.]/g, '\\$&')}([^\\w$]|$)`).test(node.getText());
+  // The name can be any code, such as `/import\(/` from a regular expression literal, so every special character is escaped.
+  const mentions = (node: ts.Node) => new RegExp(`(^|[^\\w$.])${name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}([^\\w$]|$)`).test(node.getText());
   let current = expression;
   for (let parent = expression.parent; parent && !ts.isSourceFile(parent); current = parent, parent = parent.parent) {
     if (ts.isIfStatement(parent) && parent.thenStatement === current && mentions(parent.expression)) {

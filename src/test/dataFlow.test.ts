@@ -207,3 +207,8 @@ test('destructuring assignments write the variable, and template reads show the 
   assert.ok(idSteps.includes('declared in Order'), idSteps.join(', '));
   assert.ok(idSteps.includes('read in `#${order.id}`'), idSteps.join(', '));
 });
+
+test('data flow declines values declared by a library, such as undefined', () => {
+  const project = virtualProject('inspect', 'src/syntax.ts');
+  assert.throws(() => dataFlowSteps(project, syntax, offsetIn(syntax, 'nothing = undef|ined')), /library/);
+});

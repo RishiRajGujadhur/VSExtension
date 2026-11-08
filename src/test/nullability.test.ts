@@ -90,3 +90,8 @@ test('uses of a property list its reads', () => {
   assert.match(uses?.children?.[0].label ?? '', /user\.nickname/);
   assert.match(uses?.children?.[0].description ?? '', /may be undefined/);
 });
+
+test('nullability copes with code that looks like a regular expression', () => {
+  const syntax = path.join(fixtures, 'inspect/src/syntax.ts');
+  assert.doesNotThrow(() => nullabilityReport(virtualProject('inspect', 'src/syntax.ts'), syntax, offsetIn(syntax, '.te|st(source)')));
+});

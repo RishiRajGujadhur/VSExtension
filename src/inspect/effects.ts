@@ -332,7 +332,8 @@ export class EffectAnalyzer {
     if ((ts.isPropertyAccessExpression(parent) && parent.name === identifier) || (parent as ts.NamedDeclaration).name === identifier || ts.isTypeReferenceNode(parent)) {
       return undefined;
     }
-    const known = effectfulGlobals[identifier.text];
+    // Own keys only: a variable named `constructor` or `toString` would otherwise find Object's methods.
+    const known = Object.hasOwn(effectfulGlobals, identifier.text) ? effectfulGlobals[identifier.text] : undefined;
     if (known && this.isLibrary(identifier)) {
       let top: ts.Node = identifier;
       while (ts.isPropertyAccessExpression(top.parent) && top.parent.expression === top) {
@@ -345,7 +346,7 @@ export class EffectAnalyzer {
       const member = ts.isPropertyAccessExpression(parent) && parent.expression === identifier ? `.${parent.name.text}` : '';
       return { kind: known.kind, target: `${identifier.text}${member}`, description: known.note, node: identifier };
     }
-    const members = nondeterministicMembers[identifier.text];
+    const members = Object.hasOwn(nondeterministicMembers, identifier.text) ? nondeterministicMembers[identifier.text] : undefined;
     if (members && ts.isPropertyAccessExpression(parent) && members.includes(parent.name.text) && this.isLibrary(identifier)) {
       return { kind: 'nondeterministic', target: `${identifier.text}.${parent.name.text}`, description: identifier.text === 'Math' || identifier.text === 'crypto' ? 'produces random values' : 'reads the current time', node: parent };
     }

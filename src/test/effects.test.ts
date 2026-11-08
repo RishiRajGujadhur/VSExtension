@@ -130,3 +130,10 @@ test('effects are also listed by the call that brings them in', () => {
 function byLabel(report: { roots: { label: string; children?: any[] }[] }, label: string): any[] {
   return report.roots.find((r) => r.label === label)!.children!;
 }
+
+test('side effects cope with names that are also Object methods, such as constructor', () => {
+  const syntax = path.join(fixtures, 'inspect/src/syntax.ts');
+  const program = virtualProject('inspect', 'src/syntax.ts').program();
+  const report = sideEffectReport(program, syntax, offsetIn(syntax, 'function kind|Of'));
+  assert.equal(report.description, 'pure');
+});

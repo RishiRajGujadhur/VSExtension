@@ -49,6 +49,10 @@ export function dataFlowSteps(project: VirtualProject, fileName: string, offset:
   if (!symbol || !(symbol.flags & (ts.SymbolFlags.Variable | ts.SymbolFlags.Property | ts.SymbolFlags.Accessor))) {
     throw new AnalysisError(`'${identifier.text}' isn't a variable, parameter or property.`);
   }
+  // undefined, length, window…: declared by a library and used everywhere, so following them would search the whole project.
+  if (!symbol.declarations?.some((d) => !d.getSourceFile().isDeclarationFile)) {
+    throw new AnalysisError(`'${identifier.text}' is declared by a library, not in your code. Data Flow follows values your code declares.`);
+  }
   const steps: FlowStep[] = [];
   for (const reference of referencesAt(project.service, fileName, identifier.getStart())) {
     if (ts.isIdentifier(reference) || ts.isPrivateIdentifier(reference) || ts.isStringLiteral(reference)) {
