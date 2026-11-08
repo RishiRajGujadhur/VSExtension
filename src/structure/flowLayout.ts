@@ -161,7 +161,9 @@ export function layoutFlow(nodes: readonly LayoutNode[], edges: readonly LayoutE
       const sx = siblings.length > 1 ? a.x + (a.width * (slot + 1)) / (siblings.length + 1) : a.x + a.width / 2;
       const from = { x: sx, y: a.y + a.height };
       const to = { x: b.x + b.width / 2, y: b.y };
-      routes.push({ points: [from, to], label: { x: from.x + (to.x - from.x) * 0.3, y: from.y + (to.y - from.y) * 0.3 } });
+      // With three or more branches the labels sit halfway, where the edges have spread apart.
+      const t = siblings.length > 2 ? 0.55 : 0.3;
+      routes.push({ points: [from, to], label: { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t } });
     } else {
       // Out of the source's right side, right of everything in between, up, and into the target's right side.
       const top = Math.min(a.y, b.y);
