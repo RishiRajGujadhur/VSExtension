@@ -103,8 +103,8 @@ export class DiagramPanel {
     const button = iconButton;
     return webviewPage(webview, this.extensionUri, {
       title: 'Analysis Diagram',
-      styles: ['diagram.css'],
-      scripts: ['diagramGrid.js', 'diagram.js'],
+      styles: ['chart.css', 'diagram.css'],
+      scripts: ['diagramGrid.js', 'chartKit.js', 'diagram.js'],
       images: true,
       bodyAttributes: `data-vscode-context='{"preventDefaultContextMenuItems": true}'`,
       body: `<header aria-label="Chart tools">

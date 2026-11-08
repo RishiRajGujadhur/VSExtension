@@ -1,17 +1,3 @@
-html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
-header #caption { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vscode-descriptionForeground); }
-header button { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 2px 8px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; cursor: pointer;
-  background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); font-family: inherit; font-size: inherit; }
-header button:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
-header button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
-body { display: flex; flex-direction: column; }
-#stage { position: relative; flex: 1; min-height: 0; }
-#grid, #canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#grid { pointer-events: none; }
-#grid[hidden] { display: none; }
-#canvas { cursor: grab; }
-#canvas.dragging { cursor: grabbing; }
 #empty { padding: 24px; color: var(--vscode-descriptionForeground); }
 
 .edge { fill: none; stroke: var(--vscode-editorLineNumber-foreground, #858585); stroke-width: 1.4; }
@@ -39,7 +25,6 @@ body { display: flex; flex-direction: column; }
 .toggle circle { fill: var(--vscode-badge-background, #4d4d4d); stroke: var(--vscode-editor-background); stroke-width: 2; }
 .toggle text { fill: var(--vscode-badge-foreground, #fff); font-size: 10px; font-weight: 600; }
 .side { fill: var(--vscode-descriptionForeground); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-#canvas.off { display: none; }
 
 /* Find */
 #search { width: 180px; min-height: 22px; padding: 2px 6px; box-sizing: border-box; border: 1px solid var(--vscode-input-border, transparent); border-radius: 2px;
@@ -112,16 +97,6 @@ body { position: relative; }
 #minimap .mini.ok { fill: var(--vscode-testing-iconPassed, #73c991); }
 #miniView { fill: var(--vscode-focusBorder, #007fd4); fill-opacity: .12; stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 
-/* Grid and Flow toggles: pressed looks like VS Code's toggled buttons. */
-header button[aria-pressed="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-
-/* Flow animation: pulses moving along the lines in the direction the value travels. */
-.flow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 8 32; pointer-events: none;
-  animation: flow 1.1s linear infinite; filter: drop-shadow(0 0 3px var(--vscode-charts-blue, #00c8ff)); }
-@keyframes flow { to { stroke-dashoffset: -40; } }
-@media (prefers-reduced-motion: reduce) {
-  .flow { animation: none; stroke-dasharray: none; opacity: .75; }
-}
 
 /* Tone symbols, so the tone is not shown by color alone. */
 .node .glyph { font-size: 12px; font-weight: 700; }
@@ -135,18 +110,6 @@ header button[aria-pressed="true"] { background: var(--vscode-button-background)
 .node:focus-visible .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.5; }
 
 
-/* Toolbar: icon buttons in small groups, like VS Code's own toolbars. */
-header { gap: 8px; }
-header .group { display: inline-flex; align-items: center; gap: 2px; }
-header button.icon { min-width: 26px; min-height: 26px; padding: 3px; justify-content: center; background: transparent; color: var(--vscode-icon-foreground, var(--vscode-foreground)); border-color: transparent; }
-header button.icon:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
-header button.icon[aria-pressed="true"] { background: var(--vscode-inputOption-activeBackground, rgba(0, 127, 212, .4)); color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground)); border-color: var(--vscode-inputOption-activeBorder, transparent); }
-header button.icon .codicon { font-size: 16px; }
-header .zoom-level { min-width: 46px; min-height: 26px; padding: 2px 4px; background: transparent; color: var(--vscode-foreground); border-color: transparent; font-variant-numeric: tabular-nums; }
-header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
-#caption { display: inline-flex; align-items: baseline; gap: 6px; min-width: 60px; }
-#caption strong { color: var(--vscode-foreground); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#caption .kind { flex: none; padding: 0 6px; border-radius: 9px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
 
 /* Visible in every theme: outlines and text come from the theme's text color, which always contrasts with the
    background (WCAG 1.4.11 non-text contrast 3:1), instead of the widget border color, which some themes make
@@ -160,8 +123,6 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 .node.located:hover .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2; }
 
 /* The subject keeps its name; the search box gives up width first. */
-header #caption { flex: 0 1 auto; min-width: 0; }
-#caption strong { max-width: 240px; min-width: 0; }
 #search { flex: 1 1 140px; width: auto; min-width: 90px; max-width: 240px; }
 
 /* The right-click menu of a box, styled like VS Code's menus. */

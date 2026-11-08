@@ -1,22 +1,7 @@
-html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-body { display: flex; flex-direction: column; }
-header { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
-header .group { display: inline-flex; align-items: center; gap: 2px; }
-#caption { flex: 1; display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
-#caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-#caption .kind { flex: none; padding: 0 6px; border-radius: 9px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+#caption { flex: 1; }
 button { font-family: inherit; font-size: inherit; cursor: pointer; }
-header button { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; min-height: 26px; padding: 3px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
-header button:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
-header button[aria-pressed="true"] { background: var(--vscode-inputOption-activeBackground, rgba(0, 127, 212, .4)); border-color: var(--vscode-inputOption-activeBorder, transparent); }
 header button:focus-visible, li:focus-visible, .node:focus-visible .shape { outline: 1px solid var(--vscode-focusBorder); }
-#zoomLevel { min-width: 46px; color: var(--vscode-foreground); font-variant-numeric: tabular-nums; }
-.codicon { font-size: 16px; }
 main { flex: 1; min-height: 0; display: flex; }
-#stage { position: relative; flex: 1; min-width: 0; }
-#canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
-#canvas.off { display: none; }
-#empty { padding: 24px; color: var(--vscode-descriptionForeground); }
 
 /* Path Explorer */
 #explorer { width: 300px; flex: none; display: flex; flex-direction: column; border-left: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
@@ -74,10 +59,6 @@ li.selected .path-steps { color: inherit; }
 .node.on .shape { stroke-width: 2.4; }
 .edge.pinned .edge-label rect { stroke: var(--vscode-focusBorder); stroke-width: 2; }
 .node.cursor .shape { stroke: var(--vscode-editorCursor-foreground, var(--vscode-focusBorder)); stroke-width: 2.6; stroke-dasharray: none; }
-@media (prefers-reduced-motion: no-preference) {
-  .edge.on .line { stroke-dasharray: 8 6; animation: flow 1.2s linear infinite; }
-}
-@keyframes flow { to { stroke-dashoffset: -14; } }
 @media (forced-colors: active) {
   .node .shape { fill: Canvas; stroke: CanvasText; }
   .code, .code tspan, .edge-label text, .node .title { fill: CanvasText; }

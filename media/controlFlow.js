@@ -1,7 +1,6 @@
 // The Control Flow view: a function's flowchart with its decisions, loops and returns, and the Path Explorer.
 (function () {
   const vscode = acquireVsCodeApi();
-  const svgNs = 'http://www.w3.org/2000/svg';
   const svg = document.getElementById('canvas');
   const scene = document.getElementById('scene');
   const list = document.getElementById('paths');
@@ -22,12 +21,18 @@
   let compared = -1;
   const comparison = document.getElementById('comparison');
 
-  const el = (name, attrs, parent) => {
-    const node = document.createElementNS(svgNs, name);
-    for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, String(value));
-    if (parent) parent.appendChild(node);
-    return node;
+  const { el } = window.chartKit;
+  // The animated grid and flowing lines, shared with the analysis diagram (diagramGrid.js, chartKit.js).
+  const prefs = { effects: true, flow: true, ...(state.prefs || {}) };
+  const saveState = () => {
+    state.prefs = prefs;
+    vscode.setState(state);
   };
+  let grid;
+  let hovered;
+  let flowing;
+  let layoutVersion = 0;
+  let edgeShapes = [];
 
   // Light syntax coloring with theme colors: keywords, strings, numbers and called functions.
   const keywords = new Set('if else return let const var new typeof instanceof switch case default for of in while do throw catch finally try await async break continue true false null undefined this void delete yield function class'.split(' '));
@@ -75,6 +80,8 @@
     scene.textContent = '';
     if (!chart) return;
     const edges = el('g', { class: 'edges' }, scene);
+    layoutVersion++;
+    edgeShapes = chart.edges.map((e) => edgePath(e.points));
     chart.edges.forEach((e, i) => {
       const g = el('g', { class: `edge ${e.kind}${e.back ? ' back' : ''}`, 'data-edge': i }, edges);
       el('path', { d: edgePath(e.points), class: 'line', 'marker-end': 'url(#arrow)' }, g);
@@ -277,6 +284,26 @@
       g.classList.toggle('off', focus && !onEdges.has(i));
       g.classList.toggle('pinned', pins.includes(i));
     });
+    drawFlows(other);
+  }
+
+  function drawFlows(other) {
+    const lines = new Set();
+    if (prefs.flow && chart) {
+      if (selected >= 0) {
+        chart.paths[selected].edges.forEach((e) => lines.add(e));
+        if (other) other.edges.forEach((e) => lines.add(e));
+      } else if (flowing !== undefined) {
+        // A clicked box: execution flowing through it, on every possible path that reaches it.
+        for (const p of chart.paths) if (p.feasible && p.nodes.includes(flowing)) p.edges.forEach((e) => lines.add(e));
+      }
+    }
+    window.chartKit.drawFlows(scene, scene.querySelector('.nodes'), [...lines].map((e) => edgeShapes[e]));
+  }
+
+  function stopFlow() {
+    flowing = undefined;
+    highlight();
   }
 
   // Clicks: a box opens its code; a branch label or line pins that branch; ƒ+ expands a call.
@@ -297,7 +324,21 @@
       return;
     }
     const g = e.target.closest('.node');
-    if (g) open(chart.nodes[Number(g.dataset.node)]);
+    if (g) {
+      const n = chart.nodes[Number(g.dataset.node)];
+      if (grid) grid.pulse(view.x + (n.x + n.width / 2) * view.k, view.y + (n.y + n.height / 2) * view.k);
+      flowing = n.id;
+      highlight();
+      open(n);
+    }
+  });
+  scene.addEventListener('mouseover', (e) => {
+    const g = e.target.closest('.node');
+    const n = g ? chart.nodes[Number(g.dataset.node)] : undefined;
+    if (n !== hovered) {
+      hovered = n;
+      if (grid) grid.wake();
+    }
   });
   scene.addEventListener('keydown', (e) => {
     const expand = e.target.closest('.expand');
@@ -318,6 +359,7 @@
   // Pan by dragging, zoom with the wheel, Fit to see it all.
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    if (grid) grid.wake();
     document.getElementById('zoomLevel').textContent = `${Math.round(view.k * 100)}%`;
   }
   function fit(all) {
@@ -346,11 +388,25 @@
   let drag;
   svg.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || e.target.closest('.node') || e.target.closest('.edge')) return;
-    drag = { x: e.clientX - view.x, y: e.clientY - view.y };
+    drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
   });
-  svg.addEventListener('pointermove', (e) => { if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; apply(); } });
-  svg.addEventListener('pointerup', () => { drag = undefined; });
+  svg.addEventListener('pointermove', (e) => {
+    if (grid) {
+      const r = svg.getBoundingClientRect();
+      grid.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
+    }
+    if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; apply(); }
+  });
+  svg.addEventListener('pointerup', (e) => {
+    // A click on the background, not a drag, stops the flowing lines.
+    if (drag && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4 && flowing !== undefined) stopFlow();
+    drag = undefined;
+  });
+  svg.addEventListener('pointerleave', () => {
+    if (grid) grid.pointer(undefined);
+    hovered = undefined;
+  });
   svg.addEventListener('wheel', (e) => {
     e.preventDefault();
     const r = svg.getBoundingClientRect();
@@ -362,27 +418,7 @@
     vscode.postMessage({ type: 'mermaid', path: path ? { nodes: path.nodes, edges: path.edges } : undefined });
   });
   document.getElementById('save').addEventListener('click', () => {
-    if (!chart) return;
-    const box = scene.getBBox();
-    const pad = 24;
-    const copy = svg.cloneNode(true);
-    const props = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight'];
-    const originals = svg.querySelectorAll('*');
-    copy.querySelectorAll('*').forEach((node, i) => {
-      const style = getComputedStyle(originals[i]);
-      node.setAttribute('style', props.map((p) => `${p}:${style.getPropertyValue(p)}`).join(';'));
-      node.removeAttribute('tabindex');
-    });
-    copy.querySelectorAll('.hit, title').forEach((node) => node.remove());
-    copy.removeAttribute('class');
-    copy.setAttribute('xmlns', svgNs);
-    copy.setAttribute('viewBox', `${box.x - pad} ${box.y - pad} ${box.width + 2 * pad} ${box.height + 2 * pad}`);
-    copy.setAttribute('width', String(Math.ceil(box.width + 2 * pad)));
-    copy.setAttribute('height', String(Math.ceil(box.height + 2 * pad)));
-    copy.querySelector('#scene').removeAttribute('transform');
-    const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
-    copy.insertBefore(background, copy.querySelector('#scene'));
-    vscode.postMessage({ type: 'save', svg: new XMLSerializer().serializeToString(copy) });
+    if (chart) vscode.postMessage({ type: 'save', svg: window.chartKit.exportSvg(svg, scene, ['.hit']).text });
   });
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
@@ -397,7 +433,8 @@
   impossibleBox.checked = showImpossible;
   impossibleBox.addEventListener('change', () => {
     showImpossible = impossibleBox.checked;
-    vscode.setState({ ...state, showImpossible });
+    state.showImpossible = showImpossible;
+    vscode.setState(state);
     afterPins();
   });
   window.addEventListener('keydown', (e) => {
@@ -405,13 +442,14 @@
     if (e.key === '+' || e.key === '=') zoom(1.2);
     else if (e.key === '-') zoom(1 / 1.2);
     else if (e.key === '0') fit(true);
-    else if (e.key === 'Escape') { pins = []; compared = -1; select(-1); }
+    else if (e.key === 'Escape') { pins = []; compared = -1; flowing = undefined; select(-1); }
   });
 
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'chart') {
       slice = undefined;
+      flowing = undefined;
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
       empty.hidden = !!chart;
@@ -448,5 +486,18 @@
       highlight();
     }
   });
+  // The grid behind the chart: every box bends it, the hovered one pushes further.
+  const onScreen = (n) => ({ x: view.x + n.x * view.k, y: view.y + n.y * view.k, w: n.width * view.k, h: n.height * view.k });
+  grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
+    panX: view.x,
+    panY: view.y,
+    k: view.k,
+    version: layoutVersion,
+    get boxes() {
+      return chart ? chart.nodes.map(onScreen) : [];
+    },
+    hovered: hovered ? onScreen(hovered) : undefined,
+  }));
+  window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });
 })();

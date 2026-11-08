@@ -158,8 +158,8 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   const button = iconButton;
   return webviewPage(webview, extensionUri, {
     title: 'Control Flow',
-    styles: ['controlFlow.css'],
-    scripts: ['controlFlow.js'],
+    styles: ['chart.css', 'controlFlow.css'],
+    scripts: ['diagramGrid.js', 'chartKit.js', 'controlFlow.js'],
     body: `<header aria-label="Control flow tools">
   <span id="caption"></span>
   <span class="group" role="group" aria-label="Zoom">
@@ -172,11 +172,16 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   ${button('mermaid', 'markdown', 'Copy as Mermaid: the flowchart, with the picked path drawn thick')}
   ${button('save', 'save', 'Save as SVG image, in the current colors')}
   </span>
+  <span class="group" role="group" aria-label="Effects">
+  ${button('effects', 'sparkle', 'Animated Grid: the dot grid behind the chart follows the pointer', 'aria-pressed="true"')}
+  ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates every path through it (Escape stops it)', 'aria-pressed="true"')}
+  </span>
   ${button('togglePaths', 'list-tree', 'Path Explorer: the paths through the function', 'aria-pressed="true" aria-controls="explorer"')}
 </header>
 <p id="empty">Put the cursor in a function and run Control Flow Graph to draw it here.</p>
 <main>
 <div id="stage">
+<canvas id="grid" aria-hidden="true"></canvas>
 <svg id="canvas" class="off" role="group" aria-label="Control flow graph. Tab moves between boxes; Enter opens the code.">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>

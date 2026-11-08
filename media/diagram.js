@@ -62,14 +62,7 @@
     return text.slice(0, low) + '…';
   };
   const widthOf = (node) => Math.min(MAX_W, Math.max(MIN_W, Math.ceil(Math.max(textWidth(node.label, fontOf(600, 12)), textWidth(node.description, fontOf(400, 11))) + 30)));
-  const el = (name, attrs, parent) => {
-    const node = document.createElementNS(svgNs, name);
-    for (const [key, value] of Object.entries(attrs || {})) {
-      node.setAttribute(key, String(value));
-    }
-    if (parent) parent.appendChild(node);
-    return node;
-  };
+  const { el } = window.chartKit;
   // Branch focus: after a double-click only the box, the boxes between it and the subject, and what is behind it are drawn.
   let isolated;
   let chain = new Set();
@@ -481,11 +474,7 @@
       const behind = (n) => visible(n).forEach((c) => { if (c.edgeEl) edges.push(c.edgeEl); behind(c); });
       behind(flowing);
     }
-    const layer = el('g', { class: 'flows' });
-    scene.insertBefore(layer, scene.querySelector('.nodes'));
-    for (const edge of edges) {
-      if (!edge.classList.contains('relation')) el('path', { d: edge.getAttribute('d'), class: 'flow' }, layer);
-    }
+    window.chartKit.drawFlows(scene, scene.querySelector('.nodes'), edges.filter((edge) => !edge.classList.contains('relation')).map((edge) => edge.getAttribute('d')));
   }
 
   function stopFlow() {
@@ -749,32 +738,15 @@
   // Save SVG: the chart as a standalone image, with the theme's colors written into it.
   function exportSvg() {
     if (!diagram) return;
+    // The whole chart in detail, written out, then back to drawing what is in view.
     paint(true, true);
-    const box = scene.getBBox();
-    const pad = 24;
-    const out = svg.cloneNode(true);
-    const props = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight', 'letter-spacing'];
-    const originals = svg.querySelectorAll('*');
-    out.querySelectorAll('*').forEach((copy, i) => {
-      const style = getComputedStyle(originals[i]);
-      copy.setAttribute('style', props.map((p) => `${p}:${style.getPropertyValue(p)}`).join(';'));
-      copy.removeAttribute('data-vscode-context');
-      copy.removeAttribute('tabindex');
+    const image = window.chartKit.exportSvg(svg, scene, [], (copy) => {
+      for (const side of copy.querySelectorAll('.side')) side.textContent = side.textContent.toUpperCase();
     });
-    for (const side of out.querySelectorAll('.side')) side.textContent = side.textContent.toUpperCase();
-    out.removeAttribute('class');
-    out.removeAttribute('role');
-    out.setAttribute('xmlns', svgNs);
-    out.setAttribute('viewBox', `${box.x - pad} ${box.y - pad} ${box.width + 2 * pad} ${box.height + 2 * pad}`);
-    out.setAttribute('width', String(Math.ceil(box.width + 2 * pad)));
-    out.setAttribute('height', String(Math.ceil(box.height + 2 * pad)));
-    out.querySelector('#scene').removeAttribute('transform');
-    out.querySelectorAll('.flows').forEach((layer) => layer.remove());
-    const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
-    out.insertBefore(background, out.querySelector('#scene'));
     paint(true);
-    return { text: new XMLSerializer().serializeToString(out), width: box.width + 2 * pad, height: box.height + 2 * pad };
+    return image;
   }
+
 
   function saveSvg() {
     const image = exportSvg();
@@ -893,8 +865,6 @@
     }
   });
   // The grid and the two toggles in the header.
-  const effectsButton = document.getElementById('effects');
-  const flowButton = document.getElementById('flowToggle');
   const onScreen = (n) => ({ x: view.x + n.px * view.k, y: view.y + n.py * view.k, w: n.w * view.k, h: H * view.k });
   grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
     panX: view.x,
@@ -906,18 +876,6 @@
     },
     hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
   }));
-  const showPrefs = () => {
-    effectsButton.setAttribute('aria-pressed', String(prefs.effects));
-    flowButton.setAttribute('aria-pressed', String(prefs.flow));
-    grid.setEnabled(prefs.effects);
-  };
-  effectsButton.addEventListener('click', () => { prefs.effects = !prefs.effects; showPrefs(); saveState(); });
-  flowButton.addEventListener('click', () => {
-    prefs.flow = !prefs.flow;
-    if (!prefs.flow) stopFlow();
-    showPrefs();
-    saveState();
-  });
-  showPrefs();
+  window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });
 })();
