@@ -91,3 +91,14 @@ export function retry(): number {
   } while (attempts < 3);
   return attempts;
 }
+
+export function twice(flag: boolean): string {
+  let label = 'none';
+  if (flag) {
+    label = 'first';
+  }
+  if (flag) {
+    label += ' again';
+  }
+  return label;
+}
