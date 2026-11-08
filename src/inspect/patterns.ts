@@ -146,7 +146,18 @@ function classPatterns(cls: ts.ClassLikeDeclaration): DetectedPattern[] {
 }
 
 /** Design patterns and architecture recognizable in the file, each with the node that shows it. */
+/** Patterns found per file; a file's syntax tree never changes, so Data Flow and Design Patterns share them. */
+const detected = new WeakMap<ts.SourceFile, DetectedPattern[]>();
+
 export function detectPatterns(sourceFile: ts.SourceFile): DetectedPattern[] {
+  let found = detected.get(sourceFile);
+  if (!found) {
+    detected.set(sourceFile, (found = findPatterns(sourceFile)));
+  }
+  return [...found];
+}
+
+function findPatterns(sourceFile: ts.SourceFile): DetectedPattern[] {
   const found: DetectedPattern[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isClassLike(node)) {

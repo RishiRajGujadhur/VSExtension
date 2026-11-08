@@ -27,19 +27,50 @@ const text = (node: ts.Node | undefined): string => node?.getText() ?? '';
 
 const hasModifier = (node: ts.Node, kind: ts.SyntaxKind): boolean => (ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []).some((m) => m.kind === kind) : false);
 
+/**
+ * Every node of a file in source order, collected once per file. Some 60 detectors look at each file, and
+ * walking the tree once instead of once per detector is most of their cost.
+ */
+const nodeLists = new WeakMap<ts.SourceFile, ts.Node[]>();
+function nodesOf(sourceFile: ts.SourceFile): ts.Node[] {
+  let nodes = nodeLists.get(sourceFile);
+  if (!nodes) {
+    const all: ts.Node[] = [];
+    const collect = (node: ts.Node): void => {
+      all.push(node);
+      ts.forEachChild(node, collect);
+    };
+    collect(sourceFile);
+    nodeLists.set(sourceFile, (nodes = all));
+  }
+  return nodes;
+}
+
 function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
+  if (ts.isSourceFile(node)) {
+    nodesOf(node).forEach((n) => visit(n));
+    return;
+  }
   visit(node);
   ts.forEachChild(node, (child) => walk(child, visit));
 }
 
-function classesIn(sourceFile: ts.SourceFile): ts.ClassLikeDeclaration[] {
-  const found: ts.ClassLikeDeclaration[] = [];
-  walk(sourceFile, (node) => ts.isClassLike(node) && found.push(node));
-  return found;
+/** Results computed once per file and shared by the detectors. */
+function perFile<T>(compute: (sourceFile: ts.SourceFile) => T): (sourceFile: ts.SourceFile) => T {
+  const cache = new WeakMap<ts.SourceFile, T>();
+  return (sourceFile) => {
+    if (!cache.has(sourceFile)) {
+      cache.set(sourceFile, compute(sourceFile));
+    }
+    return cache.get(sourceFile)!;
+  };
 }
 
+const classesIn = perFile((sourceFile): ts.ClassLikeDeclaration[] => nodesOf(sourceFile).filter(ts.isClassLike));
+
 /** Named functions: declarations, methods and functions assigned to a name. */
-function functionsIn(sourceFile: ts.SourceFile): { name: string; fn: ts.FunctionLikeDeclaration }[] {
+const functionsIn = perFile(namedFunctions);
+function namedFunctions(sourceFile: ts.SourceFile): { name: string; fn: ts.FunctionLikeDeclaration }[] {
   const found: { name: string; fn: ts.FunctionLikeDeclaration }[] = [];
   walk(sourceFile, (node) => {
     if ((ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) && node.body && nameOf(node)) {
