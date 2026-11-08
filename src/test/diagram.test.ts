@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
 import { dataFlowReport } from '../inspect/dataFlow';
-import { diagramMermaid, reportDiagram } from '../structure/diagram';
+import { DiagramNode, diagramMermaid, foldToFit, reportDiagram } from '../structure/diagram';
 import { Report } from '../structure/report';
 import { fixtures, offsetIn, virtualProject } from './helpers';
 
@@ -103,4 +103,18 @@ test('the chart copies as a Mermaid flowchart with arrows in the direction of th
     '  classDef warning stroke:#d29922,stroke-width:2px',
     '  class n2 warning',
   ]);
+});
+
+test('a chart that would open with too many boxes folds its deepest levels first', () => {
+  const leaf = (label: string): DiagramNode => ({ label, collapsed: false, children: [] });
+  const group = (label: string, children: DiagramNode[]): DiagramNode => ({ label, collapsed: false, children });
+  // 3 groups of 4 subgroups of 20 leaves: 3 + 12 + 240 boxes.
+  const right = [0, 1, 2].map((i) => group(`g${i}`, [0, 1, 2, 3].map((j) => group(`g${i}.${j}`, Array.from({ length: 20 }, (_, k) => leaf(`leaf ${k}`))))));
+  const diagram = foldToFit({ title: 't', center: leaf('c'), left: [], right }, 50);
+  // The groups stay open and their subgroups show; the subgroups fold their leaves away.
+  assert.equal(diagram.right[0].collapsed, false);
+  assert.equal(diagram.right[0].children[0].collapsed, true);
+  // A chart that fits is left as it is.
+  const small = foldToFit({ title: 't', center: leaf('c'), left: [], right: [group('g', [leaf('a')])] }, 50);
+  assert.equal(small.right[0].collapsed, false);
 });

@@ -49,6 +49,39 @@ function onlyWrites(row: ReportNode): boolean {
  * travel left to right through the variable; every other analysis hangs its rows to the right of its subject.
  */
 export function reportDiagram(report: Report): Diagram {
+  return foldToFit(buildDiagram(report));
+}
+
+/** How many boxes a chart shows when it opens; Unfold All shows the rest. */
+export const openingBoxes = 150;
+
+/**
+ * Folds a chart that would open with more than `limit` boxes: the deepest levels fold first, keeping as many
+ * levels unfolded as fit. Small charts open exactly as the results view shows them.
+ */
+export function foldToFit(diagram: Diagram, limit = openingBoxes): Diagram {
+  const sides = [...diagram.left, ...diagram.right];
+  const count = (nodes: DiagramNode[], depth: number, maxDepth: number): number =>
+    nodes.reduce((total, n) => total + 1 + (n.collapsed || depth >= maxDepth ? 0 : count(n.children, depth + 1, maxDepth)), 0);
+  if (count(sides, 1, Infinity) <= limit) {
+    return diagram;
+  }
+  let depth = 1;
+  while (count(sides, 1, depth + 1) <= limit && depth < 50) {
+    depth++;
+  }
+  const fold = (nodes: DiagramNode[], level: number): void =>
+    nodes.forEach((n) => {
+      if (level >= depth && n.children.length) {
+        n.collapsed = true;
+      }
+      fold(n.children, level + 1);
+    });
+  fold(sides, 1);
+  return diagram;
+}
+
+function buildDiagram(report: Report): Diagram {
   const { heading, subject } = titleParts(report);
   const roots = report.roots.filter((r) => !skipped.has(r.label));
   const center: DiagramNode = { label: subject ?? heading, description: report.description, collapsed: false, children: [] };
