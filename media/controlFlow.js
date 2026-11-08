@@ -18,6 +18,9 @@
   let cursorNode;
   let showImpossible = !!state.showImpossible;
   let slice;
+  // A second path to compare with the selected one (Shift+click).
+  let compared = -1;
+  const comparison = document.getElementById('comparison');
 
   const el = (name, attrs, parent) => {
     const node = document.createElementNS(svgNs, name);
@@ -174,17 +177,50 @@
         why.textContent = `Impossible: ${p.reason}`;
         item.appendChild(why);
       }
-      const choose = () => select(i === selected ? -1 : i);
+      const choose = (e) => {
+        if ((e.shiftKey || e.ctrlKey || e.metaKey) && selected >= 0 && i !== selected) {
+          compared = compared === i ? -1 : i;
+          renderList();
+          highlight();
+        } else {
+          compared = -1;
+          select(i === selected ? -1 : i);
+        }
+      };
       item.addEventListener('click', choose);
-      item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); } });
+      item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(e); } });
+      if (i === compared) item.classList.add('compared');
       list.appendChild(item);
     });
+    renderComparison();
     if (!found.length) {
       const none = document.createElement('li');
       none.className = 'none';
       none.textContent = 'No possible path takes all these branches.';
       list.appendChild(none);
     }
+  }
+
+  // Where two paths part: the branches they share, the first one they take differently, and how each ends.
+  function renderComparison() {
+    comparison.textContent = '';
+    comparison.hidden = !(selected >= 0 && compared >= 0);
+    if (comparison.hidden) return;
+    const a = chart.paths[selected];
+    const b = chart.paths[compared];
+    let shared = 0;
+    while (shared < a.steps.length && shared < b.steps.length && a.steps[shared].edge === b.steps[shared].edge) shared++;
+    const line = (label, text, cls) => {
+      const row = document.createElement('div');
+      row.className = `compare-row ${cls || ''}`;
+      const name = document.createElement('strong');
+      name.textContent = label;
+      row.append(name, document.createTextNode(text));
+      comparison.appendChild(row);
+    };
+    line('Both: ', shared ? a.steps.slice(0, shared).map((s) => s.text).join(' → ') : 'no branch in common');
+    line('A: ', [...a.steps.slice(shared).map((s) => s.text), a.ending].join(' → '), 'a');
+    line('B: ', [...b.steps.slice(shared).map((s) => s.text), b.ending].join(' → '), 'b');
   }
 
   function select(i) {
@@ -217,10 +253,18 @@
       p.nodes.forEach((n) => onNodes.add(n));
       p.edges.forEach((e) => onEdges.add(e));
     }
+    const other = compared >= 0 && selected >= 0 ? chart.paths[compared] : undefined;
+    const otherNodes = new Set(other ? other.nodes : []);
+    const otherEdges = new Set(other ? other.edges : []);
+    if (other) {
+      other.nodes.forEach((n) => onNodes.add(n));
+      other.edges.forEach((e) => onEdges.add(e));
+    }
     const focus = active.length > 0;
     scene.querySelectorAll('.node').forEach((g) => {
       const id = Number(g.dataset.node);
       g.classList.toggle('on', focus && onNodes.has(id));
+      g.classList.toggle('on2', otherNodes.has(id));
       g.classList.toggle('off', focus && !onNodes.has(id));
       g.classList.toggle('cursor', id === cursorNode);
       g.classList.toggle('criterion', !!slice && id === slice.at);
@@ -228,6 +272,8 @@
     scene.querySelectorAll('.edge').forEach((g) => {
       const i = Number(g.dataset.edge);
       g.classList.toggle('on', focus && onEdges.has(i));
+      g.classList.toggle('on2', otherEdges.has(i));
+      g.classList.toggle('only2', otherEdges.has(i) && !(selected >= 0 && chart.paths[selected].edges.includes(i)));
       g.classList.toggle('off', focus && !onEdges.has(i));
       g.classList.toggle('pinned', pins.includes(i));
     });
@@ -359,7 +405,7 @@
     if (e.key === '+' || e.key === '=') zoom(1.2);
     else if (e.key === '-') zoom(1 / 1.2);
     else if (e.key === '0') fit(true);
-    else if (e.key === 'Escape') { pins = []; select(-1); }
+    else if (e.key === 'Escape') { pins = []; compared = -1; select(-1); }
   });
 
   window.addEventListener('message', (event) => {

@@ -106,3 +106,15 @@ li.selected .path-steps { color: inherit; }
 /* Slices */
 .chip.slice { border-color: var(--vscode-charts-purple, #b180d7); background: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 20%, transparent); }
 .node.criterion .shape { stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 3; }
+
+/* Comparing two paths: A blue, B orange, shared purple. */
+.edge.on.on2 .line { stroke: var(--vscode-charts-purple, #b180d7); }
+.edge.only2 .line { stroke: var(--vscode-charts-orange, #d18616); stroke-width: 2.6; }
+.node.on2 .shape { stroke: var(--vscode-charts-orange, #d18616); }
+.node.on.on2 .shape { stroke: var(--vscode-charts-purple, #b180d7); }
+#paths li.compared { outline: 1px solid var(--vscode-charts-orange, #d18616); outline-offset: -1px; }
+#comparison { margin: 0 12px 8px; padding: 6px 8px; border-radius: 4px; background: var(--vscode-editorWidget-background, rgba(128, 128, 128, .12)); font-size: 12px; }
+#comparison[hidden] { display: none; }
+.compare-row { margin: 2px 0; }
+.compare-row.a strong { color: var(--vscode-focusBorder, #3794ff); }
+.compare-row.b strong { color: var(--vscode-charts-orange, #d18616); }

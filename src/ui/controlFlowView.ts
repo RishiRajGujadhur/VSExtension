@@ -197,12 +197,13 @@ function html(webview: vscode.Webview, media: vscode.Uri, codicons: vscode.Uri):
 <aside id="explorer" aria-label="Path Explorer">
   <h2>Path Explorer</h2>
   <div id="pathSummary" role="status"></div>
-  <p class="hint">Pick a path to light up its route, or click a branch label (yes, no, case…) to keep only the paths through it.</p>
+  <p class="hint">Pick a path to light up its route, Shift+click another to compare them, or click a branch label (yes, no, case…) to keep only the paths through it.</p>
   <div class="options">
     <label><input type="checkbox" id="showImpossible"> Show impossible paths</label>
     <button id="clearPins" title="Remove every branch filter and the selected path (Escape)">Clear</button>
   </div>
   <div id="pins" aria-label="Branches the paths must take"></div>
+  <div id="comparison" role="status" hidden></div>
   <ul id="paths" role="listbox" aria-label="Paths through the function"></ul>
 </aside>
 </main>
