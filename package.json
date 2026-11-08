@@ -872,6 +872,18 @@
         "title": "Explain Value Path",
         "category": "TypeScript Structure",
         "icon": "$(debug-breakpoint-data)"
+      },
+      {
+        "command": "tsStructure.sliceBackward",
+        "title": "What Affects This Value (Backward Slice)",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-step-back)"
+      },
+      {
+        "command": "tsStructure.sliceForward",
+        "title": "What This Value Affects (Forward Slice)",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-step-out)"
       }
     ],
     "viewsContainers": {
@@ -1422,6 +1434,16 @@
           "command": "tsStructure.explainValue",
           "when": "config.tsStructure.features.dataFlow",
           "group": "3_analysis@6"
+        },
+        {
+          "command": "tsStructure.sliceBackward",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@7"
+        },
+        {
+          "command": "tsStructure.sliceForward",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@8"
         }
       ],
       "explorer/context": [
@@ -2038,6 +2060,14 @@
         },
         {
           "command": "tsStructure.explainValue",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.sliceBackward",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.sliceForward",
           "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
         }
       ],

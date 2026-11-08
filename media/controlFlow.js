@@ -17,6 +17,7 @@
   let pins = [];
   let cursorNode;
   let showImpossible = !!state.showImpossible;
+  let slice;
 
   const el = (name, attrs, parent) => {
     const node = document.createElementNS(svgNs, name);
@@ -136,6 +137,14 @@
     const possible = chart.paths.filter((p) => p.feasible).length;
     summary.textContent = `${possible} possible path${possible === 1 ? '' : 's'}${chart.paths.length > possible ? `, ${chart.paths.length - possible} impossible` : ''}${chart.truncated ? ' (first ' + chart.paths.length + ' shown)' : ''}`;
     pinsBar.textContent = '';
+    if (slice) {
+      const chip = document.createElement('button');
+      chip.className = 'chip slice';
+      chip.title = 'Clear the slice';
+      chip.textContent = `${slice.direction === 'backward' ? '← What affects' : '→ What is affected by'} ${slice.name} (line ${slice.line}): ${slice.nodes.length} boxes ✕`;
+      chip.addEventListener('click', () => { slice = undefined; renderList(); highlight(); });
+      pinsBar.appendChild(chip);
+    }
     for (const e of pins) {
       const edge = chart.edges[e];
       const chip = document.createElement('button');
@@ -199,6 +208,11 @@
     const onNodes = new Set();
     const onEdges = new Set();
     const active = selected >= 0 ? [chart.paths[selected]] : pins.length ? matching().map(({ p }) => p) : [];
+    // A slice lights up its boxes, and the edges between them, when no path is picked.
+    if (!active.length && slice) {
+      const inSlice = new Set(slice.nodes);
+      active.push({ nodes: slice.nodes, edges: chart.edges.map((e, i) => (inSlice.has(e.from) && inSlice.has(e.to) ? i : -1)).filter((i) => i >= 0) });
+    }
     for (const p of active) {
       p.nodes.forEach((n) => onNodes.add(n));
       p.edges.forEach((e) => onEdges.add(e));
@@ -209,6 +223,7 @@
       g.classList.toggle('on', focus && onNodes.has(id));
       g.classList.toggle('off', focus && !onNodes.has(id));
       g.classList.toggle('cursor', id === cursorNode);
+      g.classList.toggle('criterion', !!slice && id === slice.at);
     });
     scene.querySelectorAll('.edge').forEach((g) => {
       const i = Number(g.dataset.edge);
@@ -350,6 +365,7 @@
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'chart') {
+      slice = undefined;
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
       empty.hidden = !!chart;
@@ -375,6 +391,12 @@
       renderList();
       if (!same) fit();
       else apply();
+    } else if (message.type === 'slice') {
+      slice = message.slice;
+      selected = -1;
+      pins = [];
+      renderList();
+      highlight();
     } else if (message.type === 'cursor') {
       cursorNode = message.id;
       highlight();

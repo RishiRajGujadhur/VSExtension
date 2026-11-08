@@ -34,6 +34,8 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Can async code change this variable at the wrong time?', command: 'tsStructure.raceConditions', key: '7' },
   { question: 'Which paths can this function take, and what does each return?', command: 'tsStructure.controlFlow', key: '1' },
   { question: 'Why does this variable have this value here?', command: 'tsStructure.explainValue', key: '0' },
+  { question: 'What does this value depend on?', command: 'tsStructure.sliceBackward' },
+  { question: 'What does changing this value affect?', command: 'tsStructure.sliceForward' },
   { question: 'Which features are on?', command: 'tsStructure.configureFeatures' },
   { question: 'Change a keyboard shortcut', command: 'tsStructure.editKeybindings' },
 ];

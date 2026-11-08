@@ -20,6 +20,8 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.raceConditions': 'watch',
   'tsStructure.controlFlow': 'git-branch',
   'tsStructure.explainValue': 'debug-breakpoint-data',
+  'tsStructure.sliceBackward': 'debug-step-back',
+  'tsStructure.sliceForward': 'debug-step-out',
   'tsStructure.sideEffects': 'zap',
   'tsStructure.nullability': 'circle-slash',
   'tsStructure.promiseRejections': 'debug-disconnect',

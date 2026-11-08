@@ -102,3 +102,7 @@ li.selected .path-steps { color: inherit; }
 .frame-label { fill: var(--vscode-charts-blue, #3794ff); font-size: 11px; font-weight: 600; font-family: var(--vscode-editor-font-family, monospace); }
 .edge.call .line { stroke: var(--vscode-charts-blue, #3794ff); }
 .edge.call .edge-label text { fill: var(--vscode-charts-blue, #3794ff); }
+
+/* Slices */
+.chip.slice { border-color: var(--vscode-charts-purple, #b180d7); background: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 20%, transparent); }
+.node.criterion .shape { stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 3; }

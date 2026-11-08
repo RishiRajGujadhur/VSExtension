@@ -3,6 +3,7 @@ import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
 import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
 import { saveImage } from './diagramView';
+import { sliceAt } from '../inspect/slice';
 import { ReportLocation } from '../structure/report';
 
 /**
@@ -19,6 +20,8 @@ export class ControlFlowPanel {
   private refresh: NodeJS.Timeout | undefined;
   /** Calls expanded in place, by "file:offset"; cleared when another function is shown. */
   private expanded = new Set<string>();
+  /** The slice on screen, sent after each chart until the code is edited. */
+  private slice: { nodes: number[]; at: number; direction: 'backward' | 'forward'; name: string; line: number } | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -34,6 +37,8 @@ export class ControlFlowPanel {
           if (change.rangeOffset + change.rangeLength <= this.target.anchor) this.target.anchor += change.text.length - change.rangeLength;
         }
         clearTimeout(this.refresh);
+        // Box numbers change with the code, so an edit ends the slice.
+        this.slice = undefined;
         this.refresh = setTimeout(() => this.build(), 400);
       }),
       vscode.window.onDidChangeTextEditorSelection((e) => {
@@ -45,11 +50,36 @@ export class ControlFlowPanel {
     );
   }
 
+  /** Opens the view on the function around the cursor with the slice of the variable there lit up. */
+  showSlice(editor: vscode.TextEditor, direction: 'backward' | 'forward'): void {
+    const uri = editor.document.uri;
+    const folder = vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
+    const offset = editor.document.offsetAt(editor.selection.active);
+    try {
+      const slice = sliceAt(this.projects.analysisProject(uri.fsPath, folder), uri.fsPath, offset, direction);
+      const at = slice.cfg.nodes[slice.at].nodes[0];
+      // The slice is about the function around the cursor, even when the cursor is on a call.
+      const anchor = slice.cfg.fn.getStart();
+      this.show(editor, anchor);
+      this.slice = {
+        nodes: slice.nodes,
+        at: slice.at,
+        direction,
+        name: slice.name,
+        line: at ? at.getSourceFile().getLineAndCharacterOfPosition(at.getStart()).line + 1 : editor.selection.active.line + 1,
+      };
+      this.post();
+    } catch (error) {
+      void vscode.window.showInformationMessage(error instanceof AnalysisError ? error.message : `Slice: ${String(error)}`);
+    }
+  }
+
   /** Opens the view for the function at the editor's cursor (or the function called there). */
-  show(editor: vscode.TextEditor): void {
+  show(editor: vscode.TextEditor, anchor?: number): void {
     const uri = editor.document.uri;
     this.expanded.clear();
-    this.target = { uri, anchor: editor.document.offsetAt(editor.selection.active), folder: vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath };
+    this.slice = undefined;
+    this.target = { uri, anchor: anchor ?? editor.document.offsetAt(editor.selection.active), folder: vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath };
     if (!this.build(true)) return;
     if (this.panel) {
       this.panel.reveal(undefined, false);
@@ -110,6 +140,7 @@ export class ControlFlowPanel {
     if (!this.panel || !this.ready) return;
     this.panel.title = this.chart ? `Control Flow: ${this.chart.name}` : 'Control Flow';
     void this.panel.webview.postMessage({ type: 'chart', chart: this.chart });
+    if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
   }
 
   /** For tests: the chart on screen. */
