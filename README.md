@@ -8,7 +8,7 @@ Refactorings, inspections and code navigation for TypeScript, JavaScript and Rea
 
 1. Open a TypeScript or JavaScript file and put the cursor on a symbol.
 2. Right-click: **Find Usages**, **Find Usages in Current File**, **Data Flow** and **Analyze or Refactor This…** are at the top of the menu. Everything else is under **Code X-Ray**.
-3. Results open in the **Code X-Ray** view in the Activity Bar.
+3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, with a search box, your **Most Used** actions first and the rest by category. Results open in the **Analysis** view below it.
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
 
