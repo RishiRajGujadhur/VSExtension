@@ -39,3 +39,9 @@ export function area({ width, height = 1 }: { width: number; height?: number }):
 }
 
 export const square = area({ width: 2 });
+
+export function Resale(props: { amount: number }) {
+  return <Price {...props} />;
+}
+
+export const wide = (options: { width: number }) => area({ ...options });

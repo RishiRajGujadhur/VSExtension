@@ -154,8 +154,8 @@ test('flows in of a destructured prop or option lists what each call site passes
       .roots.find((r) => r.label === 'Flows in')
       ?.children?.find((c) => c.label === 'Incoming values from call sites')
       ?.children?.map((c) => `${c.label} · ${c.description}`);
-  assert.deepEqual(incoming('Price({ am|ount'), ['count · Counter · state.tsx', '9.5 · Shop · state.tsx']);
-  assert.deepEqual(incoming('area({ width, hei|ght'), ['omitted, default 1 · module scope · state.tsx']);
+  assert.deepEqual(incoming('Price({ am|ount'), ['count · Counter · state.tsx', '9.5 · Shop · state.tsx', 'maybe from {...props} · Resale · state.tsx']);
+  assert.deepEqual(incoming('area({ width, hei|ght'), ['omitted, default 1 · module scope · state.tsx', 'maybe from ...options · wide · state.tsx']);
   // The prop name at a call site sets the prop; it does not declare it.
   const steps = dataFlowReport(project, state, offsetIn(state, 'Price({ am|ount')).roots.flatMap((r) => r.children ?? []).map((c) => c.label);
   assert.ok(steps.includes('set by <Price amount=count>'), steps.join(', '));

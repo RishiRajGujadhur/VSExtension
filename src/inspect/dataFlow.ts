@@ -645,12 +645,21 @@ function incomingProperty(project: VirtualProject, binding: ts.BindingElement, b
     if (ts.isJsxOpeningElement(call) || ts.isJsxSelfClosingElement(call)) {
       const attribute = index === 0 ? jsxAttribute(call, prop) : undefined;
       value = attribute?.initializer && ts.isJsxExpression(attribute.initializer) ? attribute.initializer.expression : attribute?.initializer;
-      label = attribute ? (value ? nodeText(value) : 'true') : omitted;
+      // `<Price {...props} />` may pass it through the spread.
+      const spread = call.attributes.properties.find(ts.isJsxSpreadAttribute);
+      label = attribute ? (value ? nodeText(value) : 'true') : spread ? `maybe from {...${nodeText(spread.expression)}}` : omitted;
     } else if (ts.isCallExpression(call) || ts.isNewExpression(call)) {
       const argument = call.arguments?.[index];
       const property = argument && ts.isObjectLiteralExpression(argument) ? argument.properties.find((p) => p.name?.getText() === prop) : undefined;
       value = property && ts.isPropertyAssignment(property) ? property.initializer : property && ts.isShorthandPropertyAssignment(property) ? property.name : undefined;
-      label = value ? nodeText(value) : argument && !ts.isObjectLiteralExpression(argument) ? `${nodeText(argument)}.${prop}` : omitted;
+      const spread = argument && ts.isObjectLiteralExpression(argument) ? argument.properties.find(ts.isSpreadAssignment) : undefined;
+      label = value
+        ? nodeText(value)
+        : argument && !ts.isObjectLiteralExpression(argument)
+          ? `${nodeText(argument)}.${prop}`
+          : spread
+            ? `maybe from ...${nodeText(spread.expression)}`
+            : omitted;
     }
     return { label, description: where, icon: 'arrow-left', tone: value || label !== omitted || binding.initializer ? undefined : 'info', role: 'read', location: builder.at(value ?? call) };
   });
