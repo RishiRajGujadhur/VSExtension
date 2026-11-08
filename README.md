@@ -67,6 +67,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - Zoom, position and folding are kept when the same analysis runs again.
 - **Copy Mermaid** copies the chart as a Mermaid flowchart for Markdown, GitHub issues and pull requests; **Save SVG** and **Save PNG** save it as an image.
 - **?** explains the colors, arrows and keys.
+- An animated dot grid sits behind the chart: it glows and moves aside around the pointer, and clicking a box sends a wave across it. Clicking a box also makes pulses flow along the lines between it and the subject. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid is adapted from [robot-components](https://github.com/dashrobotco/robot-components), MIT.)
 
 ![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
 
