@@ -2587,6 +2587,11 @@
     "views": {
       "tsStructure": [
         {
+          "type": "webview",
+          "id": "tsStructure.actions",
+          "name": "Actions"
+        },
+        {
           "id": "tsStructure.report",
           "name": "Analysis"
         }
@@ -2602,7 +2607,7 @@
     "viewsWelcome": [
       {
         "view": "tsStructure.report",
-        "contents": "Results of analyses appear here. Put the cursor on a symbol and pick an analysis, or right-click in the editor.\n[$(list-tree) Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\n[$(references) Find Usages](command:tsStructure.semanticUsages)\n[$(pulse) Data Flow](command:tsStructure.dataFlow)\n[$(checklist) Inspect Code…](command:tsStructure.inspectCode)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)\nNot sure where to start? [How Do I…?](command:tsStructure.howDoI), [Guide Me](command:tsStructure.guideMe) or [Choose Features…](command:tsStructure.configureFeatures)"
+        "contents": "Results of analyses appear here. Pick an action in the Actions view above, or put the cursor on a symbol and right-click in the editor.\n[$(list-tree) Analyze or Refactor This…](command:tsStructure.actionsAtCursor)\nShortcuts: Ctrl+Alt+S then a letter (D Data Flow, U Usages, I Inspect, N Nullability…). [Keyboard Shortcuts…](command:tsStructure.editKeybindings)"
       },
       {
         "view": "tsImpact.results",

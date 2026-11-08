@@ -10,6 +10,7 @@ import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
 import { DiagramPanel } from './ui/diagramView';
 import { ControlFlowPanel } from './ui/controlFlowView';
+import { ActionsView } from './ui/actionsView';
 import { sourceEditor } from './ui/refactorCommands';
 import { Report } from './structure/report';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
@@ -69,6 +70,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const diagram = new DiagramPanel(context.extensionUri, structureView);
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
+  // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
+  new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []).register(context);
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {

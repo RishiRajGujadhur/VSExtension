@@ -1,0 +1,47 @@
+html, body { margin: 0; padding: 0; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); background: transparent; }
+body { padding: 8px 10px 12px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+
+/* Tabs, like the ones in the reference: an icon over the label, the chosen one joined to the list below. */
+#tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 7px; border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: var(--vscode-descriptionForeground); }
+.tab .codicon { font-size: 18px; }
+.tab:hover { background: var(--vscode-list-hoverBackground); color: var(--vscode-foreground); }
+.tab[aria-selected="true"] { background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editorWidget-background, rgba(128, 128, 128, .15)));
+  border-color: var(--vscode-widget-border, var(--vscode-sideBarSectionHeader-border, rgba(128, 128, 128, .35))); color: var(--vscode-foreground); font-weight: 600; }
+
+.search { position: relative; margin-bottom: 6px; }
+.search .codicon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground)); }
+#search { width: 100%; box-sizing: border-box; padding: 6px 8px 6px 28px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 6px;
+  background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; }
+#search:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+
+h2 { margin: 12px 2px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+.group { display: flex; flex-direction: column; gap: 2px; }
+
+/* An action: icon tile, label and description, shortcut on the right. */
+.item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 6px; border: 1px solid transparent; border-radius: 8px; background: transparent; text-align: left; }
+.item:hover, .item:focus-visible { background: var(--vscode-list-hoverBackground); }
+.item:focus-visible { border-color: var(--vscode-focusBorder); outline: none; }
+.tile { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); background: var(--vscode-editorWidget-background, rgba(128, 128, 128, .12)); color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
+.tile .codicon { font-size: 16px; }
+.item:hover .tile, .item:focus-visible .tile { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail { color: var(--vscode-descriptionForeground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+kbd { flex: none; padding: 0 5px; border: 1px solid var(--vscode-keybindingLabel-border, rgba(128, 128, 128, .4)); border-bottom-width: 2px; border-radius: 3px;
+  background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); color: var(--vscode-keybindingLabel-foreground, inherit); font-family: inherit; font-size: 11px; }
+.where { flex: none; font-size: 11px; color: var(--vscode-descriptionForeground); }
+.none { color: var(--vscode-descriptionForeground); padding: 6px 2px; }
+
+#footer { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); }
+.link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; border: 0; background: none; color: var(--vscode-textLink-foreground); }
+.link:hover { text-decoration: underline; }
+.link .codicon { font-size: 14px; }
+
+@media (forced-colors: active) {
+  .tab[aria-selected="true"], .item:focus-visible { border-color: Highlight; }
+}

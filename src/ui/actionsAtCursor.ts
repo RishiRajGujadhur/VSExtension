@@ -6,6 +6,7 @@ import { isFeatureEnabled } from './features';
 import { commandIcons } from '../structure/icons';
 import { intentionsAtCursor } from './intentionProvider';
 import { suggestedAt } from './analysisActions';
+import { recordActionUse } from './actionsView';
 
 interface Action {
   command: string;
@@ -145,6 +146,8 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
     if (all.some((a) => a.command === picked.command)) {
       const previous = memento?.get<string[]>(recentKey) ?? [];
       await memento?.update(recentKey, [picked.command, ...previous.filter((c) => c !== picked.command)].slice(0, maxRecent));
+      // The Actions view's Most Used section counts these too.
+      if (memento) recordActionUse(memento, picked.command);
     }
     await vscode.commands.executeCommand(picked.command);
   }
