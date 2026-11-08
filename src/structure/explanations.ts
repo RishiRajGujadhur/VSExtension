@@ -23,6 +23,14 @@ export const explanations: Record<string, Explanation> = {
       'because those can run interleaved with other code. The first row says how widely the variable is shared: module-level and object properties are shared by every caller, a local variable is not.',
     anchor: 'nullability-side-effects-mutations-errors-and-arguments',
   },
+  explainValue: {
+    title: 'How is a value path found?',
+    text:
+      'Code X-Ray follows every path through the function to the cursor, taking each loop zero or one times, and finds the last assignment of the variable on each. ' +
+      'Paths that give the same value are grouped, with the branch conditions each one takes. A path that tests the same unchanged condition both ways cannot happen and is listed apart. ' +
+      'Conditions inside expressions (&&, ||, ?:) and changes made by called functions are not followed.',
+    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+  },
   races: {
     title: 'What is a race condition?',
     text:

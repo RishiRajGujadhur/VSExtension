@@ -3,6 +3,7 @@ import { Cfg, CfgEdge, Choice, buildCfg } from './controlFlow';
 import { AnalysisError } from '../analysis/types';
 import { FunctionWithBody, enclosingFunction, identifierAt, isFunctionWithBody, symbolAt } from '../structure/util';
 import { VirtualProject } from '../refactor/virtualProject';
+import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 
 /** One way through a function: the nodes and edges in order, the branches taken, and how it ends. */
 export interface CfgPath {
@@ -282,4 +283,53 @@ function initialValue(symbol: ts.Symbol, fn: FunctionWithBody): { text: string; 
     return { text: 'its value from outside the function', node: declaration };
   }
   return { text: 'undefined (not assigned yet)' };
+}
+
+/**
+ * Explain Value Path as a report: each value the variable can have at the cursor, the ways (sets of branch
+ * conditions) that give it, and each condition linked to its code.
+ */
+export function explainValueReport(project: VirtualProject, fileName: string, offset: number): Report {
+  const explanation = explainValue(project, fileName, offset);
+  const { cfg, name } = explanation;
+  const builder = new ReportBuilder('explainValue', `Value path of ${name}`);
+  const conditionRow = (edgeIndex: number): ReportNode => {
+    const edge = cfg.edges[edgeIndex];
+    const decision = cfg.nodes[edge.from].nodes[0];
+    return { label: describeChoice(edge.choice!), description: edge.label, icon: 'filter', location: decision ? builder.at(decision) : undefined };
+  };
+  const at = cfg.nodes[explanation.at].nodes[0];
+  const line = at ? at.getSourceFile().getLineAndCharacterOfPosition(at.getStart()).line + 1 : undefined;
+  const roots: ReportNode[] = explanation.sources.map((source) => ({
+    label: /^(undefined|the argument|destructured|its value|each item|each key)/.test(source.value) ? source.value : `= ${source.value}`,
+    description: plural(source.ways.length, 'way'),
+    tooltip: `${name} is ${source.value} at line ${line} when the code takes ${source.ways.length === 1 ? 'this path' : `one of these ${source.ways.length} paths`}.`,
+    icon: 'symbol-variable',
+    location: source.node ? builder.at(source.node) : undefined,
+    expanded: true,
+    children: source.ways.map((way) => {
+      const stop = way.path.nodes.indexOf(explanation.at);
+      const decisions = way.path.edges.slice(0, stop).filter((e) => cfg.edges[e].choice);
+      return {
+        label: decisions.length ? decisions.map((e) => describeChoice(cfg.edges[e].choice!)).join(', ') : 'always',
+        description: decisions.length ? plural(decisions.length, 'condition') : 'no branch decides it',
+        icon: 'git-branch',
+        expanded: source.ways.length <= 3,
+        children: decisions.map(conditionRow),
+      };
+    }),
+  }));
+  if (explanation.impossible.length) {
+    roots.push({
+      label: 'Impossible paths',
+      description: `${plural(explanation.impossible.length, 'path')} that cannot happen`,
+      icon: 'circle-slash',
+      children: explanation.impossible.map((p) => ({ label: p.reason ?? 'contradictory conditions', description: p.choices.map(describeChoice).join(', '), icon: 'circle-slash' })),
+    });
+  }
+  if (explanation.truncated) {
+    builder.warnings.push(`Only the first ${maxPaths} paths through ${cfg.name} were followed; there may be more values.`);
+  }
+  const values = explanation.sources.length;
+  return builder.finish(roots, values ? `${plural(values, 'possible value')} at line ${line}` : `no path reaches line ${line}`);
 }

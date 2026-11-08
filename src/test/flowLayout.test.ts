@@ -65,3 +65,23 @@ test('the two branches of a decision leave from separate points', () => {
   const starts = cfg.edges.map((e, i) => ({ e, r: layout.routes[i] })).filter(({ e }) => e.from === decision.id).map(({ r }) => r.points[0].x);
   assert.equal(new Set(starts).size, 2);
 });
+
+test('the Control Flow chart has every node placed, source locations and the paths', async () => {
+  const { controlFlowChart, nodeAtOffset } = await import('../inspect/controlFlowChart');
+  const project = virtualProject('inspect', 'src/control.ts');
+  const chart = controlFlowChart(project, file, offsetIn(file, 'function getPer|mission'));
+  assert.equal(chart.name, 'getPermission');
+  assert.equal(chart.paths.length, 5);
+  assert.deepEqual(chart.paths[0].steps.map((s) => s.text), ['not user.active']);
+  assert.equal(chart.paths[0].ending, "returns 'blocked'");
+  const decision = chart.nodes.find((n) => n.lines[0] === '!user.active')!;
+  assert.equal(decision.location?.line, offsetLine('if (!user.active)'));
+  // The editor's cursor on `sensitive` in `if (sensitive)` finds that decision, not the switch around it.
+  const at = nodeAtOffset(chart, project.sourceFile(file), offsetIn(file, 'if (sens|itive)'));
+  assert.equal(chart.nodes[at!].lines[0], 'sensitive');
+});
+
+function offsetLine(marker: string): number {
+  const text = require('fs').readFileSync(file, 'utf8') as string;
+  return text.slice(0, text.indexOf(marker)).split('\n').length - 1;
+}

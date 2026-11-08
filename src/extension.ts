@@ -9,6 +9,8 @@ import { registerRefactorings } from './ui/refactorCommands';
 import { registerAnalyses } from './ui/analysisCommands';
 import { StructureView } from './ui/structureView';
 import { DiagramPanel } from './ui/diagramView';
+import { ControlFlowPanel } from './ui/controlFlowView';
+import { sourceEditor } from './ui/refactorCommands';
 import { Report } from './structure/report';
 import { InspectionDiagnostics } from './ui/inspectionDiagnostics';
 import { customInspectionConfigs, registerStructuralSearch } from './ui/structuralSearchPanel';
@@ -65,6 +67,16 @@ export function activate(context: vscode.ExtensionContext): void {
   const structureView = new StructureView(context.workspaceState, context.extensionUri);
   registerAnalyses(context, projects, structureView);
   const diagram = new DiagramPanel(context.extensionUri, structureView);
+  const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
+  controlFlow.register(context);
+  context.subscriptions.push(
+    // The function at the cursor as a flowchart with its paths; returns the chart for tests.
+    registerCommand('tsStructure.controlFlow', () => {
+      const editor = sourceEditor();
+      if (editor) controlFlow.show(editor);
+      return controlFlow.current;
+    }),
+  );
   context.subscriptions.push(
     registerCommand('tsStructure.report.showDiagram', () => diagram.show()),
     // Data Flow at the cursor, drawn as a chart.

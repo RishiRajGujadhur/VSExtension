@@ -43,6 +43,7 @@ import { isFeatureEnabled } from './features';
 import { reportCsv } from '../structure/markdown';
 import { AnalysisError } from '../analysis/types';
 import { analyzeSymbol, offerSymbols } from './analysisActions';
+import { explainValueReport } from '../inspect/paths';
 
 /** The file, cursor and project an analysis runs against, captured so it can be re-run later. */
 export interface AnalysisTarget {
@@ -559,6 +560,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.raceConditions', 'Race Conditions', (t) => raceReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.explainValue', 'Explain Value Path', (t) => explainValueReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', { id: 'mutations', kinds: projectScopes.filter((k) => k !== 'file') }, (t, scope) => {
       const program = t.project().program();
       const { files, note } = filesIn(program, scope);

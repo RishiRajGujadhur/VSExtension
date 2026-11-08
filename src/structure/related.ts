@@ -70,6 +70,11 @@ relatedAnalyses.variableMutations = [
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
 ];
 
+relatedAnalyses.explainValue = [
+  { command: 'tsStructure.controlFlow', title: 'Every path through the function (Control Flow Graph)' },
+  { command: 'tsStructure.dataFlow', title: 'Where the value goes next (Data Flow)' },
+];
+
 relatedAnalyses.races = [
   { command: 'tsStructure.mutationTrackingVariable', title: 'Every change to it (Mutation Tracking for This Variable)' },
   { command: 'tsStructure.dataFlow', title: 'Its whole data flow (Data Flow)' },

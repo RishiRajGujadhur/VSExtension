@@ -860,6 +860,18 @@
         "title": "Data Flow Diagram",
         "category": "Code X-Ray",
         "icon": "$(circuit-board)"
+      },
+      {
+        "command": "tsStructure.controlFlow",
+        "title": "Control Flow Graph",
+        "category": "TypeScript Structure",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "tsStructure.explainValue",
+        "title": "Explain Value Path",
+        "category": "TypeScript Structure",
+        "icon": "$(debug-breakpoint-data)"
       }
     ],
     "viewsContainers": {
@@ -1177,6 +1189,18 @@
         "mac": "cmd+ctrl+s 9",
         "command": "tsStructure.report.showDiagram",
         "when": "tsStructure.hasReport"
+      },
+      {
+        "key": "ctrl+alt+s 1",
+        "mac": "cmd+ctrl+s 1",
+        "command": "tsStructure.controlFlow",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s 0",
+        "mac": "cmd+ctrl+s 0",
+        "command": "tsStructure.explainValue",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
       }
     ],
     "menus": {
@@ -1388,6 +1412,16 @@
           "command": "tsStructure.dataFlowDiagram",
           "when": "config.tsStructure.features.dataFlow",
           "group": "3_analysis@4"
+        },
+        {
+          "command": "tsStructure.controlFlow",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@5"
+        },
+        {
+          "command": "tsStructure.explainValue",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@6"
         }
       ],
       "explorer/context": [
@@ -1996,6 +2030,14 @@
         },
         {
           "command": "tsStructure.dataFlowDiagram",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.controlFlow",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.explainValue",
           "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
         }
       ],
