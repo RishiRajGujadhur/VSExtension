@@ -1,3 +1,4 @@
+import { inspectionStatusLabel } from '../structure/accessibility';
 import * as path from 'path';
 import ts = require('typescript');
 import * as vscode from 'vscode';
@@ -354,6 +355,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     if (!config.get('inspections.enabled', true)) {
       this.status.text = '$(debug-pause) TS Structure';
       this.status.tooltip = 'TypeScript Structure live inspections are paused. Click to resume them or inspect on demand.';
+      this.status.accessibilityInformation = { label: inspectionStatusLabel({ error: 0, warning: 0, info: 0 }, true), role: 'button' };
       this.status.show();
       return;
     }
@@ -376,6 +378,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     tooltip.appendMarkdown('\n\nClick to go to a problem, inspect more or configure.');
     this.status.tooltip = tooltip;
+    // The icons are not read aloud, so "3 2" alone would not say which count is which.
+    this.status.accessibilityInformation = { label: inspectionStatusLabel({ error: count('error'), warning: count('warning'), info: count('info') }), role: 'button' };
     this.status.show();
   }
 

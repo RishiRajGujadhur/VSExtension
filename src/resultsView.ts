@@ -28,6 +28,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
       this.status.name = 'Impacted Tests';
       this.status.text = `$(beaker) ${countLabel(result.tests.length)}`;
       this.status.tooltip = `Tests impacted by ${result.target.name}. Click to see or run them.`;
+      this.status.accessibilityInformation = { label: `${countLabel(result.tests.length)} impacted by ${result.target.name}. Show them.`, role: 'button' };
       this.status.command = 'tsImpact.showLastResults';
       this.status.show();
     } else {
@@ -71,6 +72,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
         tree.resourceUri = vscode.Uri.file(item.file);
         tree.iconPath = vscode.ThemeIcon.File;
         tree.contextValue = 'file';
+        tree.accessibilityInformation = { label: `${path.basename(item.file)}, in ${tree.description || 'the workspace root'}. ${countLabel(item.tests.length)}.` };
         return tree;
       }
       case 'test': {
@@ -81,6 +83,8 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
         tree.iconPath = new vscode.ThemeIcon(confidence === 'confirmed' ? 'beaker' : 'question');
         tree.contextValue = 'test';
         tree.command = openCommand(test.location);
+        // The beaker and question icons say confirmed or possible; screen readers hear it in words.
+        tree.accessibilityInformation = { label: `${confidence === 'confirmed' ? 'Confirmed' : 'Possible'} test: ${testLabel(test)}${test.parameterized ? ', parameterized' : ''}. ${path.basename(test.location.file)}, line ${test.location.line + 1}. ${item.impacted.path.length} steps from the change.` };
         return tree;
       }
       case 'step': {
@@ -91,6 +95,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
         tree.tooltip = `${step.kind} · ${vscode.workspace.asRelativePath(step.location.file)}:${step.location.line + 1}`;
         tree.contextValue = 'step';
         tree.command = openCommand(step.location);
+        tree.accessibilityInformation = { label: `Step ${item.index + 1}: ${step.kind} ${step.name}${step.note ? `, ${step.note}` : ''}. ${path.basename(step.location.file)}, line ${step.location.line + 1}.` };
         return tree;
       }
     }
