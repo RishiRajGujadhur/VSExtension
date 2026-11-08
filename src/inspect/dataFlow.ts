@@ -478,7 +478,7 @@ function outflowOf(node: ts.Node): Outflow | undefined {
 }
 
 /** Where the variable's value goes: other variables, calls, returns and, through returns, the callers that receive it. */
-function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBuilder, depth = 0): ReportNode[] {
+function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBuilder, depth = 0, hops = { left: maxNextHops }): ReportNode[] {
   const checker = project.program().getTypeChecker();
   const rows: ReportNode[] = [];
   for (const step of steps) {
@@ -497,7 +497,8 @@ function flowsOut(project: VirtualProject, steps: FlowStep[], builder: ReportBui
     if (flow.kind === 'into') {
       // One hop further: where the receiving variable passes the value on, folded under it.
       const follow = followFlow(flow.target);
-      const next = depth === 0 && follow ? nextHop(project, follow, builder) : [];
+      // Each hop searches the project for the variable's references, so only the first few are followed.
+      const next = depth === 0 && follow && hops.left-- > 0 ? nextHop(project, follow, builder) : [];
       rows.push({
         label: `→ ${nodeText(flow.target)}`,
         description: next.length ? `${description} · then ${plural(next.length, 'place')}` : description,
@@ -567,6 +568,9 @@ function propBinding(checker: ts.TypeChecker, tagName: ts.JsxTagNameExpression, 
 }
 
 /** Where a variable that received the value sends it next, one level deep. */
+/** How many receiving variables Flows out follows one hop further; the rest can be followed with Trace This Value. */
+const maxNextHops = 8;
+
 function nextHop(project: VirtualProject, follow: Follow, builder: ReportBuilder): ReportNode[] {
   try {
     const { steps } = dataFlowSteps(project, follow.file, follow.offset);
