@@ -68,7 +68,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     private readonly projects: ProjectService,
     private readonly extra: () => readonly Inspection[] = () => [],
   ) {
-    this.status.name = 'TypeScript Structure Inspections';
+    this.status.name = 'Code X-Ray Inspections';
     this.status.command = { command: 'tsStructure.inspectionsMenu', title: 'Inspections' };
   }
 
@@ -111,7 +111,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const editor = vscode.window.activeTextEditor;
         const findings = editor && [...(this.findingsFor(editor.document) ?? [])].sort((a, b) => a.start - b.start);
         if (!editor || !findings?.length) {
-          void vscode.window.setStatusBarMessage('No TypeScript Structure problems in this file', 3000);
+          void vscode.window.setStatusBarMessage('No Code X-Ray problems in this file', 3000);
           return;
         }
         const offset = editor.document.offsetAt(editor.selection.active);
@@ -125,7 +125,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const document = vscode.window.activeTextEditor?.document;
         const findings = document && this.findingsFor(document);
         if (!document || !findings?.length) {
-          void vscode.window.showInformationMessage('No TypeScript Structure problems in this file.');
+          void vscode.window.showInformationMessage('No Code X-Ray problems in this file.');
           return;
         }
         const file = vscode.workspace.asRelativePath(document.uri);
@@ -287,7 +287,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
             run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
           },
     ];
-    const picked = await vscode.window.showQuickPick(items, { title: 'TypeScript Structure Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action (Ctrl+Alt+S 5 jumps to the next one)' : undefined, matchOnDescription: true });
+    const picked = await vscode.window.showQuickPick(items, { title: 'Code X-Ray Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action (Ctrl+Alt+S 5 jumps to the next one)' : undefined, matchOnDescription: true });
     await picked?.run?.();
   }
 
@@ -353,8 +353,8 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     // Paused inspections stay visible, so it is clear why nothing is reported and how to resume.
     if (!config.get('inspections.enabled', true)) {
-      this.status.text = '$(debug-pause) TS Structure';
-      this.status.tooltip = 'TypeScript Structure live inspections are paused. Click to resume them or inspect on demand.';
+      this.status.text = '$(debug-pause) X-Ray';
+      this.status.tooltip = 'Code X-Ray live inspections are paused. Click to resume them or inspect on demand.';
       this.status.accessibilityInformation = { label: inspectionStatusLabel({ error: 0, warning: 0, info: 0 }, true), role: 'button' };
       this.status.show();
       return;
@@ -366,13 +366,13 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     const count = (severity: Severity) => result.findings.filter((f) => f.severity === severity).length;
     const problems = result.findings.filter((f) => f.severity !== 'hint').length;
-    this.status.text = problems ? [count('error') ? `$(error) ${count('error')}` : '', count('warning') ? `$(warning) ${count('warning')}` : '', count('info') ? `$(info) ${count('info')}` : ''].filter(Boolean).join(' ') : '$(pass) TS Structure';
+    this.status.text = problems ? [count('error') ? `$(error) ${count('error')}` : '', count('warning') ? `$(warning) ${count('warning')}` : '', count('info') ? `$(info) ${count('info')}` : ''].filter(Boolean).join(' ') : '$(pass) X-Ray';
     // Which inspections report what in this file, as a table in the hover.
     const byInspection = new Map<string, number>();
     for (const finding of result.findings) {
       byInspection.set(finding.inspection, (byInspection.get(finding.inspection) ?? 0) + 1);
     }
-    const tooltip = new vscode.MarkdownString(`**TypeScript Structure inspections in this file**\n\n${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints`);
+    const tooltip = new vscode.MarkdownString(`**Code X-Ray inspections in this file**\n\n${count('error')} errors, ${count('warning')} warnings, ${count('info')} infos, ${count('hint')} hints`);
     if (byInspection.size) {
       tooltip.appendMarkdown(`\n\n| Inspection | Problems |\n| --- | --: |\n${[...byInspection].map(([id, n]) => `| ${id} | ${n} |`).join('\n')}`);
     }
@@ -481,7 +481,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       if (edits.length === 0) {
         return [];
       }
-      const action = new vscode.CodeAction('Fix all TypeScript Structure problems', fixAllKind);
+      const action = new vscode.CodeAction('Fix all Code X-Ray problems', fixAllKind);
       action.edit = toWorkspaceEdit(edits);
       return [action];
     }
@@ -558,7 +558,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
 function toDiagnostic(document: vscode.TextDocument, finding: Finding): vscode.Diagnostic {
   const range = new vscode.Range(document.positionAt(finding.start), document.positionAt(finding.end));
   const diagnostic = new vscode.Diagnostic(range, finding.message, severities[finding.severity]);
-  diagnostic.source = 'TS Structure';
+  diagnostic.source = 'X-Ray';
   const docs = finding.inspection.startsWith('custom:') ? customDocsUrl : docsUrl;
   diagnostic.code = { value: finding.inspection, target: vscode.Uri.parse(docs) };
   if (finding.unnecessary) {

@@ -1,6 +1,6 @@
 {
   "name": "ts-test-impact",
-  "displayName": "TypeScript Structure: Refactoring & Test Impact",
+  "displayName": "Code X-Ray",
   "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
   "version": "0.25.0",
   "publisher": "RishiGujadhur",
@@ -42,77 +42,77 @@
       {
         "command": "tsImpact.analyze",
         "title": "Test Impact Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(beaker)"
       },
       {
         "command": "tsImpact.showLastResults",
         "title": "Show Last Impact Results",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(list-filter)"
       },
       {
         "command": "tsImpact.runImpactedTests",
         "title": "Run Impacted Tests",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(play)"
       },
       {
         "command": "tsImpact.runTest",
         "title": "Run Test",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(play)"
       },
       {
         "command": "tsImpact.clear",
         "title": "Clear Impact Results",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(clear-all)"
       },
       {
         "command": "tsStructure.changeSignature",
         "title": "Change Signature…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-method)"
       },
       {
         "command": "tsStructure.safeDelete",
         "title": "Safe Delete…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(trash)"
       },
       {
         "command": "tsStructure.safeDeleteFile",
         "title": "Safe Delete File…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.introduceParameter",
         "title": "Introduce Parameter…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-parameter)"
       },
       {
         "command": "tsStructure.moveMembers",
         "title": "Move Members to Module…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(file-symlink-file)"
       },
       {
         "command": "tsStructure.openLocation",
         "title": "Open Location",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.rerunAnalysis",
         "title": "Re-run Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(refresh)"
       },
       {
         "command": "tsStructure.clearReport",
         "title": "Clear Analysis and Go Back to the Start Page",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": {
           "light": "media/clear-light.svg",
           "dark": "media/clear-dark.svg"
@@ -121,303 +121,303 @@
       {
         "command": "tsStructure.dataFlow",
         "title": "Data Flow Path Explorer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(pulse)"
       },
       {
         "command": "tsStructure.mutationTracking",
         "title": "Mutation Tracking (Active File)",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(diff-modified)"
       },
       {
         "command": "tsStructure.mutationTrackingProject",
         "title": "Mutation Tracking (Project)",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(project)"
       },
       {
         "command": "tsStructure.sideEffects",
         "title": "Side-Effect Analyzer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(zap)"
       },
       {
         "command": "tsStructure.nullability",
         "title": "Nullability Path Explorer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(circle-slash)"
       },
       {
         "command": "tsStructure.promiseRejections",
         "title": "Promise Rejection Analyzer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "tsStructure.deadExports",
         "title": "Dead Export Analyzer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(export)"
       },
       {
         "command": "tsStructure.report.safeDelete",
         "title": "Safe Delete…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(trash)"
       },
       {
         "command": "tsStructure.report.unexport",
         "title": "Remove export Keyword",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(eye-closed)"
       },
       {
         "command": "tsStructure.report.safeDeleteFile",
         "title": "Safe Delete File…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(trash)"
       },
       {
         "command": "tsStructure.exceptionFlow",
         "title": "Exception Flow Visualizer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(flame)"
       },
       {
         "command": "tsStructure.findDuplicates",
         "title": "Find Structural Duplicates…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(files)"
       },
       {
         "command": "tsStructure.semanticUsages",
         "title": "Semantic Find Usages",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(references)"
       },
       {
         "command": "tsStructure.reexportChain",
         "title": "Re-export Chain Navigator",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(link)"
       },
       {
         "command": "tsStructure.structuralSearch",
         "title": "Structural Search…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-structure)"
       },
       {
         "command": "tsStructure.manageCustomInspections",
         "title": "Manage Custom Inspections…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-ruler)"
       },
       {
         "command": "tsStructure.typeHierarchy",
         "title": "Inheritance Hierarchy Explorer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "tsStructure.overrideImpact",
         "title": "Override Impact Analyzer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(type-hierarchy-sub)"
       },
       {
         "command": "tsStructure.dependencyPath",
         "title": "Dependency Path Finder…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(git-merge)"
       },
       {
         "command": "tsStructure.dependencyGraphDiff",
         "title": "Dependency Graph Diff…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(git-compare)"
       },
       {
         "command": "tsStructure.argumentFlow",
         "title": "Argument Propagation Explorer",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(call-incoming)"
       },
       {
         "command": "tsStructure.report.back",
         "title": "Previous Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-left)"
       },
       {
         "command": "tsStructure.report.forward",
         "title": "Next Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-right)"
       },
       {
         "command": "tsStructure.report.filter",
         "title": "Filter Analysis Results…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(filter)"
       },
       {
         "command": "tsStructure.report.chooseGroups",
         "title": "Show Groups…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(list-selection)"
       },
       {
         "command": "tsStructure.report.next",
         "title": "Go to Next Result",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-down)"
       },
       {
         "command": "tsStructure.report.previous",
         "title": "Go to Previous Result",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-up)"
       },
       {
         "command": "tsStructure.report.copyMarkdown",
         "title": "Copy Analysis as Markdown",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(copy)"
       },
       {
         "command": "tsStructure.report.export",
         "title": "Export Analysis to Markdown…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(save)"
       },
       {
         "command": "tsStructure.report.openToSide",
         "title": "Open to the Side",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(split-horizontal)"
       },
       {
         "command": "tsStructure.report.copyLocation",
         "title": "Copy Location",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.inspectCode",
         "title": "Inspect Code…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(checklist)"
       },
       {
         "command": "tsStructure.auditTypeAssertions",
         "title": "Audit Type Assertions (Project)",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(shield)"
       },
       {
         "command": "tsStructure.report.applyFix",
         "title": "Apply Fix",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(lightbulb-autofix)"
       },
       {
         "command": "tsStructure.explainFinding",
         "title": "Explain Finding",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.compareDuplicates",
         "title": "Compare Copies",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(diff)"
       },
       {
         "command": "tsStructure.report.follow",
         "title": "Follow Into Call",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-small-right)"
       },
       {
         "command": "tsStructure.report.showSideEffects",
         "title": "Show All Side Effects",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(zap)"
       },
       {
         "command": "tsStructure.report.quickFix",
         "title": "Show Fixes",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(lightbulb)"
       },
       {
         "command": "tsStructure.editCustomInspection",
         "title": "Edit Custom Inspection",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.disableCustomInspection",
         "title": "Disable Custom Inspection",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.compareRevision",
         "title": "Compare with Revision",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(git-compare)"
       },
       {
         "command": "tsStructure.report.swapDependency",
         "title": "Swap Direction",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-swap)"
       },
       {
         "command": "tsStructure.report.runTests",
         "title": "Run These Tests",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(run-all)"
       },
       {
         "command": "tsStructure.report.overrideImpact",
         "title": "Override Impact of This Member",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(type-hierarchy-sub)"
       },
       {
         "command": "tsStructure.report.showHierarchy",
         "title": "Show Hierarchy of This Type",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "tsStructure.report.findUsages",
         "title": "Find Usages",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(references)"
       },
       {
         "command": "tsStructure.report.rename",
         "title": "Rename Symbol",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(edit)"
       },
       {
         "command": "tsStructure.report.refactor",
         "title": "Refactor…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(wrench)"
       },
       {
         "command": "tsStructure.report.unexportAll",
         "title": "Remove All Unneeded export Keywords in File",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(eye-closed)"
       },
       {
         "command": "tsStructure.actionsAtCursor",
         "title": "Analyze or Refactor This…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": {
           "light": "media/structure-light.svg",
           "dark": "media/structure-dark.svg"
@@ -426,439 +426,439 @@
       {
         "command": "tsStructure.configureFeatures",
         "title": "Choose Features…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(settings-gear)"
       },
       {
         "command": "tsStructure.openSettings",
         "title": "Open Settings",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(gear)"
       },
       {
         "command": "tsStructure.excludeFromAnalysis",
-        "title": "Exclude from TypeScript Structure Analysis",
-        "category": "TypeScript Structure"
+        "title": "Exclude from Code X-Ray Analysis",
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.editAnalysisScope",
         "title": "Edit Analysis Scope…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(exclude)"
       },
       {
         "command": "tsStructure.turnOffInspection",
         "title": "Turn Off Inspection",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.toggleSideEffectLens",
         "title": "Toggle Side-Effect CodeLens",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.guideMe",
         "title": "Guide Me",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(question)"
       },
       {
         "command": "tsStructure.report.traceValue",
         "title": "Trace This Value",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(debug-step-into)"
       },
       {
         "command": "tsStructure.report.expandAll",
         "title": "Expand All",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(expand-all)"
       },
       {
         "command": "tsStructure.report.copyRow",
         "title": "Copy",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.history",
         "title": "Show Analysis History…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(history)"
       },
       {
         "command": "tsStructure.configureInspections",
         "title": "Configure Inspections…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(settings)"
       },
       {
         "command": "tsStructure.chooseIntentions",
         "title": "Choose Intention Actions…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(wand)"
       },
       {
         "command": "tsStructure.toggleHighlights",
         "title": "Toggle Result Highlights",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-color)"
       },
       {
         "command": "tsImpact.analyzeFile",
         "title": "Find Impacted Tests",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.deadExportsInFolder",
         "title": "Find Dead Exports in Folder",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.findDuplicatesInFolder",
         "title": "Find Duplicates in Folder",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.inspectionsMenu",
         "title": "Inspections Menu…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.structuralSearchInFolder",
         "title": "Structural Search in Folder…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.traceDeeper",
         "title": "Trace Deeper",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(debug-step-over)"
       },
       {
         "command": "tsStructure.report.exportJson",
         "title": "Export Analysis to JSON…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsImpact.copyTests",
         "title": "Copy Impacted Tests…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(copy)"
       },
       {
         "command": "tsStructure.report.limitScope",
         "title": "Limit Results to Scope…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(filter-filled)"
       },
       {
         "command": "tsStructure.report.clearLimit",
         "title": "Show All Results",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(eye)"
       },
       {
         "command": "tsStructure.report.applyAllFixes",
         "title": "Apply All Fixes",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(check-all)"
       },
       {
         "command": "tsStructure.report.markPublic",
         "title": "Mark as Public API",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(verified)"
       },
       {
         "command": "tsStructure.semanticUsagesInFile",
         "title": "Find Usages in Current File",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(go-to-file)"
       },
       {
         "command": "tsStructure.editKeybindings",
         "title": "Keyboard Shortcuts…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(keyboard)"
       },
       {
         "command": "tsStructure.report.about",
         "title": "About This Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(info)"
       },
       {
         "command": "tsStructure.report.clearFilters",
         "title": "Show Every Row",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(clear-all)"
       },
       {
         "command": "tsStructure.report.usagesHere",
         "title": "Find Usages Here",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(references)"
       },
       {
         "command": "tsStructure.report.dataFlowHere",
         "title": "Data Flow Here",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(pulse)"
       },
       {
         "command": "tsStructure.report.revealInExplorer",
         "title": "Reveal in Explorer",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.excludeFile",
         "title": "Exclude File from Analysis",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.copyLocations",
         "title": "Copy All Locations",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(list-unordered)"
       },
       {
         "command": "tsStructure.report.rerunOutdated",
         "title": "Re-run Analysis (Results Out of Date)",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(warning)"
       },
       {
         "command": "tsStructure.howDoI",
         "title": "How Do I…?",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "tsStructure.shortcutSheet",
         "title": "Shortcut Cheat Sheet",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(keyboard)"
       },
       {
         "command": "tsStructure.analyzeSymbol",
         "title": "Analyze a Symbol…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-class)"
       },
       {
         "command": "tsStructure.showLog",
         "title": "Show Log",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.togglePreview",
         "title": "Toggle Refactoring Preview",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.toggleLiveInspections",
         "title": "Pause or Resume Live Inspections",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.openFiles",
         "title": "Open All Result Files",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(multiple-windows)"
       },
       {
         "command": "tsStructure.report.copyCode",
         "title": "Copy Line of Code",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.detectPatterns",
         "title": "Detect Design Patterns…",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(library)"
       },
       {
         "command": "tsStructure.report.explainPattern",
         "title": "About This Pattern",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(info)"
       },
       {
         "command": "tsStructure.report.copyCsv",
         "title": "Copy Analysis as CSV",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(table)"
       },
       {
         "command": "tsStructure.report.preview",
         "title": "Open Analysis as Markdown Preview",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(open-preview)"
       },
       {
         "command": "tsStructure.report.toggleRerunOnSave",
         "title": "Toggle Re-run on Save",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.findImportCycles",
         "title": "Find Import Cycles",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(sync)"
       },
       {
         "command": "tsStructure.whoImports",
         "title": "Who Imports This File",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-circle-up)"
       },
       {
         "command": "tsStructure.cancelAnalysis",
         "title": "Stop the Running Analysis",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(debug-stop)"
       },
       {
         "command": "tsStructure.introduceOptionalParameter",
         "title": "Introduce Optional Parameter…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.showRewrites",
         "title": "Show Rewrites Here…",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.copyProblems",
         "title": "Copy Problems in This File",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(copy)"
       },
       {
         "command": "tsStructure.nextProblem",
         "title": "Go to Next Inspection Problem",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(arrow-down)"
       },
       {
         "command": "tsStructure.inspectChanged",
         "title": "Inspect Changed Files",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(diff-multiple)"
       },
       {
         "command": "tsStructure.inspectOpen",
         "title": "Inspect Open Editors",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(multiple-windows)"
       },
       {
         "command": "tsStructure.toggleAssertionTests",
         "title": "Toggle Type Assertion Checks in Test Files",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsImpact.analyzeChanged",
         "title": "Test Impact of Changed Files",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(diff-multiple)"
       },
       {
         "command": "tsImpact.openTestFiles",
         "title": "Open Impacted Test Files",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(file-code)"
       },
       {
         "command": "tsStructure.report.fewerButtons",
         "title": "Show Fewer Title Buttons",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.allButtons",
         "title": "Show All Title Buttons",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.learnPattern",
         "title": "Learn More About This Pattern",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(link-external)"
       },
       {
         "command": "tsStructure.report.explainTerm",
         "title": "What Does This Mean?",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(question)"
       },
       {
         "command": "tsStructure.mutationTrackingVariable",
         "title": "Mutation Tracking for This Variable",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-variable)"
       },
       {
         "command": "tsStructure.raceConditions",
         "title": "Race Conditions",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(watch)"
       },
       {
         "command": "tsStructure.report.flowByDirection",
         "title": "Group Data Flow Steps Under Flows In and Out",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.flowByFunction",
         "title": "Group Data Flow Steps by Function",
-        "category": "TypeScript Structure"
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.nullabilityHere",
         "title": "Check for Null or Undefined Here",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(circle-slash)"
       },
       {
         "command": "tsStructure.report.mutationsHere",
         "title": "Mutation Tracking for This Variable",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(symbol-variable)"
       },
       {
         "command": "tsStructure.report.racesHere",
         "title": "Race Conditions",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(watch)"
       },
       {
         "command": "tsStructure.report.sideEffectsHere",
         "title": "Side Effects",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(zap)"
       },
       {
         "command": "tsStructure.report.exceptionsHere",
         "title": "Exception Flow",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(flame)"
       },
       {
         "command": "tsStructure.report.argumentsHere",
         "title": "Argument Propagation",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(call-incoming)"
       },
       {
         "command": "tsStructure.report.showDiagram",
         "title": "Show as Diagram",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(circuit-board)"
       },
       {
         "command": "tsStructure.dataFlowDiagram",
         "title": "Data Flow Diagram",
-        "category": "TypeScript Structure",
+        "category": "Code X-Ray",
         "icon": "$(circuit-board)"
       }
     ],
@@ -866,7 +866,7 @@
       "activitybar": [
         {
           "id": "tsStructure",
-          "title": "TypeScript Structure",
+          "title": "Code X-Ray",
           "icon": "media/structure.svg"
         }
       ]
@@ -874,7 +874,7 @@
     "submenus": [
       {
         "id": "tsStructure.editorMenu",
-        "label": "TypeScript Structure"
+        "label": "Code X-Ray"
       },
       {
         "id": "tsStructure.report.analyzeHere",
@@ -2570,7 +2570,7 @@
               "type": "string"
             },
             "default": [],
-            "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results (for example `**/generated/**` or `src/legacy/*.ts`). A folder such as `src/legacy` excludes everything below it. Right-click files or folders in the Explorer and choose **Exclude from TypeScript Structure Analysis** to add them.",
+            "markdownDescription": "Glob patterns, relative to the workspace folder, for files left out of inspections, Inspect Code, structural search, duplicate detection, mutation tracking, the type assertion audit and dead export results (for example `**/generated/**` or `src/legacy/*.ts`). A folder such as `src/legacy` excludes everything below it. Right-click files or folders in the Explorer and choose **Exclude from Code X-Ray Analysis** to add them.",
             "scope": "resource",
             "order": 1
           },
@@ -2590,109 +2590,109 @@
             "type": "boolean",
             "default": true,
             "order": 0,
-            "markdownDescription": "**Test Impact Analysis**: Find and run the tests that depend on a symbol or file, and the Impacted Tests view. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Test Impact Analysis**: Find and run the tests that depend on a symbol or file, and the Impacted Tests view. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.refactorings": {
             "type": "boolean",
             "default": true,
             "order": 1,
-            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.intentions": {
             "type": "boolean",
             "default": true,
             "order": 2,
-            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.inspections": {
             "type": "boolean",
             "default": true,
             "order": 3,
-            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.dataFlow": {
             "type": "boolean",
             "default": true,
             "order": 4,
-            "markdownDescription": "**Data Flow and Mutation Tracking**: Data Flow Path Explorer and Mutation Tracking. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Data Flow and Mutation Tracking**: Data Flow Path Explorer and Mutation Tracking. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.nullability": {
             "type": "boolean",
             "default": true,
             "order": 5,
-            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.usages": {
             "type": "boolean",
             "default": true,
             "order": 6,
-            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. On by default; turn off to hide its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.sideEffects": {
             "type": "boolean",
             "default": false,
             "order": 7,
-            "markdownDescription": "**Side-Effect Analyzer**: Side-Effect Analyzer and its CodeLens. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Side-Effect Analyzer**: Side-Effect Analyzer and its CodeLens. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.promiseRejections": {
             "type": "boolean",
             "default": false,
             "order": 8,
-            "markdownDescription": "**Promise Rejection Analyzer**: Where a function’s promise rejections are handled or lost. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Promise Rejection Analyzer**: Where a function’s promise rejections are handled or lost. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.deadExports": {
             "type": "boolean",
             "default": false,
             "order": 9,
-            "markdownDescription": "**Dead Export Analyzer**: Exports and files nothing reachable from the entry points uses. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Dead Export Analyzer**: Exports and files nothing reachable from the entry points uses. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.exceptionFlow": {
             "type": "boolean",
             "default": false,
             "order": 10,
-            "markdownDescription": "**Exception Flow Visualizer**: Where errors are thrown, caught, transformed or swallowed. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Exception Flow Visualizer**: Where errors are thrown, caught, transformed or swallowed. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.duplicates": {
             "type": "boolean",
             "default": false,
             "order": 11,
-            "markdownDescription": "**Structural Duplicates**: Find code copied with renamed variables or changed values. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Structural Duplicates**: Find code copied with renamed variables or changed values. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.reexports": {
             "type": "boolean",
             "default": false,
             "order": 12,
-            "markdownDescription": "**Re-export Chain Navigator**: Follow a name through aliases and barrel files. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Re-export Chain Navigator**: Follow a name through aliases and barrel files. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.structuralSearch": {
             "type": "boolean",
             "default": false,
             "order": 13,
-            "markdownDescription": "**Structural Search and Replace**: Search and replace code by shape, and build custom inspections. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Structural Search and Replace**: Search and replace code by shape, and build custom inspections. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.hierarchy": {
             "type": "boolean",
             "default": false,
             "order": 14,
-            "markdownDescription": "**Inheritance Hierarchy and Override Impact**: Supertypes, subtypes and overrides, and what a change to a member reaches. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Inheritance Hierarchy and Override Impact**: Supertypes, subtypes and overrides, and what a change to a member reaches. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.dependencyPath": {
             "type": "boolean",
             "default": false,
             "order": 15,
-            "markdownDescription": "**Dependency Path Finder**: Why one module depends on another. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Dependency Path Finder**: Why one module depends on another. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.graphDiff": {
             "type": "boolean",
             "default": false,
             "order": 16,
-            "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.argumentFlow": {
             "type": "boolean",
             "default": false,
             "order": 17,
-            "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Optional, off by default: turn on to add its commands and menus. **TypeScript Structure: Choose Features…** changes several at once."
+            "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           }
         }
       },
@@ -2714,7 +2714,7 @@
           "tsStructure.results.focusView": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Reveal the TypeScript Structure view when an analysis finishes. Turn off to stay where you are; a status bar message says when a report is ready."
+            "markdownDescription": "Reveal the Code X-Ray view when an analysis finishes. Turn off to stay where you are; a status bar message says when a report is ready."
           },
           "tsStructure.results.historySize": {
             "type": "number",
@@ -2726,7 +2726,7 @@
           "tsStructure.results.rerunOnSave": {
             "type": "boolean",
             "default": false,
-            "markdownDescription": "Re-run the report in the TypeScript Structure view when you save a file it covers, instead of showing the *Files changed* banner."
+            "markdownDescription": "Re-run the report in the Code X-Ray view when you save a file it covers, instead of showing the *Files changed* banner."
           },
           "tsStructure.lightbulbAnalyses": {
             "type": "boolean",
@@ -2736,12 +2736,12 @@
           "tsStructure.editorTitleButton": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Show the TypeScript Structure button in the editor title bar of TypeScript and JavaScript files. It opens **Analyze or Refactor This…**."
+            "markdownDescription": "Show the Code X-Ray button in the editor title bar of TypeScript and JavaScript files. It opens **Analyze or Refactor This…**."
           },
           "tsStructure.contextMenu.topLevel": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Show **Find Usages in Current File**, **Semantic Find Usages**, **Data Flow Path Explorer** and **Analyze or Refactor This…** directly in the editor's right-click menu, next to Go to Definition. Everything else stays under **TypeScript Structure**."
+            "markdownDescription": "Show **Find Usages in Current File**, **Semantic Find Usages**, **Data Flow Path Explorer** and **Analyze or Refactor This…** directly in the editor's right-click menu, next to Go to Definition. Everything else stays under **Code X-Ray**."
           },
           "tsStructure.results.progress": {
             "type": "string",
@@ -2759,7 +2759,7 @@
           "tsStructure.results.followCursor": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Select the result row of the place under the editor's cursor, so the TypeScript Structure view shows where you are in the results. Next and Previous Result continue from it."
+            "markdownDescription": "Select the result row of the place under the editor's cursor, so the Code X-Ray view shows where you are in the results. Next and Previous Result continue from it."
           },
           "tsStructure.dataFlow.designPatterns": {
             "type": "boolean",
@@ -2782,7 +2782,7 @@
               "Only Back, Re-run, Filter, About and Clear; the rest move to the ... menu."
             ],
             "default": "all",
-            "markdownDescription": "Which buttons the title of the **TypeScript Structure** results view shows. You can also hide a single button by right-clicking the title bar."
+            "markdownDescription": "Which buttons the title of the **Code X-Ray** results view shows. You can also hide a single button by right-clicking the title bar."
           },
           "tsStructure.dataFlow.groupByDirection": {
             "type": "boolean",
@@ -2799,7 +2799,7 @@
           "tsStructure.inspections.enabled": {
             "type": "boolean",
             "default": true,
-            "description": "Run the TypeScript Structure inspections on open files and report findings in the Problems panel.",
+            "description": "Run the Code X-Ray inspections on open files and report findings in the Problems panel.",
             "scope": "resource"
           },
           "tsStructure.inspections.statusBar": {
@@ -2999,7 +2999,7 @@
                 "splitInitializer"
               ]
             },
-            "markdownDescription": "Intention actions to hide from the lightbulb menu. **TypeScript Structure: Choose Intention Actions…** sets this from a checklist."
+            "markdownDescription": "Intention actions to hide from the lightbulb menu. **Code X-Ray: Choose Intention Actions…** sets this from a checklist."
           }
         }
       },
@@ -3122,14 +3122,14 @@
     "walkthroughs": [
       {
         "id": "gettingStarted",
-        "title": "Get Started with TypeScript Structure",
+        "title": "Get Started with Code X-Ray",
         "description": "Refactor, inspect and navigate TypeScript and JavaScript across files, in seven short steps.",
         "when": "true",
         "steps": [
           {
             "id": "actions",
             "title": "One shortcut for everything",
-            "description": "Put the cursor on a function, variable or class in a TypeScript file and press **Ctrl+Alt+Shift+T** (**Analyze or Refactor This…**). Every refactoring and analysis that fits is listed, and you can type to filter. The same list is in the editor's right-click menu under **TypeScript Structure**.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)",
+            "description": "Put the cursor on a function, variable or class in a TypeScript file and press **Ctrl+Alt+Shift+T** (**Analyze or Refactor This…**). Every refactoring and analysis that fits is listed, and you can type to filter. The same list is in the editor's right-click menu under **Code X-Ray**.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)",
             "media": {
               "image": "media/walkthrough/actions-at-cursor.png",
               "altText": "The Analyze or Refactor This list at the cursor"
@@ -3178,7 +3178,7 @@
           {
             "id": "understand",
             "title": "Understand code before changing it",
-            "description": "**Semantic Find Usages** (**Alt+F7**) groups references into reads, writes, calls and imports. **Data Flow** shows how a value changes, and **Nullability** shows which paths make it undefined. Results open in the TypeScript Structure view, where you can filter, go back and forward, and re-run them.\n[Semantic Find Usages](command:tsStructure.semanticUsages)",
+            "description": "**Semantic Find Usages** (**Alt+F7**) groups references into reads, writes, calls and imports. **Data Flow** shows how a value changes, and **Nullability** shows which paths make it undefined. Results open in the Code X-Ray view, where you can filter, go back and forward, and re-run them.\n[Semantic Find Usages](command:tsStructure.semanticUsages)",
             "media": {
               "image": "media/walkthrough/semantic-usages.png",
               "altText": "Semantic Find Usages grouped by kind"
@@ -3214,7 +3214,7 @@
           {
             "id": "scope",
             "title": "Leave files out",
-            "description": "Generated or vendored code can be left out of inspections and project-wide searches: right-click a file or folder in the Explorer and choose **Exclude from TypeScript Structure Analysis**, or edit the whole scope here. Every option is in the settings.\n[Edit Analysis Scope…](command:tsStructure.editAnalysisScope)\n[Open Settings](command:tsStructure.openSettings)",
+            "description": "Generated or vendored code can be left out of inspections and project-wide searches: right-click a file or folder in the Explorer and choose **Exclude from Code X-Ray Analysis**, or edit the whole scope here. Every option is in the settings.\n[Edit Analysis Scope…](command:tsStructure.editAnalysisScope)\n[Open Settings](command:tsStructure.openSettings)",
             "media": {
               "image": "media/walkthrough/analysis-scope.png",
               "altText": "The analysis scope with include and exclude patterns"

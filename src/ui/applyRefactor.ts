@@ -5,7 +5,7 @@ import { pathKey } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { RefactorError, RefactorResult } from '../refactor/types';
 
-export const output = vscode.window.createOutputChannel('TypeScript Structure');
+export const output = vscode.window.createOutputChannel('Code X-Ray');
 
 /**
  * Applies a computed refactoring after showing its conflicts. With `preview`, VS Code's Refactor
@@ -23,7 +23,7 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
       output.appendLine(`  - ${conflict.message}${where}`);
     }
     const shown = result.conflicts.slice(0, 6).map((c) => `• ${c.message}`).join('\n');
-    const more = result.conflicts.length > 6 ? `\n…and ${result.conflicts.length - 6} more (see the TypeScript Structure output).` : '';
+    const more = result.conflicts.length > 6 ? `\n…and ${result.conflicts.length - 6} more (see the Code X-Ray output).` : '';
     const proceed = preview ? 'Preview Anyway' : 'Apply Anyway';
     const choice = await vscode.window.showWarningMessage(`${result.label} found problems`, { modal: true, detail: shown + more }, proceed, 'Show Details');
     if (choice === 'Show Details') {

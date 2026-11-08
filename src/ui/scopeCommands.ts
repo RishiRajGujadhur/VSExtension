@@ -16,7 +16,7 @@ function scopeOf(folder: vscode.WorkspaceFolder, key: ScopeKey): string[] {
   return vscode.workspace.getConfiguration('tsStructure', folder.uri).get<string[]>(key, []);
 }
 
-/** Explorer: "Exclude from TypeScript Structure Analysis" on files and folders, several at once. */
+/** Explorer: "Exclude from Code X-Ray Analysis" on files and folders, several at once. */
 async function excludeFromAnalysis(uri?: vscode.Uri, selected?: vscode.Uri[]): Promise<void> {
   const uris = selected?.length ? selected : uri ? [uri] : vscode.window.activeTextEditor ? [vscode.window.activeTextEditor.document.uri] : [];
   const added: string[] = [];
@@ -42,7 +42,7 @@ async function excludeFromAnalysis(uri?: vscode.Uri, selected?: vscode.Uri[]): P
     added.push(relative);
   }
   if (added.length > 0) {
-    const choice = await vscode.window.showInformationMessage(`Excluded ${added.map((a) => `'${a}'`).join(', ')} from TypeScript Structure analysis.`, 'Undo', 'Edit Scope…');
+    const choice = await vscode.window.showInformationMessage(`Excluded ${added.map((a) => `'${a}'`).join(', ')} from Code X-Ray analysis.`, 'Undo', 'Edit Scope…');
     if (choice === 'Undo') {
       for (const target of uris) {
         const folder = vscode.workspace.getWorkspaceFolder(target);
@@ -54,7 +54,7 @@ async function excludeFromAnalysis(uri?: vscode.Uri, selected?: vscode.Uri[]): P
       await editAnalysisScope();
     }
   } else if (uris.length > 0) {
-    void vscode.window.setStatusBarMessage('Already excluded from TypeScript Structure analysis', 3000);
+    void vscode.window.setStatusBarMessage('Already excluded from Code X-Ray analysis', 3000);
   }
 }
 
@@ -64,7 +64,7 @@ async function editAnalysisScope(): Promise<void> {
   const active = vscode.window.activeTextEditor && vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
   const folder = folders.length > 1 ? (active ?? (await vscode.window.showWorkspaceFolderPick({ placeHolder: 'Edit the analysis scope of which folder?' }))) : folders[0];
   if (!folder) {
-    void vscode.window.showInformationMessage('Open a folder to set which files TypeScript Structure analyzes.');
+    void vscode.window.showInformationMessage('Open a folder to set which files Code X-Ray analyzes.');
     return;
   }
   type Item = vscode.QuickPickItem & { key?: ScopeKey; glob?: string; add?: ScopeKey };

@@ -47,13 +47,13 @@ export function rowAccessibleLabel(node: ReportNode, state: RowState = {}): stri
   return parts.join('. ') + '.';
 }
 
-/** The inspections status bar item read aloud: "TypeScript Structure: 2 errors, 1 warning in this file." */
+/** The inspections status bar item read aloud: "Code X-Ray: 2 errors, 1 warning in this file." */
 export function inspectionStatusLabel(counts: { error: number; warning: number; info: number }, paused = false): string {
   if (paused) {
-    return 'TypeScript Structure live inspections are paused. Open the inspections menu to resume them.';
+    return 'Code X-Ray live inspections are paused. Open the inspections menu to resume them.';
   }
   const parts = (['error', 'warning', 'info'] as const)
     .filter((kind) => counts[kind] > 0)
     .map((kind) => `${counts[kind]} ${kind === 'info' ? 'information' : kind}${counts[kind] === 1 || kind === 'info' ? '' : 's'}`);
-  return `TypeScript Structure: ${parts.length ? parts.join(', ') : 'no problems'} in this file. Open the inspections menu.`;
+  return `Code X-Ray: ${parts.length ? parts.join(', ') : 'no problems'} in this file. Open the inspections menu.`;
 }

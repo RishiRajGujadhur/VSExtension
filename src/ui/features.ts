@@ -24,7 +24,7 @@ export function registerCommand(id: string, handler: (...args: any[]) => unknown
 
 async function offerToEnable(feature: Feature): Promise<void> {
   const off = enabledByDefault(feature) ? 'is turned off' : 'is an optional feature, off by default,';
-  const choice = await vscode.window.showInformationMessage(`${feature.title} ${off} in the TypeScript Structure settings.`, 'Turn On', 'Choose Features…');
+  const choice = await vscode.window.showInformationMessage(`${feature.title} ${off} in the Code X-Ray settings.`, 'Turn On', 'Choose Features…');
   if (choice === 'Turn On') {
     await setFeature(feature.id, true);
   } else if (choice) {
@@ -73,7 +73,7 @@ export async function configureFeatures(): Promise<void> {
   const defaults: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Back to Defaults' };
   const settings: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('gear'), tooltip: 'Settings of This Feature' };
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = 'TypeScript Structure Features';
+  picker.title = 'Code X-Ray Features';
   picker.placeholder = 'Tick the features you want; the rest stay out of your menus';
   picker.canSelectMany = true;
   picker.matchOnDetail = true;
@@ -102,6 +102,6 @@ export async function configureFeatures(): Promise<void> {
     await setFeature(feature.id, on.has(feature.id));
   }
   if (changed.length > 0) {
-    void vscode.window.setStatusBarMessage(`TypeScript Structure: ${on.size} of ${features.length} features on`, 4000);
+    void vscode.window.setStatusBarMessage(`Code X-Ray: ${on.size} of ${features.length} features on`, 4000);
   }
 }

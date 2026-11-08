@@ -137,7 +137,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     if (config.get('focusView', true)) {
       await vscode.commands.executeCommand('tsStructure.report.focus');
     } else if (!this.view.visible) {
-      void vscode.window.setStatusBarMessage(`$(${reportIcons[report.kind] ?? 'list-tree'}) ${titleParts(report).heading} is ready in the TypeScript Structure view`, 5000);
+      void vscode.window.setStatusBarMessage(`$(${reportIcons[report.kind] ?? 'list-tree'}) ${titleParts(report).heading} is ready in the Code X-Ray view`, 5000);
     }
     const focused = this.located.find((node) => node.focus);
     if (focused) {

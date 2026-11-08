@@ -38,7 +38,7 @@ const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../pa
 async function typeCommand(command: string, delay: SceneContext['delay']): Promise<void> {
   const title = manifest.contributes.commands.find((c) => c.command === command)?.title ?? command;
   // Starting from the category, so the list holds only this extension's commands while the name is typed.
-  const prefix = '>TypeScript Structure: ';
+  const prefix = '>Code X-Ray: ';
   for (let n = 0; n < title.length; n += 2) {
     await vscode.commands.executeCommand('workbench.action.quickOpen', prefix + title.slice(0, n));
     await delay(40);
@@ -69,7 +69,7 @@ function analysis(name: string, file: string, needle: string, command: string, .
 
 /** Waits until the file has diagnostics from this extension. */
 async function diagnostics(file: string, delay: SceneContext['delay']): Promise<void> {
-  for (let i = 0; i < 100 && !vscode.languages.getDiagnostics(uri(file)).some((d) => d.source === 'TS Structure'); i++) {
+  for (let i = 0; i < 100 && !vscode.languages.getDiagnostics(uri(file)).some((d) => d.source === 'X-Ray'); i++) {
     await delay(100);
   }
 }

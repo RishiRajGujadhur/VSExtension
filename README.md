@@ -1,4 +1,4 @@
-# TypeScript Structure
+# Code X-Ray
 
 Refactorings, inspections and code navigation for TypeScript, JavaScript and React in VS Code, in the style of WebStorm. Everything is offline static analysis with the TypeScript compiler: no AI, no network.
 
@@ -7,8 +7,8 @@ Refactorings, inspections and code navigation for TypeScript, JavaScript and Rea
 ## Getting started
 
 1. Open a TypeScript or JavaScript file and put the cursor on a symbol.
-2. Right-click: **Find Usages**, **Find Usages in Current File**, **Data Flow** and **Analyze or Refactor This…** are at the top of the menu. Everything else is under **TypeScript Structure**.
-3. Results open in the **TypeScript Structure** view in the Activity Bar.
+2. Right-click: **Find Usages**, **Find Usages in Current File**, **Data Flow** and **Analyze or Refactor This…** are at the top of the menu. Everything else is under **Code X-Ray**.
+3. Results open in the **Code X-Ray** view in the Activity Bar.
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
 
@@ -179,7 +179,7 @@ The extension follows the W3C's Web Content Accessibility Guidelines (WCAG 2.2) 
 
 ## Settings
 
-Run **TypeScript Structure: Open Settings**. The ones you are most likely to change:
+Run **Code X-Ray: Open Settings**. The ones you are most likely to change:
 
 | Setting | Default | |
 | --- | --- | --- |

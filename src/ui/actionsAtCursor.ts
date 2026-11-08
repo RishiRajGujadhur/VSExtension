@@ -113,7 +113,7 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
   picker.placeholder = 'Type to filter refactorings, inspections and navigation';
   picker.matchOnDetail = true;
   picker.items = items;
-  const allShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Keyboard Shortcuts for TypeScript Structure' };
+  const allShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Keyboard Shortcuts for Code X-Ray' };
   picker.buttons = [allShortcuts];
   const picked = await new Promise<Item | undefined>((resolve) => {
     picker.onDidAccept(() => resolve(picker.selectedItems[0]));

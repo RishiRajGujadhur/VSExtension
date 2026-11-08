@@ -317,7 +317,7 @@ async function showShortcutSheet(contributes: { keybindings: Keybinding[]; comma
     .sort((a, b) => a.description!.localeCompare(b.description!));
   const editShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Change Shortcuts…' };
   const picker = vscode.window.createQuickPick<(typeof items)[number]>();
-  picker.title = 'TypeScript Structure Shortcuts';
+  picker.title = 'Code X-Ray Shortcuts';
   picker.placeholder = 'Pick one to run it';
   picker.matchOnDescription = true;
   picker.items = items;

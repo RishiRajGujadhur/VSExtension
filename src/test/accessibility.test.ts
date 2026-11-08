@@ -22,7 +22,7 @@ test('places are spoken as file and line', () => {
 });
 
 test('the inspections status bar item is read as counts with their kind', () => {
-  assert.equal(inspectionStatusLabel({ error: 2, warning: 1, info: 0 }), 'TypeScript Structure: 2 errors, 1 warning in this file. Open the inspections menu.');
-  assert.equal(inspectionStatusLabel({ error: 0, warning: 0, info: 0 }), 'TypeScript Structure: no problems in this file. Open the inspections menu.');
+  assert.equal(inspectionStatusLabel({ error: 2, warning: 1, info: 0 }), 'Code X-Ray: 2 errors, 1 warning in this file. Open the inspections menu.');
+  assert.equal(inspectionStatusLabel({ error: 0, warning: 0, info: 0 }), 'Code X-Ray: no problems in this file. Open the inspections menu.');
   assert.match(inspectionStatusLabel({ error: 0, warning: 0, info: 0 }, true), /paused/);
 });

@@ -273,7 +273,7 @@ async function missingAwaitFlow(): Promise<void> {
   const file = vscode.Uri.file(path.join(sample, 'src/notifications.ts'));
   const document = await vscode.workspace.openTextDocument(file);
   await vscode.window.showTextDocument(document);
-  const diagnostics = await waitForDiagnostics(file, (d) => d.source === 'TS Structure');
+  const diagnostics = await waitForDiagnostics(file, (d) => d.source === 'X-Ray');
   assert.equal(diagnostics.length, 1, diagnostics.map((d) => d.message).join('\n'));
   assert.match(diagnostics[0].message, /notify\(\) \(from send\(\)\) is not awaited/);
   assert.equal(diagnostics[0].relatedInformation?.length, 1);
@@ -292,7 +292,7 @@ async function missingAwaitFlow(): Promise<void> {
 
   assert.ok(await vscode.workspace.applyEdit(actions.find((a) => a.title === 'Add await')!.edit!));
   assert.match(document.getText(), /await notify\(message\);/);
-  await waitForDiagnostics(file, (d) => d.source === 'TS Structure', 0);
+  await waitForDiagnostics(file, (d) => d.source === 'X-Ray', 0);
   console.log('missing await diagnostics and fix ok');
   await revert([file]);
 }
