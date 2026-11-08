@@ -9,6 +9,7 @@ import { currentHash } from '../resultsView';
 import { countResults, limitReport } from '../structure/scope';
 import { countFixes, rowFix } from '../structure/fixes';
 import { reportIcons } from '../structure/icons';
+import { rowAccessibleLabel } from '../structure/accessibility';
 
 const toneColors: Record<Tone, string> = {
   error: 'problemsErrorIcon.foreground',
@@ -469,7 +470,10 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     // A group with several fixes below it gets Fix All; a row already acted on loses its buttons.
     const fixAll = !done && !rowFix(node) && node.children?.length && countFixes(node, (n) => this.isDone(n)) > 1 ? 'fixAll' : '';
     // term: the row names a language construct the ? button explains.
-    item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll, termFor(node.label, node.description) ? 'term' : ''].filter(Boolean).join(' ');
+    const explainable = !!termFor(node.label, node.description);
+    item.contextValue = [node.location ? 'location' : '', node.action && !done ? `action:${node.action.kind}` : '', fixAll, explainable ? 'term' : ''].filter(Boolean).join(' ');
+    // Screen readers hear the tone, place and state that the icon color and buttons show (WCAG 1.4.1, 4.1.2).
+    item.accessibilityInformation = { label: rowAccessibleLabel(node, { done, fixable: !done && !!rowFix(node), explainable }), role: 'treeitem' };
     return item;
   }
 
