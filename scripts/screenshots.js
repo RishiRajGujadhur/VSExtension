@@ -64,6 +64,8 @@ const result = spawnSync(
     '--skip-release-notes',
     '--disable-workspace-trust',
     `--user-data-dir=${userData}`,
+    // An empty extensions folder, so an installed copy of this extension cannot add its menus to the recordings.
+    `--extensions-dir=${path.join(userData, 'extensions')}`,
     workspace,
   ],
   {
