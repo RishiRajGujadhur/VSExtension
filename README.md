@@ -80,6 +80,11 @@ The **Path Explorer** lists every path through the function with the branches it
 
 **Explain Value Path** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
 
+- **Expand calls in place**: a box that calls a function of your project has an **ƒ+** button. It splices the called function into the chart, in a labeled frame, with its returns leading on to what followed the call; paths then run through it.
+- **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.
+- **Slices**: **What Affects This Value** (backward slice) lights up the statements and decisions a variable depends on at the cursor; **What This Value Affects** (forward slice) lights up everything it flows into or decides.
+- **Export**: copy the chart as a Mermaid flowchart (with the picked path drawn thick) or save it as SVG.
+
 Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
 
 ![The control flow of deliveryDays beside its code, with the paths through it](docs/images/control-flow.gif)
