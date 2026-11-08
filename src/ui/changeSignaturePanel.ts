@@ -103,42 +103,45 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style nonce="${nonce}">
   body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 12px 16px; }
-  h2 { font-size: 1.1em; margin: 0 0 12px; }
+  h1 { font-size: 1.1em; margin: 0 0 12px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   label { display: block; margin-bottom: 10px; }
-  label span { display: block; opacity: .8; margin-bottom: 3px; }
+  label span { display: block; color: var(--vscode-descriptionForeground); margin-bottom: 3px; }
   input[type=text] { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground);
     border: 1px solid var(--vscode-input-border, transparent); padding: 3px 6px; font-family: var(--vscode-editor-font-family); }
   input[type=text]:focus { outline: 1px solid var(--vscode-focusBorder); }
   input:disabled { opacity: .5; }
   .top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; }
-  th { text-align: left; font-weight: normal; opacity: .8; padding: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
+  th { text-align: left; font-weight: normal; color: var(--vscode-descriptionForeground); padding: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
   td { padding: 3px 4px; vertical-align: middle; }
   tr.new td:first-child { border-left: 2px solid var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
 ${buttonCss}
   .actions { margin-top: 16px; }
   pre { background: var(--vscode-textCodeBlock-background); padding: 8px; white-space: pre-wrap; word-break: break-word; font-family: var(--vscode-editor-font-family); }
-  .hint { opacity: .75; font-size: .92em; }
+  .hint { color: var(--vscode-descriptionForeground); font-size: .92em; }
+  input[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
   .problems { color: var(--vscode-errorForeground); min-height: 1em; margin: 4px 0 0; }
 </style>
 </head>
 <body>
-<h2 id="title"></h2>
+<h1 id="title"></h1>
 <div class="top">
   <label><span>Name</span><input type="text" id="name"></label>
   <label id="returnLabel"><span>Return type (empty for none)</span><input type="text" id="returnType"></label>
 </div>
 <table>
-  <thead><tr><th>Name</th><th class="typed">Type</th><th>Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th>Value for existing callers${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Leave it empty for an optional parameter or one with a default value.')}</th><th class="typed">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th></th></tr></thead>
+  <caption class="visually-hidden">Parameters, in order</caption>
+  <thead><tr><th scope="col">Name</th><th scope="col" class="typed">Type</th><th scope="col">Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th scope="col">Value for existing callers${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Leave it empty for an optional parameter or one with a default value.')}</th><th scope="col" class="typed">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th scope="col"><span class="visually-hidden">Move or remove</span></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
 <button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add Parameter</span></button>
 <p class="hint">Existing parameters keep the argument each caller passes. For a new parameter, the value for existing callers is inserted at every call site; leave it empty when the parameter is optional or has a default value.</p>
 <pre id="preview"></pre>
-<p id="problems" class="problems" role="alert"></p>
+<p id="problems" class="problems" role="status" aria-live="polite"></p>
 <div class="actions">
-  <button class="primary" id="previewBtn" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview Changes</span></button>
-  <button id="apply" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
+  <button class="primary" id="previewBtn" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview Changes</span></button>
+  <button id="apply" aria-describedby="problems" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
   <span class="spacer"></span>
   <button id="copy" title="Copy the signature shown in the preview">${icon('copy')}<span>Copy Signature</span></button>
   <button id="reset" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
@@ -157,9 +160,13 @@ ${buttonCss}
     document.querySelectorAll('.typed').forEach((el) => (el.style.display = 'none'));
   }
 
+  const columns = { name: 'Name', type: 'Type', initializer: 'Default value', callValue: 'Value for existing callers' };
   function input(row, key, placeholder, disabled) {
     const el = document.createElement('input');
     el.type = 'text';
+    const position = rows.indexOf(row) + 1;
+    el.setAttribute('aria-label', columns[key] + ' of parameter ' + position + (key !== 'name' && row.name ? ' (' + row.name + ')' : ''));
+    el.dataset.key = key;
     el.value = row[key];
     el.placeholder = placeholder || '';
     el.disabled = !!disabled;
@@ -198,19 +205,29 @@ ${buttonCss}
       if (!info.typed) optCell.style.display = 'none';
       const opt = document.createElement('input');
       opt.type = 'checkbox';
+      opt.setAttribute('aria-label', 'Optional: parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : ''));
       opt.checked = row.optional;
       opt.addEventListener('change', () => { row.optional = opt.checked; update(); });
       optCell.appendChild(opt);
       tr.appendChild(optCell);
       const tools = document.createElement('td');
       tools.style.whiteSpace = 'nowrap';
-      tools.appendChild(button('up', 'Move up (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); }));
-      tools.appendChild(button('down', 'Move down (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); }));
-      tools.appendChild(button('remove', 'Remove parameter (Ctrl+Delete)', false, () => { rows.splice(i, 1); render(); }));
+      const label = ' parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : '');
+      tools.appendChild(button('up', 'Move up' + label + ' (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); refocus(i - 1, 'up'); }));
+      tools.appendChild(button('down', 'Move down' + label + ' (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); refocus(i + 1, 'down'); }));
+      tools.appendChild(button('remove', 'Remove' + label + ' (Ctrl+Delete)', false, () => { rows.splice(i, 1); render(); refocus(Math.min(i, rows.length - 1), 'name'); }));
       tr.appendChild(tools);
       body.appendChild(tr);
     });
     update();
+  }
+  /** After a row moves or goes away, focus the same kind of control on the row it went to, or Add Parameter. */
+  function refocus(index, kind) {
+    const tr = $('rows').children[index];
+    const buttons = tr ? tr.querySelectorAll('button') : [];
+    const target = !tr ? $('add') : kind === 'up' ? buttons[0] : kind === 'down' ? buttons[1] : kind === 'remove' ? buttons[2] : tr.querySelector('input');
+    // A disabled button (first row moved to the top) cannot take focus; its row's name can.
+    (target && !target.disabled ? target : tr ? tr.querySelector('input') : $('add')).focus();
   }
   const identifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
   /** What stops the refactoring, checked as you type so the buttons say why they are off. */
@@ -233,6 +250,20 @@ ${buttonCss}
   function update() {
     const found = problems();
     $('problems').textContent = found.join(' ');
+    const markInvalid = (el, bad) => {
+      el.setAttribute('aria-invalid', String(bad));
+      if (bad) el.setAttribute('aria-describedby', 'problems');
+      else el.removeAttribute('aria-describedby');
+    };
+    markInvalid($('name'), !identifier.test($('name').value.trim()));
+    const names = rows.map((r) => r.name.trim());
+    Array.prototype.forEach.call($('rows').children, (tr, i) => {
+      const r = rows[i];
+      const original = r && r.originalIndex !== null ? info.parameters[r.originalIndex] : null;
+      const field = tr.querySelector('input[data-key="name"]');
+      if (!field || !r || (original && !original.renamable)) return;
+      markInvalid(field, !identifier.test(names[i]) || names.indexOf(names[i]) !== i);
+    });
     $('previewBtn').disabled = $('apply').disabled = found.length > 0;
     const params = rows.map((r) => {
       const original = r.originalIndex === null ? null : info.parameters[r.originalIndex];
@@ -286,6 +317,7 @@ ${buttonCss}
         e.preventDefault();
         rows.splice(i, 1);
         render();
+        refocus(Math.min(i, rows.length - 1), 'name');
       }
     } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
       e.preventDefault();
