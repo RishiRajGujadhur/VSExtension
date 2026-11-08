@@ -262,7 +262,7 @@
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
-        g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
+        g.setAttribute('aria-haspopup', 'menu');
       }
       if (!detail) continue;
       const room = node.w - (node.tone ? 40 : 26);
@@ -433,6 +433,12 @@
   }
 
   function onNodeKey(e, node) {
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      const box = node.el.getBoundingClientRect();
+      openMenu(node, box.left + 12, box.bottom + 2);
+      return;
+    }
     if (e.key.startsWith('Arrow')) {
       e.preventDefault();
       const next = neighbor(node, e.key);
@@ -613,6 +619,89 @@
     if (node) onNodeKey(e, node);
   });
 
+  // Right-click menu of a box: open its code, run another analysis on it, show only its branch or fold it.
+  // Drawn by the page so it can show icons; it works like a menu from the keyboard as well (WAI-ARIA menu pattern).
+  const boxMenu = document.getElementById('boxMenu');
+  let analyses = [];
+  let menuFor;
+  function menuItems(node) {
+    const items = [];
+    if (node.location) {
+      items.push({ icon: 'go-to-file', label: 'Open Code', run: () => vscode.postMessage({ type: 'open', location: node.location }) });
+      const main = analyses.filter((a) => !a.more);
+      const more = analyses.filter((a) => a.more);
+      if (main.length) items.push('-', ...main.map((a) => ({ icon: a.icon, label: a.label, run: () => vscode.postMessage({ type: 'analyze', command: a.command, location: node.location }) })));
+      if (more.length) items.push({ heading: 'More analyses here' }, ...more.map((a) => ({ icon: a.icon, label: a.label, run: () => vscode.postMessage({ type: 'analyze', command: a.command, location: node.location }) })));
+    }
+    if (node !== diagram.center) {
+      items.push('-', { icon: 'filter', label: node === isolated ? 'Show Whole Chart' : 'Show Only This Branch', keys: 'B', run: () => isolate(node === isolated ? undefined : node) });
+      if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? `Unfold (${node.children.length})` : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
+    }
+    return items.filter((item, i, all) => item !== '-' || (i > 0 && all[i - 1] !== '-'));
+  }
+  function openMenu(node, x, y) {
+    menuFor = node;
+    boxMenu.textContent = '';
+    for (const item of menuItems(node)) {
+      if (item === '-') {
+        boxMenu.appendChild(Object.assign(document.createElement('div'), { className: 'separator', role: 'separator' }));
+        continue;
+      }
+      if (item.heading) {
+        const heading = document.createElement('div');
+        heading.className = 'menu-heading';
+        heading.setAttribute('role', 'presentation');
+        heading.textContent = item.heading;
+        boxMenu.appendChild(heading);
+        continue;
+      }
+      const button = document.createElement('button');
+      button.setAttribute('role', 'menuitem');
+      button.tabIndex = -1;
+      button.innerHTML = `<i class="codicon codicon-${item.icon}" aria-hidden="true"></i><span class="menu-label"></span>${item.keys ? '<span class="menu-keys"></span>' : ''}`;
+      button.querySelector('.menu-label').textContent = item.label;
+      if (item.keys) button.querySelector('.menu-keys').textContent = item.keys;
+      button.addEventListener('click', () => {
+        closeMenu(false);
+        item.run();
+      });
+      boxMenu.appendChild(button);
+    }
+    boxMenu.hidden = false;
+    // Kept inside the window.
+    const width = boxMenu.offsetWidth;
+    const height = boxMenu.offsetHeight;
+    boxMenu.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`;
+    boxMenu.style.top = `${Math.max(4, Math.min(y, window.innerHeight - height - 4))}px`;
+    const first = boxMenu.querySelector('[role="menuitem"]');
+    if (first) first.focus();
+  }
+  function closeMenu(refocus) {
+    if (boxMenu.hidden) return;
+    boxMenu.hidden = true;
+    if (refocus && menuFor && menuFor.el) menuFor.el.focus({ preventScroll: true });
+  }
+  boxMenu.addEventListener('keydown', (e) => {
+    const items = [...boxMenu.querySelectorAll('[role="menuitem"]')];
+    const at = items.indexOf(document.activeElement);
+    const move = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
+    if (move !== undefined) {
+      e.preventDefault();
+      items[(move + items.length) % items.length].focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeMenu(true);
+    }
+  });
+  boxMenu.addEventListener('focusout', (e) => { if (!boxMenu.contains(e.relatedTarget)) closeMenu(false); });
+  window.addEventListener('pointerdown', (e) => { if (!boxMenu.contains(e.target)) closeMenu(false); }, true);
+  svg.addEventListener('contextmenu', (e) => {
+    const node = boxOf(e.target);
+    e.preventDefault();
+    if (node) openMenu(node, e.clientX, e.clientY);
+  });
+
   // Drag the background to pan; the wheel zooms around the pointer.
   let drag;
   svg.addEventListener('pointerdown', (e) => {
@@ -767,6 +856,8 @@
     }
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
+    analyses = event.data.analyses || [];
+    closeMenu(false);
     focused = undefined;
     flowing = undefined;
     selected = undefined;
@@ -783,7 +874,16 @@
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
     svg.classList.toggle('off', !diagram);
-    caption.textContent = diagram ? [diagram.title, diagram.center.description].filter(Boolean).join(' · ') : '';
+    caption.textContent = '';
+    if (diagram) {
+      const subject = document.createElement('strong');
+      subject.textContent = diagram.center.label;
+      const kind = document.createElement('span');
+      kind.className = 'kind';
+      kind.textContent = diagram.title.replace(/ (of|in|since) .*$/, '');
+      caption.append(subject, kind);
+      caption.title = [diagram.title, diagram.center.description].filter(Boolean).join(': ');
+    }
     render();
     if (memory) {
       view = { ...memory.view };

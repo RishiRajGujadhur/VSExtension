@@ -2510,28 +2510,6 @@
           "command": "tsStructure.report.argumentsHere",
           "when": "config.tsStructure.features.argumentFlow"
         }
-      ],
-      "webview/context": [
-        {
-          "command": "tsStructure.report.usagesHere",
-          "when": "config.tsStructure.features.usages && webviewId == 'tsStructure.diagram' && webviewSection == 'node'",
-          "group": "1_analyze@1"
-        },
-        {
-          "command": "tsStructure.report.dataFlowHere",
-          "when": "config.tsStructure.features.dataFlow && webviewId == 'tsStructure.diagram' && webviewSection == 'node'",
-          "group": "1_analyze@2"
-        },
-        {
-          "command": "tsStructure.report.nullabilityHere",
-          "when": "config.tsStructure.features.nullability && webviewId == 'tsStructure.diagram' && webviewSection == 'node'",
-          "group": "1_analyze@3"
-        },
-        {
-          "submenu": "tsStructure.report.analyzeHere",
-          "when": "webviewId == 'tsStructure.diagram' && webviewSection == 'node'",
-          "group": "1_analyze@9"
-        }
       ]
     },
     "views": {
@@ -3259,6 +3237,7 @@
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
+    "@vscode/codicons": "0.0.45",
     "typescript": "6.0.3"
   },
   "devDependencies": {

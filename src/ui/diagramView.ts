@@ -2,6 +2,21 @@ import * as vscode from 'vscode';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report, ReportLocation } from '../structure/report';
 import { StructureView } from './structureView';
+import { commandIcons } from '../structure/icons';
+import { featureOf } from '../structure/features';
+import { isFeatureEnabled } from './features';
+
+/** The analyses a box's right-click menu offers, with the icon each has everywhere else. */
+const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
+  { command: 'tsStructure.report.usagesHere', runs: 'tsStructure.semanticUsages', label: 'Find Usages Here' },
+  { command: 'tsStructure.report.dataFlowHere', runs: 'tsStructure.dataFlow', label: 'Data Flow Here' },
+  { command: 'tsStructure.report.nullabilityHere', runs: 'tsStructure.nullability', label: 'Check for Null or Undefined Here' },
+  { command: 'tsStructure.report.mutationsHere', runs: 'tsStructure.mutationTrackingVariable', label: 'Mutation Tracking for This Variable', more: true },
+  { command: 'tsStructure.report.racesHere', runs: 'tsStructure.raceConditions', label: 'Race Conditions', more: true },
+  { command: 'tsStructure.report.sideEffectsHere', runs: 'tsStructure.sideEffects', label: 'Side Effects', more: true },
+  { command: 'tsStructure.report.exceptionsHere', runs: 'tsStructure.exceptionFlow', label: 'Exception Flow', more: true },
+  { command: 'tsStructure.report.argumentsHere', runs: 'tsStructure.argumentFlow', label: 'Argument Propagation', more: true },
+];
 
 /**
  * The analysis on screen as a flow chart in an editor tab. It follows the results view: each new
@@ -11,6 +26,11 @@ export class DiagramPanel {
   static readonly viewType = 'tsStructure.diagram';
   private panel: vscode.WebviewPanel | undefined;
   private ready = false;
+
+  /** VS Code's icon font (@vscode/codicons), so the buttons look like VS Code's own. */
+  private get codicons(): vscode.Uri {
+    return vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist');
+  }
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -32,11 +52,11 @@ export class DiagramPanel {
       return;
     }
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media] });
+    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media, this.codicons] });
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview, media);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
@@ -56,6 +76,9 @@ export class DiagramPanel {
         void vscode.window.setStatusBarMessage('Copied the chart as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
       } else if (message.type === 'save' && message.svg) {
         await saveImage(Buffer.from(message.svg, 'utf8'), 'svg', message.title);
+      } else if (message.type === 'analyze' && message.command && message.location && boxAnalyses.some((a) => a.command === message.command)) {
+        // A choice from a box's right-click menu: the same command the results view runs on a row.
+        await vscode.commands.executeCommand(message.command, { file: message.location.file, line: message.location.line, character: message.location.character });
       } else if (message.type === 'error' && message.text) {
         void vscode.window.showWarningMessage(message.text);
       } else if (message.type === 'savePng' && message.png) {
@@ -70,18 +93,29 @@ export class DiagramPanel {
       return;
     }
     this.panel.title = report ? `Diagram: ${report.title}` : 'Analysis Diagram';
-    void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined });
+    // Only the analyses whose features are turned on appear in the right-click menu.
+    const analyses = boxAnalyses
+      .filter((a) => {
+        const feature = featureOf(a.command);
+        return !feature || isFeatureEnabled(feature.id);
+      })
+      .map((a) => ({ command: a.command, label: a.label, icon: commandIcons[a.runs], more: !!a.more }));
+    void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses });
   }
 
   private html(webview: vscode.Webview, media: vscode.Uri): string {
     const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-    const button = (id: string, label: string, title: string) => `<button id="${id}" title="${title}">${label}</button>`;
+    // Icon buttons: the tooltip and the accessible name are the same words.
+    const button = (id: string, icon: string, title: string, extra = '') =>
+      `<button id="${id}" class="icon" title="${title}" aria-label="${title}" ${extra}><i class="codicon codicon-${icon}" aria-hidden="true"></i></button>`;
+    const codicons = webview.asWebviewUri(vscode.Uri.joinPath(this.codicons, 'codicon.css'));
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src ${webview.cspSource}; img-src data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src ${webview.cspSource}; img-src data:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="${codicons}">
 <link rel="stylesheet" href="${asset('diagram.css')}">
 <title>Analysis Diagram</title>
 </head>
@@ -90,18 +124,26 @@ export class DiagramPanel {
   <span id="caption"></span>
   <input id="search" type="search" placeholder="Find a box (Ctrl+F)" aria-label="Find a box" title="Highlights boxes whose text contains this; Enter goes to the next, Shift+Enter to the previous">
   <span id="searchCount" aria-live="polite"></span>
-  ${button('collapse', 'Fold All', 'Show only the rows next to the subject')}
-  ${button('expand', 'Unfold All', 'Show every row')}
-  <button id="zoomOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
-  <button id="zoomLevel" title="Zoom level; click for 100%" aria-label="Zoom 100%, reset to 100%">100%</button>
-  <button id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
-  ${button('fit', 'Fit', 'Fit the diagram to the window')}
-  ${button('mermaid', 'Copy Mermaid', 'Copy the chart, as folded now, as a Mermaid flowchart for Markdown, GitHub issues and pull requests')}
-  ${button('save', 'Save SVG', 'Save the chart as an SVG image, in the current colors')}
-  ${button('savePng', 'Save PNG', 'Save the chart as a PNG picture at twice the size, for chats and slides')}
-  <button id="effects" class="toggle-button" aria-pressed="true" title="The animated dot grid behind the chart, which follows the pointer">Grid</button>
-  <button id="flowToggle" class="toggle-button" aria-pressed="true" title="Clicking a box animates the lines between it and the subject; click the background or press Escape to stop">Flow</button>
-  <button id="legendButton" title="What the colors, arrows and buttons mean" aria-expanded="false" aria-controls="legend" aria-label="Legend: what the colors, arrows and keys mean">?</button>
+  <span class="group" role="group" aria-label="Folding">
+  ${button('collapse', 'collapse-all', 'Fold All: show only the boxes next to the subject')}
+  ${button('expand', 'expand-all', 'Unfold All: show every box')}
+  </span>
+  <span class="group" role="group" aria-label="Zoom">
+  ${button('zoomOut', 'zoom-out', 'Zoom Out (−)')}
+  <button id="zoomLevel" class="zoom-level" title="Zoom level: click for 100%" aria-label="Zoom 100%, reset to 100%">100%</button>
+  ${button('zoomIn', 'zoom-in', 'Zoom In (+)')}
+  ${button('fit', 'screen-full', 'Fit the Whole Chart (0)')}
+  </span>
+  <span class="group" role="group" aria-label="Export">
+  ${button('mermaid', 'markdown', 'Copy as Mermaid: a flowchart for Markdown, GitHub issues and pull requests')}
+  ${button('save', 'save', 'Save as SVG image, in the current colors')}
+  ${button('savePng', 'file-media', 'Save as PNG picture, at twice the size')}
+  </span>
+  <span class="group" role="group" aria-label="Effects">
+  ${button('effects', 'sparkle', 'Animated Grid: the dot grid behind the chart follows the pointer', 'aria-pressed="true"')}
+  ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates the lines to the subject (Escape stops it)', 'aria-pressed="true"')}
+  ${button('legendButton', 'question', 'Legend: what the colors, symbols, arrows and keys mean', 'aria-expanded="false" aria-controls="legend"')}
+  </span>
 </header>
 <div id="branch" role="status" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
@@ -137,6 +179,7 @@ export class DiagramPanel {
   </ul>
 </aside>
 <svg id="minimap" class="off" aria-hidden="true"><g id="miniScene"></g><rect id="miniView"/></svg>
+<div id="boxMenu" role="menu" aria-label="Box actions" hidden></div>
 <footer id="info"></footer>
 <script src="${asset('diagramGrid.js')}"></script>
 <script src="${asset('diagram.js')}"></script>

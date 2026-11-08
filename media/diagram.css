@@ -113,7 +113,7 @@ body { position: relative; }
 #miniView { fill: var(--vscode-focusBorder, #007fd4); fill-opacity: .12; stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 
 /* Grid and Flow toggles: pressed looks like VS Code's toggled buttons. */
-header button.toggle-button[aria-pressed="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+header button[aria-pressed="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 
 /* Flow animation: pulses moving along the lines in the direction the value travels. */
 .flow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 8 32; pointer-events: none;
@@ -133,6 +133,51 @@ header button.toggle-button[aria-pressed="true"] { background: var(--vscode-butt
 .toggle .hit { fill: transparent; stroke: none; }
 /* A clearly visible keyboard focus on boxes. */
 .node:focus-visible .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.5; }
+
+
+/* Toolbar: icon buttons in small groups, like VS Code's own toolbars. */
+header { gap: 8px; }
+header .group { display: inline-flex; align-items: center; gap: 2px; }
+header button.icon { min-width: 26px; min-height: 26px; padding: 3px; justify-content: center; background: transparent; color: var(--vscode-icon-foreground, var(--vscode-foreground)); border-color: transparent; }
+header button.icon:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+header button.icon[aria-pressed="true"] { background: var(--vscode-inputOption-activeBackground, rgba(0, 127, 212, .4)); color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground)); border-color: var(--vscode-inputOption-activeBorder, transparent); }
+header button.icon .codicon { font-size: 16px; }
+header .zoom-level { min-width: 46px; min-height: 26px; padding: 2px 4px; background: transparent; color: var(--vscode-foreground); border-color: transparent; font-variant-numeric: tabular-nums; }
+header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+#caption { display: inline-flex; align-items: baseline; gap: 6px; min-width: 60px; }
+#caption strong { color: var(--vscode-foreground); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#caption .kind { flex: none; padding: 0 6px; border-radius: 9px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+
+/* Visible in every theme: outlines and text come from the theme's text color, which always contrasts with the
+   background (WCAG 1.4.11 non-text contrast 3:1), instead of the widget border color, which some themes make
+   nearly invisible. Group boxes get a solid backing so the grid does not show through their text. */
+.node .box { stroke: color-mix(in srgb, var(--vscode-foreground) 50%, transparent); stroke-width: 1.2; }
+.node.group .box { fill: color-mix(in srgb, var(--vscode-editor-background) 82%, transparent); stroke: color-mix(in srgb, var(--vscode-foreground) 55%, transparent); stroke-width: 1.3; }
+.node.group .label { fill: var(--vscode-foreground); }
+.node .description { fill: color-mix(in srgb, var(--vscode-foreground) 78%, var(--vscode-editor-background)); }
+.node.center .description { fill: var(--vscode-button-foreground, #fff); }
+.node.pattern .description { fill: color-mix(in srgb, var(--vscode-foreground) 78%, var(--vscode-editor-background)); }
+.node.located:hover .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2; }
+
+/* The subject keeps its name; the search box gives up width first. */
+header #caption { flex: 0 1 auto; min-width: 0; }
+#caption strong { max-width: 240px; min-width: 0; }
+#search { flex: 1 1 140px; width: auto; min-width: 90px; max-width: 240px; }
+
+/* The right-click menu of a box, styled like VS Code's menus. */
+#boxMenu { position: fixed; z-index: 5; min-width: 230px; padding: 4px 0; border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, #454545)); border-radius: 5px;
+  background: var(--vscode-menu-background, var(--vscode-editorWidget-background, #252526)); color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); font-size: 13px; }
+#boxMenu[hidden] { display: none; }
+#boxMenu [role="menuitem"] { display: flex; align-items: center; gap: 8px; width: calc(100% - 8px); margin: 0 4px; min-height: 26px; padding: 2px 10px; border: 0; border-radius: 3px;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#boxMenu [role="menuitem"]:hover, #boxMenu [role="menuitem"]:focus { background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground)); outline: none; }
+#boxMenu [role="menuitem"]:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+#boxMenu .codicon { flex: none; width: 16px; font-size: 16px; }
+#boxMenu .menu-label { flex: 1; }
+#boxMenu .menu-keys { color: var(--vscode-descriptionForeground); font-size: 12px; }
+#boxMenu .separator { height: 1px; margin: 4px 0; background: var(--vscode-menu-separatorBackground, var(--vscode-widget-border, #454545)); }
+#boxMenu .menu-heading { padding: 4px 14px 2px; color: var(--vscode-descriptionForeground); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 
 /* Windows high contrast and other forced color modes: system colors, no decorative grid. */
 @media (forced-colors: active) {
