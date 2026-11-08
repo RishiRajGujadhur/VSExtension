@@ -11,18 +11,150 @@
     return node;
   }
 
-  /** Replaces the layer of flowing lines: one pulsing copy of each path, drawn under `before` (the boxes). */
-  function drawFlows(scene, before, paths) {
-    const old = scene.querySelector('.flows');
-    if (old) old.remove();
-    if (scene.ownerSVGElement) scene.ownerSVGElement.classList.toggle('flowing', paths.length > 0);
-    if (!paths.length) return;
-    const layer = el('g', { class: 'flows' });
-    scene.insertBefore(layer, before);
-    // One glow path for all lines (it doesn't move), then the moving dashes.
-    el('path', { d: paths.join(' '), class: 'flow-glow' }, layer);
-    for (const d of paths) el('path', { d, class: 'flow' }, layer);
+  /**
+   * Flowing lines, drawn on a canvas under the chart the way robot-components' node grid draws its connections
+   * (MIT): each line is a blue wire with soft cyan pulses travelling along it, in the direction the value or execution
+   * goes. Canvas rather than SVG: the chart's own drawing doesn't repaint on every frame, and only lines in the window
+   * are drawn. `attachFlowLines` is called once per page; `drawFlows` sets which lines carry the flow.
+   */
+  const WIRE = '#3B82F6';
+  const PULSE_SPEED = 0.12; // screen pixels per millisecond
+  const PULSE_SPACING = 100; // screen pixels between pulses
+  const PULSE_WIDTH = 60; // screen pixels each pulse fades over
+  const LEVELS = 8;
+  let flowLines;
+  function attachFlowLines(canvas, getView) {
+    const ctx = canvas.getContext('2d');
+    // A hidden path measures each line's shape once; the samples are kept by path data.
+    const ruler = el('svg', { width: 0, height: 0, style: 'position:absolute;width:0;height:0;overflow:hidden', 'aria-hidden': 'true' });
+    document.body.appendChild(ruler);
+    const probe = el('path', {}, ruler);
+    const samples = new Map();
+    let lines = [];
+    let frame = 0;
+    let width = 0;
+    let height = 0;
+    let scale = 1;
+    const motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+    function sample(d) {
+      let s = samples.get(d);
+      if (s) return s;
+      if (samples.size > 4000) samples.clear();
+      probe.setAttribute('d', d);
+      const length = probe.getTotalLength();
+      const n = Math.max(2, Math.ceil(length / 6));
+      const xs = new Float32Array(n + 1);
+      const ys = new Float32Array(n + 1);
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i <= n; i++) {
+        const p = probe.getPointAtLength((length * i) / n);
+        xs[i] = p.x;
+        ys[i] = p.y;
+        x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
+      }
+      s = { xs, ys, step: length / n, n, box: { x0, y0, x1, y1 } };
+      samples.set(d, s);
+      return s;
+    }
+    function fit() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      if (w === width && h === height && ratio === scale) return;
+      width = w;
+      height = h;
+      scale = ratio;
+      canvas.width = Math.max(1, Math.round(w * ratio));
+      canvas.height = Math.max(1, Math.round(h * ratio));
+    }
+    function draw(now) {
+      frame = 0;
+      fit();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!lines.length) return;
+      const v = getView();
+      const k = v.k;
+      ctx.setTransform(scale * k, 0, 0, scale * k, scale * v.x, scale * v.y);
+      const margin = 20 / k;
+      const vx0 = -v.x / k - margin, vy0 = -v.y / k - margin, vx1 = (width - v.x) / k + margin, vy1 = (height - v.y) / k + margin;
+      const still = motion.matches;
+      const spacing = PULSE_SPACING / k;
+      const reach = PULSE_WIDTH / k;
+      const at = still ? 0 : ((now * PULSE_SPEED) / k) % spacing;
+      const solid = new Path2D();
+      const dashed = new Path2D();
+      const lit = Array.from({ length: LEVELS }, () => new Path2D());
+      for (const line of lines) {
+        const s = line.s;
+        if (s.box.x1 < vx0 || s.box.x0 > vx1 || s.box.y1 < vy0 || s.box.y0 > vy1) continue;
+        const wire = line.dashed ? dashed : solid;
+        wire.moveTo(s.xs[0], s.ys[0]);
+        for (let i = 1; i <= s.n; i++) wire.lineTo(s.xs[i], s.ys[i]);
+        if (still) continue;
+        // Brightness of each piece: its distance to the nearest pulse, with a cosine falloff.
+        for (let i = 0; i < s.n; i++) {
+          const mid = (i + 0.5) * s.step;
+          const offset = (((mid - at) % spacing) + spacing) % spacing;
+          const dist = Math.min(offset, spacing - offset);
+          if (dist >= reach) continue;
+          const b = (Math.cos((dist / reach) * Math.PI) + 1) / 2;
+          if (b <= 0.02) continue;
+          const path = lit[Math.min(LEVELS - 1, Math.floor(b * LEVELS))];
+          path.moveTo(s.xs[i], s.ys[i]);
+          path.lineTo(s.xs[i + 1], s.ys[i + 1]);
+        }
+      }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = WIRE;
+      ctx.lineWidth = 2 / k;
+      ctx.stroke(solid);
+      ctx.setLineDash([5 / k, 4 / k]);
+      ctx.stroke(dashed);
+      ctx.setLineDash([]);
+      lit.forEach((path, level) => {
+        const b = (level + 0.5) / LEVELS;
+        ctx.strokeStyle = `rgba(0, 200, 255, ${b * 0.9})`;
+        ctx.lineWidth = (2 + b * 1.5) / k;
+        ctx.stroke(path);
+      });
+      ctx.globalAlpha = 1;
+      if (!still && !document.hidden) frame = requestAnimationFrame(draw);
+    }
+    function redraw() {
+      if (!frame) frame = requestAnimationFrame(draw);
+    }
+    document.addEventListener('visibilitychange', redraw);
+    motion.addEventListener && motion.addEventListener('change', redraw);
+    new ResizeObserver(redraw).observe(canvas);
+    flowLines = {
+      set(items) {
+        lines = items.map((item) => ({ s: sample(item.d), dashed: !!item.dashed }));
+        redraw();
+      },
+      redraw,
+    };
+    return flowLines;
   }
+
+  /**
+   * Sets the lines that carry the flow: SVG path elements (a `back` class draws them dashed). Their own SVG stroke
+   * steps aside for the canvas wire; arrowheads stay. Rings around circles turn while any line flows.
+   */
+  let carried = [];
+  function drawFlows(scene, before, paths) {
+    carried.forEach((p) => p.classList.remove('carried'));
+    carried = paths.filter((p) => typeof p !== 'string');
+    carried.forEach((p) => p.classList.add('carried'));
+    if (scene.ownerSVGElement) scene.ownerSVGElement.classList.toggle('flowing', paths.length > 0);
+    if (flowLines) {
+      flowLines.set(paths.map((p) => (typeof p === 'string' ? { d: p } : { d: p.getAttribute('d'), dashed: !!p.closest('.back') })));
+    }
+  }
+  /** The view moved: the canvas lines follow (needed only when they don't animate). */
+  const redrawFlows = () => flowLines && flowLines.redraw();
 
   /**
    * The chart as a standalone SVG: the theme's colors written into each element, the background filled, and the
@@ -69,7 +201,7 @@
     effects.addEventListener('click', () => { prefs.effects = !prefs.effects; show(); save(); });
     flow.addEventListener('click', () => {
       prefs.flow = !prefs.flow;
-      if (!prefs.flow) onFlowOff();
+      onFlowOff();
       show();
       save();
     });
@@ -371,5 +503,5 @@
     }).observe(element);
   }
 
-  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  window.chartKit = { el, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

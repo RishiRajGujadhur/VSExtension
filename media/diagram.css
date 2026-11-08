@@ -3,9 +3,10 @@
 .edge { fill: none; stroke: var(--vscode-editorLineNumber-foreground, #858585); stroke-width: 1.4; }
 #arrow path { fill: var(--vscode-editorLineNumber-foreground, #858585); }
 
-.node .box { fill: var(--vscode-editorWidget-background, #252526); stroke: var(--vscode-editorWidget-border, #454545); stroke-width: 1; }
+.node .box { fill: var(--box-fill); stroke: var(--box-border); stroke-width: 1; transition: stroke .2s ease; }
 .node.located { cursor: pointer; }
-.node.located:hover .box, .node:focus .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; }
+.node.located:hover .box { stroke: var(--box-border-hover); }
+.node:focus .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 1.5; }
 .node:focus { outline: none; }
 .node .label { fill: var(--vscode-foreground); font-size: 12px; font-weight: 600; }
 .node .description { fill: var(--vscode-descriptionForeground); font-size: 11px; }
@@ -78,7 +79,7 @@ body { position: relative; }
 #legend kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, #555); border-radius: 3px; background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); font-family: inherit; font-size: 11px; }
 
 /* Design patterns: purple hexagons on dotted lines, so they never read as steps of the value. */
-.node.pattern .box { fill: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 16%, var(--vscode-editorWidget-background, #252526)); stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 1.5; }
+.node.pattern .box { fill: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 16%, var(--box-fill)); stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 1.5; }
 .node.pattern .label { fill: var(--vscode-charts-purple, #b180d7); }
 .node.pattern.located:hover .box, .node.pattern:focus .box { stroke-width: 2.5; }
 .edge.relation { stroke: var(--vscode-charts-purple, #b180d7); stroke-dasharray: 4 4; }
@@ -116,13 +117,12 @@ body { position: relative; }
 /* Visible in every theme: outlines and text come from the theme's text color, which always contrasts with the
    background (WCAG 1.4.11 non-text contrast 3:1), instead of the widget border color, which some themes make
    nearly invisible. Group boxes get a solid backing so the grid does not show through their text. */
-.node .box { stroke: color-mix(in srgb, var(--vscode-foreground) 50%, transparent); stroke-width: 1.2; }
-.node.group .box { fill: color-mix(in srgb, var(--vscode-editor-background) 82%, transparent); stroke: color-mix(in srgb, var(--vscode-foreground) 55%, transparent); stroke-width: 1.3; }
+.node.group .box { fill: color-mix(in srgb, var(--box-fill) 70%, transparent); stroke: var(--box-border-hover); stroke-width: 1.3; }
 .node.group .label { fill: var(--vscode-foreground); }
 .node .description { fill: color-mix(in srgb, var(--vscode-foreground) 78%, var(--vscode-editor-background)); }
 .node.center .description { fill: var(--vscode-button-foreground, #fff); }
 .node.pattern .description { fill: color-mix(in srgb, var(--vscode-foreground) 78%, var(--vscode-editor-background)); }
-.node.located:hover .box { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2; }
+.node.located:hover .box { stroke: var(--box-border-hover); }
 
 /* The subject keeps its name; the search box gives up width first. */
 #search { flex: 1 1 140px; width: auto; min-width: 90px; max-width: 240px; }
@@ -137,7 +137,6 @@ body { position: relative; }
   .node .tone { fill: CanvasText; }
   .edge, .edge.relation, .edge.onpath { stroke: CanvasText; }
   #arrow path, #arrowOn path { fill: CanvasText; }
-  .flow { stroke: Highlight; filter: none; }
   .node:focus .box, .node:focus-visible .box, .node.selected .box, .node.onpath .box, .node.match .box { stroke: Highlight; stroke-width: 3; }
   .toggle circle:not(.hit) { fill: ButtonFace; stroke: ButtonText; }
   .toggle text { fill: ButtonText; }

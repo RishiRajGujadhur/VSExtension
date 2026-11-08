@@ -266,15 +266,15 @@
         const w = node.w;
         el('path', { d: `M12,0 H${w - 12} L${w},${H / 2} L${w - 12},${H} H12 L0,${H / 2} Z`, class: 'box' }, g);
       } else {
-        if (node.duplicates) el('rect', { x: 4, y: -4, width: node.w, height: H, rx: 6, class: 'box stack' }, g);
-        el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
+        if (node.duplicates) el('rect', { x: 4, y: -4, width: node.w, height: H, rx: 12, class: 'box stack' }, g);
+        el('rect', { width: node.w, height: H, rx: 12, class: 'box' }, g);
         if (node.duplicates) {
           const badge = el('g', { class: 'dup-badge', transform: `translate(${node.w - 14},${-4})`, 'aria-hidden': 'true' }, g);
           el('rect', { x: -14, y: -8, width: 28, height: 16, rx: 8 }, badge);
           el('text', { y: 4, 'text-anchor': 'middle' }, badge).textContent = `×${node.duplicates}`;
         }
       }
-      if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
+      if (node.tone) el('rect', { width: 4, height: H - 20, x: 5, y: 10, rx: 2, class: 'tone' }, g);
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
         g.setAttribute('aria-haspopup', 'menu');
@@ -455,25 +455,22 @@
     else if (e.key === 'Home') { e.preventDefault(); centerOn(diagram.center); diagram.center.el.focus({ preventScroll: true }); }
   });
 
-  // The lines between the clicked box and the subject, and those behind the box, carry moving pulses in the
-  // direction the value travels. Clicking the background or pressing Escape stops them.
+  // Every line carries moving pulses in the direction the value travels; after a click on a box only its way to the
+  // subject and what is behind it do. Clicking the background or pressing Escape goes back to every line.
   function drawFlows() {
-    const old = scene.querySelector('.flows');
-    if (old) old.remove();
-    if (!flowing || !prefs.flow || !diagram || !shownNodes.includes(flowing)) return;
+    if (!prefs.flow || !diagram) return window.chartKit.drawFlows(scene, null, []);
     const edges = [];
-    if (flowing === diagram.center) {
+    if (!flowing || !shownNodes.includes(flowing) || flowing === diagram.center) {
       shownNodes.forEach((n) => n.edgeEl && edges.push(n.edgeEl));
     } else {
       for (let n = flowing; n; n = n.parent) if (n.edgeEl) edges.push(n.edgeEl);
       const behind = (n) => visible(n).forEach((c) => { if (c.edgeEl) edges.push(c.edgeEl); behind(c); });
       behind(flowing);
     }
-    window.chartKit.drawFlows(scene, scene.querySelector('.nodes'), edges.filter((edge) => !edge.classList.contains('relation')).map((edge) => edge.getAttribute('d')));
+    window.chartKit.drawFlows(scene, null, edges.filter((edge) => !edge.classList.contains('relation')));
   }
 
   function stopFlow() {
-    if (!flowing) return;
     flowing = undefined;
     drawFlows();
   }
@@ -488,6 +485,7 @@
   function apply() {
     view = window.chartKit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    window.chartKit.redrawFlows();
     paint(false);
     if (grid) grid.wake();
     zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
@@ -885,6 +883,7 @@
     },
     hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
   }));
+  window.chartKit.attachFlowLines(document.getElementById('flowLines'), () => view);
   window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });
 })();

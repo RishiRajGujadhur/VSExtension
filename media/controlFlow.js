@@ -95,7 +95,7 @@
     } else if (n.kind === 'decision' || n.kind === 'switch') {
       el('path', { d: `M14,0 H${w - 14} L${w},${h / 2} L${w - 14},${h} H14 L0,${h / 2} Z`, class: 'shape' }, g);
     } else {
-      el('rect', { width: w, height: h, rx: n.kind === 'loop' ? 10 : 4, class: 'shape' }, g);
+      el('rect', { width: w, height: h, rx: 12, class: 'shape' }, g);
     }
   }
 
@@ -169,9 +169,9 @@
       g.setAttribute('aria-label', spoken(n));
       nodeShape(g, n);
       if (n.kind === 'start') {
-        el('text', { x: n.width + 10, y: n.height / 2 + 5, class: 'title' }, g).textContent = `${chart.name}()`;
+        el('text', { x: n.width + 16, y: n.height / 2 + 5, class: 'title' }, g).textContent = `${chart.name}()`;
       } else if (n.kind === 'end') {
-        el('text', { x: n.width + 8, y: n.height / 2 + 4, class: 'terminal-label' }, g).textContent = 'end';
+        el('text', { x: n.width + 14, y: n.height / 2 + 4, class: 'terminal-label' }, g).textContent = 'end';
       } else {
         const textX = isDecision(n) ? 26 : 13;
         n.lines.forEach((line, i) => codeLine(g, line, textX, 8 + 13 + i * 18));
@@ -484,22 +484,29 @@
       g.classList.toggle('pinned', pins.includes(i));
     });
     drawMinimap(focus ? onNodes : undefined);
-    drawFlows(other);
+    drawFlows();
   }
 
-  function drawFlows(other) {
+  // Every line carries execution's pulses; a picked path, or the paths through a clicked box, narrow it to those.
+  // A compared path keeps its own orange line.
+  function drawFlows() {
     const lines = new Set();
+    const elements = scene.querySelectorAll('.edge');
     if (prefs.flow && chart) {
       const shownPath = preview >= 0 ? preview : selected;
       if (shownPath >= 0) {
         chart.paths[shownPath].edges.forEach((e) => lines.add(e));
-        if (other) other.edges.forEach((e) => lines.add(e));
+      } else if (previewGroup) {
+        previewGroup.forEach((i) => chart.paths[i].edges.forEach((e) => lines.add(e)));
       } else if (flowing !== undefined) {
         // A clicked box: execution flowing through it, on every possible path that reaches it.
         for (const p of chart.paths) if (p.feasible && p.nodes.includes(flowing)) p.edges.forEach((e) => lines.add(e));
+      } else {
+        // Nothing picked: every line that isn't faded.
+        elements.forEach((g, i) => { if (!g.classList.contains('off')) lines.add(i); });
       }
     }
-    kit.drawFlows(scene, scene.querySelector('.nodes'), [...lines].map((e) => edgeShapes[e]));
+    kit.drawFlows(scene, null, [...lines].filter((e) => elements[e]).map((e) => elements[e].querySelector('.line')));
   }
 
   function stopFlow() {
@@ -821,6 +828,7 @@
   function apply() {
     view = kit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    kit.redrawFlows();
     if (grid) grid.wake();
     map.update();
     document.getElementById('zoomLevel').textContent = `${Math.round(view.k * 100)}%`;
@@ -1072,6 +1080,7 @@
     },
     hovered: hovered ? onScreen(hovered) : undefined,
   }));
+  kit.attachFlowLines(document.getElementById('flowLines'), () => view);
   kit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });
 })();

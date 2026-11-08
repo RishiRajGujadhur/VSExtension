@@ -225,6 +225,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
 <main>
 <div id="stage">
 <canvas id="grid" aria-hidden="true"></canvas>
+<canvas id="flowLines" aria-hidden="true"></canvas>
 <svg id="canvas" class="off" tabindex="-1" role="group" aria-label="Control flow graph. Tab moves between boxes; Enter opens the code.">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>

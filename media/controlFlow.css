@@ -35,11 +35,11 @@ li.selected .path-steps { color: inherit; }
 .path-reason { margin-top: 2px; font-size: 11px; color: var(--vscode-editorWarning-foreground, #cca700); }
 
 /* The chart */
-.node .shape { fill: var(--vscode-editorWidget-background, #252526); stroke: color-mix(in srgb, var(--vscode-foreground) 50%, transparent); stroke-width: 1.2; }
+.node .shape { fill: var(--box-fill); stroke: var(--box-border); stroke-width: 1; transition: stroke .2s ease; }
 .node.located { cursor: pointer; }
-.node.located:hover .shape { stroke: var(--vscode-focusBorder); stroke-width: 2; }
-.node.decision .shape, .node.switch .shape { fill: color-mix(in srgb, var(--vscode-charts-yellow, #cca700) 12%, var(--vscode-editorWidget-background, #252526)); stroke: var(--vscode-charts-yellow, #cca700); }
-.node.loop .shape { fill: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 12%, var(--vscode-editorWidget-background, #252526)); stroke: var(--vscode-charts-purple, #b180d7); }
+.node.located:hover .shape { stroke: var(--box-border-hover); }
+.node.decision .shape, .node.switch .shape { fill: color-mix(in srgb, var(--vscode-charts-yellow, #cca700) 12%, var(--box-fill)); stroke: var(--vscode-charts-yellow, #cca700); }
+.node.loop .shape { fill: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 12%, var(--box-fill)); stroke: var(--vscode-charts-purple, #b180d7); }
 .node.return .shape { stroke: var(--vscode-charts-green, #89d185); stroke-width: 1.6; }
 .node.throw .shape { stroke: var(--vscode-charts-red, #f14c4c); stroke-width: 1.6; }
 .node.catch .shape, .node.finally .shape { stroke-dasharray: 5 3; }

@@ -120,7 +120,7 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
     })),
     truncated,
     // Room for the function's name, written to the right of the start circle.
-    width: Math.max(layout.width, ...cfg.nodes.filter((n) => n.kind === 'start').map((n) => layout.nodes.get(n.id)!.x + TERMINAL + 10 + cfg.name.length * CHAR)),
+    width: Math.max(layout.width, ...cfg.nodes.filter((n) => n.kind === 'start').map((n) => layout.nodes.get(n.id)!.x + TERMINAL + 16 + cfg.name.length * CHAR)),
     height: layout.height,
   };
 }

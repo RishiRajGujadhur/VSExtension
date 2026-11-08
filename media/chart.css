@@ -30,20 +30,14 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 #canvas.off { display: none; }
 #empty { padding: 24px; color: var(--vscode-descriptionForeground); }
 
-/* Flowing lines: pulses moving along a path in the direction the value or execution goes (chartKit.drawFlows). */
-.flow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 8 32; pointer-events: none;
-  animation: flow 1.1s linear infinite; }
-/* The glow is a wide, faint, still line under the dashes: no filter to recompute on every frame. */
-.flow-glow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 7; stroke-opacity: .16; stroke-linecap: round; pointer-events: none; }
-@keyframes flow { to { stroke-dashoffset: -40; } }
-@media (prefers-reduced-motion: reduce) {
-  .flow { animation: none; stroke-dasharray: none; opacity: .75; }
-  .flow-glow { display: none; }
-}
+/* Flowing lines (chartKit.attachFlowLines): a canvas between the grid and the chart. A line it carries hides its
+   SVG stroke, keeping its arrowhead and click target. */
+#flowLines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.carried { stroke-opacity: 0 !important; }
 @media (forced-colors: active) {
   #grid { display: none; }
-  .flow { stroke: Highlight; filter: none; }
-  .flow-glow { display: none; }
+  #flowLines { display: none; }
+  .carried { stroke-opacity: 1 !important; }
   .ring path { stroke: Highlight; }
 }
 
@@ -91,3 +85,29 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 
 /* Codicon glyphs inside SVG (chartKit.glyph). */
 .glyph-icon { font-family: codicon; font-size: 14px; font-weight: normal; dominant-baseline: central; text-anchor: middle; pointer-events: none; }
+
+/* Boxes, as in robot-components' node grid: 12px corners, a #2a2a2a card with a faint light border that brightens on
+   hover, and a soft shadow below (box-shadow 0 24px 24px -12px rgba(0, 0, 0, .25), drawn as one drop-shadow on the
+   layer of boxes). Light and high contrast themes get their own card colors. */
+:root {
+  --box-fill: #2a2a2a;
+  --box-border: rgba(255, 255, 255, .1);
+  --box-border-hover: rgba(255, 255, 255, .16);
+  --box-shadow: drop-shadow(0 16px 12px rgba(0, 0, 0, .25));
+}
+body.vscode-light {
+  --box-fill: #ffffff;
+  --box-border: rgba(0, 0, 0, .12);
+  --box-border-hover: rgba(0, 0, 0, .22);
+  --box-shadow: drop-shadow(0 14px 12px rgba(0, 0, 0, .12));
+}
+body.vscode-high-contrast, body.vscode-high-contrast-light {
+  --box-fill: var(--vscode-editor-background);
+  --box-border: var(--vscode-contrastBorder, CanvasText);
+  --box-border-hover: var(--vscode-contrastActiveBorder, Highlight);
+  --box-shadow: none;
+}
+.nodes { filter: var(--box-shadow); }
+@media (forced-colors: active) {
+  .nodes { filter: none; }
+}
