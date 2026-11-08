@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import { test } from 'node:test';
 import { dataFlowReport } from '../inspect/dataFlow';
-import { DiagramNode, diagramMermaid, foldToFit, reportDiagram } from '../structure/diagram';
+import { DiagramNode, diagramMermaid, foldToFit, groupDuplicates, reportDiagram } from '../structure/diagram';
 import { Report } from '../structure/report';
 import { fixtures, offsetIn, virtualProject } from './helpers';
 
@@ -117,4 +117,21 @@ test('a chart that would open with too many boxes folds its deepest levels first
   // A chart that fits is left as it is.
   const small = foldToFit({ title: 't', center: leaf('c'), left: [], right: [group('g', [leaf('a')])] }, 50);
   assert.equal(small.right[0].collapsed, false);
+});
+
+test('boxes that read the same are stacked into one, each told apart by its line when unfolded', () => {
+  const at = (line: number) => ({ file: 'a.ts', line, character: 0, endLine: line, endCharacter: 1 });
+  const used = (line: number): DiagramNode => ({ label: 'used in check(x)', description: 'arrow function · a.ts', location: at(line), collapsed: false, children: [] });
+  const other: DiagramNode = { label: 'returned', collapsed: false, children: [] };
+  const grouped = groupDuplicates({ title: 't', center: { label: 'x', collapsed: false, children: [] }, left: [], right: [used(4), other, used(9)] });
+  assert.equal(grouped.right.length, 2);
+  const stack = grouped.right[0];
+  assert.equal(stack.duplicates, 2);
+  assert.equal(stack.collapsed, true);
+  assert.deepEqual(stack.children.map((c) => c.description), ['line 5 · arrow function · a.ts', 'line 10 · arrow function · a.ts']);
+  assert.equal(grouped.right[1].label, 'returned');
+  // Different descriptions are not duplicates.
+  const apart = groupDuplicates({ title: 't', center: grouped.center, left: [used(1), { ...used(2), description: 'b.ts' }], right: [] });
+  assert.equal(apart.left.length, 2);
+  assert.ok(apart.left.every((n) => !n.duplicates));
 });

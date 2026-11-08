@@ -30,6 +30,9 @@
   // A second path to compare with the selected one (Shift+click), and one previewed by hovering the list.
   let compared = -1;
   let preview = -1;
+  // Groups of paths with the same ending that are unfolded, and a group previewed by hovering its heading.
+  const openGroups = new Set();
+  let previewGroup;
   const comparison = document.getElementById('comparison');
   let query = '';
   let matches = [];
@@ -81,10 +84,12 @@
     const { width: w, height: h } = n;
     if (n.kind === 'start') {
       // Start: a filled circle with a play mark; the function's name is written beside it.
+      el('circle', { cx: w / 2, cy: h / 2, r: w / 2 + 5, class: 'ring' }, g);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       kit.icon(g, 'play', w / 2 + 1, h / 2, 'terminal-icon');
     } else if (n.kind === 'end') {
       // End: a ring around a dot, like the end of a UML activity.
+      el('circle', { cx: w / 2, cy: h / 2, r: w / 2 + 5, class: 'ring' }, g);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2 - 7, class: 'core' }, g);
     } else if (n.kind === 'decision' || n.kind === 'switch') {
@@ -256,12 +261,18 @@
     for (const id of nodePins) {
       chip(`through ${shortCode(chart.nodes[id])}`, 'Remove this box from the filter', () => { nodePins = nodePins.filter((x) => x !== id); afterPins(); }, 'through');
     }
-    found.forEach(({ p, i }, n) => {
+    // Paths that end the same way are grouped under that ending, folded, when there are several of them.
+    const groups = new Map();
+    for (const f of found) groups.set(f.p.ending, [...(groups.get(f.p.ending) || []), f]);
+    const grouping = groups.size < found.length;
+    let number = 0;
+    const addPath = ({ p, i }, n, into, level) => {
       const item = document.createElement('li');
       item.className = `path${i === selected ? ' selected' : ''}${p.feasible ? '' : ' impossible'}`;
       item.tabIndex = i === selected || (selected < 0 && n === 0) ? 0 : -1;
       item.dataset.path = i;
-      item.setAttribute('role', 'option');
+      item.setAttribute('role', 'treeitem');
+      item.setAttribute('aria-level', String(level));
       item.setAttribute('aria-selected', String(i === selected));
       const title = document.createElement('div');
       title.className = 'path-title';
@@ -306,8 +317,58 @@
         menu.open(pathMenu(i), e.clientX, e.clientY, item);
       });
       if (i === compared) item.classList.add('compared');
-      list.appendChild(item);
-    });
+      into.appendChild(item);
+    };
+    for (const [ending, members] of groups) {
+      if (!grouping || members.length < 2) {
+        members.forEach((m) => addPath(m, number++, list, 1));
+        continue;
+      }
+      const open = openGroups.has(ending) || members.some((m) => m.i === selected || m.i === compared);
+      const head = document.createElement('li');
+      head.className = 'path-group';
+      head.tabIndex = -1;
+      head.setAttribute('role', 'treeitem');
+      head.setAttribute('aria-level', '1');
+      head.setAttribute('aria-expanded', String(open));
+      const chevron = document.createElement('i');
+      chevron.className = `codicon codicon-chevron-${open ? 'down' : 'right'}`;
+      chevron.setAttribute('aria-hidden', 'true');
+      const title = document.createElement('span');
+      title.className = 'path-title';
+      title.textContent = ending;
+      const count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = `${members.length} paths`;
+      head.append(chevron, title, count);
+      const toggle = () => {
+        if (openGroups.has(ending)) openGroups.delete(ending);
+        else openGroups.add(ending);
+        renderList();
+        const again = [...list.querySelectorAll('.path-group')].find((g) => g.querySelector('.path-title').textContent === ending);
+        if (again) again.focus();
+      };
+      head.addEventListener('click', toggle);
+      head.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || (e.key === 'ArrowRight' && !open) || (e.key === 'ArrowLeft' && open)) {
+          e.preventDefault();
+          toggle();
+        }
+      });
+      // Hovering the group shows all of its paths at once.
+      head.addEventListener('mouseenter', () => { previewGroup = members.map((m) => m.i); highlight(); });
+      head.addEventListener('mouseleave', () => { previewGroup = undefined; highlight(); });
+      list.appendChild(head);
+      const inner = document.createElement('ul');
+      inner.setAttribute('role', 'group');
+      inner.hidden = !open;
+      members.forEach((m) => addPath(m, number++, inner, 2));
+      if (open) list.appendChild(inner);
+    }
+    if (!list.querySelector('[tabindex="0"]')) {
+      const first = list.querySelector('li.path, li.path-group');
+      if (first) first.tabIndex = 0;
+    }
     renderComparison();
     if (!found.length) {
       const none = document.createElement('li');
@@ -320,7 +381,7 @@
   // Up and down move between paths in the list.
   list.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
-    const items = [...list.querySelectorAll('li.path')];
+    const items = [...list.querySelectorAll('li.path, li.path-group')];
     const at = items.indexOf(document.activeElement);
     if (at < 0) return;
     e.preventDefault();
@@ -379,7 +440,7 @@
     const onNodes = new Set();
     const onEdges = new Set();
     const shownPath = preview >= 0 ? preview : selected;
-    const active = shownPath >= 0 ? [chart.paths[shownPath]] : pins.length || nodePins.length ? matching().map(({ p }) => p) : [];
+    const active = shownPath >= 0 ? [chart.paths[shownPath]] : previewGroup ? previewGroup.map((i) => chart.paths[i]) : pins.length || nodePins.length ? matching().map(({ p }) => p) : [];
     // A slice lights up its boxes, and the edges between them, when no path is picked.
     if (!active.length && slice) {
       const inSlice = new Set(slice.nodes);
@@ -514,10 +575,18 @@
     const n = nodeOf(e.target);
     if (n) zoomTo(n);
   });
+  function touchEdges(n) {
+    scene.querySelectorAll('.edge.touch').forEach((g) => g.classList.remove('touch'));
+    if (!n) return;
+    chart.edges.forEach((e, i) => {
+      if (e.from === n.id || e.to === n.id) scene.querySelector(`.edge[data-edge="${i}"]`).classList.add('touch');
+    });
+  }
   scene.addEventListener('mouseover', (e) => {
     const n = nodeOf(e.target);
     if (n !== hovered) {
       hovered = n;
+      touchEdges(n);
       showInfo(n || focusedNode);
       if (grid) grid.wake();
     }
@@ -565,8 +634,8 @@
     centerOn(n);
   }
   function centerOn(n, k = view.k) {
-    view = { k, x: svg.clientWidth / 2 - (n.x + n.width / 2) * k, y: svg.clientHeight / 2 - (n.y + n.height / 2) * k };
-    apply();
+    fitted = false;
+    moveTo({ k, x: svg.clientWidth / 2 - (n.x + n.width / 2) * k, y: svg.clientHeight / 2 - (n.y + n.height / 2) * k });
   }
   function zoomTo(n) {
     centerOn(n, Math.max(view.k, 1.2));
@@ -635,6 +704,7 @@
       if (more.length) items.push({ heading: 'More analyses here' }, ...more.map((a) => ({ icon: a.icon, label: a.label, run: run(a) })));
     }
     if (!isTerminal(n)) items.push('-', { icon: 'copy', label: 'Copy Code', run: () => vscode.postMessage({ type: 'copy', text: n.text }) });
+    if (n.location) items.push({ icon: 'location', label: 'Copy Location', run: () => vscode.postMessage({ type: 'copy', text: `${n.location.file}:${n.location.line + 1}:${n.location.character + 1}` }) });
     return items;
   }
   function edgeMenuItems(i) {
@@ -669,6 +739,8 @@
       ...(folded.length ? [{ icon: 'unfold', label: `Expand All Calls (${folded.length})`, run: () => vscode.postMessage({ type: 'expand', keys: folded, expand: true }) }] : []),
       ...(unfolded.length ? [{ icon: 'fold', label: 'Fold All Calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
       { icon: 'list-tree', label: panel.hidden ? 'Show Path Explorer' : 'Hide Path Explorer', keys: 'P', run: () => togglePanel(panel.hidden) },
+      { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
+      { icon: 'play-circle', label: 'Animate Every Path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },
       '-',
       { icon: 'markdown', label: 'Copy as Mermaid', run: () => copyMermaid() },
       { icon: 'save', label: 'Save as SVG', run: () => saveSvg() },
@@ -730,7 +802,10 @@
   });
 
   // Pan by dragging, zoom with the wheel (Shift+wheel pans sideways), Fit to see it all.
+  // Whether the view is as Fit left it, so resizing the tab fits again.
+  let fitted = false;
   function apply() {
+    view = kit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
     if (grid) grid.wake();
     map.update();
@@ -752,18 +827,30 @@
     const w = svg.clientWidth || 800;
     const h = svg.clientHeight || 600;
     let k = Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height);
+    let to;
     if (k < 0.55 && !all) {
       // Too small to read when it all fits: start at the top at a readable size, centered on the start circle.
       k = 0.85;
       const start = chart.nodes.find((n) => n.kind === 'start') || chart.nodes[0];
-      view = { k, x: w / 2 - (start.x + start.width / 2) * k, y: 20 };
+      to = { k, x: w / 2 - (start.x + start.width / 2) * k, y: 20 };
     } else {
       k = Math.max(0.2, k);
-      view = { k, x: Math.max(20, (w - chart.width * k) / 2), y: 20 };
+      to = { k, x: Math.max(20, (w - chart.width * k) / 2), y: 20 };
     }
-    apply();
+    moveTo(to, !all);
+    fitted = true;
+  }
+  /** Moves the view there: smoothly when the person asked, at once when a chart first opens. */
+  function moveTo(to, atOnce) {
+    if (atOnce) {
+      view = to;
+      apply();
+    } else {
+      kit.glide(view, to, (v) => { view = v; apply(); });
+    }
   }
   function zoom(f, cx, cy) {
+    fitted = false;
     const k = Math.min(3, Math.max(0.2, view.k * f));
     const px = cx ?? svg.clientWidth / 2;
     const py = cy ?? svg.clientHeight / 2;
@@ -776,13 +863,14 @@
     drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('dragging');
+    svg.focus({ preventScroll: true });
   });
   svg.addEventListener('pointermove', (e) => {
     if (grid) {
       const r = svg.getBoundingClientRect();
       grid.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
     }
-    if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; apply(); }
+    if (drag) { fitted = false; view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; apply(); }
   });
   svg.addEventListener('pointerup', (e) => {
     // A click on the background, not a drag, stops the flowing lines.
@@ -793,12 +881,14 @@
   svg.addEventListener('pointerleave', () => {
     if (grid) grid.pointer(undefined);
     hovered = undefined;
+    touchEdges(undefined);
     showInfo(focusedNode);
   });
   svg.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
       // Shift+wheel moves the chart sideways.
+      fitted = false;
       view.x -= e.deltaY || e.deltaX;
       apply();
       return;
@@ -835,7 +925,23 @@
   document.getElementById('savePng').addEventListener('click', savePng);
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
-  document.getElementById('zoomLevel').addEventListener('click', () => zoom(1 / view.k));
+  const zoomButton = document.getElementById('zoomLevel');
+  zoomButton.addEventListener('click', () => kit.zoomPresets(menu, zoomButton, view.k, (k) => zoom(k / view.k), () => fit(true)));
+  // Double-clicking the background fits; arrow keys pan while the background has the focus.
+  svg.addEventListener('dblclick', (e) => {
+    if (!nodeOf(e.target) && !e.target.closest('.edge')) fit(true);
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.target === svg) kit.panKey(e, (dx, dy) => { fitted = false; view = { k: view.k, x: view.x + dx, y: view.y + dy }; apply(); });
+  });
+  // The minimap can be hidden (M); the choice is kept.
+  map.hidden = prefs.minimap === false;
+  function toggleMinimap() {
+    map.hidden = !map.hidden;
+    prefs.minimap = !map.hidden;
+    saveState();
+  }
+  kit.refitOnResize(svg, () => fitted, () => fit(true));
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('toCursor').addEventListener('click', toCursor);
   document.getElementById('togglePaths').addEventListener('click', () => togglePanel(panel.hidden));
@@ -867,6 +973,7 @@
     else if (e.key === '0') fit(true);
     else if (e.key === 'c' || e.key === 'C') toCursor();
     else if (e.key === 'p' || e.key === 'P') togglePanel(panel.hidden);
+    else if (e.key === 'm' || e.key === 'M') toggleMinimap();
     else if (e.key === 'Escape') {
       if (!legend.hidden) {
         legend.hidden = true;

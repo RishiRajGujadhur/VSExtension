@@ -15,6 +15,7 @@
   function drawFlows(scene, before, paths) {
     const old = scene.querySelector('.flows');
     if (old) old.remove();
+    if (scene.ownerSVGElement) scene.ownerSVGElement.classList.toggle('flowing', paths.length > 0);
     if (!paths.length) return;
     const layer = el('g', { class: 'flows' });
     scene.insertBefore(layer, before);
@@ -151,6 +152,7 @@
         });
         element.appendChild(button);
       }
+      if (!element.querySelector('[role="menuitem"]')) return;
       element.hidden = false;
       // Kept inside the window.
       const width = element.offsetWidth;
@@ -192,6 +194,8 @@
     const scene = map.querySelector('.mini-scene') || map.querySelector('g');
     const frame = map.querySelector('rect');
     let bounds;
+    // Hidden by the person (M, or the background menu), whatever the chart's size.
+    let off = false;
     function draw(boxes, pad = 20) {
       scene.textContent = '';
       bounds = undefined;
@@ -231,7 +235,7 @@
       frame.setAttribute('width', vw);
       frame.setAttribute('height', vh);
       const fits = vx <= bounds.x && vy <= bounds.y && vx + vw >= bounds.x + bounds.w && vy + vh >= bounds.y + bounds.h;
-      map.classList.toggle('off', fits);
+      map.classList.toggle('off', fits || off);
     }
     let dragging = false;
     const moveTo = (e) => {
@@ -246,7 +250,13 @@
     map.addEventListener('pointermove', (e) => { if (dragging) moveTo(e); });
     map.addEventListener('pointerup', () => { dragging = false; });
     window.addEventListener('resize', update);
-    return { draw, update, get bounds() { return bounds; } };
+    return {
+      draw,
+      update,
+      get bounds() { return bounds; },
+      get hidden() { return off; },
+      set hidden(value) { off = !!value; update(); },
+    };
   }
 
   /** An exported SVG (from exportSvg) drawn at twice its size as a PNG, given to `done` as base64. */
@@ -266,5 +276,84 @@
     picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(image.text);
   }
 
-  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, menu, minimap, toPng };
+  /**
+   * A view moved back so that at least `margin` pixels of the chart stay in the window: dragging or zooming can
+   * not lose the chart off the side. `bounds` is the chart's box ({ x, y, w, h }) in chart units.
+   */
+  function clampView(view, bounds, width, height, margin = 80) {
+    if (!bounds) return view;
+    const left = bounds.x * view.k;
+    const right = (bounds.x + bounds.w) * view.k;
+    const top = bounds.y * view.k;
+    const bottom = (bounds.y + bounds.h) * view.k;
+    const m = Math.min(margin, width / 2, height / 2);
+    // The chart's right edge stays right of the margin, its left edge left of the far margin; same up and down.
+    const x = Math.min(Math.max(view.x, m - right), width - m - left);
+    const y = Math.min(Math.max(view.y, m - bottom), height - m - top);
+    return { k: view.k, x, y };
+  }
+
+  /**
+   * Moves the view smoothly to `to` over a fifth of a second (at once when the system asks for reduced motion),
+   * calling `set` with each step. Returns a function that stops it.
+   */
+  const reduced = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: true };
+  let moving;
+  function glide(from, to, set) {
+    cancelAnimationFrame(moving);
+    if (reduced.matches) {
+      set(to);
+      return;
+    }
+    const started = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - started) / 200);
+      const e = 1 - Math.pow(1 - t, 3);
+      set({ k: from.k + (to.k - from.k) * e, x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e });
+      if (t < 1) moving = requestAnimationFrame(step);
+    };
+    moving = requestAnimationFrame(step);
+  }
+
+  /** The zoom presets menu, opened from the zoom level button. */
+  function zoomPresets(menuControl, button, current, zoomTo, fit) {
+    const r = button.getBoundingClientRect();
+    const levels = [0.5, 0.75, 1, 1.5, 2];
+    menuControl.open(
+      [
+        ...levels.map((k) => ({ icon: Math.abs(current - k) < 0.01 ? 'check' : 'blank', label: `${k * 100}%`, run: () => zoomTo(k) })),
+        '-',
+        { icon: 'screen-full', label: 'Fit', keys: '0', run: fit },
+      ],
+      r.left,
+      r.bottom + 2,
+      button,
+    );
+  }
+
+  /** Arrow keys pan the chart by a step when the background (not a box) has the focus; Shift moves further. */
+  function panKey(e, pan) {
+    const step = e.shiftKey ? 240 : 60;
+    const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+    const move = moves[e.key];
+    if (!move) return false;
+    e.preventDefault();
+    pan(move[0], move[1]);
+    return true;
+  }
+
+  /** Calls `refit` when the chart area changes size while the chart is still as Fit left it. */
+  function refitOnResize(element, isFitted, refit) {
+    let last = `${element.clientWidth}x${element.clientHeight}`;
+    let timer;
+    new ResizeObserver(() => {
+      const size = `${element.clientWidth}x${element.clientHeight}`;
+      if (size === last) return;
+      last = size;
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (isFitted()) refit(); }, 80);
+    }).observe(element);
+  }
+
+  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

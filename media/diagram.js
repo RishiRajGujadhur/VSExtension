@@ -83,6 +83,7 @@
     else if (node.side < 0 && diagram.leftCaption) parts.push(diagram.leftCaption);
     else if (node.side > 0 && diagram.rightCaption) parts.push(diagram.rightCaption);
     if (node.kind === 'pattern') parts.push('design pattern');
+    if (node.duplicates) parts.push(`${node.duplicates} the same`);
     if (node.children.length && node.collapsed && node !== diagram.center) parts.push(`${node.children.length} folded`);
     if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
     return parts.join('. ');
@@ -256,6 +257,7 @@
         // The subject: a circle, with a port where values come in and one where they go out.
         const r = node.w / 2;
         el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'halo' }, g);
+        el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'ring' }, g);
         el('circle', { cx: r, cy: H / 2, r, class: 'box' }, g);
         if (captions.left !== undefined) el('circle', { cx: 0, cy: H / 2, r: 5, class: 'port in' }, g);
         if (captions.right !== undefined) el('circle', { cx: node.w, cy: H / 2, r: 5, class: 'port out' }, g);
@@ -264,7 +266,13 @@
         const w = node.w;
         el('path', { d: `M12,0 H${w - 12} L${w},${H / 2} L${w - 12},${H} H12 L0,${H / 2} Z`, class: 'box' }, g);
       } else {
+        if (node.duplicates) el('rect', { x: 4, y: -4, width: node.w, height: H, rx: 6, class: 'box stack' }, g);
         el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
+        if (node.duplicates) {
+          const badge = el('g', { class: 'dup-badge', transform: `translate(${node.w - 14},${-4})`, 'aria-hidden': 'true' }, g);
+          el('rect', { x: -14, y: -8, width: 28, height: 16, rx: 8 }, badge);
+          el('text', { y: 4, 'text-anchor': 'middle' }, badge).textContent = `×${node.duplicates}`;
+        }
       }
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
       if (node.location) {
@@ -470,7 +478,10 @@
     drawFlows();
   }
 
+  // Whether the view is as Fit left it, so resizing the tab fits again.
+  let fitted = false;
   function apply() {
+    view = window.chartKit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
     paint(false);
     if (grid) grid.wake();
@@ -488,20 +499,32 @@
     const height = svg.clientHeight || 600;
     if (!box.width || !box.height) return;
     const k = Math.min(1.2, (width - 40) / box.width, (height - 40) / box.height);
+    let to;
     if (k < 0.6 && diagram && !all) {
       // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
       const c = diagram.center;
-      view = { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
+      to = { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
     } else {
-      view = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
+      to = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
     }
-    apply();
+    moveTo(to, !all);
+    fitted = true;
+  }
+
+  /** Moves the view there: smoothly when asked by the person, at once when a chart first opens. */
+  function moveTo(to, atOnce) {
+    if (atOnce) {
+      view = to;
+      apply();
+    } else {
+      window.chartKit.glide(view, to, (v) => { view = v; apply(); });
+    }
   }
 
   /** Pans so the box is in the middle of the window, at the current zoom. */
   function centerOn(node) {
-    view = { k: view.k, x: svg.clientWidth / 2 - (node.px + node.w / 2) * view.k, y: svg.clientHeight / 2 - (node.py + H / 2) * view.k };
-    apply();
+    fitted = false;
+    moveTo({ k: view.k, x: svg.clientWidth / 2 - (node.px + node.w / 2) * view.k, y: svg.clientHeight / 2 - (node.py + H / 2) * view.k });
   }
 
   // Find: matching boxes stand out, the rest fade; folded boxes holding a match unfold. Enter goes to the next match.
@@ -539,6 +562,7 @@
   });
 
   function zoom(factor, cx, cy) {
+    fitted = false;
     const k = Math.min(3, Math.max(0.15, view.k * factor));
     const px = cx === undefined ? svg.clientWidth / 2 : cx;
     const py = cy === undefined ? svg.clientHeight / 2 : cy;
@@ -610,11 +634,40 @@
       if (main.length) items.push('-', ...main.map((a) => ({ icon: a.icon, label: a.label, run: () => vscode.postMessage({ type: 'analyze', command: a.command, location: node.location }) })));
       if (more.length) items.push({ heading: 'More analyses here' }, ...more.map((a) => ({ icon: a.icon, label: a.label, run: () => vscode.postMessage({ type: 'analyze', command: a.command, location: node.location }) })));
     }
-    if (node !== diagram.center) {
+    if (node === diagram.center) {
+      // The subject: everything at once.
+      items.push(
+        { icon: 'play-circle', label: 'Animate Every Flow', run: () => { flowing = diagram.center; drawFlows(); } },
+        { icon: 'unfold', label: 'Unfold All', run: () => setAll(false) },
+        { icon: 'fold', label: 'Fold All', run: () => setAll(true) },
+        ...(isolated ? [{ icon: 'filter', label: 'Show Whole Chart', run: () => isolate(undefined) }] : []),
+        { icon: 'screen-full', label: 'Fit the Whole Chart', keys: '0', run: () => fit(true) },
+      );
+    } else {
       items.push('-', { icon: 'filter', label: node === isolated ? 'Show Whole Chart' : 'Show Only This Branch', keys: 'B', run: () => isolate(node === isolated ? undefined : node) });
-      if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? `Unfold (${node.children.length})` : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
+      if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? (node.duplicates ? `Show the ${node.duplicates} Duplicates` : `Unfold (${node.children.length})`) : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
+      items.push({ icon: 'play-circle', label: 'Animate Its Flow', run: () => { flowing = node; drawFlows(); } });
     }
+    items.push('-', { icon: 'copy', label: 'Copy Text', run: () => vscode.postMessage({ type: 'copy', text: [node.label, node.description].filter(Boolean).join(' · ') }) });
+    if (node.location) items.push({ icon: 'location', label: 'Copy Location', run: () => vscode.postMessage({ type: 'copy', text: `${node.location.file}:${node.location.line + 1}:${node.location.character + 1}` }) });
     return items;
+  }
+  function backgroundMenu() {
+    return [
+      { icon: 'screen-full', label: 'Fit the Whole Chart', keys: '0', run: () => fit(true) },
+      { icon: 'zoom-in', label: 'Actual Size', run: () => zoom(1 / view.k) },
+      { icon: 'home', label: 'Go to the Subject', keys: 'Home', run: () => centerOn(diagram.center) },
+      ...(isolated ? [{ icon: 'filter', label: 'Show Whole Chart', run: () => isolate(undefined) }] : []),
+      '-',
+      { icon: 'unfold', label: 'Unfold All', run: () => setAll(false) },
+      { icon: 'fold', label: 'Fold All', run: () => setAll(true) },
+      { icon: 'play-circle', label: 'Animate Every Flow', run: () => { flowing = diagram.center; drawFlows(); } },
+      { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
+      '-',
+      { icon: 'markdown', label: 'Copy as Mermaid', run: copyMermaid },
+      { icon: 'save', label: 'Save as SVG', run: saveSvg },
+      { icon: 'file-media', label: 'Save as PNG', run: savePng },
+    ];
   }
   const menu = window.chartKit.menu(boxMenu);
   function openMenu(node, x, y) {
@@ -626,6 +679,14 @@
     const node = boxOf(e.target);
     e.preventDefault();
     if (node) openMenu(node, e.clientX, e.clientY);
+    else if (diagram) menu.open(backgroundMenu(), e.clientX, e.clientY, svg);
+  });
+  // Double-clicking the background fits the chart; arrow keys pan it while the background has the focus.
+  svg.addEventListener('dblclick', (e) => {
+    if (!boxOf(e.target)) fit(true);
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.target === svg) window.chartKit.panKey(e, (dx, dy) => { fitted = false; view = { k: view.k, x: view.x + dx, y: view.y + dy }; apply(); });
   });
 
   // Drag the background to pan; the wheel zooms around the pointer.
@@ -635,6 +696,7 @@
     drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('dragging');
+    svg.focus({ preventScroll: true });
   });
   svg.addEventListener('pointermove', (e) => {
     if (grid) {
@@ -642,6 +704,7 @@
       grid.pointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     }
     if (!drag) return;
+    fitted = false;
     view.x = e.clientX - drag.x;
     view.y = e.clientY - drag.y;
     apply();
@@ -709,7 +772,19 @@
   }
 
   document.getElementById('mermaid').addEventListener('click', copyMermaid);
-  zoomLevel.addEventListener('click', () => zoom(1 / view.k));
+  zoomLevel.addEventListener('click', () => window.chartKit.zoomPresets(menu, zoomLevel, view.k, (k) => zoom(k / view.k), () => fit(true)));
+  // The minimap can be hidden (M); the choice is kept with the other viewer preferences.
+  map.hidden = prefs.minimap === false;
+  function toggleMinimap() {
+    map.hidden = !map.hidden;
+    prefs.minimap = !map.hidden;
+    saveState();
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.target === searchBox || e.ctrlKey || e.metaKey || e.altKey || menu.isOpen) return;
+    if (e.key === 'm' || e.key === 'M') toggleMinimap();
+  });
+  window.chartKit.refitOnResize(svg, () => fitted, () => fit(true));
   // The legend: what colors, arrows and buttons mean, and the keys. Escape closes it.
   const showLegend = (open) => {
     legend.hidden = !open;

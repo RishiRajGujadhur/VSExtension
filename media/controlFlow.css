@@ -18,6 +18,14 @@ main { flex: 1; min-height: 0; display: flex; }
 #paths li.path:hover { background: var(--vscode-list-hoverBackground); }
 #paths li.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
 #paths li.impossible { opacity: .75; border-style: dashed; border-color: var(--vscode-editorWidget-border, rgba(128, 128, 128, .5)); }
+#paths li.path-group { display: flex; align-items: center; gap: 6px; margin: 2px 6px; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
+#paths li.path-group:hover { background: var(--vscode-list-hoverBackground); }
+#paths li.path-group:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+#paths li.path-group .path-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#paths li.path-group .count { flex: none; padding: 0 6px; border-radius: 8px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+#paths ul[role="group"] { margin: 0 0 0 14px; padding: 0; list-style: none; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, rgba(128, 128, 128, .35)); }
+#canvas:focus { outline: none; }
+.edge.touch .line { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.2; }
 #paths li.none { padding: 8px 12px; color: var(--vscode-descriptionForeground); }
 .path-title { font-family: var(--vscode-editor-font-family, monospace); font-size: 12px; font-weight: 600; }
 .path-steps { margin-top: 2px; font-size: 12px; color: var(--vscode-descriptionForeground); }

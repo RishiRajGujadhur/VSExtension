@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, WebStorm-style refactorings, inspections and structural search. Deterministic, offline, no AI.",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -2651,7 +2651,8 @@
         },
         {
           "id": "tsStructure.report",
-          "name": "Analysis"
+          "name": "Analysis",
+          "visibility": "collapsed"
         }
       ],
       "test": [

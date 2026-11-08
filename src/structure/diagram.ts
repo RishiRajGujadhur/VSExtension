@@ -10,6 +10,8 @@ export interface DiagramNode {
   kind?: 'pattern';
   /** The codicon its row has in the results view, or one for common groups such as Design patterns. */
   icon?: string;
+  /** A stack of boxes that read the same: how many, with each one as a child, told apart by its line. */
+  duplicates?: number;
   /** Folded: the children are hidden until the node's button is clicked. */
   collapsed: boolean;
   children: DiagramNode[];
@@ -73,7 +75,40 @@ function onlyWrites(row: ReportNode): boolean {
  * travel left to right through the variable; every other analysis hangs its rows to the right of its subject.
  */
 export function reportDiagram(report: Report): Diagram {
-  return foldToFit(buildDiagram(report));
+  return foldToFit(groupDuplicates(buildDiagram(report)));
+}
+
+/**
+ * Boxes side by side that read exactly the same (label, description, kind and tone), such as one call made on
+ * several lines, become one folded stack: its count shows on it, and unfolding it shows each one with its line.
+ */
+export function groupDuplicates(diagram: Diagram): Diagram {
+  const keyOf = (n: DiagramNode) => [n.label, n.description ?? '', n.kind ?? '', n.tone ?? ''].join('\u0000');
+  const group = (nodes: DiagramNode[]): DiagramNode[] => {
+    const byKey = new Map<string, DiagramNode[]>();
+    for (const n of nodes) byKey.set(keyOf(n), [...(byKey.get(keyOf(n)) ?? []), n]);
+    const out: DiagramNode[] = [];
+    const done = new Set<string>();
+    for (const n of nodes) {
+      const key = keyOf(n);
+      const same = byKey.get(key)!;
+      if (same.length < 2) {
+        out.push({ ...n, children: group(n.children) });
+        continue;
+      }
+      if (done.has(key)) continue;
+      done.add(key);
+      const where = (m: DiagramNode, i: number) => (m.location ? `line ${m.location.line + 1}` : `#${i + 1}`);
+      out.push({
+        ...n,
+        duplicates: same.length,
+        collapsed: true,
+        children: same.map((m, i) => ({ ...m, description: [where(m, i), m.description].filter(Boolean).join(' · '), children: group(m.children) })),
+      });
+    }
+    return out;
+  };
+  return { ...diagram, left: group(diagram.left), right: group(diagram.right) };
 }
 
 /** How many boxes a chart shows when it opens; Unfold All shows the rest. */

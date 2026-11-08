@@ -79,6 +79,8 @@ The functions that write the value sit under **Flows in** and those that read it
 
 - Boxes are as wide as their text and carry the same icon as their row in the results view (a pencil for a write, an eye for a read, books for design patterns); the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
 - Design patterns are purple hexagons on dotted lines, since they describe the code rather than carry the value. Boxes that only group others are dashed outlines.
+- Boxes that read exactly the same, such as one call made on several lines, are stacked into one with a **×2** badge; unfold it to see each one with its line.
+- Right-click the subject circle to animate every flow, fold or unfold everything, or fit; right-click the background for fitting, folding, the minimap and export. While lines flow, the ring around the subject turns with them.
 - Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
 - Hovering a box highlights its way to the subject. Selecting a row in the results view marks its box, and clicking a box selects its row.
@@ -112,6 +114,14 @@ Finding your way around a large function:
 - The bar under the chart shows the hovered or focused box: its kind, line, how many paths pass through it, and its code in full. Hovering a path in the list previews its route.
 - Keys: `Tab` to the chart, `↑` `↓` to follow the flow, `←` `→` along a row, `Enter` to open, `F` to animate, `T` to filter by the box, `Shift+F10` for its menu, `C` for the box at the editor's cursor, `P` to show or hide the Path Explorer, `Home` and `End` for start and end. Shift+wheel scrolls sideways, double-click zooms to a box, and **?** explains every shape, color and key.
 - Zoom and position are kept per function, as is whether the Path Explorer is open.
+- Paths that end the same way are grouped under that ending (*returns permission · 4 paths*); hover a group to see all its paths at once, open it to pick one. Hovering a box lights up the lines into and out of it; while lines flow, rings turn around start and end.
+
+Both charts:
+
+- You can't lose the chart: dragging, zooming and scrolling always keep part of it in the window. Double-click the background, or press `0`, to fit it again; the chart refits when you resize the tab, until you move it yourself.
+- Click the zoom level for 50%, 75%, 100%, 150%, 200% or Fit. Fit and moving to a box glide there (at once when your system asks for reduced motion).
+- Click the background and use the arrow keys to pan (`Shift` for bigger steps); `M` hides or shows the minimap, and the choice is kept.
+- Right-click a box for **Copy Text** or **Copy Location** (`file:line:column`).
 
 The chart has the same animated grid as the Data Flow diagram, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
 

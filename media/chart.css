@@ -74,5 +74,13 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
   #minimap .mini, #miniView { fill: CanvasText; stroke: CanvasText; }
 }
 
+/* While lines flow, the ring around the subject (or around start and end) turns with them. */
+.ring { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2; stroke-dasharray: 6 8; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.flowing .ring { opacity: .9; animation: ring 1.1s linear infinite; filter: drop-shadow(0 0 3px var(--vscode-charts-blue, #00c8ff)); }
+@keyframes ring { to { stroke-dashoffset: -28; } }
+@media (prefers-reduced-motion: reduce) {
+  .flowing .ring { animation: none; }
+}
+
 /* Codicon glyphs inside SVG (chartKit.glyph). */
 .glyph-icon { font-family: codicon; font-size: 14px; font-weight: normal; dominant-baseline: central; text-anchor: middle; pointer-events: none; }

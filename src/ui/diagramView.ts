@@ -85,6 +85,9 @@ export class DiagramPanel {
       } else if (message.type === 'analyze' && message.command && message.location && boxAnalyses.some((a) => a.command === message.command)) {
         // A choice from a box's right-click menu: the same command the results view runs on a row.
         await vscode.commands.executeCommand(message.command, { file: message.location.file, line: message.location.line, character: message.location.character });
+      } else if (message.type === 'copy' && typeof message.text === 'string') {
+        await vscode.env.clipboard.writeText(message.text);
+        void vscode.window.setStatusBarMessage('Copied', 3000);
       } else if (message.type === 'error' && message.text) {
         void vscode.window.showWarningMessage(message.text);
       } else if (message.type === 'savePng' && message.png) {
@@ -141,7 +144,7 @@ export class DiagramPanel {
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Click a box to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
 <main id="stage" aria-label="Chart">
 <canvas id="grid" aria-hidden="true"></canvas>
-<svg id="canvas" class="off" role="tree" aria-label="Analysis diagram. Tab to the subject, then use the arrow keys to move between boxes.">
+<svg id="canvas" class="off" tabindex="-1" role="tree" aria-label="Analysis diagram. Tab to the subject, then use the arrow keys to move between boxes.">
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>
 </svg>
