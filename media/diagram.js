@@ -24,6 +24,7 @@
   let grid;
   let hovered;
   let flowing;
+  let layoutVersion = 0;
   let query = '';
   let matchIndex = -1;
   let shownNodes = [];
@@ -32,13 +33,33 @@
 
   // Boxes are as wide as their text, between MIN_W and MAX_W; longer text is cut with an ellipsis.
   const measure = document.createElement('canvas').getContext('2d');
-  const fontOf = (weight, size) => `${weight} ${size}px ${getComputedStyle(document.body).fontFamily}`;
-  const textWidth = (text, font) => { measure.font = font; return measure.measureText(text || '').width; };
+  // The font is read once rather than per box (reading styles while building the chart forces layout), widths are
+  // remembered, and long text is cut by halving instead of one character at a time.
+  let fontFamily = getComputedStyle(document.body).fontFamily;
+  const widths = new Map();
+  new MutationObserver(() => { fontFamily = getComputedStyle(document.body).fontFamily; widths.clear(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  const fontOf = (weight, size) => `${weight} ${size}px ${fontFamily}`;
+  const textWidth = (text, font) => {
+    const key = `${font}\u0000${text || ''}`;
+    let width = widths.get(key);
+    if (width === undefined) {
+      if (widths.size > 20000) widths.clear();
+      measure.font = font;
+      width = measure.measureText(text || '').width;
+      widths.set(key, width);
+    }
+    return width;
+  };
   const fitText = (text, font, max) => {
     if (!text || textWidth(text, font) <= max) return text || '';
-    let cut = text.length;
-    while (cut > 1 && textWidth(text.slice(0, cut) + '…', font) > max) cut--;
-    return text.slice(0, cut) + '…';
+    let low = 1;
+    let high = text.length - 1;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (textWidth(text.slice(0, mid) + '…', font) <= max) low = mid;
+      else high = mid - 1;
+    }
+    return text.slice(0, low) + '…';
   };
   const widthOf = (node) => Math.min(MAX_W, Math.max(MIN_W, Math.ceil(Math.max(textWidth(node.label, fontOf(600, 12)), textWidth(node.description, fontOf(400, 11))) + 30)));
   const el = (name, attrs, parent) => {
@@ -105,8 +126,15 @@
     }
   }
 
+  // Layout covers every unfolded box; painting puts only the boxes in and around the window into the document, so
+  // a chart of thousands of boxes stays as quick as a small one. Below DETAIL_ZOOM boxes are drawn without text.
+  const DETAIL_ZOOM = 0.45;
+  let painted;
+  let captions = {};
+
   function render() {
     scene.textContent = '';
+    painted = undefined;
     if (!diagram) return;
     const leftRows = place(roots(diagram.left), 1, -1, { next: 0 });
     const rightRows = place(roots(diagram.right), 1, 1, { next: 0 });
@@ -137,55 +165,73 @@
       n.px = n.side === 0 ? -n.w / 2 : n.side > 0 ? edge(1, n.depth) : -edge(-1, n.depth) - n.w;
       n.py = n.row * (H + GAP_Y);
     }
-    const x = (n) => n.px;
-    const y = (n) => n.py;
+    captions = {
+      left: diagram.leftCaption && roots(diagram.left).length ? -edge(-1, 1) : undefined,
+      right: diagram.rightCaption && roots(diagram.right).length ? edge(1, 1) : undefined,
+    };
+    highlighted = [];
+    layoutVersion++;
+    drawMinimap();
+    paint(true);
+    apply();
+  }
+
+  /** The window in chart coordinates. */
+  function viewport() {
+    return { x0: -view.x / view.k, y0: -view.y / view.k, x1: ((svg.clientWidth || 800) - view.x) / view.k, y1: ((svg.clientHeight || 600) - view.y) / view.k };
+  }
+
+  /**
+   * Puts the boxes and lines in and around the window into the document: the window plus one window's size on
+   * every side, so panning redraws only now and then. `everything` draws the whole chart in detail, for export.
+   */
+  function paint(force, everything) {
+    if (!diagram || !shownNodes.length) return;
+    const v = viewport();
+    const detail = everything || view.k >= DETAIL_ZOOM;
+    if (!force && painted && painted.detail === detail && v.x0 >= painted.x0 && v.y0 >= painted.y0 && v.x1 <= painted.x1 && v.y1 <= painted.y1) return;
+    const spanX = v.x1 - v.x0;
+    const spanY = v.y1 - v.y0;
+    const region = everything ? { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity } : { x0: v.x0 - spanX, y0: v.y0 - spanY, x1: v.x1 + spanX, y1: v.y1 + spanY };
+    painted = { ...region, detail };
+    const hadFocus = svg.contains(document.activeElement);
+    scene.textContent = '';
+    const center = diagram.center;
+    const overlaps = (x0, y0, x1, y1) => x1 >= region.x0 && x0 <= region.x1 && y1 >= region.y0 && y0 <= region.y1;
+    for (const n of shownNodes) {
+      n.el = undefined;
+      n.edgeEl = undefined;
+    }
 
     const edges = el('g', { class: 'edges' }, scene);
-    const link = (from, to, side) => {
+    for (const node of shownNodes) {
+      if (node === center) continue;
       // Arrows point the way the value moves: into the subject on the left, away from it on the right.
-      const [a, b] = side < 0 ? [to, from] : [from, to];
-      const x1 = x(a) + a.w;
-      const y1 = y(a) + H / 2;
-      const x2 = x(b);
-      const y2 = y(b) + H / 2;
+      const from = node.parent || center;
+      const [a, b] = node.side < 0 ? [node, from] : [from, node];
+      const x1 = a.px + a.w;
+      const y1 = a.py + H / 2;
+      const x2 = b.px;
+      const y2 = b.py + H / 2;
+      if (!overlaps(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2))) continue;
       const mid = (x1 + x2) / 2;
-      return el('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2 - 2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, edges);
-    };
-    const linkAll = (parent, nodes, side) => {
-      for (const node of nodes) {
-        node.edgeEl = link(parent, node, side);
-        if (node.kind === 'pattern') {
-          // A pattern describes the code around the value; it is not where the value goes, so no arrow.
-          node.edgeEl.classList.add('relation');
-          node.edgeEl.removeAttribute('marker-end');
-        }
-        linkAll(node, visible(node), side);
+      node.edgeEl = el('path', { d: `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2 - 2},${y2}`, class: 'edge', 'marker-end': 'url(#arrow)' }, edges);
+      if (node.kind === 'pattern') {
+        // A pattern describes the code around the value; it is not where the value goes, so no arrow.
+        node.edgeEl.classList.add('relation');
+        node.edgeEl.removeAttribute('marker-end');
       }
-    };
-    linkAll(center, roots(diagram.left), -1);
-    linkAll(center, roots(diagram.right), 1);
+    }
 
     const layer = el('g', { class: 'nodes' }, scene);
-    const draw = (node) => {
+    for (const node of shownNodes) {
+      if (!overlaps(node.px, node.py, node.px + node.w, node.py + H)) continue;
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
       // A box with no code of its own only gathers the boxes behind it: drawn as a dashed outline.
       const group = !node.location && node.children.length && !node.kind && node !== center ? ' group' : '';
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${x(node)},${y(node)})`, tabindex: node === center ? 0 : -1 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: node === center ? 0 : -1 }, layer);
       node.el = g;
-      g.addEventListener('focus', () => { focused = node; highlightPath(node); showInfo(node); });
-      g.addEventListener('mouseenter', () => { hovered = node; highlightPath(node); showInfo(node); if (grid) grid.wake(); });
-      g.addEventListener('mouseleave', () => { hovered = undefined; highlightPath(focused); showInfo(focused); if (grid) grid.wake(); });
-      // Clicking a box sends a wave through the grid and, with Flow animation on, animates the lines along its path.
-      g.addEventListener('click', () => {
-        if (grid) grid.pulse(view.x + (node.px + node.w / 2) * view.k, view.y + (node.py + H / 2) * view.k);
-        if (prefs.flow) {
-          flowing = node;
-          drawFlows();
-        }
-      });
-      g.addEventListener('keydown', (e) => onNodeKey(e, node));
-      g.addEventListener('dblclick', (e) => { e.stopPropagation(); if (node !== center) isolate(node); });
-      el('title', {}, g).textContent = [node.label, node.description].filter(Boolean).join('\n');
+      g.diagramNode = node;
       if (node.kind === 'pattern') {
         // Hexagon: a design pattern, not a step of the value.
         const w = node.w;
@@ -194,45 +240,27 @@
         el('rect', { width: node.w, height: H, rx: 6, class: 'box' }, g);
       }
       if (node.tone) el('rect', { width: 4, height: H - 8, x: 3, y: 4, rx: 2, class: 'tone' }, g);
-      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = fitText(node.label, fontOf(600, 12), node.w - 26);
-      if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = fitText(node.description, fontOf(400, 11), node.w - 26);
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
         g.dataset.vscodeContext = JSON.stringify({ webviewSection: 'node', file: node.location.file, line: node.location.line, character: node.location.character, preventDefaultContextMenuItems: true });
-        // A single click opens the code; a double-click focuses on the branch instead, so the click waits a moment.
-        let pending;
-        g.addEventListener('click', () => {
-          clearTimeout(pending);
-          pending = setTimeout(() => vscode.postMessage({ type: 'open', location: node.location }), 220);
-        });
-        g.addEventListener('dblclick', () => clearTimeout(pending));
       }
+      if (!detail) continue;
+      el('text', { x: 14, y: node.description ? 20 : H / 2 + 4, class: 'label' }, g).textContent = fitText(node.label, fontOf(600, 12), node.w - 26);
+      if (node.description) el('text', { x: 14, y: 37, class: 'description' }, g).textContent = fitText(node.description, fontOf(400, 11), node.w - 26);
       if (node.children.length && node !== center) {
         // The fold button sits on the outer edge, where the children are.
         const toggle = el('g', { class: 'toggle', transform: `translate(${node.side < 0 ? 0 : node.w},${H / 2})` }, g);
         el('circle', { r: 9 }, toggle);
         el('text', { y: 4, 'text-anchor': 'middle' }, toggle).textContent = node.collapsed ? String(node.children.length) : '−';
         el('title', {}, toggle).textContent = node.collapsed ? `Show ${node.children.length} more` : 'Fold';
-        toggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          node.collapsed = !node.collapsed;
-          render();
-        });
-        // Clicking the button twice quickly folds and unfolds; it is not a double-click on the box.
-        toggle.addEventListener('dblclick', (e) => e.stopPropagation());
       }
-    };
-    draw(center);
-    const drawAll = (nodes) => nodes.forEach((n) => { draw(n); drawAll(visible(n)); });
-    drawAll(roots(diagram.left));
-    drawAll(roots(diagram.right));
-    if (diagram.leftCaption && roots(diagram.left).length) el('text', { x: -edge(-1, 1), y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
-    if (diagram.rightCaption && roots(diagram.right).length) el('text', { x: edge(1, 1), y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
+    }
+    if (captions.left !== undefined) el('text', { x: captions.left, y: -14, 'text-anchor': 'end', class: 'side' }, scene).textContent = diagram.leftCaption + ' →';
+    if (captions.right !== undefined) el('text', { x: captions.right, y: -14, class: 'side' }, scene).textContent = '→ ' + diagram.rightCaption;
     highlighted = [];
     drawFlows();
-    drawMinimap();
-    apply();
-    if (focused && focused.el && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
+    if (pathNode) highlightPath(pathNode);
+    if (focused && focused.el && (hadFocus || force) && document.activeElement !== searchBox) focused.el.focus({ preventScroll: true });
   }
 
   const branchBar = document.getElementById('branch');
@@ -273,9 +301,13 @@
     const bottom = Math.max(...shownNodes.map((n) => n.py + H)) + pad;
     bounds = { x: left, y: top, w: right - left, h: bottom - top };
     minimap.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
+    // A few paths, one per color, rather than an element per box.
+    const shapes = {};
     for (const n of shownNodes) {
-      el('rect', { x: n.px, y: n.py, width: n.w, height: H, rx: 6, class: `mini${n === diagram.center ? ' center' : ''}${n.kind ? ' ' + n.kind : ''}${n.tone ? ' ' + n.tone : ''}` }, miniScene);
+      const kind = n === diagram.center ? 'center' : n.kind || n.tone || 'plain';
+      (shapes[kind] = shapes[kind] || []).push(`M${n.px},${n.py}h${n.w}v${H}h${-n.w}z`);
     }
+    for (const [kind, parts] of Object.entries(shapes)) el('path', { d: parts.join(''), class: `mini ${kind}` }, miniScene);
   }
   function updateMinimapView() {
     if (!bounds) {
@@ -339,7 +371,9 @@
 
   // The way from a box to the subject stands out while the box is hovered or focused.
   let highlighted = [];
+  let pathNode;
   function highlightPath(node) {
+    pathNode = node;
     for (const item of highlighted) {
       item.classList.remove('onpath');
       if (item.classList.contains('edge') && !item.classList.contains('relation')) item.setAttribute('marker-end', 'url(#arrow)');
@@ -379,7 +413,11 @@
     if (e.key.startsWith('Arrow')) {
       e.preventDefault();
       const next = neighbor(node, e.key);
-      if (next && next.el) { next.el.focus({ preventScroll: true }); ensureVisible(next); }
+      if (next) {
+        // Scroll first: a box outside the window is drawn once it comes into view.
+        ensureVisible(next);
+        if (next.el) next.el.focus({ preventScroll: true });
+      }
     } else if (e.key === 'Enter' && node.location) {
       vscode.postMessage({ type: 'open', location: node.location });
     } else if ((e.key === 'b' || e.key === 'B') && node !== diagram.center) {
@@ -429,6 +467,7 @@
 
   function apply() {
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+    paint(false);
     if (grid) grid.wake();
     zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
     updateMinimapView();
@@ -436,7 +475,8 @@
   }
 
   function fit(all) {
-    const box = scene.getBBox();
+    if (!bounds) return;
+    const box = { x: bounds.x, y: bounds.y - 30, width: bounds.w, height: bounds.h + 30 };
     const width = svg.clientWidth || 800;
     const height = svg.clientHeight || 600;
     if (!box.width || !box.height) return;
@@ -499,6 +539,56 @@
     apply();
   }
 
+  // One listener per event for every box, whatever the chart's size: the box is found from the event's target.
+  const boxOf = (target) => {
+    const g = target instanceof Element ? target.closest('.node') : null;
+    return g ? g.diagramNode : undefined;
+  };
+  let pendingOpen;
+  svg.addEventListener('click', (e) => {
+    const node = boxOf(e.target);
+    if (!node) return;
+    if (e.target.closest('.toggle')) {
+      node.collapsed = !node.collapsed;
+      render();
+      return;
+    }
+    // Clicking a box sends a wave through the grid and, with Flow animation on, animates the lines along its path.
+    if (grid) grid.pulse(view.x + (node.px + node.w / 2) * view.k, view.y + (node.py + H / 2) * view.k);
+    if (prefs.flow) {
+      flowing = node;
+      drawFlows();
+    }
+    // A single click opens the code; a double-click focuses on the branch instead, so the click waits a moment.
+    clearTimeout(pendingOpen);
+    if (node.location) pendingOpen = setTimeout(() => vscode.postMessage({ type: 'open', location: node.location }), 220);
+  });
+  svg.addEventListener('dblclick', (e) => {
+    const node = boxOf(e.target);
+    clearTimeout(pendingOpen);
+    // Clicking a fold button twice quickly folds and unfolds; it is not a double-click on the box.
+    if (node && node !== diagram.center && !e.target.closest('.toggle')) isolate(node);
+  });
+  svg.addEventListener('mouseover', (e) => {
+    const node = boxOf(e.target);
+    if (node === hovered) return;
+    hovered = node;
+    highlightPath(node || focused);
+    showInfo(node || focused);
+    if (grid) grid.wake();
+  });
+  svg.addEventListener('focusin', (e) => {
+    const node = boxOf(e.target);
+    if (!node) return;
+    focused = node;
+    highlightPath(node);
+    showInfo(node);
+  });
+  svg.addEventListener('keydown', (e) => {
+    const node = boxOf(e.target);
+    if (node) onNodeKey(e, node);
+  });
+
   // Drag the background to pan; the wheel zooms around the pointer.
   let drag;
   svg.addEventListener('pointerdown', (e) => {
@@ -523,7 +613,14 @@
     drag = undefined;
     svg.classList.remove('dragging');
   });
-  svg.addEventListener('pointerleave', () => { if (grid) grid.pointer(undefined); });
+  svg.addEventListener('pointerleave', () => {
+    if (grid) grid.pointer(undefined);
+    if (hovered) {
+      hovered = undefined;
+      highlightPath(focused);
+      showInfo(focused);
+    }
+  });
   svg.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = svg.getBoundingClientRect();
@@ -539,6 +636,7 @@
   // Save SVG: the chart as a standalone image, with the theme's colors written into it.
   function exportSvg() {
     if (!diagram) return;
+    paint(true, true);
     const box = scene.getBBox();
     const pad = 24;
     const out = svg.cloneNode(true);
@@ -561,6 +659,7 @@
     out.querySelectorAll('.flows').forEach((layer) => layer.remove());
     const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
     out.insertBefore(background, out.querySelector('#scene'));
+    paint(true);
     return { text: new XMLSerializer().serializeToString(out), width: box.width + 2 * pad, height: box.height + 2 * pad };
   }
 
@@ -672,10 +771,16 @@
   // The grid and the two toggles in the header.
   const effectsButton = document.getElementById('effects');
   const flowButton = document.getElementById('flowToggle');
+  const onScreen = (n) => ({ x: view.x + n.px * view.k, y: view.y + n.py * view.k, w: n.w * view.k, h: H * view.k });
   grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
     panX: view.x,
     panY: view.y,
-    box: hovered && hovered.px !== undefined ? { x: view.x + hovered.px * view.k, y: view.y + hovered.py * view.k, w: hovered.w * view.k, h: H * view.k } : undefined,
+    k: view.k,
+    version: layoutVersion,
+    get boxes() {
+      return shownNodes.map(onScreen);
+    },
+    hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
   }));
   const showPrefs = () => {
     effectsButton.setAttribute('aria-pressed', String(prefs.effects));
