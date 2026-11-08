@@ -55,9 +55,11 @@ export function activate(context: vscode.ExtensionContext): void {
   configWatcher.onDidCreate(invalidate);
   configWatcher.onDidDelete(invalidate);
   // Project file lists are cached: a new, deleted or renamed source file means listing them again.
-  const sourceWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', false, true, false);
+  const sourceWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}');
   sourceWatcher.onDidCreate(() => projects.invalidateFileList());
   sourceWatcher.onDidDelete(() => projects.invalidateFileList());
+  // A file changed outside the editor (a checkout, a formatter): read it again on the next analysis.
+  sourceWatcher.onDidChange((uri) => projects.fileChanged(uri.fsPath));
 
   // Before anything that reads the scope, so its cache is cleared first when the settings change.
   registerScope(context);

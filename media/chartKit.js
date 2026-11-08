@@ -19,6 +19,8 @@
     if (!paths.length) return;
     const layer = el('g', { class: 'flows' });
     scene.insertBefore(layer, before);
+    // One glow path for all lines (it doesn't move), then the moving dashes.
+    el('path', { d: paths.join(' '), class: 'flow-glow' }, layer);
     for (const d of paths) el('path', { d, class: 'flow' }, layer);
   }
 
@@ -91,6 +93,20 @@
       glyphs.set(name, content && content !== 'none' ? content.replace(/^["']|["']$/g, '') : '');
     }
     return glyphs.get(name);
+  }
+
+  /**
+   * The ring around a circle that turns while lines flow: two arcs, one round each side, running from where the flow
+   * enters the circle to where it leaves, so its dashes move the same way as the lines. Angles are in degrees
+   * (0 is right, 90 is down).
+   */
+  function flowRing(parent, cx, cy, r, fromDegrees, toDegrees) {
+    const at = (deg) => ({ x: cx + r * Math.cos((deg * Math.PI) / 180), y: cy + r * Math.sin((deg * Math.PI) / 180) });
+    const a = at(fromDegrees);
+    const b = at(toDegrees);
+    const g = el('g', { class: 'ring', 'aria-hidden': 'true' }, parent);
+    for (const sweep of [1, 0]) el('path', { d: `M${a.x},${a.y} A${r},${r} 0 0 ${sweep} ${b.x},${b.y}` }, g);
+    return g;
   }
 
   /** An icon drawn in SVG at (x, y), its center; nothing when the icon is unknown. */
@@ -355,5 +371,5 @@
     }).observe(element);
   }
 
-  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  window.chartKit = { el, drawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

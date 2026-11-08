@@ -57,7 +57,7 @@
     let columns = 0;
     let rows = 0;
     // Per dot: spring displacement and velocity, the displacement the boxes ask for, and nearness to a box.
-    let dx, dy, vx, vy, tx, ty, near, glowOf;
+    let dx, dy, vx, vy, tx, ty, near, glowOf, xs, ys;
     let targetsKey = '';
     let pointer;
     let pulses = [];
@@ -95,7 +95,7 @@
       columns = Math.ceil(width / GRID) + 3;
       rows = Math.ceil(height / GRID) + 3;
       const n = columns * rows;
-      [dx, dy, vx, vy, tx, ty, near, glowOf] = Array.from({ length: 8 }, () => new Float32Array(n));
+      [dx, dy, vx, vy, tx, ty, near, glowOf, xs, ys] = Array.from({ length: 10 }, () => new Float32Array(n));
       targetsKey = '';
       wake();
     }
@@ -178,8 +178,6 @@
       const still = reduceMotion.matches;
       let moving = pulses.length > 0;
       const n = columns * rows;
-      const xs = new Float32Array(n);
-      const ys = new Float32Array(n);
       for (let j = 0; j < rows; j++) {
         for (let i = 0; i < columns; i++) {
           const k = j * columns + i;

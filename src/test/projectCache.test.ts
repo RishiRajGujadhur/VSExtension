@@ -54,3 +54,14 @@ test('an analysis project is reused between runs and follows edits', () => {
   const grown = projects.analysisProject(file).program();
   assert.ok(grown.getSourceFiles().some((sf) => sf.fileName.endsWith('/src/b.ts')), 'a new file is picked up once the file list is refreshed');
 });
+
+test('an analysis project reuses a recent disk check, and reads a file again once told it changed', () => {
+  const dir = tempProject();
+  const file = path.join(dir, 'src', 'a.ts');
+  const projects = new ProjectService();
+  const text = () => projects.analysisProject(file).sourceFile(file).text;
+  assert.doesNotMatch(text(), /changed/);
+  fs.writeFileSync(file, 'export const a = 3; // changed outside the editor\n');
+  projects.fileChanged(file);
+  assert.match(text(), /changed outside the editor/);
+});

@@ -32,14 +32,19 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 
 /* Flowing lines: pulses moving along a path in the direction the value or execution goes (chartKit.drawFlows). */
 .flow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 8 32; pointer-events: none;
-  animation: flow 1.1s linear infinite; filter: drop-shadow(0 0 3px var(--vscode-charts-blue, #00c8ff)); }
+  animation: flow 1.1s linear infinite; }
+/* The glow is a wide, faint, still line under the dashes: no filter to recompute on every frame. */
+.flow-glow { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 7; stroke-opacity: .16; stroke-linecap: round; pointer-events: none; }
 @keyframes flow { to { stroke-dashoffset: -40; } }
 @media (prefers-reduced-motion: reduce) {
   .flow { animation: none; stroke-dasharray: none; opacity: .75; }
+  .flow-glow { display: none; }
 }
 @media (forced-colors: active) {
   #grid { display: none; }
   .flow { stroke: Highlight; filter: none; }
+  .flow-glow { display: none; }
+  .ring path { stroke: Highlight; }
 }
 
 /* The minimap (chartKit.minimap): the whole chart in the corner with the visible part outlined. */
@@ -75,11 +80,13 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 }
 
 /* While lines flow, the ring around the subject (or around start and end) turns with them. */
-.ring { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2; stroke-dasharray: 6 8; opacity: 0; transition: opacity .2s; pointer-events: none; }
-.flowing .ring { opacity: .9; animation: ring 1.1s linear infinite; filter: drop-shadow(0 0 3px var(--vscode-charts-blue, #00c8ff)); }
+.ring { opacity: 0; transition: opacity .2s; pointer-events: none; }
+.ring path { fill: none; stroke: var(--vscode-charts-blue, #00c8ff); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 6 8; }
+.flowing .ring { opacity: .95; }
+.flowing .ring path { animation: ring 1.1s linear infinite; }
 @keyframes ring { to { stroke-dashoffset: -28; } }
 @media (prefers-reduced-motion: reduce) {
-  .flowing .ring { animation: none; }
+  .flowing .ring path { animation: none; }
 }
 
 /* Codicon glyphs inside SVG (chartKit.glyph). */

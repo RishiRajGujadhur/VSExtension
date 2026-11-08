@@ -19,6 +19,10 @@ export class ControlFlowPanel {
   /** The file and the function's offset in it, moved along with edits above it. */
   private target: { uri: vscode.Uri; anchor: number; folder?: string } | undefined;
   private refresh: NodeJS.Timeout | undefined;
+  /** The parsed file the chart was drawn from, for finding the cursor's box without touching the project. */
+  private source: import('typescript').SourceFile | undefined;
+  private cursorTimer: NodeJS.Timeout | undefined;
+  private cursorId: number | undefined;
   /** Calls expanded in place, by "file:offset"; cleared when another function is shown. */
   private expanded = new Set<string>();
   /** The slice on screen, sent after each chart until the code is edited. */
@@ -43,10 +47,18 @@ export class ControlFlowPanel {
         this.refresh = setTimeout(() => this.build(), 400);
       }),
       vscode.window.onDidChangeTextEditorSelection((e) => {
-        if (!this.panel || !this.chart || !this.target || e.textEditor.document.uri.toString() !== this.target.uri.toString()) return;
-        const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
-        const id = nodeAtOffset(this.chart, project.sourceFile(this.target.uri.fsPath), e.textEditor.document.offsetAt(e.selections[0].active));
-        void this.panel.webview.postMessage({ type: 'cursor', id });
+        if (!this.panel || !this.chart || !this.source || !this.target || e.textEditor.document.uri.toString() !== this.target.uri.toString()) return;
+        // The box under the cursor, from the file the chart was drawn from: moving the cursor never rebuilds the
+        // project, and holding an arrow key sends one update rather than one per line.
+        clearTimeout(this.cursorTimer);
+        const offset = e.textEditor.document.offsetAt(e.selections[0].active);
+        this.cursorTimer = setTimeout(() => {
+          if (!this.panel || !this.chart || !this.source) return;
+          const id = nodeAtOffset(this.chart, this.source, offset);
+          if (id === this.cursorId) return;
+          this.cursorId = id;
+          void this.panel.webview.postMessage({ type: 'cursor', id });
+        }, 40);
       }),
     );
   }
@@ -143,6 +155,8 @@ export class ControlFlowPanel {
     try {
       const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
       this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, this.expanded);
+      this.source = project.sourceFile(this.target.uri.fsPath);
+      this.cursorId = undefined;
       // Follow the function itself from now on, not the cursor position it was found from.
       this.target.anchor = this.chart.anchor;
       this.post();

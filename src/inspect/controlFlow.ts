@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { FunctionWithBody, calledFunction, functionLabel, isFunctionWithBody } from '../structure/util';
+import { FunctionWithBody, calledFunction, functionLabel, functionOfDeclaration, isFunctionWithBody } from '../structure/util';
 import { own } from './defUse';
 
 /**
@@ -336,6 +336,28 @@ export interface CallTarget {
   fn: FunctionWithBody;
 }
 
+/**
+ * The function a call runs, found from the callee's symbol alone when that settles it: 'library' when it is declared
+ * only in declaration files (the standard library, installed packages), the function when its one declaration has a
+ * body in the project. Otherwise undefined, and the call's signature is resolved. Resolving overloads is most of the
+ * time a chart takes, and most calls are settled without it.
+ */
+function quickTarget(checker: ts.TypeChecker, call: ts.CallExpression | ts.NewExpression): FunctionWithBody | 'library' | undefined {
+  const callee = call.expression;
+  const name = ts.isPropertyAccessExpression(callee) ? callee.name : ts.isIdentifier(callee) ? callee : undefined;
+  if (!name) return undefined;
+  let symbol = checker.getSymbolAtLocation(name);
+  if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+  const declarations = symbol?.declarations;
+  if (!declarations?.length) return undefined;
+  if (declarations.every((d) => d.getSourceFile().isDeclarationFile)) return 'library';
+  if (declarations.length === 1 && !ts.isClassLike(declarations[0])) {
+    const fn = functionOfDeclaration(declarations[0]);
+    if (fn && fn.body && !fn.getSourceFile().isDeclarationFile) return fn;
+  }
+  return undefined;
+}
+
 /** Calls in a statement or return node to functions with a body in the project, in source order. */
 export function callTargets(node: CfgNode, checker: ts.TypeChecker): CallTarget[] {
   if (node.kind !== 'statement' && node.kind !== 'return') return [];
@@ -344,7 +366,9 @@ export function callTargets(node: CfgNode, checker: ts.TypeChecker): CallTarget[
     if (isFunctionWithBody(n) || ts.isClassLike(n)) return;
     ts.forEachChild(n, visit);
     if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
-      const fn = calledFunction(checker, n);
+      const quick = quickTarget(checker, n);
+      if (quick === 'library') return;
+      const fn = quick ?? calledFunction(checker, n);
       if (fn && fn.body) found.push({ key: `${n.getSourceFile().fileName}:${n.getStart()}`, name: functionLabel(fn), fn });
     }
   };

@@ -84,12 +84,12 @@
     const { width: w, height: h } = n;
     if (n.kind === 'start') {
       // Start: a filled circle with a play mark; the function's name is written beside it.
-      el('circle', { cx: w / 2, cy: h / 2, r: w / 2 + 5, class: 'ring' }, g);
+      kit.flowRing(g, w / 2, h / 2, w / 2 + 5, -90, 90);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       kit.icon(g, 'play', w / 2 + 1, h / 2, 'terminal-icon');
     } else if (n.kind === 'end') {
       // End: a ring around a dot, like the end of a UML activity.
-      el('circle', { cx: w / 2, cy: h / 2, r: w / 2 + 5, class: 'ring' }, g);
+      kit.flowRing(g, w / 2, h / 2, w / 2 + 5, -90, 90);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2 - 7, class: 'core' }, g);
     } else if (n.kind === 'decision' || n.kind === 'switch') {
@@ -129,6 +129,7 @@
 
   function render() {
     scene.textContent = '';
+    touched = [];
     if (!chart) return;
     const edges = el('g', { class: 'edges' }, scene);
     layoutVersion++;
@@ -215,7 +216,11 @@
 
   // The minimap: kinds in their colors, the boxes of the picked path lit up.
   const map = kit.minimap(document.getElementById('minimap'), svg, () => view, (v) => { view = v; apply(); });
+  let minimapKey;
   function drawMinimap(on) {
+    const key = `${layoutVersion}|${on ? [...on].sort((a, b) => a - b).join(',') : ''}`;
+    if (key === minimapKey) return;
+    minimapKey = key;
     if (!chart) return map.draw([]);
     map.draw(chart.nodes.map((n) => ({
       x: n.x,
@@ -575,12 +580,16 @@
     const n = nodeOf(e.target);
     if (n) zoomTo(n);
   });
+  let touched = [];
   function touchEdges(n) {
-    scene.querySelectorAll('.edge.touch').forEach((g) => g.classList.remove('touch'));
+    touched.forEach((g) => g.classList.remove('touch'));
+    touched = [];
     if (!n) return;
+    const elements = scene.querySelectorAll('.edge');
     chart.edges.forEach((e, i) => {
-      if (e.from === n.id || e.to === n.id) scene.querySelector(`.edge[data-edge="${i}"]`).classList.add('touch');
+      if (e.from === n.id || e.to === n.id) touched.push(elements[i]);
     });
+    touched.forEach((g) => g.classList.add('touch'));
   }
   scene.addEventListener('mouseover', (e) => {
     const n = nodeOf(e.target);
@@ -804,6 +813,11 @@
   // Pan by dragging, zoom with the wheel (Shift+wheel pans sideways), Fit to see it all.
   // Whether the view is as Fit left it, so resizing the tab fits again.
   let fitted = false;
+  // Dragging and the wheel fire many events per frame: the view is redrawn once per frame.
+  let applyFrame = 0;
+  function applySoon() {
+    if (!applyFrame) applyFrame = requestAnimationFrame(() => { applyFrame = 0; apply(); });
+  }
   function apply() {
     view = kit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
@@ -855,7 +869,7 @@
     const px = cx ?? svg.clientWidth / 2;
     const py = cy ?? svg.clientHeight / 2;
     view = { k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k };
-    apply();
+    applySoon();
   }
   let drag;
   svg.addEventListener('pointerdown', (e) => {
@@ -870,7 +884,7 @@
       const r = svg.getBoundingClientRect();
       grid.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
     }
-    if (drag) { fitted = false; view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; apply(); }
+    if (drag) { fitted = false; view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; applySoon(); }
   });
   svg.addEventListener('pointerup', (e) => {
     // A click on the background, not a drag, stops the flowing lines.
@@ -890,7 +904,7 @@
       // Shift+wheel moves the chart sideways.
       fitted = false;
       view.x -= e.deltaY || e.deltaX;
-      apply();
+      applySoon();
       return;
     }
     const r = svg.getBoundingClientRect();

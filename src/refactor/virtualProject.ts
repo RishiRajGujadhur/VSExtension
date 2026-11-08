@@ -40,6 +40,11 @@ export class VirtualProject {
   readonly service: ts.LanguageService;
   private readonly files = new Map<string, VirtualFile>();
   private readonly roots: string[];
+  /**
+   * Bumped whenever a file's text changes. The language service compares it before checking every file's version,
+   * so asking for the program again with nothing changed costs nothing instead of a walk over every file.
+   */
+  private projectVersion = 0;
 
   constructor(
     private readonly parsed: ts.ParsedCommandLine,
@@ -53,6 +58,7 @@ export class VirtualProject {
       getCompilationSettings: () => parsed.options,
       getProjectReferences: () => parsed.projectReferences,
       getScriptFileNames: () => this.scriptFileNames(),
+      getProjectVersion: () => String(this.projectVersion),
       getScriptVersion: (fileName) => this.entry(fileName).version,
       getScriptSnapshot: (fileName) => {
         const text = this.text(fileName);
@@ -91,6 +97,7 @@ export class VirtualProject {
     if (file.text !== text) {
       file.text = text;
       file.version = versionOf(text);
+      this.projectVersion++;
     }
   }
 
@@ -134,6 +141,7 @@ export class VirtualProject {
         file.original = text;
         file.text = text;
         file.version = versionOf(text);
+        this.projectVersion++;
       }
     }
   }

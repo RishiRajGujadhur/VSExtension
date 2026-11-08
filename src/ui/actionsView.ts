@@ -27,6 +27,8 @@ export class ActionsView implements vscode.WebviewViewProvider {
   static readonly viewType = 'tsStructure.actions';
   private view: vscode.WebviewView | undefined;
   private userKeybindings: vscode.Uri | undefined;
+  /** keybindings.json as last read; read again only when the file changes. */
+  private userBindingsCache: ReturnType<typeof parseKeybindingsJson> | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -39,7 +41,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
     this.userKeybindings = vscode.Uri.joinPath(context.globalStorageUri, '..', '..', 'keybindings.json');
     context.globalState.setKeysForSync([usageKey, layoutKey]);
     const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.joinPath(this.userKeybindings, '..'), 'keybindings.json'));
-    const refresh = () => this.post();
+    const refresh = () => {
+      this.userBindingsCache = undefined;
+      void this.post();
+    };
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(ActionsView.viewType, this),
       // Turning a feature on or off shows or hides its actions.
@@ -115,11 +120,13 @@ export class ActionsView implements vscode.WebviewViewProvider {
   /** The user's keybindings.json, or nothing when there is none or it can't be read. */
   private async userBindings() {
     if (!this.userKeybindings) return [];
+    if (this.userBindingsCache) return this.userBindingsCache;
     try {
-      return parseKeybindingsJson(new TextDecoder().decode(await vscode.workspace.fs.readFile(this.userKeybindings)));
+      this.userBindingsCache = parseKeybindingsJson(new TextDecoder().decode(await vscode.workspace.fs.readFile(this.userKeybindings)));
     } catch {
-      return [];
+      this.userBindingsCache = [];
     }
+    return this.userBindingsCache;
   }
 
   private async post(): Promise<void> {

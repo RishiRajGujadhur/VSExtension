@@ -257,7 +257,7 @@
         // The subject: a circle, with a port where values come in and one where they go out.
         const r = node.w / 2;
         el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'halo' }, g);
-        el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'ring' }, g);
+        window.chartKit.flowRing(g, r, H / 2, r + 5, 180, 0);
         el('circle', { cx: r, cy: H / 2, r, class: 'box' }, g);
         if (captions.left !== undefined) el('circle', { cx: 0, cy: H / 2, r: 5, class: 'port in' }, g);
         if (captions.right !== undefined) el('circle', { cx: node.w, cy: H / 2, r: 5, class: 'port out' }, g);
@@ -480,6 +480,11 @@
 
   // Whether the view is as Fit left it, so resizing the tab fits again.
   let fitted = false;
+  // Dragging and the wheel fire many events per frame: the view is redrawn once per frame.
+  let applyFrame = 0;
+  function applySoon() {
+    if (!applyFrame) applyFrame = requestAnimationFrame(() => { applyFrame = 0; apply(); });
+  }
   function apply() {
     view = window.chartKit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
@@ -567,7 +572,7 @@
     const px = cx === undefined ? svg.clientWidth / 2 : cx;
     const py = cy === undefined ? svg.clientHeight / 2 : cy;
     view = { k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k };
-    apply();
+    applySoon();
   }
 
   // One listener per event for every box, whatever the chart's size: the box is found from the event's target.
@@ -707,7 +712,7 @@
     fitted = false;
     view.x = e.clientX - drag.x;
     view.y = e.clientY - drag.y;
-    apply();
+    applySoon();
   });
   svg.addEventListener('pointerup', (e) => {
     // A click on the background, not a drag, stops the flow animation.

@@ -80,7 +80,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - Boxes are as wide as their text and carry the same icon as their row in the results view (a pencil for a write, an eye for a read, books for design patterns); the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
 - Design patterns are purple hexagons on dotted lines, since they describe the code rather than carry the value. Boxes that only group others are dashed outlines.
 - Boxes that read exactly the same, such as one call made on several lines, are stacked into one with a **×2** badge; unfold it to see each one with its line.
-- Right-click the subject circle to animate every flow, fold or unfold everything, or fit; right-click the background for fitting, folding, the minimap and export. While lines flow, the ring around the subject turns with them.
+- Right-click the subject circle to animate every flow, fold or unfold everything, or fit; right-click the background for fitting, folding, the minimap and export. While lines flow, the ring around the subject runs with them: in at the left port, round both sides and out at the right.
 - Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
 - Hovering a box highlights its way to the subject. Selecting a row in the results view marks its box, and clicking a box selects its row.
@@ -114,7 +114,7 @@ Finding your way around a large function:
 - The bar under the chart shows the hovered or focused box: its kind, line, how many paths pass through it, and its code in full. Hovering a path in the list previews its route.
 - Keys: `Tab` to the chart, `↑` `↓` to follow the flow, `←` `→` along a row, `Enter` to open, `F` to animate, `T` to filter by the box, `Shift+F10` for its menu, `C` for the box at the editor's cursor, `P` to show or hide the Path Explorer, `Home` and `End` for start and end. Shift+wheel scrolls sideways, double-click zooms to a box, and **?** explains every shape, color and key.
 - Zoom and position are kept per function, as is whether the Path Explorer is open.
-- Paths that end the same way are grouped under that ending (*returns permission · 4 paths*); hover a group to see all its paths at once, open it to pick one. Hovering a box lights up the lines into and out of it; while lines flow, rings turn around start and end.
+- Paths that end the same way are grouped under that ending (*returns permission · 4 paths*); hover a group to see all its paths at once, open it to pick one. Hovering a box lights up the lines into and out of it; while lines flow, the rings around start and end run from top to bottom, the way the lines go.
 
 Both charts:
 

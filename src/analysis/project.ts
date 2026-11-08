@@ -27,6 +27,11 @@ const inferredExtensions = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs'
 const inferredExcludes = ['**/node_modules/**', '**/dist/**', '**/out/**', '**/build/**', '**/coverage/**', '**/.git/**'];
 const maxInferredFiles = 5000;
 const packageRecheckMs = 60_000;
+/**
+ * Project files on disk are checked again at most this often: analyses that run back to back (a chart redrawn as
+ * the cursor moves, Analyze or Refactor This) don't stat every file each time. Open files come from the editor.
+ */
+const projectRecheckMs = 1000;
 /** Analysis projects kept between runs, one per configuration, most recently used last. */
 const maxAnalysisProjects = 3;
 
@@ -53,7 +58,7 @@ export class ProjectService {
   /** Parsed compiler configurations: parsing one lists the files it includes, which is slow on big projects. */
   private readonly configs = new Map<string, ts.ParsedCommandLine | undefined>();
   private readonly inferredFiles = new Map<string, string[]>();
-  private readonly diskTexts = new Map<string, { mtimeMs: number; size: number; text: string; checkedAt: number }>();
+  private readonly diskTexts = new Map<string, { mtimeMs: number; size: number; text: string | undefined; checkedAt: number }>();
   private readonly analysisProjects = new Map<string, VirtualProject>();
 
   constructor(private readonly overlay: OverlayProvider = () => undefined) {}
@@ -94,6 +99,12 @@ export class ProjectService {
     return found ?? { parsed: this.inferProject(file, fallbackRoot ?? path.dirname(file)) };
   }
 
+  /** A file changed on disk: read it again next time, even within the short reuse window of analysis projects. */
+  fileChanged(fileName: string): void {
+    const cached = this.diskTexts.get(pathKey(fileName));
+    if (cached) cached.checkedAt = 0;
+  }
+
   /** An editable in-memory copy of the file's project, for computing refactorings. */
   createVirtualProject(fileName: string, fallbackRoot?: string): VirtualProject {
     const { configPath, parsed } = this.resolve(fileName, fallbackRoot);
@@ -113,7 +124,7 @@ export class ProjectService {
     if (project && project.rootNames.length === roots.length && project.rootNames.every((f, i) => f === roots[i])) {
       project.refresh();
     } else {
-      project = new VirtualProject(parsed, this.overlay, configPath, (f) => this.readDisk(f));
+      project = new VirtualProject(parsed, this.overlay, configPath, (f) => this.readDisk(f, true));
     }
     this.analysisProjects.delete(key);
     this.analysisProjects.set(key, project);
@@ -149,18 +160,20 @@ export class ProjectService {
    * unchanged: a program is rebuilt on every edit, and most of its files (lib and @types
    * declarations especially) never change.
    */
-  private readDisk(fileName: string): string | undefined {
+  private readDisk(fileName: string, reuseRecent = false): string | undefined {
     const key = pathKey(fileName);
     const cached = this.diskTexts.get(key);
     // Installed packages change only on an install: checking them once a minute keeps edits fast on Windows, where stat is slow.
-    if (cached && key.includes('/node_modules/') && Date.now() - cached.checkedAt < packageRecheckMs) {
+    const recheck = key.includes('/node_modules/') ? packageRecheckMs : reuseRecent ? projectRecheckMs : 0;
+    if (cached && Date.now() - cached.checkedAt < recheck) {
       return cached.text;
     }
-    let stat: fs.Stats;
-    try {
-      stat = fs.statSync(fileName);
-    } catch {
-      this.diskTexts.delete(key);
+    // Module resolution asks about many files that don't exist (each extension of each import): stat without
+    // throwing, which is far cheaper on Windows, and remember missing files inside packages like present ones.
+    const stat = fs.statSync(fileName, { throwIfNoEntry: false });
+    if (!stat) {
+      if (key.includes('/node_modules/')) this.diskTexts.set(key, { mtimeMs: -1, size: -1, text: undefined, checkedAt: Date.now() });
+      else this.diskTexts.delete(key);
       return undefined;
     }
     if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
