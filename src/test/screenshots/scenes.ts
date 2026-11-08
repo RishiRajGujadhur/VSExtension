@@ -138,6 +138,14 @@ export const scenes: Scene[] = [
   // Understand code
   { ...analysis('data-flow', 'src/orders.ts', 'payment: PaymentMethod, coupon', 'tsStructure.dataFlow'), settle: 3000 },
   {
+    ...analysis('control-flow', 'src/shipping.ts', 'deliveryDays(items', 'tsStructure.controlFlow'),
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeEditorsInOtherGroups');
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    },
+    settle: 3500,
+  },
+  {
     ...analysis('data-flow-diagram', 'src/orders.ts', 'payment: PaymentMethod, coupon', 'tsStructure.dataFlowDiagram'),
     async cleanup() {
       await vscode.commands.executeCommand('workbench.action.closeEditorsInOtherGroups');

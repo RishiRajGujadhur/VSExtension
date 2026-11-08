@@ -84,3 +84,10 @@ li.selected .path-steps { color: inherit; }
   .edge .line { stroke: CanvasText; }
   .edge.on .line, .node.cursor .shape, .node.on .shape { stroke: Highlight; }
 }
+
+/* In a narrow tab, such as beside the code, the Path Explorer goes below the chart. */
+@media (max-width: 720px) {
+  main { flex-direction: column; }
+  #stage { min-height: 0; flex: 1 1 60%; }
+  #explorer { width: auto; flex: 0 1 40%; min-height: 140px; border-left: 0; border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); }
+}

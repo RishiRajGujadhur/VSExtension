@@ -352,6 +352,23 @@ async function analysisCommandsFlow(): Promise<void> {
   await vscode.window.showTextDocument(document);
   console.log('data flow diagram ok');
 
+  // Control Flow Graph draws the function at the cursor in its own tab; Explain Value Path reports in the results view.
+  at('subtotal = ');
+  const chart = await vscode.commands.executeCommand<{ name: string; nodes: unknown[]; paths: unknown[] }>('tsStructure.controlFlow');
+  assert.ok(chart && chart.nodes.length > 2 && chart.paths.length > 0, 'control flow chart');
+  for (let i = 0; i < 50 && !/^Control Flow: /.test(vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join('|')); i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  const flowTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Control Flow: '));
+  assert.ok(flowTab, 'the Control Flow tab opens');
+  console.log(`control flow ok: ${chart.name}, ${chart.nodes.length} boxes, ${chart.paths.length} paths`);
+  await vscode.window.tabGroups.close(flowTab);
+  await vscode.window.showTextDocument(document);
+  at('subtotal = ');
+  const values = await vscode.commands.executeCommand<{ title: string; description?: string }>('tsStructure.explainValue');
+  assert.ok(values, 'explain value report');
+  console.log(`explain value ok: ${values.title} — ${values.description}`);
+
   // From the Explorer with two files selected, the path between them, without the picker.
   const discount = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
   const between = await vscode.commands.executeCommand<{ title: string }>('tsStructure.dependencyPath', cart, [cart, discount]);

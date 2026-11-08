@@ -221,13 +221,20 @@
     scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
     document.getElementById('zoomLevel').textContent = `${Math.round(view.k * 100)}%`;
   }
-  function fit() {
+  function fit(all) {
     if (!chart) return;
     const w = svg.clientWidth || 800;
     const h = svg.clientHeight || 600;
-    const k = Math.max(0.3, Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height));
-    // Wide charts start at the top at a readable size; narrow ones are centered.
-    view = { k, x: Math.max(20, (w - chart.width * k) / 2), y: 20 };
+    let k = Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height);
+    if (k < 0.55 && !all) {
+      // Too small to read when it all fits: start at the top at a readable size, centered on the start box.
+      k = 0.85;
+      const start = chart.nodes[0];
+      view = { k, x: w / 2 - (start.x + start.width / 2) * k, y: 20 };
+    } else {
+      k = Math.max(0.2, k);
+      view = { k, x: Math.max(20, (w - chart.width * k) / 2), y: 20 };
+    }
     apply();
   }
   function zoom(f, cx, cy) {
@@ -253,7 +260,7 @@
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
   document.getElementById('zoomLevel').addEventListener('click', () => zoom(1 / view.k));
-  document.getElementById('fit').addEventListener('click', fit);
+  document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('togglePaths').addEventListener('click', (e) => {
     panel.hidden = !panel.hidden;
     e.currentTarget.setAttribute('aria-pressed', String(!panel.hidden));
@@ -270,7 +277,7 @@
     if (e.target instanceof HTMLInputElement) return;
     if (e.key === '+' || e.key === '=') zoom(1.2);
     else if (e.key === '-') zoom(1 / 1.2);
-    else if (e.key === '0') fit();
+    else if (e.key === '0') fit(true);
     else if (e.key === 'Escape') { pins = []; select(-1); }
   });
 
