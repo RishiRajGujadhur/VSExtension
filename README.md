@@ -56,7 +56,7 @@ The functions that write the value sit under **Flows in** and those that read it
 
 #### Diagram view
 
-**Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in the middle, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more.
+**Data Flow Diagram** (`Ctrl+Alt+S 8`) draws the same flow as a chart in the editor: the variable in the middle, where its values come from on the left and where they go on the right. Click a box to open its code, click its round button to fold or unfold what is behind it, drag to move around and scroll to zoom. Right-click a box to check it for null, find its usages, follow its data flow or run another analysis there. **Show as Diagram** in the results view (`Ctrl+Alt+S 9`) draws any analysis this way, and the chart follows the results view as you run more. Large charts stay quick: only what is on screen is drawn, and a chart of more than 150 boxes opens with its deepest levels folded.
 
 - Boxes are as wide as their text; the bar under the chart shows the whole text, file, line and line of code of the box under the mouse.
 - Design patterns are purple hexagons on dotted lines, since they describe the code rather than carry the value. Boxes that only group others are dashed outlines.
@@ -67,7 +67,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - Zoom, position and folding are kept when the same analysis runs again.
 - **Copy Mermaid** copies the chart as a Mermaid flowchart for Markdown, GitHub issues and pull requests; **Save SVG** and **Save PNG** save it as an image.
 - **?** explains the colors, arrows and keys.
-- An animated dot grid sits behind the chart: it glows and moves aside around the pointer, and clicking a box sends a wave across it. Clicking a box also makes pulses flow along the lines between it and the subject. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid is adapted from [robot-components](https://github.com/dashrobotco/robot-components), MIT.)
+- An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Clicking a box also makes pulses flow along the lines between it and the subject. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid is adapted from [robot-components](https://github.com/dashrobotco/robot-components), MIT.)
 
 ![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
 
