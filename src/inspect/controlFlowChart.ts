@@ -116,3 +116,28 @@ export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile,
   const sizeOf = (n: (typeof inside)[number]) => (n.location!.endLine - n.location!.line) * 1000 + (n.location!.endCharacter - n.location!.character);
   return inside.sort((a, b) => sizeOf(a) - sizeOf(b))[0]?.id;
 }
+
+/**
+ * The control flow as a Mermaid flowchart (top to bottom): decisions as hexagons, start and end as stadiums,
+ * loop edges dotted, unreachable code dashed, a highlighted path drawn thick.
+ */
+export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: number[]; edges: number[] }): string {
+  const escape = (text: string) => text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;');
+  const lines = ['flowchart TD'];
+  for (const n of chart.nodes) {
+    const text = `"${n.lines.map(escape).join('<br/>')}"`;
+    const shape = n.kind === 'decision' || n.kind === 'switch' || n.kind === 'loop' ? `{{${text}}}` : n.kind === 'start' || n.kind === 'end' ? `([${text}])` : `[${text}]`;
+    lines.push(`  n${n.id}${shape}`);
+  }
+  chart.edges.forEach((e) => {
+    const arrow = e.back ? '-.->' : '-->';
+    lines.push(e.label ? `  n${e.from} ${arrow === '-->' ? '--' : '-.'} ${escape(e.label)} ${arrow} n${e.to}` : `  n${e.from} ${arrow} n${e.to}`);
+  });
+  const unreachable = chart.nodes.filter((n) => n.unreachable).map((n) => `n${n.id}`);
+  if (unreachable.length) lines.push('  classDef unreachable stroke-dasharray: 4 4,opacity:0.6', `  class ${unreachable.join(',')} unreachable`);
+  if (highlight?.nodes.length) {
+    lines.push('  classDef onPath stroke-width:3px', `  class ${highlight.nodes.map((n) => `n${n}`).join(',')} onPath`);
+    for (const e of highlight.edges) lines.push(`  linkStyle ${e} stroke-width:3px`);
+  }
+  return lines.join('\n');
+}

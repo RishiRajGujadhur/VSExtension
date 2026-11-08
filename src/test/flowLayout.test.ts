@@ -81,6 +81,21 @@ test('the Control Flow chart has every node placed, source locations and the pat
   assert.equal(chart.nodes[at!].lines[0], 'sensitive');
 });
 
+test('the control flow copies as a Mermaid flowchart, with a picked path drawn thick', async () => {
+  const { controlFlowChart, chartMermaid } = await import('../inspect/controlFlowChart');
+  const chart = controlFlowChart(virtualProject('inspect', 'src/control.ts'), file, offsetIn(file, 'function tot|al'));
+  const text = chartMermaid(chart, { nodes: chart.paths[0].nodes, edges: chart.paths[0].edges });
+  const lines = text.split('\n');
+  assert.equal(lines[0], 'flowchart TD');
+  assert.ok(lines.includes('  n0(["total"])'));
+  assert.ok(lines.includes('  n3{{"for (const item of items)"}}'), text);
+  assert.ok(lines.some((l) => / -- each item --> /.test(l)));
+  // Loop edges are dotted.
+  assert.ok(lines.some((l) => /-\.->/.test(l)));
+  assert.ok(lines.some((l) => l.startsWith('  class ') && l.endsWith(' onPath')));
+  assert.ok(lines.some((l) => l.startsWith('  linkStyle ')));
+});
+
 function offsetLine(marker: string): number {
   const text = require('fs').readFileSync(file, 'utf8') as string;
   return text.slice(0, text.indexOf(marker)).split('\n').length - 1;

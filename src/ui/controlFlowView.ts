@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
-import { ControlFlowChart, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
+import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
+import { saveImage } from './diagramView';
 import { ReportLocation } from '../structure/report';
 
 /**
@@ -57,12 +58,18 @@ export class ControlFlowPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = html(this.panel.webview, media, codicons);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; path?: { nodes: number[]; edges: number[] } }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post();
       } else if (message.type === 'open' && message.location) {
         await openBeside(message.location);
+      } else if (message.type === 'mermaid' && this.chart) {
+        // The picked path, if any, is drawn thick in the copy too.
+        await vscode.env.clipboard.writeText(['```mermaid', chartMermaid(this.chart, message.path), '```', ''].join('\n'));
+        void vscode.window.setStatusBarMessage('Copied the control flow as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
+      } else if (message.type === 'save' && message.svg && this.chart) {
+        await saveImage(Buffer.from(message.svg, 'utf8'), 'svg', `control-flow-${this.chart.name}`);
       }
     });
     this.panel.onDidDispose(() => {
@@ -131,6 +138,10 @@ function html(webview: vscode.Webview, media: vscode.Uri, codicons: vscode.Uri):
   <button id="zoomLevel" title="Zoom level: click for 100%" aria-label="Zoom level, click for 100%">100%</button>
   ${button('zoomIn', 'zoom-in', 'Zoom In (+)')}
   ${button('fit', 'screen-full', 'Fit the Whole Function (0)')}
+  </span>
+  <span class="group" role="group" aria-label="Export">
+  ${button('mermaid', 'markdown', 'Copy as Mermaid: the flowchart, with the picked path drawn thick')}
+  ${button('save', 'save', 'Save as SVG image, in the current colors')}
   </span>
   ${button('togglePaths', 'list-tree', 'Path Explorer: the paths through the function', 'aria-pressed="true" aria-controls="explorer"')}
 </header>

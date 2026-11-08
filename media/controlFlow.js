@@ -257,6 +257,34 @@
     const r = svg.getBoundingClientRect();
     if (e.ctrlKey || e.metaKey || !e.shiftKey) zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
+  // Export: Mermaid text is made by the extension; the SVG is the chart as drawn, with its colors written in.
+  document.getElementById('mermaid').addEventListener('click', () => {
+    const path = selected >= 0 ? chart.paths[selected] : undefined;
+    vscode.postMessage({ type: 'mermaid', path: path ? { nodes: path.nodes, edges: path.edges } : undefined });
+  });
+  document.getElementById('save').addEventListener('click', () => {
+    if (!chart) return;
+    const box = scene.getBBox();
+    const pad = 24;
+    const copy = svg.cloneNode(true);
+    const props = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-family', 'font-size', 'font-weight'];
+    const originals = svg.querySelectorAll('*');
+    copy.querySelectorAll('*').forEach((node, i) => {
+      const style = getComputedStyle(originals[i]);
+      node.setAttribute('style', props.map((p) => `${p}:${style.getPropertyValue(p)}`).join(';'));
+      node.removeAttribute('tabindex');
+    });
+    copy.querySelectorAll('.hit, title').forEach((node) => node.remove());
+    copy.removeAttribute('class');
+    copy.setAttribute('xmlns', svgNs);
+    copy.setAttribute('viewBox', `${box.x - pad} ${box.y - pad} ${box.width + 2 * pad} ${box.height + 2 * pad}`);
+    copy.setAttribute('width', String(Math.ceil(box.width + 2 * pad)));
+    copy.setAttribute('height', String(Math.ceil(box.height + 2 * pad)));
+    copy.querySelector('#scene').removeAttribute('transform');
+    const background = el('rect', { x: box.x - pad, y: box.y - pad, width: box.width + 2 * pad, height: box.height + 2 * pad, fill: getComputedStyle(document.body).backgroundColor });
+    copy.insertBefore(background, copy.querySelector('#scene'));
+    vscode.postMessage({ type: 'save', svg: new XMLSerializer().serializeToString(copy) });
+  });
   document.getElementById('zoomIn').addEventListener('click', () => zoom(1.2));
   document.getElementById('zoomOut').addEventListener('click', () => zoom(1 / 1.2));
   document.getElementById('zoomLevel').addEventListener('click', () => zoom(1 / view.k));

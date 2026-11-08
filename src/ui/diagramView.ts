@@ -189,7 +189,7 @@ export class DiagramPanel {
 }
 
 /** Asks where to save the chart's image, offering the workspace folder and a name from the analysis title. */
-async function saveImage(content: Buffer, extension: 'svg' | 'png', title = 'diagram'): Promise<void> {
+export async function saveImage(content: Buffer, extension: 'svg' | 'png', title = 'diagram'): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   const name = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'}.${extension}`;
   const kind = extension.toUpperCase();
