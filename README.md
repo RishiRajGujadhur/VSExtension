@@ -9,7 +9,7 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 - **Know what a change affects**: Test Impact (also for uncommitted changes), Find Usages grouped by reads, writes and calls, Override Impact, Who Imports This File and the Dependency Graph Diff.
 - **Change code safely**: Change Signature, Introduce Parameter, Move Members, Safe Delete, 70 rewrites and structural search and replace.
 - **Find problems**: live inspections (missing await, unsafe type assertions and more), duplicates, dead exports, import cycles and design patterns.
-- **Built to be used**: an Actions view with search and Most Used, a shortcut for every analysis, interactive charts you can export as Mermaid, SVG or PNG, and screen reader, keyboard and high contrast support.
+- **Built to be used**: an Actions view you can search, pin, reorder and trim, a shortcut for every analysis, interactive charts you can export as Mermaid, SVG or PNG, and screen reader, keyboard and high contrast support.
 
 ![Analyze or Refactor This: every refactoring and analysis for the cursor in one list, each with its shortcut](docs/images/actions-at-cursor.gif)
 
@@ -17,7 +17,16 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 
 1. Open a TypeScript or JavaScript file and put the cursor on a symbol.
 2. Right-click: **Find Usages**, **Find Usages in Current File**, **Data Flow** and **Analyze or Refactor This…** are at the top of the menu. Everything else is under **Code X-Ray**.
-3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, with a search box, your **Most Used** actions first and the rest by category. Results open in the **Analysis** view below it.
+3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, with a search box, your **Pinned** and **Most Used** actions first and the rest by category. Results open in the **Analysis** view below it.
+
+**Arranging the Actions view**
+
+- Hover an action, or move to it with the keyboard, to see its full shortcut (for example `Ctrl+Alt+S` then `1`) and its tools: **ⓘ** explains what it does, how often you used it and its shortcut; the pin keeps it at the top.
+- Pin the actions you use and drag them into the order you like, or press `Alt+Up` and `Alt+Down`.
+- Right-click an action (or press `Shift+F10`) to run, pin, move or hide it, change or add its shortcut, or copy its command ID. `Delete` hides the focused action; hidden actions wait in a folded **Hidden** section, ready to show again.
+- Fold any section by its heading; the view's title bar folds them all, or hides the descriptions for a one-line list. Its **…** menu hides Most Used, shows every hidden action, or resets the view.
+- Type anywhere in the list, or press `/` or `Ctrl+F`, to search. Search covers both tabs, hidden actions and shortcuts (try `F7`), and marks the matching words.
+- Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
 

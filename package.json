@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, WebStorm-style refactorings, inspections and structural search. Deterministic, offline, no AI.",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -890,6 +890,33 @@
         "title": "What This Value Affects (Forward Slice)",
         "category": "TypeScript Structure",
         "icon": "$(debug-step-out)"
+      },
+      {
+        "command": "tsStructure.actions.collapseAll",
+        "title": "Fold or Unfold All Sections",
+        "category": "Code X-Ray Actions",
+        "icon": "$(collapse-all)"
+      },
+      {
+        "command": "tsStructure.actions.toggleDescriptions",
+        "title": "Show or Hide Descriptions",
+        "category": "Code X-Ray Actions",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "tsStructure.actions.toggleMostUsed",
+        "title": "Show or Hide Most Used",
+        "category": "Code X-Ray Actions"
+      },
+      {
+        "command": "tsStructure.actions.showHidden",
+        "title": "Show All Hidden Actions",
+        "category": "Code X-Ray Actions"
+      },
+      {
+        "command": "tsStructure.actions.reset",
+        "title": "Reset Actions View…",
+        "category": "Code X-Ray Actions"
       }
     ],
     "viewsContainers": {
@@ -2327,6 +2354,31 @@
           "command": "tsStructure.report.showDiagram",
           "when": "view == tsStructure.report && tsStructure.hasReport",
           "group": "navigation@6"
+        },
+        {
+          "command": "tsStructure.actions.toggleDescriptions",
+          "when": "view == tsStructure.actions",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tsStructure.actions.collapseAll",
+          "when": "view == tsStructure.actions",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.actions.toggleMostUsed",
+          "when": "view == tsStructure.actions",
+          "group": "1_view@1"
+        },
+        {
+          "command": "tsStructure.actions.showHidden",
+          "when": "view == tsStructure.actions",
+          "group": "1_view@2"
+        },
+        {
+          "command": "tsStructure.actions.reset",
+          "when": "view == tsStructure.actions",
+          "group": "9_reset@1"
         }
       ],
       "view/item/context": [

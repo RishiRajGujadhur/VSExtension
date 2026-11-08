@@ -369,6 +369,14 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.ok(values, 'explain value report');
   console.log(`explain value ok: ${values.title} — ${values.description}`);
 
+  // The Actions view's title commands rearrange it and can be undone by running them again.
+  await vscode.commands.executeCommand('workbench.view.extension.tsStructure');
+  for (const command of ['toggleDescriptions', 'toggleDescriptions', 'collapseAll', 'collapseAll', 'toggleMostUsed', 'toggleMostUsed', 'showHidden']) {
+    await vscode.commands.executeCommand(`tsStructure.actions.${command}`);
+  }
+  await vscode.window.showTextDocument(document);
+  console.log('actions view commands ok');
+
   // From the Explorer with two files selected, the path between them, without the picker.
   const discount = vscode.Uri.file(path.join(sample, 'src/discount.ts'));
   const between = await vscode.commands.executeCommand<{ title: string }>('tsStructure.dependencyPath', cart, [cart, discount]);

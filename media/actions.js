@@ -1,130 +1,491 @@
-// The Actions view: tabs for Analyze and Edit, a search box, Most Used first, then the actions by category.
+// The Actions view: Analyze and Edit tabs, a search box, then Pinned, Most Used and the actions by category.
+// Hovering an action shows its full shortcut and its tools: an info tooltip, pin, and a menu (also on right-click).
+// The arrangement (pinned order, hidden actions, folded sections, descriptions) lives in the extension.
 (function () {
   const vscode = acquireVsCodeApi();
   const tabsBar = document.getElementById('tabs');
   const list = document.getElementById('list');
   const search = document.getElementById('search');
+  const clear = document.getElementById('clear');
+  const found = document.getElementById('found');
   const footer = document.getElementById('footer');
+  const tip = document.getElementById('tip');
+  const menu = document.getElementById('menu');
+  const hint = document.getElementById('tip-hint');
   const saved = vscode.getState() || {};
   let data;
   let tab = saved.tab || 'analyze';
+  let focusAfterRender;
 
+  const save = (patch) => vscode.setState(Object.assign(saved, patch));
+  const send = (change) => vscode.postMessage({ type: 'layout', change });
+  const byCommand = (command) => data.actions.find((a) => a.command === command);
+  const isPinned = (a) => data.layout.pinned.includes(a.command);
+  const isHidden = (a) => data.layout.hidden.includes(a.command);
+
+  function make(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  const spoken = (shortcut) => shortcut.replace(/ /g, ', then ');
   const icon = (name) => {
-    const i = document.createElement('i');
-    i.className = `codicon codicon-${name}`;
+    const i = make('i', `codicon codicon-${name}`);
     i.setAttribute('aria-hidden', 'true');
     return i;
   };
 
-  function item(action, showTab) {
-    const button = document.createElement('button');
-    button.className = 'item';
-    button.title = [action.detail, action.key ? `Shortcut: ${action.key}` : ''].filter(Boolean).join('\n');
-    const tile = document.createElement('span');
-    tile.className = 'tile';
-    tile.appendChild(icon(action.icon));
-    const text = document.createElement('span');
-    text.className = 'text';
-    const label = document.createElement('span');
-    label.className = 'label';
-    label.textContent = action.label;
-    const detail = document.createElement('span');
-    detail.className = 'detail';
-    detail.textContent = action.detail;
-    text.append(label, detail);
-    button.append(tile, text);
-    if (showTab) {
-      const where = document.createElement('span');
-      where.className = 'where';
-      where.textContent = data.tabs.find((t) => t.id === action.tab).label;
-      button.appendChild(where);
-    } else if (action.key) {
-      const key = document.createElement('kbd');
-      key.textContent = action.key.replace(/^Ctrl\+Alt\+S /, '');
-      key.title = action.key;
-      button.appendChild(key);
+  // Text with the searched words marked.
+  function marked(text, words) {
+    const span = document.createDocumentFragment();
+    if (!words.length) {
+      span.append(text);
+      return span;
     }
-    button.setAttribute('aria-label', `${action.label}. ${action.detail}${action.key ? `. Shortcut ${action.key}` : ''}`);
-    button.addEventListener('click', () => vscode.postMessage({ type: 'run', command: action.command }));
-    return button;
+    const lower = text.toLowerCase();
+    const hits = [];
+    for (const w of words) {
+      for (let i = lower.indexOf(w); i >= 0; i = lower.indexOf(w, i + w.length)) hits.push([i, i + w.length]);
+    }
+    hits.sort((x, y) => x[0] - y[0]);
+    let at = 0;
+    for (const [from, to] of hits) {
+      if (from < at) continue;
+      span.append(text.slice(at, from), make('mark', '', text.slice(from, to)));
+      at = to;
+    }
+    span.append(text.slice(at));
+    return span;
   }
 
-  function section(title, actions, showTab) {
+  // A shortcut in full, one key cap per chord, so Ctrl+Alt+S 1 reads as two steps: Ctrl+Alt+S, then 1.
+  function keyCaps(shortcut) {
+    const keys = make('span', 'keys');
+    keys.title = `Shortcut: ${spoken(shortcut)}`;
+    for (const chord of shortcut.split(' ')) keys.append(make('kbd', '', chord));
+    return keys;
+  }
+
+  function toolButton(name, label, onClick, pressed) {
+    const b = make('button', `tool ${name}`);
+    b.type = 'button';
+    // One tab stop per action: the tools are reached with the right arrow from it.
+    b.tabIndex = -1;
+    b.setAttribute('aria-label', label);
+    if (name !== 'info') b.title = label;
+    if (pressed !== undefined) b.setAttribute('aria-pressed', String(pressed));
+    b.append(icon({ info: 'info', pin: pressed ? 'pinned' : 'pin', show: 'eye', more: 'ellipsis' }[name]));
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onClick(b);
+    });
+    return b;
+  }
+
+  function item(action, context) {
+    const { words, inSearch, pinnedIndex } = context;
+    const li = make('li', 'item');
+    li.dataset.command = action.command;
+    const run = make('button', 'run');
+    run.type = 'button';
+    const tile = make('span', 'tile');
+    tile.append(icon(action.icon));
+    const text = make('span', 'text');
+    const label = make('span', 'label');
+    label.append(marked(action.label, words));
+    const detail = make('span', 'detail');
+    detail.append(marked(action.detail, words));
+    text.append(label, detail);
+    run.append(tile, text);
+    run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
+    run.addEventListener('click', () => vscode.postMessage({ type: 'run', command: action.command }));
+    li.append(run);
+
+    if (inSearch) {
+      const where = make('span', 'where', isHidden(action) ? 'Hidden' : data.tabs.find((t) => t.id === action.tab).label);
+      li.append(where);
+    }
+
+    // Shown on hover or focus: the full shortcut over the tools.
+    const trail = make('span', 'trail');
+    if (action.key) trail.append(keyCaps(action.key));
+    const tools = make('span', 'tools');
+    tools.append(toolButton('info', `About ${action.label}`, () => {}));
+    if (isHidden(action)) tools.append(toolButton('show', `Show ${action.label} Again`, () => send({ kind: 'show', command: action.command })));
+    else tools.append(toolButton('pin', isPinned(action) ? `Unpin ${action.label}` : `Pin ${action.label} to the Top`, () => togglePin(action), isPinned(action)));
+    tools.append(toolButton('more', `More Actions for ${action.label}…`, (b) => openMenu(action, b)));
+    tools.lastChild.setAttribute('aria-haspopup', 'menu');
+    trail.append(tools);
+    li.append(trail);
+
+    const infoButton = tools.querySelector('.info');
+    infoButton.addEventListener('mouseenter', () => showTip(action, infoButton, 250));
+    infoButton.addEventListener('mouseleave', hideTipSoon);
+    infoButton.addEventListener('focus', () => showTip(action, infoButton, 0));
+    infoButton.addEventListener('blur', hideTipSoon);
+    infoButton.addEventListener('click', () => showTip(action, infoButton, 0));
+
+    li.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      openMenu(action, tools.querySelector('.more'), { x: e.clientX, y: e.clientY });
+    });
+    run.addEventListener('keydown', (e) => itemKeys(e, action));
+    tools.addEventListener('keydown', (e) => {
+      const buttons = [...tools.querySelectorAll('.tool')];
+      const i = buttons.indexOf(document.activeElement);
+      if (e.key === 'ArrowRight' && i < buttons.length - 1) buttons[i + 1].focus();
+      else if (e.key === 'ArrowLeft' && i > 0) buttons[i - 1].focus();
+      else if (e.key === 'ArrowLeft' || e.key === 'Escape') run.focus();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    // Pinned actions can be dragged into a new order.
+    if (pinnedIndex !== undefined && !inSearch) {
+      li.draggable = true;
+      li.classList.add('draggable');
+      li.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', action.command);
+        e.dataTransfer.effectAllowed = 'move';
+        li.classList.add('dragging');
+      });
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+    }
+    return li;
+  }
+
+  function togglePin(action) {
+    focusAfterRender = action.command;
+    send({ kind: isPinned(action) ? 'unpin' : 'pin', command: action.command });
+  }
+
+  function movePinned(action, delta) {
+    const i = data.layout.pinned.indexOf(action.command);
+    if (i < 0) return false;
+    focusAfterRender = action.command;
+    send({ kind: 'move', command: action.command, to: i + delta });
+    return true;
+  }
+
+  function itemKeys(e, action) {
+    if (e.key === 'ArrowRight' && !e.altKey) {
+      e.preventDefault();
+      e.target.closest('.item').querySelector('.tool').focus();
+    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (movePinned(action, e.key === 'ArrowUp' ? -1 : 1)) e.preventDefault();
+    } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      openMenu(action, e.target.closest('.item').querySelector('.more'));
+    } else if (e.key === 'Delete' && !isHidden(action)) {
+      e.preventDefault();
+      moveFocusFrom(e.target);
+      send({ kind: 'hide', command: action.command });
+    }
+  }
+
+  // After an action leaves the list, the next one (or the one before) takes focus.
+  function moveFocusFrom(run) {
+    const runs = [...list.querySelectorAll('.run')];
+    const i = runs.indexOf(run);
+    const next = runs[i + 1] || runs[i - 1];
+    focusAfterRender = next && next.closest('.item').dataset.command;
+  }
+
+  // A section: a heading that folds it, with a count, and its actions as a list.
+  function section(id, title, actions, context = {}) {
     if (!actions.length) return;
-    const heading = document.createElement('h2');
-    heading.textContent = title;
-    list.appendChild(heading);
-    const group = document.createElement('div');
-    group.className = 'group';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', title);
-    actions.forEach((a) => group.appendChild(item(a, showTab)));
-    list.appendChild(group);
+    const folded = !context.inSearch && data.layout.collapsed.includes(id);
+    const heading = make('h2');
+    const toggle = make('button', 'section');
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', String(!folded));
+    toggle.append(icon(folded ? 'chevron-right' : 'chevron-down'), make('span', 'title', title), make('span', 'count', String(actions.length)));
+    if (context.inSearch) toggle.disabled = true;
+    else toggle.addEventListener('click', () => {
+      focusAfterRender = `section:${id}`;
+      send({ kind: 'toggleSection', id });
+    });
+    toggle.dataset.section = id;
+    heading.append(toggle);
+    list.append(heading);
+    if (folded) return;
+    const ul = make('ul', 'group');
+    ul.setAttribute('aria-label', title);
+    if (context.extra) heading.append(context.extra);
+    actions.forEach((a, i) => ul.append(item(a, { ...context, pinnedIndex: id === 'pinned' ? i : undefined })));
+    if (id === 'pinned') dropTarget(ul);
+    list.append(ul);
+  }
+
+  // Dropping a dragged pinned action between others puts it there.
+  function dropTarget(ul) {
+    const at = (e) => {
+      const items = [...ul.querySelectorAll('.item:not(.dragging)')];
+      const i = items.findIndex((li) => e.clientY < li.getBoundingClientRect().top + li.offsetHeight / 2);
+      return i < 0 ? items.length : i;
+    };
+    ul.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      ul.querySelectorAll('.drop-before, .drop-after').forEach((n) => n.classList.remove('drop-before', 'drop-after'));
+      const items = [...ul.querySelectorAll('.item:not(.dragging)')];
+      const i = at(e);
+      if (items[i]) items[i].classList.add('drop-before');
+      else if (items.length) items[items.length - 1].classList.add('drop-after');
+    });
+    ul.addEventListener('dragleave', (e) => {
+      if (!ul.contains(e.relatedTarget)) ul.querySelectorAll('.drop-before, .drop-after').forEach((n) => n.classList.remove('drop-before', 'drop-after'));
+    });
+    ul.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const command = e.dataTransfer.getData('text/plain');
+      if (data.layout.pinned.includes(command)) {
+        focusAfterRender = command;
+        send({ kind: 'move', command, to: at(e) });
+      }
+    });
   }
 
   function renderTabs() {
     tabsBar.textContent = '';
     for (const t of data.tabs) {
-      const button = document.createElement('button');
-      button.className = 'tab';
+      const button = make('button', 'tab');
+      button.type = 'button';
       button.setAttribute('role', 'tab');
       button.setAttribute('aria-selected', String(t.id === tab));
+      button.setAttribute('aria-controls', 'list');
       button.tabIndex = t.id === tab ? 0 : -1;
       button.append(icon(t.icon), document.createTextNode(t.label));
       button.addEventListener('click', () => choose(t.id));
-      tabsBar.appendChild(button);
+      tabsBar.append(button);
     }
   }
 
   function choose(id, focus) {
     tab = id;
-    vscode.setState({ ...saved, tab });
+    save({ tab });
     renderTabs();
     render();
     if (focus) tabsBar.querySelector('[aria-selected="true"]').focus();
   }
 
-  // Every word must appear in the label, description, category or keywords.
+  // Every word must appear in the label, description, category, keywords or shortcut.
   const matches = (action, words) => {
-    const text = `${action.label} ${action.detail} ${action.category} ${action.keywords || ''}`.toLowerCase();
+    const text = `${action.label} ${action.detail} ${action.info} ${action.category} ${action.keywords || ''} ${action.key || ''}`.toLowerCase();
     return words.every((w) => text.includes(w));
   };
 
   function render() {
+    hideTip();
     list.textContent = '';
     if (!data) return;
+    document.body.classList.toggle('compact', data.layout.compact);
     const words = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    clear.hidden = !search.value;
     if (words.length) {
-      // Search covers both tabs.
-      const found = data.actions.filter((a) => matches(a, words));
-      section(`${found.length} found`, found, true);
-      if (!found.length) {
-        const none = document.createElement('p');
-        none.className = 'none';
-        none.textContent = 'No action matches. Try other words, such as "null", "references" or "rename".';
-        list.appendChild(none);
-      }
+      // Search covers both tabs, hidden actions too.
+      const hits = data.actions.filter((a) => matches(a, words));
+      found.textContent = hits.length ? `${hits.length} action${hits.length === 1 ? '' : 's'} found` : 'No action found';
+      section('search', 'Results', hits, { words, inSearch: true });
+      if (!hits.length) list.append(make('p', 'none', 'No action matches. Try other words, such as "null", "references", "rename" or a key like "F7".'));
+      restoreFocus();
       return;
     }
+    found.textContent = '';
     const inTab = data.actions.filter((a) => a.tab === tab);
-    const top = (data.mostUsed[tab] || []).map((c) => inTab.find((a) => a.command === c)).filter(Boolean);
-    section(data.usedOnce ? 'Most Used' : 'Start Here', top, false);
-    const categories = [...new Set(inTab.map((a) => a.category))];
-    for (const category of categories) section(category, inTab.filter((a) => a.category === category && !top.includes(a)), false);
+    const visible = inTab.filter((a) => !isHidden(a));
+    const pinned = data.layout.pinned.map(byCommand).filter((a) => a && a.tab === tab && !isHidden(a));
+    const top = data.layout.hideMostUsed ? [] : (data.mostUsed[tab] || []).map(byCommand).filter((a) => a && a.tab === tab);
+    const context = { words: [] };
+    section('pinned', 'Pinned', pinned, context);
+    section('mostUsed', data.usedOnce ? 'Most Used' : 'Start Here', top, context);
+    const shown = new Set([...pinned, ...top]);
+    for (const category of [...new Set(visible.map((a) => a.category))]) {
+      section(`category:${category}`, category, visible.filter((a) => a.category === category && !shown.has(a)), context);
+    }
+    const hidden = inTab.filter(isHidden);
+    if (hidden.length) {
+      const all = make('button', 'link small', 'Show all');
+      all.type = 'button';
+      all.addEventListener('click', () => send({ kind: 'showAll' }));
+      section('hidden', 'Hidden', hidden, { ...context, extra: all });
+    }
+    // A first-time tip, until something is pinned or the tip is dismissed.
+    hint.hidden = !!(saved.hintDismissed || data.layout.pinned.length);
+    restoreFocus();
+  }
+
+  function restoreFocus() {
+    if (!focusAfterRender) return;
+    const target = focusAfterRender.startsWith('section:')
+      ? list.querySelector(`[data-section="${CSS.escape(focusAfterRender.slice(8))}"]`)
+      : list.querySelector(`.item[data-command="${CSS.escape(focusAfterRender)}"] .run`);
+    focusAfterRender = undefined;
+    if (target) target.focus();
+  }
+
+  function renderHint() {
+    hint.textContent = '';
+    hint.append(icon('lightbulb'), make('span', '', 'Hover an action for its shortcut. Pin the ones you use to keep them on top, or right-click to hide them.'));
+    const close = make('button', 'tool');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Dismiss tip');
+    close.title = 'Dismiss tip';
+    close.append(icon('close'));
+    close.addEventListener('click', () => {
+      save({ hintDismissed: true });
+      hint.hidden = true;
+    });
+    hint.append(close);
   }
 
   function renderFooter() {
     footer.textContent = '';
     for (const link of data.footer) {
-      const button = document.createElement('button');
-      button.className = 'link';
+      const button = make('button', 'link');
+      button.type = 'button';
       button.append(icon(link.icon), document.createTextNode(link.label));
       button.addEventListener('click', () => vscode.postMessage({ type: 'run', command: link.command }));
-      footer.appendChild(button);
+      footer.append(button);
     }
   }
 
-  // Keyboard: arrows move between tabs, and between actions; Escape clears the search.
+  // The info tooltip: what the action does, its shortcut, and how often it was run. It stays while the pointer is
+  // over it, and Escape closes it (WCAG 1.4.13).
+  let tipTimer;
+  let tipFor;
+  function showTip(action, anchor, delay) {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      tip.textContent = '';
+      tip.append(make('strong', '', action.label), make('p', '', action.info));
+      const facts = make('div', 'facts');
+      if (action.key) {
+        const row = make('div', 'fact');
+        row.append(make('span', '', 'Shortcut'), keyCaps(action.key));
+        facts.append(row);
+      }
+      const runs = (data.usage && data.usage[action.command]) || 0;
+      const row = make('div', 'fact');
+      row.append(make('span', '', 'Used'), make('span', '', runs ? `${runs} time${runs === 1 ? '' : 's'}` : 'not yet'));
+      facts.append(row);
+      const where = make('div', 'fact');
+      where.append(make('span', '', 'Category'), make('span', '', `${data.tabs.find((t) => t.id === action.tab).label} › ${action.category}`));
+      facts.append(where);
+      tip.append(facts);
+      tip.hidden = false;
+      tipFor = anchor;
+      anchor.setAttribute('aria-describedby', 'tip');
+      place(tip, anchor.getBoundingClientRect());
+    }, delay);
+  }
+  function hideTip() {
+    clearTimeout(tipTimer);
+    tip.hidden = true;
+    if (tipFor) tipFor.removeAttribute('aria-describedby');
+    tipFor = undefined;
+  }
+  function hideTipSoon() {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      if (!tip.matches(':hover')) hideTip();
+    }, 150);
+  }
+  tip.addEventListener('mouseleave', hideTipSoon);
+
+  // A floating box next to a rectangle, kept inside the view: below it, or above when there is no room.
+  function place(box, rect, point) {
+    box.style.left = '0px';
+    box.style.top = '0px';
+    const w = box.offsetWidth;
+    const h = box.offsetHeight;
+    const x = point ? point.x : rect.right - w;
+    const below = point ? point.y : rect.bottom + 4;
+    const y = below + h > window.innerHeight - 4 ? Math.max(4, (point ? point.y : rect.top - 4) - h) : below;
+    box.style.left = `${Math.max(4, Math.min(window.innerWidth - w - 4, x))}px`;
+    box.style.top = `${y}px`;
+  }
+
+  // The menu of an action: run, pin, reorder, hide, change its shortcut, copy its id.
+  let menuReturn;
+  function openMenu(action, anchor, point) {
+    hideTip();
+    menu.textContent = '';
+    const entries = [];
+    const add = (label, iconName, onPick, key) => entries.push({ label, iconName, onPick, key });
+    const sep = () => entries.push(undefined);
+    add('Run', 'play', () => vscode.postMessage({ type: 'run', command: action.command }), 'Enter');
+    sep();
+    if (isHidden(action)) add('Show Again', 'eye', () => send({ kind: 'show', command: action.command }));
+    else {
+      add(isPinned(action) ? 'Unpin' : 'Pin to Top', isPinned(action) ? 'pinned' : 'pin', () => togglePin(action));
+      const i = data.layout.pinned.indexOf(action.command);
+      if (i > 0) add('Move Up', 'arrow-up', () => movePinned(action, -1), 'Alt+Up');
+      if (i >= 0 && i < data.layout.pinned.length - 1) add('Move Down', 'arrow-down', () => movePinned(action, 1), 'Alt+Down');
+      add('Hide', 'eye-closed', () => {
+        const run = list.querySelector(`.item[data-command="${CSS.escape(action.command)}"] .run`);
+        if (run) moveFocusFrom(run);
+        send({ kind: 'hide', command: action.command });
+      }, 'Delete');
+    }
+    sep();
+    add(action.key ? 'Change Shortcut…' : 'Add a Shortcut…', 'keyboard', () => vscode.postMessage({ type: 'changeShortcut', command: action.command }));
+    add('Copy Command ID', 'copy', () => vscode.postMessage({ type: 'copyId', command: action.command }));
+    for (const entry of entries) {
+      if (!entry) {
+        menu.append(make('div', 'separator'));
+        menu.lastChild.setAttribute('role', 'separator');
+        continue;
+      }
+      const b = make('button', 'menuitem');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.tabIndex = -1;
+      b.append(icon(entry.iconName), make('span', 'grow', entry.label));
+      if (entry.key) b.append(make('span', 'menukey', entry.key));
+      b.addEventListener('click', () => {
+        closeMenu(false);
+        entry.onPick();
+      });
+      menu.append(b);
+    }
+    menu.setAttribute('aria-label', `${action.label} actions`);
+    menu.hidden = false;
+    menuReturn = anchor;
+    anchor.setAttribute('aria-expanded', 'true');
+    place(menu, anchor.getBoundingClientRect(), point);
+    menu.querySelector('.menuitem').focus();
+  }
+  function closeMenu(refocus = true) {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    if (menuReturn) {
+      menuReturn.setAttribute('aria-expanded', 'false');
+      if (refocus && document.contains(menuReturn)) menuReturn.closest('.item').querySelector('.run').focus();
+    }
+    menuReturn = undefined;
+  }
+  menu.addEventListener('keydown', (e) => {
+    const items = [...menu.querySelectorAll('.menuitem')];
+    const i = items.indexOf(document.activeElement);
+    const go = (j) => items[(j + items.length) % items.length].focus();
+    if (e.key === 'ArrowDown') go(i + 1);
+    else if (e.key === 'ArrowUp') go(i - 1);
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(items.length - 1);
+    else if (e.key === 'Escape' || e.key === 'Tab') closeMenu();
+    else return;
+    e.preventDefault();
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!menu.hidden && !menu.contains(e.target)) closeMenu(false);
+  });
+  window.addEventListener('blur', () => closeMenu(false));
+
+  // Keyboard: arrows move between tabs and between actions, Home and End to the ends; typing searches; / or
+  // Ctrl+F goes to the search box; Escape clears it.
   tabsBar.addEventListener('keydown', (e) => {
     const ids = data.tabs.map((t) => t.id);
     const i = ids.indexOf(tab);
@@ -134,20 +495,48 @@
     }
   });
   list.addEventListener('keydown', (e) => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-    const items = [...list.querySelectorAll('.item')];
-    const i = items.indexOf(document.activeElement);
-    if (i < 0) return;
+    const runs = [...list.querySelectorAll('.run, .section:not(:disabled)')];
+    const i = runs.indexOf(document.activeElement);
+    if (i < 0 || e.altKey || e.ctrlKey || e.metaKey) return;
+    let j;
+    if (e.key === 'ArrowDown') j = Math.min(runs.length - 1, i + 1);
+    else if (e.key === 'ArrowUp') j = Math.max(0, i - 1);
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = runs.length - 1;
+    else if (e.key.length === 1 && /\S/.test(e.key)) {
+      // Typing on the list starts a search.
+      search.focus();
+      search.value += e.key;
+      render();
+      e.preventDefault();
+      return;
+    } else return;
     e.preventDefault();
-    items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))].focus();
+    runs[j].focus();
+  });
+  document.addEventListener('keydown', (e) => {
+    const typing = e.target === search;
+    if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f')) {
+      e.preventDefault();
+      search.focus();
+      search.select();
+    } else if (e.key === 'Escape' && !tip.hidden) {
+      hideTip();
+    }
   });
   search.addEventListener('input', render);
+  clear.addEventListener('click', () => {
+    search.value = '';
+    render();
+    search.focus();
+  });
   search.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && search.value) {
+      e.stopPropagation();
       search.value = '';
       render();
     } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
-      const first = list.querySelector('.item');
+      const first = list.querySelector('.run');
       if (first) {
         e.preventDefault();
         if (e.key === 'Enter' && search.value.trim()) first.click();
@@ -160,9 +549,17 @@
     if (event.data.type !== 'actions') return;
     data = event.data;
     if (!data.tabs.some((t) => t.id === tab)) tab = data.tabs[0].id;
+    // Keep the focused action focused across the redraw.
+    if (!focusAfterRender && list.contains(document.activeElement)) {
+      const at = document.activeElement.closest('.item');
+      const sectionButton = document.activeElement.closest('.section');
+      if (at) focusAfterRender = at.dataset.command;
+      else if (sectionButton) focusAfterRender = `section:${sectionButton.dataset.section}`;
+    }
     renderTabs();
     render();
     renderFooter();
   });
+  renderHint();
   vscode.postMessage({ type: 'ready' });
 })();

@@ -1,9 +1,14 @@
 html, body { margin: 0; padding: 0; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); background: transparent; }
-body { padding: 8px 10px 12px; }
+body { padding: 0 10px 12px; }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+ul { list-style: none; margin: 0; padding: 0; }
 
-/* Tabs, like the ones in the reference: an icon over the label, the chosen one joined to the list below. */
+/* Tabs and search stay at the top while the list scrolls. */
+.top { position: sticky; top: 0; z-index: 3; padding-top: 8px; padding-bottom: 2px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+
+/* Tabs: an icon over the label, the chosen one raised. */
 #tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 7px; border: 1px solid transparent; border-radius: 8px;
   background: transparent; color: var(--vscode-descriptionForeground); }
@@ -13,28 +18,84 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-color: var(--vscode-widget-border, var(--vscode-sideBarSectionHeader-border, rgba(128, 128, 128, .35))); color: var(--vscode-foreground); font-weight: 600; }
 
 .search { position: relative; margin-bottom: 6px; }
-.search .codicon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground)); }
-#search { width: 100%; box-sizing: border-box; padding: 6px 8px 6px 28px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 6px;
+.search > .codicon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground)); }
+#search { width: 100%; box-sizing: border-box; padding: 6px 30px 6px 28px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 6px;
   background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; }
+#search::-webkit-search-cancel-button { display: none; }
 #search:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.clear { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
+.clear:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.clear[hidden] { display: none; }
 
-h2 { margin: 12px 2px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+/* First-time tip. */
+.hint { display: flex; align-items: flex-start; gap: 6px; margin: 4px 0 2px; padding: 6px 4px 6px 8px; border-radius: 6px; font-size: 12px;
+  background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, .1)); color: var(--vscode-descriptionForeground); }
+.hint[hidden] { display: none; }
+.hint > .codicon { margin-top: 1px; color: var(--vscode-editorLightBulb-foreground, var(--vscode-foreground)); }
+.hint > span { flex: 1; }
+
+/* Section headings fold their section and show how many actions it has. */
+h2 { margin: 10px 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-descriptionForeground);
+  display: flex; align-items: center; gap: 4px; }
+.section { flex: 1; display: flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 2px; border: 0; border-radius: 4px; background: transparent;
+  color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; }
+.section:hover:not(:disabled) { color: var(--vscode-foreground); }
+.section:disabled { cursor: default; }
+.section .codicon { font-size: 14px; }
+.section:disabled .codicon { display: none; }
+.section .count { margin-left: 2px; padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0;
+  background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+.link.small { font-size: 11px; text-transform: none; letter-spacing: 0; font-weight: 400; }
 .group { display: flex; flex-direction: column; gap: 2px; }
 
-/* An action: icon tile, label and description, shortcut on the right. */
-.item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 6px; border: 1px solid transparent; border-radius: 8px; background: transparent; text-align: left; }
-.item:hover, .item:focus-visible { background: var(--vscode-list-hoverBackground); }
-.item:focus-visible { border-color: var(--vscode-focusBorder); outline: none; }
+/* An action: icon tile, label and description. Its shortcut and tools appear over the right end on hover or focus. */
+.item { position: relative; display: flex; align-items: center; border: 1px solid transparent; border-radius: 8px; }
+.item:hover, .item:focus-within { background: var(--vscode-list-hoverBackground); }
+.item:has(.run:focus-visible) { border-color: var(--vscode-focusBorder); }
+.run { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 5px 6px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+.run:focus-visible { outline: none; }
 .tile { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px;
   border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); background: var(--vscode-editorWidget-background, rgba(128, 128, 128, .12)); color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
 .tile .codicon { font-size: 16px; }
-.item:hover .tile, .item:focus-visible .tile { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
+.item:hover .tile, .item:focus-within .tile { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
 .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail { color: var(--vscode-descriptionForeground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-kbd { flex: none; padding: 0 5px; border: 1px solid var(--vscode-keybindingLabel-border, rgba(128, 128, 128, .4)); border-bottom-width: 2px; border-radius: 3px;
-  background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); color: var(--vscode-keybindingLabel-foreground, inherit); font-family: inherit; font-size: 11px; }
-.where { flex: none; font-size: 11px; color: var(--vscode-descriptionForeground); }
+mark { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, .33)); color: inherit; border-radius: 2px; }
+.where { flex: none; margin-right: 8px; font-size: 11px; color: var(--vscode-descriptionForeground); }
+.item:hover .where, .item:focus-within .where { visibility: hidden; }
+
+/* The shortcut over the tools, both hidden until the action is hovered or focused. */
+.trail { position: absolute; right: 4px; top: 3px; bottom: 3px; display: flex; opacity: 0; pointer-events: none; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 2px;
+  padding-left: 10px; border-radius: 6px;
+  background: linear-gradient(var(--vscode-list-hoverBackground), var(--vscode-list-hoverBackground)), var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+.item:hover .trail, .item:focus-within .trail { opacity: 1; pointer-events: auto; }
+.trail:not(:has(.keys)) { justify-content: flex-end; }
+.keys { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, rgba(128, 128, 128, .4)); border-bottom-width: 2px; border-radius: 3px;
+  border-bottom-color: var(--vscode-keybindingLabel-bottomBorder, var(--vscode-keybindingLabel-border, rgba(128, 128, 128, .4)));
+  background: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, .17)); color: var(--vscode-keybindingLabel-foreground, inherit); font-family: inherit; font-size: 11px; line-height: 15px; }
+.tools { display: inline-flex; gap: 1px; }
+.tool { display: flex; align-items: center; justify-content: center; width: 22px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent;
+  color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
+.tool:hover, .tool[aria-expanded="true"] { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.tool .codicon { font-size: 14px; }
+.tool.pin[aria-pressed="true"] { color: var(--vscode-focusBorder); }
+
+/* Without descriptions, each action is one line and the shortcut sits beside the tools. */
+.compact .detail { display: none; }
+.compact .tile { width: 22px; height: 22px; border-radius: 5px; }
+.compact .tile .codicon { font-size: 14px; }
+.compact .run { padding-top: 3px; padding-bottom: 3px; }
+.compact .trail { flex-direction: row; align-items: center; top: 0; bottom: 0; }
+
+/* Dragging pinned actions into order. */
+.draggable .run { cursor: grab; }
+.item.dragging { opacity: .5; }
+.item.drop-before { box-shadow: 0 -2px 0 var(--vscode-focusBorder); }
+.item.drop-after { box-shadow: 0 2px 0 var(--vscode-focusBorder); }
+
 .none { color: var(--vscode-descriptionForeground); padding: 6px 2px; }
 
 #footer { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); }
@@ -42,6 +103,27 @@ kbd { flex: none; padding: 0 5px; border: 1px solid var(--vscode-keybindingLabel
 .link:hover { text-decoration: underline; }
 .link .codicon { font-size: 14px; }
 
+/* The info tooltip and the action menu float over the list, like VS Code's own hovers and menus. */
+#tip, #menu { position: fixed; z-index: 10; box-sizing: border-box; border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-widget-border, rgba(128, 128, 128, .4)));
+  border-radius: 6px; box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); }
+#tip[hidden], #menu[hidden] { display: none; }
+#tip { max-width: min(300px, calc(100vw - 8px)); padding: 8px 10px; font-size: 12px;
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background)); color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground)); }
+#tip p { margin: 4px 0 6px; line-height: 1.4; }
+#tip .facts { display: grid; gap: 3px; padding-top: 6px; border-top: 1px solid var(--vscode-editorHoverWidget-border, rgba(128, 128, 128, .3)); }
+#tip .fact { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#tip .fact > span:first-child { color: var(--vscode-descriptionForeground); }
+#menu { min-width: 190px; padding: 4px; background: var(--vscode-menu-background, var(--vscode-editorWidget-background)); color: var(--vscode-menu-foreground, var(--vscode-foreground)); }
+.menuitem { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: 4px; background: transparent; text-align: left; }
+.menuitem:hover, .menuitem:focus { outline: none; background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground)); }
+.menuitem .codicon { font-size: 14px; }
+.menuitem .grow { flex: 1; }
+.menukey { font-size: 11px; opacity: .75; }
+.separator { height: 1px; margin: 4px 0; background: var(--vscode-menu-separatorBackground, var(--vscode-widget-border, rgba(128, 128, 128, .3))); }
+
 @media (forced-colors: active) {
-  .tab[aria-selected="true"], .item:focus-visible { border-color: Highlight; }
+  .tab[aria-selected="true"], .item:has(.run:focus-visible) { border-color: Highlight; }
+  .trail { background: Canvas; }
+  .menuitem:focus { outline: 1px solid Highlight; }
+  mark { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
