@@ -1,4 +1,5 @@
 import ts = require('typescript');
+import { allNodes } from '../structure/util';
 
 /** What a catalog detector found: the node that shows the pattern and how. */
 export interface Found {
@@ -27,28 +28,9 @@ const text = (node: ts.Node | undefined): string => node?.getText() ?? '';
 
 const hasModifier = (node: ts.Node, kind: ts.SyntaxKind): boolean => (ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []).some((m) => m.kind === kind) : false);
 
-/**
- * Every node of a file in source order, collected once per file. Some 60 detectors look at each file, and
- * walking the tree once instead of once per detector is most of their cost.
- */
-const nodeLists = new WeakMap<ts.SourceFile, ts.Node[]>();
-function nodesOf(sourceFile: ts.SourceFile): ts.Node[] {
-  let nodes = nodeLists.get(sourceFile);
-  if (!nodes) {
-    const all: ts.Node[] = [];
-    const collect = (node: ts.Node): void => {
-      all.push(node);
-      ts.forEachChild(node, collect);
-    };
-    collect(sourceFile);
-    nodeLists.set(sourceFile, (nodes = all));
-  }
-  return nodes;
-}
-
 function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
   if (ts.isSourceFile(node)) {
-    nodesOf(node).forEach((n) => visit(n));
+    allNodes(node).forEach((n) => visit(n));
     return;
   }
   visit(node);
@@ -66,7 +48,7 @@ function perFile<T>(compute: (sourceFile: ts.SourceFile) => T): (sourceFile: ts.
   };
 }
 
-const classesIn = perFile((sourceFile): ts.ClassLikeDeclaration[] => nodesOf(sourceFile).filter(ts.isClassLike));
+const classesIn = perFile((sourceFile): ts.ClassLikeDeclaration[] => allNodes(sourceFile).filter(ts.isClassLike));
 
 /** Named functions: declarations, methods and functions assigned to a name. */
 const functionsIn = perFile(namedFunctions);

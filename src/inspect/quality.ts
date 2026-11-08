@@ -1,25 +1,14 @@
 import ts = require('typescript');
+import { allNodes } from '../structure/util';
 import { Finding, Fix, Inspection, Severity } from './inspection';
 
 /** Inspections for common slips: what is wrong in a few words and, where it is clear, the fix. */
 export const qualityInspections: Inspection[] = [];
 
-/** Every node of a file in source order, collected once and shared by the 40 or so inspections that walk it. */
-const nodeLists = new WeakMap<ts.SourceFile, ts.Node[]>();
-
 function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
+  // A whole file: the shared list of its nodes, walked once for all inspections.
   if (ts.isSourceFile(node)) {
-    let nodes = nodeLists.get(node);
-    if (!nodes) {
-      const all: ts.Node[] = [];
-      const collect = (n: ts.Node): void => {
-        all.push(n);
-        ts.forEachChild(n, collect);
-      };
-      collect(node);
-      nodeLists.set(node, (nodes = all));
-    }
-    nodes.forEach((n) => visit(n));
+    allNodes(node).forEach((n) => visit(n));
     return;
   }
   visit(node);

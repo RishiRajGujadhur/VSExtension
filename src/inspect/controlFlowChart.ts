@@ -2,6 +2,7 @@ import ts = require('typescript');
 import { Cfg, CfgNode, buildCfg, callTargets, expandCalls } from './controlFlow';
 import { cfgPaths, describeChoice } from './paths';
 import { layoutFlow } from '../structure/flowLayout';
+import { mermaidText } from '../structure/diagram';
 import { ReportLocation } from '../structure/report';
 import { functionAtOffset } from '../structure/util';
 import { normalizePath } from '../analysis/paths';
@@ -131,7 +132,7 @@ export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile,
  * loop edges dotted, unreachable code dashed, a highlighted path drawn thick.
  */
 export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: number[]; edges: number[] }): string {
-  const escape = (text: string) => text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;');
+  const escape = mermaidText;
   const lines = ['flowchart TD'];
   for (const n of chart.nodes) {
     const text = `"${n.lines.map(escape).join('<br/>')}"`;

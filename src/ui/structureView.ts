@@ -10,6 +10,7 @@ import { countResults, limitReport } from '../structure/scope';
 import { countFixes, rowFix } from '../structure/fixes';
 import { reportIcons } from '../structure/icons';
 import { rowAccessibleLabel } from '../structure/accessibility';
+import { besideChartColumn } from './webviewPage';
 
 const toneColors: Record<Tone, string> = {
   error: 'problemsErrorIcon.foreground',
@@ -608,8 +609,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     const selection = new vscode.Range(location.line, location.character, location.endLine, location.endCharacter);
     // From a diagram tab, the code opens in another editor group so the diagram stays in view.
-    const fromWebview = vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputWebview;
-    const other = fromWebview ? (vscode.window.tabGroups.all.find((g) => g !== vscode.window.tabGroups.activeTabGroup)?.viewColumn ?? vscode.ViewColumn.Beside) : undefined;
+    const other = besideChartColumn();
     await vscode.window.showTextDocument(uri, { selection, preview: !sideBySide, viewColumn: sideBySide ? vscode.ViewColumn.Beside : other });
   }
 }

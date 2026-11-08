@@ -25,6 +25,9 @@ export interface Diagram {
   rightCaption?: string;
 }
 
+/** Text that is safe inside a quoted Mermaid label: quotes and angle brackets as Mermaid entities. */
+export const mermaidText = (text: string): string => text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;');
+
 /** Rows that suggest what to do next rather than describe the code. */
 const skipped = new Set(['Next', 'How to fix']);
 
@@ -113,7 +116,7 @@ export function diagramMermaid(diagram: Diagram): string {
   const lines = ['flowchart LR'];
   const tones: Record<string, string[]> = {};
   let next = 0;
-  const escape = (text: string) => text.replace(/"/g, '#quot;').replace(/</g, '#lt;').replace(/>/g, '#gt;');
+  const escape = mermaidText;
   const declare = (node: DiagramNode): string => {
     const id = `n${next++}`;
     const hidden = node.collapsed && node.children.length ? `${node.children.length} more folded` : '';

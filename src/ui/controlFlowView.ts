@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
 import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
-import { saveImage } from './diagramView';
+import { besideChartColumn, iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { sliceAt } from '../inspect/slice';
 import { ReportLocation } from '../structure/report';
 
@@ -86,11 +86,10 @@ export class ControlFlowPanel {
       return;
     }
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    const codicons = vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist');
-    this.panel = vscode.window.createWebviewPanel(ControlFlowPanel.viewType, 'Control Flow', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media, codicons] });
+    this.panel = vscode.window.createWebviewPanel(ControlFlowPanel.viewType, 'Control Flow', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: webviewRoots(this.extensionUri) });
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
-    this.panel.webview.html = html(this.panel.webview, media, codicons);
+    this.panel.webview.html = html(this.panel.webview, this.extensionUri);
     this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean }) => {
       if (message.type === 'ready') {
         this.ready = true;
@@ -151,28 +150,17 @@ export class ControlFlowPanel {
 
 /** Opens code in an editor group other than the one the chart is in. */
 async function openBeside(location: ReportLocation): Promise<void> {
-  const fromWebview = vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputWebview;
-  const other = fromWebview ? (vscode.window.tabGroups.all.find((g) => g !== vscode.window.tabGroups.activeTabGroup)?.viewColumn ?? vscode.ViewColumn.Beside) : undefined;
   const selection = new vscode.Range(location.line, location.character, location.endLine, location.endCharacter);
-  await vscode.window.showTextDocument(vscode.Uri.file(location.file), { selection, viewColumn: other, preserveFocus: false });
+  await vscode.window.showTextDocument(vscode.Uri.file(location.file), { selection, viewColumn: besideChartColumn(), preserveFocus: false });
 }
 
-function html(webview: vscode.Webview, media: vscode.Uri, codicons: vscode.Uri): string {
-  const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-  const button = (id: string, icon: string, title: string, extra = '') =>
-    `<button id="${id}" title="${title}" aria-label="${title}" ${extra}><i class="codicon codicon-${icon}" aria-hidden="true"></i></button>`;
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src ${webview.cspSource};">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="${webview.asWebviewUri(vscode.Uri.joinPath(codicons, 'codicon.css'))}">
-<link rel="stylesheet" href="${asset('controlFlow.css')}">
-<title>Control Flow</title>
-</head>
-<body>
-<header aria-label="Control flow tools">
+function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+  const button = iconButton;
+  return webviewPage(webview, extensionUri, {
+    title: 'Control Flow',
+    styles: ['controlFlow.css'],
+    scripts: ['controlFlow.js'],
+    body: `<header aria-label="Control flow tools">
   <span id="caption"></span>
   <span class="group" role="group" aria-label="Zoom">
   ${button('zoomOut', 'zoom-out', 'Zoom Out (−)')}
@@ -206,8 +194,6 @@ function html(webview: vscode.Webview, media: vscode.Uri, codicons: vscode.Uri):
   <div id="comparison" role="status" hidden></div>
   <ul id="paths" role="listbox" aria-label="Paths through the function"></ul>
 </aside>
-</main>
-<script src="${asset('controlFlow.js')}"></script>
-</body>
-</html>`;
+</main>`,
+  });
 }

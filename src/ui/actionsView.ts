@@ -4,6 +4,7 @@ import { featureOf } from '../structure/features';
 import { commandIcons } from '../structure/icons';
 import { Keybinding, shortcuts } from '../structure/keys';
 import { isFeatureEnabled } from './features';
+import { webviewPage, webviewRoots } from './webviewPage';
 
 const usageKey = 'tsStructure.actionUsage';
 
@@ -38,10 +39,8 @@ export class ActionsView implements vscode.WebviewViewProvider {
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    const codicons = vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist');
-    view.webview.options = { enableScripts: true, localResourceRoots: [media, codicons] };
-    view.webview.html = html(view.webview, media, codicons);
+    view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
+    view.webview.html = html(view.webview, this.extensionUri);
     view.webview.onDidReceiveMessage(async (message: { type: string; command?: string }) => {
       if (message.type === 'ready') {
         this.post();
@@ -79,27 +78,12 @@ const footer = [
   { command: 'tsStructure.configureFeatures', label: 'Features…', icon: 'extensions' },
 ];
 
-function html(webview: vscode.Webview, media: vscode.Uri, codicons: vscode.Uri): string {
-  const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src ${webview.cspSource};">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="${webview.asWebviewUri(vscode.Uri.joinPath(codicons, 'codicon.css'))}">
-<link rel="stylesheet" href="${asset('actions.css')}">
-<title>Actions</title>
-</head>
-<body>
-<div id="tabs" role="tablist" aria-label="Kinds of actions"></div>
+function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['actions.js'], body: `<div id="tabs" role="tablist" aria-label="Kinds of actions"></div>
 <div class="search">
   <i class="codicon codicon-search" aria-hidden="true"></i>
   <input id="search" type="search" placeholder="Search actions…" aria-label="Search actions" aria-controls="list">
 </div>
 <div id="list" role="region" aria-live="polite" aria-label="Actions"></div>
-<nav id="footer" aria-label="Help and settings"></nav>
-<script src="${asset('actions.js')}"></script>
-</body>
-</html>`;
+<nav id="footer" aria-label="Help and settings"></nav>` });
 }

@@ -446,3 +446,23 @@ export function sourceFileOf(program: ts.Program, fileName: string): ts.SourceFi
   }
   return sourceFile;
 }
+
+const nodeLists = new WeakMap<ts.SourceFile, ts.Node[]>();
+
+/**
+ * Every node of a file in source order, collected once per file version. The pattern detectors and the quality
+ * inspections, some 100 checks, walk the same file; sharing one walk is most of their speed.
+ */
+export function allNodes(sourceFile: ts.SourceFile): readonly ts.Node[] {
+  let nodes = nodeLists.get(sourceFile);
+  if (!nodes) {
+    const all: ts.Node[] = [];
+    const collect = (node: ts.Node): void => {
+      all.push(node);
+      ts.forEachChild(node, collect);
+    };
+    collect(sourceFile);
+    nodeLists.set(sourceFile, (nodes = all));
+  }
+  return nodes;
+}

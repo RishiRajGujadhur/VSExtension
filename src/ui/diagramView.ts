@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report, ReportLocation } from '../structure/report';
 import { StructureView } from './structureView';
+import { iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { commandIcons } from '../structure/icons';
 import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
@@ -27,11 +28,6 @@ export class DiagramPanel {
   private panel: vscode.WebviewPanel | undefined;
   private ready = false;
 
-  /** VS Code's icon font (@vscode/codicons), so the buttons look like VS Code's own. */
-  private get codicons(): vscode.Uri {
-    return vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist');
-  }
-
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly view: StructureView,
@@ -52,10 +48,10 @@ export class DiagramPanel {
       return;
     }
     const media = vscode.Uri.joinPath(this.extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media, this.codicons] });
+    this.panel = vscode.window.createWebviewPanel(DiagramPanel.viewType, 'Analysis Diagram', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: webviewRoots(this.extensionUri) });
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
-    this.panel.webview.html = this.html(this.panel.webview, media);
+    this.panel.webview.html = this.html(this.panel.webview);
     this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string }) => {
       if (message.type === 'ready') {
         this.ready = true;
@@ -103,24 +99,15 @@ export class DiagramPanel {
     void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses });
   }
 
-  private html(webview: vscode.Webview, media: vscode.Uri): string {
-    const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-    // Icon buttons: the tooltip and the accessible name are the same words.
-    const button = (id: string, icon: string, title: string, extra = '') =>
-      `<button id="${id}" class="icon" title="${title}" aria-label="${title}" ${extra}><i class="codicon codicon-${icon}" aria-hidden="true"></i></button>`;
-    const codicons = webview.asWebviewUri(vscode.Uri.joinPath(this.codicons, 'codicon.css'));
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src ${webview.cspSource}; img-src data:;">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="${codicons}">
-<link rel="stylesheet" href="${asset('diagram.css')}">
-<title>Analysis Diagram</title>
-</head>
-<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-<header aria-label="Chart tools">
+  private html(webview: vscode.Webview): string {
+    const button = iconButton;
+    return webviewPage(webview, this.extensionUri, {
+      title: 'Analysis Diagram',
+      styles: ['diagram.css'],
+      scripts: ['diagramGrid.js', 'diagram.js'],
+      images: true,
+      bodyAttributes: `data-vscode-context='{"preventDefaultContextMenuItems": true}'`,
+      body: `<header aria-label="Chart tools">
   <span id="caption"></span>
   <input id="search" type="search" placeholder="Find a box (Ctrl+F)" aria-label="Find a box" title="Highlights boxes whose text contains this; Enter goes to the next, Shift+Enter to the previous">
   <span id="searchCount" aria-live="polite"></span>
@@ -180,25 +167,7 @@ export class DiagramPanel {
 </aside>
 <svg id="minimap" class="off" aria-hidden="true"><g id="miniScene"></g><rect id="miniView"/></svg>
 <div id="boxMenu" role="menu" aria-label="Box actions" hidden></div>
-<footer id="info"></footer>
-<script src="${asset('diagramGrid.js')}"></script>
-<script src="${asset('diagram.js')}"></script>
-</body>
-</html>`;
-  }
-}
-
-/** Asks where to save the chart's image, offering the workspace folder and a name from the analysis title. */
-export async function saveImage(content: Buffer, extension: 'svg' | 'png', title = 'diagram'): Promise<void> {
-  const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
-  const name = `${title.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram'}.${extension}`;
-  const kind = extension.toUpperCase();
-  const target = await vscode.window.showSaveDialog({ defaultUri: folder ? vscode.Uri.joinPath(folder, name) : undefined, filters: { [`${kind} image`]: [extension] }, title: `Save Diagram as ${kind}` });
-  if (!target) {
-    return;
-  }
-  await vscode.workspace.fs.writeFile(target, content);
-  if ((await vscode.window.showInformationMessage(`Diagram saved to ${vscode.workspace.asRelativePath(target)}.`, 'Open')) === 'Open') {
-    await vscode.commands.executeCommand('vscode.open', target);
+<footer id="info"></footer>`,
+    });
   }
 }
