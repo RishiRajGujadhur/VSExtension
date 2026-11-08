@@ -73,7 +73,8 @@ export function layoutFlow(nodes: readonly LayoutNode[], edges: readonly LayoutE
 
   // Rows: one below the deepest node leading here; the end node goes last.
   const row = new Map<number, number>();
-  const topological = [...order].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  // Discovery order is already a topological order of the forward edges.
+  const topological = order;
   const settle = () => {
     for (let changed = true, guard = 0; changed && guard < nodes.length + 2; guard++) {
       changed = false;
@@ -145,20 +146,23 @@ export function layoutFlow(nodes: readonly LayoutNode[], edges: readonly LayoutE
 
   // Routes: forward edges leave the bottom (spread when a node has several), back edges run down the right side.
   const routes: Route[] = [];
-  const outgoing = new Map<number, number>();
   let lane = 0;
+  // Each node's downward edges, sorted by where they go, found once rather than for every edge.
+  const downward = new Map<number, number[]>();
+  for (const e of edges) {
+    if (!e.back && placed.get(e.to)!.row > placed.get(e.from)!.row) downward.set(e.from, [...(downward.get(e.from) ?? []), placed.get(e.to)!.x]);
+  }
+  for (const xs of downward.values()) xs.sort((p, q) => p - q);
   for (const e of edges) {
     const a = placed.get(e.from)!;
     const b = placed.get(e.to)!;
     const back = e.back || !isForward(e.from, e.to) || b.row <= a.row;
     if (!back) {
-      const siblings = edges.filter((x) => x.from === e.from && !x.back && placed.get(x.to)!.row > a.row);
-      const n = outgoing.get(e.from) ?? 0;
-      outgoing.set(e.from, n + 1);
       // Several branches leave from points spread along the bottom, ordered by where they go.
-      const sorted = siblings.map((x) => placed.get(x.to)!.x).sort((p, q) => p - q);
-      const slot = siblings.length > 1 ? sorted.indexOf(b.x) : 0;
-      const sx = siblings.length > 1 ? a.x + (a.width * (slot + 1)) / (siblings.length + 1) : a.x + a.width / 2;
+      const sorted = downward.get(e.from) ?? [b.x];
+      const siblings = sorted;
+      const slot = sorted.length > 1 ? sorted.indexOf(b.x) : 0;
+      const sx = sorted.length > 1 ? a.x + (a.width * (slot + 1)) / (sorted.length + 1) : a.x + a.width / 2;
       const from = { x: sx, y: a.y + a.height };
       const to = { x: b.x + b.width / 2, y: b.y };
       // With three or more branches the labels sit halfway, where the edges have spread apart.

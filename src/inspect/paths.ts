@@ -1,5 +1,6 @@
 import ts = require('typescript');
-import { Cfg, CfgEdge, Choice, buildCfg } from './controlFlow';
+import { Cfg, CfgEdge, Choice, buildCfg, cfgNodeAt } from './controlFlow';
+import { definitions } from './defUse';
 import { AnalysisError } from '../analysis/types';
 import { FunctionWithBody, enclosingFunction, identifierAt, isFunctionWithBody, symbolAt } from '../structure/util';
 import { VirtualProject } from '../refactor/virtualProject';
@@ -74,35 +75,14 @@ function normalize(choice: Choice): { subject: string; outcome: string } {
   return { subject, outcome };
 }
 
-/** Names assigned in a node: a later test of them may come out differently. */
-function assignedNames(cfg: Cfg, id: number): Set<string> {
-  const names = new Set<string>();
-  const root = (e: ts.Node): string | undefined => {
-    while (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e) || ts.isParenthesizedExpression(e) || ts.isNonNullExpression(e)) e = e.expression;
-    return ts.isIdentifier(e) ? e.text : undefined;
-  };
-  const visit = (node: ts.Node): void => {
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-      const name = root(node.left);
-      if (name) names.add(name);
-    } else if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) && (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken)) {
-      const name = root(node.operand);
-      if (name) names.add(name);
-    } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      names.add(node.name.text);
-    } else if (ts.isCallExpression(node)) {
-      // A call may change the object it is called on: items.push(x).
-      const name = ts.isPropertyAccessExpression(node.expression) ? root(node.expression.expression) : undefined;
-      if (name) names.add(name);
-    }
-    if (!isFunctionWithBody(node)) ts.forEachChild(node, visit);
-  };
-  const node = cfg.nodes[id];
-  if (node.kind === 'statement' || node.kind === 'loop' || node.kind === 'catch') node.nodes.forEach(visit);
-  return names;
-}
-
-const mentions = (subject: string, names: Set<string>): boolean => [...names].some((name) => new RegExp(`(^|[^\\w$.])${name.replace(/\$/g, '\\$')}([^\\w$]|$)`).test(subject));
+const patterns = new Map<string, RegExp>();
+/** Whether a tested subject mentions one of the names, as a whole word; the pattern per name is built once. */
+const mentions = (subject: string, names: Set<string>): boolean =>
+  [...names].some((name) => {
+    let pattern = patterns.get(name);
+    if (!pattern) patterns.set(name, (pattern = new RegExp(`(^|[^\\w$.])${name.replace(/\$/g, '\\$')}([^\\w$]|$)`)));
+    return pattern.test(subject);
+  });
 
 /** Why a path cannot happen, if it tests the same thing two incompatible ways with nothing changed in between. */
 function contradictionIn(cfg: Cfg, nodes: number[], edges: number[]): string | undefined {
@@ -125,7 +105,7 @@ function contradictionIn(cfg: Cfg, nodes: number[], edges: number[]): string | u
       }
       known.set(subject, { outcome, excludes: edge.choice.excludes });
     }
-    const assigned = assignedNames(cfg, nodes[i + 1]);
+    const assigned = definitions(cfg.nodes[nodes[i + 1]]);
     if (assigned.size) known = new Map([...known].filter(([subject]) => !mentions(subject, assigned)));
   }
   return undefined;
@@ -185,15 +165,18 @@ export function explainValue(project: VirtualProject, fileName: string, offset: 
     throw new AnalysisError('Place the cursor inside a function: Explain Value Path follows the paths through it.');
   }
   const cfg = buildCfg(fn);
-  const contains = (n: ts.Node) => n.getStart(sourceFile) <= offset && offset <= n.end;
-  // The innermost node: a condition inside a statement block wins over the block.
-  const candidates = cfg.nodes.filter((n) => n.kind !== 'start' && n.kind !== 'end' && n.nodes.some(contains));
-  const at = candidates.sort((a, b) => span(a) - span(b))[0]?.id;
+  const at = cfgNodeAt(cfg, sourceFile, offset)?.id;
   if (at === undefined) {
     throw new AnalysisError('The cursor is not in a statement of the function.');
   }
   const { paths, truncated } = cfgPaths(cfg);
-  const same = (n: ts.Node) => ts.isIdentifier(n) && symbolAt(checker, n) === symbol;
+  const same = (n: ts.Node) => ts.isIdentifier(n) && n.text === identifier.text && symbolAt(checker, n) === symbol;
+  const named = new Map<ts.Node, boolean>();
+  const mayName = (statement: ts.Node) => {
+    let found = named.get(statement);
+    if (found === undefined) named.set(statement, (found = statement.getText().includes(identifier.text)));
+    return found;
+  };
   const sources = new Map<string, ValueSource>();
   const impossible: CfgPath[] = [];
   const seen = new Set<string>();
@@ -215,6 +198,8 @@ export function explainValue(project: VirtualProject, fileName: string, offset: 
       const statements = node.kind === 'statement' || node.kind === 'catch' ? node.nodes : node.kind === 'loop' ? node.nodes.map(loopHeader).filter((n): n is ts.Node => !!n) : [];
       for (const statement of statements) {
         if (i === stop && statement.getStart(sourceFile) >= offset) break;
+        // Most statements never name the variable: skip them without walking their syntax.
+        if (!mayName(statement)) continue;
         value = lastDefinition(statement, same, value, i === stop ? offset : undefined) ?? value;
       }
     }
@@ -232,10 +217,6 @@ export function explainValue(project: VirtualProject, fileName: string, offset: 
 /** The part of a loop statement that assigns: the variable of a for…of or for…in. */
 function loopHeader(node: ts.Node): ts.Node | undefined {
   return (ts.isForOfStatement(node) || ts.isForInStatement(node)) && ts.isVariableDeclarationList(node.initializer) ? node : undefined;
-}
-
-function span(node: { nodes: ts.Node[] }): number {
-  return node.nodes.reduce((total, n) => total + (n.end - n.pos), 0);
 }
 
 /** The value a statement leaves in the variable, given the value before it; compound updates build on it. */

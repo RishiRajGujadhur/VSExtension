@@ -1,5 +1,6 @@
 import ts = require('typescript');
 import { FunctionWithBody, calledFunction, functionLabel, isFunctionWithBody } from '../structure/util';
+import { own } from './defUse';
 
 /**
  * Control flow of one function: the statements and decisions execution can pass through and the edges between
@@ -314,6 +315,17 @@ export function buildCfg(fn: FunctionWithBody): Cfg {
     if (!reached.has(node.id) && node.id !== end) node.unreachable = true;
   }
   return { name: functionLabel(fn), fn, nodes, edges, start, end };
+}
+
+/**
+ * The box whose code holds the offset, innermost first: a condition inside a block wins over the block. A loop's
+ * body belongs to the boxes inside it, so only its header counts for the loop box.
+ */
+export function cfgNodeAt(cfg: Cfg, sourceFile: ts.SourceFile, offset: number): CfgNode | undefined {
+  const header = own;
+  const contains = (n: ts.Node) => n.getSourceFile() === sourceFile && n.getStart(sourceFile) <= offset && offset <= n.end;
+  const size = (n: CfgNode) => header(n).reduce((total, x) => total + x.end - x.pos, 0);
+  return cfg.nodes.filter((n) => n.kind !== 'start' && n.kind !== 'end' && header(n).some(contains)).sort((a, b) => size(a) - size(b))[0];
 }
 
 /** A call in a node to a function of the project, which can be expanded in place. */

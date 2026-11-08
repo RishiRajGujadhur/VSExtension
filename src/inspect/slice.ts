@@ -1,8 +1,9 @@
 import ts = require('typescript');
-import { Cfg, CfgNode, buildCfg } from './controlFlow';
+import { Cfg, buildCfg, cfgNodeAt } from './controlFlow';
 import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';
-import { enclosingFunction, identifierAt, isFunctionWithBody } from '../structure/util';
+import { enclosingFunction, identifierAt } from '../structure/util';
+import { definitions, uses } from './defUse';
 
 /**
  * Program slices within one function, on its control flow graph:
@@ -20,67 +21,6 @@ export interface Slice {
   at: number;
   /** Boxes in the slice, including the one at the cursor. */
   nodes: number[];
-}
-
-/** The syntax of a box that runs when it runs: a loop's header, not its body. */
-function own(node: CfgNode): ts.Node[] {
-  if (node.kind !== 'loop') return node.nodes;
-  return node.nodes.flatMap((n) => {
-    if (ts.isForOfStatement(n) || ts.isForInStatement(n)) return [n.initializer, n.expression];
-    if (ts.isForStatement(n)) return [n.condition, n.incrementor].filter((x): x is ts.Expression => !!x);
-    if (ts.isWhileStatement(n)) return [n.expression];
-    return [n];
-  });
-}
-
-const rootName = (e: ts.Node): string | undefined => {
-  while (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e) || ts.isParenthesizedExpression(e) || ts.isNonNullExpression(e)) e = e.expression;
-  return ts.isIdentifier(e) ? e.text : undefined;
-};
-
-/** Names a box assigns: declarations, assignments (also to a property of it), ++ and --, and calls on it. */
-export function definitions(node: CfgNode): Set<string> {
-  const names = new Set<string>();
-  const visit = (n: ts.Node): void => {
-    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) names.add(n.name.text);
-    else if (ts.isVariableDeclarationList(n)) n.declarations.forEach((d) => ts.isIdentifier(d.name) && names.add(d.name.text));
-    if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-      const name = rootName(n.left);
-      if (name) names.add(name);
-    }
-    if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) {
-      const name = rootName(n.operand);
-      if (name) names.add(name);
-    }
-    // items.push(x) changes items.
-    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
-      const name = rootName(n.expression.expression);
-      if (name && /^(push|pop|shift|unshift|splice|sort|reverse|fill|set|add|delete|clear)$/.test(n.expression.name.text)) names.add(name);
-    }
-    if (!isFunctionWithBody(n)) ts.forEachChild(n, visit);
-  };
-  own(node).forEach(visit);
-  return names;
-}
-
-/** Names a box reads: identifiers outside declarations' names, property names, types and plain `x =` targets. */
-export function uses(node: CfgNode): Set<string> {
-  const names = new Set<string>();
-  const visit = (n: ts.Node): void => {
-    if (ts.isTypeNode(n)) return;
-    if (ts.isIdentifier(n)) {
-      const parent = n.parent;
-      const isName = (parent as ts.NamedDeclaration).name === n && !ts.isPropertyAccessExpression(parent);
-      const isProperty = (ts.isPropertyAccessExpression(parent) && parent.name === n) || (ts.isPropertyAssignment(parent) && parent.name === n);
-      const isPlainTarget = ts.isBinaryExpression(parent) && parent.left === n && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken;
-      if (!isName && !isProperty && !isPlainTarget) names.add(n.text);
-      return;
-    }
-    if (ts.isShorthandPropertyAssignment(n)) names.add(n.name.text);
-    if (!isFunctionWithBody(n) || n !== own(node)[0]) ts.forEachChild(n, visit);
-  };
-  own(node).forEach(visit);
-  return names;
 }
 
 /** For each box, the boxes control-dependent on it: those that run only for some of its branches. */
@@ -120,13 +60,16 @@ export function controlDependents(cfg: Cfg): Map<number, Set<number>> {
 }
 
 function reach(cfg: Cfg, from: number, forward: boolean): Set<number> {
+  const next = new Map<number, number[]>();
+  for (const e of cfg.edges) {
+    const [a, b] = forward ? [e.from, e.to] : [e.to, e.from];
+    next.set(a, [...(next.get(a) ?? []), b]);
+  }
   const seen = new Set<number>();
   const queue = [from];
   while (queue.length) {
-    const id = queue.shift()!;
-    for (const e of cfg.edges) {
-      const [a, b] = forward ? [e.from, e.to] : [e.to, e.from];
-      if (a === id && !seen.has(b)) {
+    for (const b of next.get(queue.pop()!) ?? []) {
+      if (!seen.has(b)) {
         seen.add(b);
         queue.push(b);
       }
@@ -186,11 +129,7 @@ export function sliceAt(project: VirtualProject, fileName: string, offset: numbe
   const fn = enclosingFunction(identifier);
   if (!fn) throw new AnalysisError('Place the cursor inside a function: a slice follows the code of one function.');
   const cfg = buildCfg(fn);
-  const contains = (n: ts.Node) => n.getStart(sourceFile) <= offset && offset <= n.end;
-  const candidates = cfg.nodes.filter((n) => n.kind !== 'start' && n.kind !== 'end' && own(n).some(contains));
-  const fallback = cfg.nodes.filter((n) => n.kind !== 'start' && n.kind !== 'end' && n.nodes.some(contains));
-  const size = (n: CfgNode) => n.nodes.reduce((t, x) => t + x.end - x.pos, 0);
-  const at = (candidates.length ? candidates : fallback).sort((a, b) => size(a) - size(b))[0]?.id ?? (ts.isParameter(identifier.parent) ? cfg.start : undefined);
+  const at = cfgNodeAt(cfg, sourceFile, offset)?.id ?? (ts.isParameter(identifier.parent) ? cfg.start : undefined);
   if (at === undefined) throw new AnalysisError('The cursor is not in a statement of the function.');
   return { direction, name: identifier.text, cfg, at, nodes: sliceOf(cfg, at, identifier.text, direction) };
 }
