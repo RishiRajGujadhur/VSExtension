@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "WebStorm-style refactorings, cross-file inspections, structural search and navigation for TypeScript, JavaScript and React, plus test impact analysis. Deterministic, offline, no AI.",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {

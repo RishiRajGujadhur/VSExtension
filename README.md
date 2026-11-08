@@ -37,6 +37,7 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `2` | Audit Type Assertions | `3` | Mutation Tracking (Project) |
 | `4` | Test Impact of Changed Files | `5` | Next inspection problem |
 | `6` | Mutation Tracking for This Variable | `7` | Race Conditions |
+| `1` | Control Flow Graph | `0` | Explain Value Path |
 | `8` | Data Flow Diagram | `9` | Show the results as a diagram |
 | `Escape` | Stop the running analysis | | |
 
@@ -70,6 +71,18 @@ The functions that write the value sit under **Flows in** and those that read it
 - An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Clicking a box also makes pulses flow along the lines between it and the subject. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid is adapted from [robot-components](https://github.com/dashrobotco/robot-components), MIT.)
 
 ![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
+
+### Control Flow Graph and Path Explorer
+
+**Control Flow Graph** (`Ctrl+Alt+S 1`) draws the function at the cursor as a flowchart beside the code: statements in the editor font, decisions as hexagons with **yes** and **no** edges, switch cases (including fall-through), loops with their way back, returns and throws, and code nothing reaches drawn dashed. Put the cursor on a call to draw the called function instead.
+
+The **Path Explorer** lists every path through the function with the branches it takes, in words (*user.active → user.role is 'member' → not sensitive*), and what it returns. Pick a path to light up its route; click a branch label (yes, no, case…) to keep only the paths through it. Paths that test the same unchanged condition both ways cannot happen and are hidden unless you ask for them. Click a box to open its code; the box your cursor is in is outlined, and the chart redraws as you edit.
+
+**Explain Value Path** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
+
+Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
+
+![The control flow of deliveryDays beside its code, with the paths through it](docs/images/control-flow.gif)
 
 ### Detect Design Patterns
 
