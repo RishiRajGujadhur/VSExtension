@@ -14,7 +14,7 @@ function git(cwd: string, args: string[], input?: string): Buffer {
     return execFileSync('git', args, { cwd, input, maxBuffer: 512 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
   } catch (error) {
     const stderr = (error as { stderr?: Buffer }).stderr?.toString().trim();
-    throw new AnalysisError(`git ${args[0]} failed${stderr ? `: ${stderr}` : ''}`);
+    throw new AnalysisError(`git ${args[0]} failed${stderr ? `: ${stderr}` : ''}`, 'git');
   }
 }
 

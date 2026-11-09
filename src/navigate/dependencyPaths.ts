@@ -89,7 +89,7 @@ export function dependencyPathReport(program: ts.Program, from: string, to: stri
   const source = normalizePath(from);
   const target = normalizePath(to);
   if (!graph.files.has(source) || !graph.files.has(target)) {
-    throw new AnalysisError('Both files must be in the same project.');
+    throw new AnalysisError('Both files must be in the same project.', 'project');
   }
   const relative = (file: string) => (root ? path.relative(root, file).replace(/\\/g, '/') : path.basename(file));
   const builder = new ReportBuilder('dependencyPath', `${path.basename(source)} → ${path.basename(target)}`);

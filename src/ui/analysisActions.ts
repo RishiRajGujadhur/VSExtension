@@ -3,6 +3,8 @@ import { FileSymbol, SymbolKind, fileSymbols, symbolAt } from '../structure/symb
 import { parse, refactorKind } from './codeActions';
 import { isFeatureEnabled } from './features';
 import { commandIcons } from '../structure/icons';
+import { AnalysisError } from '../analysis/types';
+import { Remedy, remedies, showProblem, syntaxErrorRemedy, withSyntaxNote } from './problems';
 
 /** An analysis that starts from a named thing at the cursor, and the things it can start from. */
 interface CursorAnalysis {
@@ -23,7 +25,14 @@ const analyses: readonly CursorAnalysis[] = [
   { command: 'tsStructure.mutationTrackingVariable', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Track every change to '${s.name}'` },
   { command: 'tsStructure.raceConditions', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Check '${s.name}' for race conditions` },
   { command: 'tsStructure.explainValue', feature: 'dataFlow', kinds: ['variable', 'parameter'], lightbulb: (s) => `Explain the possible values of '${s.name}' here` },
+  { command: 'tsStructure.dataFlowDiagram', feature: 'dataFlow', kinds: ['variable', 'parameter', 'member'], accepts: notMethod },
+  { command: 'tsStructure.sliceBackward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },
+  { command: 'tsStructure.sliceForward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },
   { command: 'tsStructure.controlFlow', feature: 'dataFlow', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show the control flow of ${qualified(s)}()` },
+  { command: 'tsStructure.dependenceGraph', feature: 'dataFlow', kinds: ['function', 'member'], accepts: notProperty },
+  { command: 'tsStructure.callGraph', feature: 'usages', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show the call graph of ${qualified(s)}()` },
+  // Components (capitalized) and hooks (use…) only.
+  { command: 'tsStructure.reactState', feature: 'dataFlow', kinds: ['function', 'variable'], accepts: (s) => /^[A-Z]|^use[A-Z]/.test(s.name), lightbulb: (s) => `Show the React state graph of ${s.name}` },
   { command: 'tsStructure.nullability', feature: 'nullability', kinds: ['variable', 'parameter', 'member', 'function'] },
   { command: 'tsStructure.argumentFlow', feature: 'argumentFlow', kinds: ['parameter'], lightbulb: (s) => `Trace values of parameter '${s.name}'` },
   { command: 'tsStructure.sideEffects', feature: 'sideEffects', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show side effects of ${qualified(s)}()` },
@@ -84,29 +93,47 @@ const icons: Record<SymbolKind, string> = {
  * After an analysis found nothing to start from at the cursor, offers the file's declarations it can
  * start from, and runs it on the one picked.
  */
-export async function offerSymbols(command: string, message: string, editor: vscode.TextEditor): Promise<void> {
+export async function offerSymbols(command: string, error: string | AnalysisError, editor: vscode.TextEditor): Promise<void> {
+  const message = typeof error === 'string' ? error : error.message;
+  const reason = typeof error === 'string' ? 'cursor' : error.reason;
   const analysis = analyses.find((a) => a.command === command);
   const symbols = analysis ? fileSymbols(parse(editor.document)).filter((s) => fits(analysis, s)) : [];
-  if (!analysis || symbols.length === 0) {
-    void vscode.window.showErrorMessage(message);
-    return;
-  }
+  const syntax = syntaxErrorRemedy(editor);
+  const buttons: Remedy[] = [];
+  // Broken code first: a syntax error is the likeliest reason nothing was found at the cursor.
+  if (syntax && reason === 'cursor') buttons.push(syntax.remedy);
+  if (reason === 'library') buttons.push(remedies.goToDefinition, remedies.findUsages);
   // On a function, a class or an import, offer the analysis that fits it, such as Side Effects for Data Flow on a function.
   const here = symbolAt(parse(editor.document), editor.document.offsetAt(editor.selection.active));
   const fitting = here && analyses.find((a) => a.command !== command && a.lightbulb && isFeatureEnabled(a.feature) && fits(a, here) && (a.command !== 'tsStructure.promiseRejections' || here.async));
-  const alternative = fitting ? `${titles[fitting.command] ?? 'Analyze'} of ${here!.name}` : undefined;
-  const choice = await vscode.window.showErrorMessage(message, ...(alternative ? [alternative] : []), 'Choose a Symbol…');
-  if (!choice) {
-    return;
+  if (fitting) buttons.push({ title: `${titles[fitting.command] ?? 'Analyze'} of ${here!.name}`, run: () => vscode.commands.executeCommand(fitting.command) });
+  if (analysis && symbols.length) {
+    buttons.push({
+      title: chooseTitle(analysis),
+      run: async () => {
+        const picked = await pickSymbol(editor, symbols, `${titles[command] ?? 'Analyze'}: ${chooseTitle(analysis).replace(/…$/, '')}`);
+        if (picked) await runOn(editor, picked, command);
+      },
+    });
+  } else {
+    // Nothing in this file fits: look elsewhere in the project, or ask which analysis answers the question.
+    buttons.push(remedies.findInProject, remedies.howDoI);
   }
-  if (choice === alternative) {
-    await vscode.commands.executeCommand(fitting!.command);
-    return;
-  }
-  const picked = await pickSymbol(editor, symbols);
-  if (picked) {
-    await runOn(editor, picked, command);
-  }
+  // The choose button matters most when there is no syntax error to fix.
+  const ordered = syntax && reason === 'cursor' ? buttons : [...buttons.filter((b) => b.title.startsWith('Choose')), ...buttons.filter((b) => !b.title.startsWith('Choose'))];
+  await showProblem(withSyntaxNote(message, reason === 'cursor' ? syntax?.count : undefined), ordered);
+}
+
+/** "Choose a Variable…", "Choose a Function…": what the analysis starts from, in words. */
+function chooseTitle(analysis: CursorAnalysis): string {
+  const kinds = new Set(analysis.kinds);
+  if ([...kinds].every((k) => k === 'function' || k === 'member') && analysis.accepts === notProperty) return 'Choose a Function…';
+  if ([...kinds].every((k) => k === 'variable' || k === 'parameter' || k === 'member')) return kinds.has('member') ? 'Choose a Variable or Property…' : 'Choose a Variable…';
+  if ([...kinds].every((k) => k === 'class' || k === 'interface')) return 'Choose a Class or Interface…';
+  if ([...kinds].every((k) => k === 'parameter')) return 'Choose a Parameter…';
+  if ([...kinds].every((k) => k === 'member')) return 'Choose a Method or Property…';
+  if ([...kinds].every((k) => k === 'import')) return 'Choose an Import…';
+  return 'Choose a Symbol…';
 }
 
 /** A list of declarations with the one nearest the cursor selected, so Enter takes the obvious one. */
@@ -147,6 +174,9 @@ const titles: Record<string, string> = {
   'tsStructure.mutationTrackingVariable': 'Mutation Tracking',
   'tsStructure.raceConditions': 'Race Conditions',
   'tsStructure.controlFlow': 'Control Flow Graph',
+  'tsStructure.dependenceGraph': 'Program Dependence Graph',
+  'tsStructure.callGraph': 'Call Graph',
+  'tsStructure.reactState': 'React State Graph',
   'tsStructure.explainValue': 'Explain Value Path',
   'tsStructure.argumentFlow': 'Argument Propagation',
   'tsStructure.sideEffects': 'Side Effects',

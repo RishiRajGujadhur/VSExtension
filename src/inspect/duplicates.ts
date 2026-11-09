@@ -286,7 +286,7 @@ export function findCopies(sourceFiles: readonly ts.SourceFile[], sourceFile: ts
 export function copiesReport(sourceFiles: readonly ts.SourceFile[], sourceFile: ts.SourceFile, start: number, end: number, root?: string): Report {
   const group = findCopies(sourceFiles, sourceFile, start, end);
   if (!group) {
-    throw new AnalysisError('Select whole statements to find copies.');
+    throw new AnalysisError('Select whole statements to find copies.', 'selection');
   }
   const report = duplicatesReport(sourceFiles, { minStatements: 1, minTokens: 0 }, root, [group]);
   report.title = 'Copies of the selection';

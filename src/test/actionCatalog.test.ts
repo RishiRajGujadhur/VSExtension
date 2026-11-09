@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as path from 'path';
 import { test } from 'node:test';
-import { actionCatalog, changeLayout, defaultLayout, maxDetailLength, mostUsed, normalizeLayout } from '../structure/actionCatalog';
+import { actionCatalog, actionId, changeLayout, defaultLayout, maxDetailLength, mostUsed, normalizeLayout } from '../structure/actionCatalog';
 import { effectiveKeybindings, parseKeybindingsJson, shortcuts } from '../structure/keys';
 import { commandIcons } from '../structure/icons';
 
@@ -14,7 +14,11 @@ test('every action in the sidebar is a real command with an icon, listed once', 
     assert.ok(commands.has(action.command), action.command);
     assert.ok(action.icon || commandIcons[action.command] || commands.get(action.command)?.icon, `${action.command} has no icon`);
   }
-  assert.equal(new Set(actionCatalog.map((a) => a.command)).size, actionCatalog.length);
+  assert.equal(new Set(actionCatalog.map(actionId)).size, actionCatalog.length);
+  // The Graphs tab lists each command once too.
+  const graphs = actionCatalog.filter((a) => a.tab === 'graphs');
+  assert.equal(new Set(graphs.map((a) => a.command)).size, graphs.length);
+  assert.ok(graphs.length >= 10);
 });
 
 test('most used: the actions run most often, then the defaults', () => {

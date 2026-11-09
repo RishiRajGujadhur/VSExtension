@@ -369,8 +369,32 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.ok(values, 'explain value report');
   console.log(`explain value ok: ${values.title} — ${values.description}`);
 
+  // Graphs: the call graph opens with callers and callees; the dependence graph adds arcs to the control flow chart.
+  at('subtotal = ');
+  const calls = await vscode.commands.executeCommand<{ kind: string; roots: { label: string }[] }>('tsStructure.callGraph');
+  assert.equal(calls?.kind, 'callGraph');
+  assert.deepEqual(calls.roots.map((r) => r.label).slice(0, 2), ['Called by', 'Calls']);
+  await vscode.window.showTextDocument(document);
+  at('subtotal = ');
+  const dependences = await vscode.commands.executeCommand<{ dependences: { data: unknown[] } }>('tsStructure.dependenceGraph');
+  assert.ok(dependences && dependences.dependences.data.length > 0, 'dependence arcs');
+  console.log(`graphs ok: ${calls.roots.length} sides, ${dependences.dependences.data.length} data dependences`);
+  // The charts these opened are closed again, so later steps find their own tabs.
+  const charts = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs).filter((t) => t.input instanceof vscode.TabInputWebview && /tsStructure\.(diagram|controlFlow)$/.test(t.input.viewType));
+  for (let i = 0; i < 5 && charts().length; i++) {
+    await vscode.window.tabGroups.close(charts());
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(charts().length, 0, 'the chart tabs close');
+  // An analysis that can't start at the cursor explains itself rather than failing.
+  await vscode.window.showTextDocument(document);
+  const editorNow = vscode.window.activeTextEditor!;
+  editorNow.selection = new vscode.Selection(0, 0, 0, 0);
+  await vscode.commands.executeCommand('tsStructure.reactState');
+  console.log('error with fixes ok');
+
   // The Actions view's title commands rearrange it and can be undone by running them again.
-  await vscode.commands.executeCommand('workbench.view.extension.tsStructure');
+  await vscode.commands.executeCommand('tsStructure.actions.focus');
   for (const command of ['toggleDescriptions', 'toggleDescriptions', 'collapseAll', 'collapseAll', 'toggleMostUsed', 'toggleMostUsed', 'showHidden']) {
     await vscode.commands.executeCommand(`tsStructure.actions.${command}`);
   }
@@ -448,7 +472,8 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.equal(await vscode.commands.executeCommand('tsStructure.sideEffects'), undefined);
   await vscode.workspace.getConfiguration('tsStructure.features').update('sideEffects', true, vscode.ConfigurationTarget.Global);
   const report = await vscode.commands.executeCommand<{ kind: string }>('tsStructure.sideEffects');
-  assert.equal(report?.kind, 'sideEffects');
+  const activeEditor = vscode.window.activeTextEditor;
+  assert.equal(report?.kind, 'sideEffects', `active: ${activeEditor?.document.uri.fsPath} at ${activeEditor?.selection.active.line}:${activeEditor?.selection.active.character}, word ${activeEditor && activeEditor.document.getText(activeEditor.document.getWordRangeAtPosition(activeEditor.selection.active))}`);
   await vscode.workspace.getConfiguration('tsStructure').update('codeLens.sideEffects', undefined, vscode.ConfigurationTarget.Global);
   console.log('side-effect code lens ok');
   console.log('feature switches ok');

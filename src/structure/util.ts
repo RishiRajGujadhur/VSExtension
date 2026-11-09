@@ -442,7 +442,7 @@ export function enclosingCondition(node: ts.Node): ts.Expression | undefined {
 export function sourceFileOf(program: ts.Program, fileName: string): ts.SourceFile {
   const sourceFile = program.getSourceFile(fileName);
   if (!sourceFile) {
-    throw new AnalysisError(`${fileName} isn't in the compiler project.`);
+    throw new AnalysisError(`${fileName} isn't in the compiler project.`, 'project');
   }
   return sourceFile;
 }

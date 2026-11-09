@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ActionLayout, actionCatalog, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
+import { ActionLayout, actionCatalog, actionId, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
+import { Report } from '../structure/report';
 import { featureOf } from '../structure/features';
 import { commandIcons } from '../structure/icons';
 import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } from '../structure/keys';
@@ -16,7 +17,8 @@ export function recordActionUse(memento: vscode.Memento, command: string): void 
   void memento.update(usageKey, usage);
 }
 
-const isAction = (command: unknown): command is string => typeof command === 'string' && actionCatalog.some((a) => a.command === command);
+const entryOf = (id: unknown) => (typeof id === 'string' ? actionCatalog.find((a) => actionId(a) === id) : undefined);
+const isAction = (id: unknown): id is string => !!entryOf(id);
 
 /**
  * The Actions view at the top of the Code X-Ray sidebar: every analysis and edit, searchable, in Analyze and Edit
@@ -65,21 +67,23 @@ export class ActionsView implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
     view.webview.html = html(view.webview, this.extensionUri);
-    view.webview.onDidReceiveMessage(async (message: { type: string; command?: unknown; change?: LayoutChange }) => {
+    view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
       if (message.type === 'ready') {
         this.post();
-      } else if (message.type === 'run' && (isAction(message.command) || footer.some((f) => f.command === message.command))) {
-        const command = message.command as string;
-        if (isAction(command)) {
-          recordActionUse(this.memento, command);
-          this.post();
-        }
-        await vscode.commands.executeCommand(command);
+      } else if (message.type === 'run' && entryOf(message.id)) {
+        const entry = entryOf(message.id)!;
+        recordActionUse(this.memento, actionId(entry));
+        void this.post();
+        const result = await vscode.commands.executeCommand<Report | undefined>(entry.command);
+        // A graph of the Graphs tab: the report it made, drawn as a chart.
+        if (entry.graph && result && typeof result === 'object' && 'roots' in result) await vscode.commands.executeCommand('tsStructure.report.showDiagram');
+      } else if (message.type === 'run' && footer.some((f) => f.command === message.command)) {
+        await vscode.commands.executeCommand(message.command as string);
       } else if (message.type === 'layout' && message.change && typeof message.change === 'object') {
         this.change(message.change);
-      } else if (message.type === 'changeShortcut' && isAction(message.command)) {
+      } else if (message.type === 'changeShortcut' && typeof message.command === 'string' && actionCatalog.some((a) => a.command === message.command)) {
         await vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', `@command:${message.command}`);
-      } else if (message.type === 'copyId' && isAction(message.command)) {
+      } else if (message.type === 'copyId' && typeof message.command === 'string' && actionCatalog.some((a) => a.command === message.command)) {
         await vscode.env.clipboard.writeText(message.command);
         void vscode.window.setStatusBarMessage(`Copied ${message.command}`, 3000);
       } else if (message.type === 'reset') {
@@ -138,10 +142,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
         const feature = featureOf(a.command);
         return !feature || isFeatureEnabled(feature.id);
       })
-      .map((a) => ({ ...a, icon: a.icon ?? commandIcons[a.command] ?? 'symbol-misc', key: keys.get(a.command) }));
+      .map((a) => ({ ...a, id: actionId(a), icon: a.icon ?? commandIcons[a.command] ?? 'symbol-misc', key: keys.get(a.command) }));
     const usage = this.memento.get<Record<string, number>>(usageKey) ?? {};
     // Most Used leaves out what is already pinned, and what is hidden.
-    const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.command) && !layout.hidden.includes(a.command)).map((a) => a.command);
+    const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
     void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout });
   }

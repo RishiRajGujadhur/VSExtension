@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { remedies, showProblem } from './problems';
 import { ProjectService } from '../analysis/project';
 import { openChangeSignature } from './changeSignaturePanel';
 import { RefactorCommandProvider } from './codeActions';
@@ -18,7 +19,7 @@ export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescr
 export function sourceEditor(): vscode.TextEditor | undefined {
   const editor = vscode.window.activeTextEditor;
   if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
-    void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file first.');
+    void showProblem('Open a TypeScript or JavaScript file first.', [remedies.openFile]);
     return undefined;
   }
   return editor;

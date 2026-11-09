@@ -49,6 +49,16 @@ export const explanations: Record<string, Explanation> = {
     text: 'A well-known way of organizing code, such as a Factory that creates objects in one place, an Observer that notifies listeners, or a Strategy of interchangeable classes. They are recognized from the shape of the code, never from names alone; hover a pattern to read what it means.',
     anchor: 'detect-design-patterns',
   },
+  callGraph: {
+    title: 'Call Graph',
+    text: 'Who calls a function and what it calls, a few levels each way: callers on the left (their callers further out), callees on the right. Calls are resolved with the type checker, so methods, imported functions and functions passed through variables are followed; calls into libraries are counted. A call made inside a callback, such as setTimeout(() => f()), belongs to the function that set the callback up.',
+    anchor: 'call-graph',
+  },
+  reactState: {
+    title: 'React State Graph',
+    text: 'The props and context a component or hook receives, and its state, refs, memoized values, callbacks, custom hooks and effects: where each is set, read and rendered, which effects and memos it triggers as a dependency, when each effect runs and what it sets, and values an effect reads but does not list as a dependency.',
+    anchor: 'react-state-graph',
+  },
   sideEffects: {
     title: 'What is a side effect?',
     text: 'Anything a function does besides returning a value: changing state it does not own, input/output (console, network, storage, files), scheduling timers, or reading the clock or random numbers. A function without any is pure.',

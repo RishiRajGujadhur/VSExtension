@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { remedies, showProblem } from './problems';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
@@ -70,7 +71,7 @@ export function registerGraphDiff(context: vscode.ExtensionContext, projects: Pr
       const editor = vscode.window.activeTextEditor;
       const anchor = editor?.document.uri.scheme === 'file' ? editor.document.uri.fsPath : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!anchor) {
-        void vscode.window.showErrorMessage('Open a file in a Git repository first.');
+        void showProblem('Open a file in a Git repository first.', [remedies.openFile, remedies.initGit]);
         return;
       }
       try {

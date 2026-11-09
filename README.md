@@ -17,7 +17,7 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 
 1. Open a TypeScript or JavaScript file and put the cursor on a symbol.
 2. Right-click: **Find Usages**, **Find Usages in Current File**, **Data Flow** and **Analyze or Refactor This…** are at the top of the menu. Everything else is under **Code X-Ray**.
-3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, with a search box, your **Pinned** and **Most Used** actions first and the rest by category. Results open in the **Analysis** view below it.
+3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, and every chart in the **Graphs** tab (the Graph Explorer), with a search box, your **Pinned** and **Most Used** actions first and the rest by category. Results open in the **Analysis** view below it.
 
 **Arranging the Actions view**
 
@@ -25,7 +25,7 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 - Pin the actions you use and drag them into the order you like, or press `Alt+Up` and `Alt+Down`.
 - Right-click an action (or press `Shift+F10`) to run, pin, move or hide it, change or add its shortcut, or copy its command ID. `Delete` hides the focused action; hidden actions wait in a folded **Hidden** section, ready to show again.
 - Fold any section by its heading; the view's title bar folds them all, or hides the descriptions for a one-line list. Its **…** menu hides Most Used, shows every hidden action, or resets the view.
-- Type anywhere in the list, or press `/` or `Ctrl+F`, to search. Search covers both tabs, hidden actions and shortcuts (try `F7`), and marks the matching words.
+- Type anywhere in the list, or press `/` or `Ctrl+F`, to search. Search covers every tab, hidden actions and shortcuts (try `F7`), and marks the matching words.
 - Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
@@ -129,6 +129,18 @@ Each loop is taken zero or one times, and branches inside expressions (`&&`, `||
 
 ![The control flow of deliveryDays beside its code, with the paths through it](docs/images/control-flow.gif)
 
+#### Program Dependence Graph
+
+**Program Dependence Graph** (`Ctrl+Alt+S Shift+D`), or the **Dependences** button (`D`) in the Control Flow view, draws the function's dependences on its flowchart: purple arcs on the left run from where a variable is set to each place that value is read (an assignment that can reach the read without being overwritten), named by the variable; orange dashed arcs on the right run from a decision to each statement that runs only for some of its branches. Hover or focus a box to keep only its own arcs; in a large function the arcs stay faint until you do. Together they answer *why can this line run, and where did its values come from?* (Assignments through a property or a method such as `push` count as setting the variable.)
+
+### Call Graph
+
+**Call Graph** (`Ctrl+Alt+S Shift+C`) draws the function at the cursor as a butterfly: who calls it on the left (and who calls them, further out), what it calls on the right (and what those call), three levels each way (`tsStructure.callGraph.depth`). Calls are resolved with the type checker, so methods, imported functions, React components rendered in JSX and functions passed through variables are followed; a call made inside a callback, such as `setTimeout(() => submit())`, belongs to the function that set the callback up and says so. Top-level code shows as the module that runs it, recursion is marked and not followed again, and calls into libraries or through interfaces are counted in one box. The same rows are in the results view.
+
+### React State Graph
+
+**React State Graph** (`Ctrl+Alt+S Shift+R`) shows how a React component or hook fits together. Its props and context are on the left; on the right are its state (`useState`, `useReducer`), refs, memoized values and callbacks, custom hooks and effects. For each value you see where it is set (in which handler or effect), where it is read or rendered, and which effects and memos it triggers as a dependency. Each effect says when it runs (*when userId changes*, *after every render*, *once*), what it sets and reads, whether it cleans up, and warns about a value it reads but doesn't list as a dependency. Values nothing reads are marked.
+
 ### Detect Design Patterns
 
 The design patterns and architecture of a file, folder or the whole project, 75 in all, each recognized from the shape of the code, with a link to learn more about each:
@@ -214,6 +226,10 @@ Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorin
 
 Analyses over many files ask where to look: the whole project, a folder, the open editors, the changed files, the current file, function or selection. While one runs, the results view shows a progress bar and a stop button (`Ctrl+Alt+S Escape`). In the Explorer, right-click folders to analyze only those.
 
+### Graph Explorer
+
+The **Graphs** tab of the Actions view lists every chart Code X-Ray draws, by what it shows: **Execution** (Control Flow, Call Graph, Exception Flow, Async Rejections), **Data** (Data Flow, Program Dependence, Mutations, Arguments, React State) and **Structure** (Inheritance, Overrides, Importers, Dependency Path). Each one starts from the cursor and opens as a chart, with the same rows in the results view.
+
 ## Working with results
 
 - **Clear** (the orange button) goes back to the start page. Too many buttons? **Show Fewer Title Buttons** in the **...** menu keeps only the essentials (`tsStructure.results.toolbar`), or right-click the title bar to hide single buttons.
@@ -222,6 +238,7 @@ Analyses over many files ask where to look: the whole project, a folder, the ope
 - `F4` / `Shift+F4` walk through the results; the selected row follows your cursor.
 - `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here**, **Check for Null or Undefined Here**, and **More Analyses Here** (Mutation Tracking, Race Conditions, Side Effects, Exception Flow, Argument Propagation).
 - Green checks mark what was found safe, such as a value that is never null or undefined.
+- When an analysis can't start, the message says why and offers the way forward: **Choose a Variable…** (or a function, class or parameter, whichever the analysis needs) lists the file's declarations that fit; another analysis that does fit the symbol at the cursor is offered by name; **Go to Syntax Error** appears when broken code is the likely cause; a library symbol offers **Go to Definition**; a file outside the project offers its tsconfig.json; and unexpected failures offer **Show Log**, **Copy Details** and **Report Issue**.
 - Copy or export a report as Markdown, CSV or JSON, open it as a Markdown preview, or **Copy All Locations**. Remove reports from **Show Analysis History…** with their trash button.
 
 ![Usages limited to cart.ts](docs/images/limit-results.gif)

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { remedies, remediesFor, showProblem, unexpectedRemedies } from './ui/problems';
 import { ProjectService } from './analysis/project';
 import { analyzeImpactAsync } from './analysis/impact';
 import { AnalysisError, AnalysisScope, ImpactResult, SourceLocation, TestCase } from './analysis/types';
@@ -70,6 +71,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const structureView = new StructureView(context.workspaceState, context.extensionUri);
   registerAnalyses(context, projects, structureView);
   const diagram = new DiagramPanel(context.extensionUri, structureView);
+  // Graph analyses open as a chart straight away; the results view keeps the same rows as a tree.
+  const graphKinds = new Set(['callGraph', 'reactState']);
+  // Only a newly run graph opens the chart: filtering it or going back to it in the results view doesn't.
+  context.subscriptions.push(structureView.onDidShowNewReport((report) => graphKinds.has(report.kind) && diagram.show()));
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
@@ -89,6 +94,12 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCommand('tsStructure.controlFlow', () => {
       const editor = sourceEditor();
       if (editor) controlFlow.show(editor);
+      return controlFlow.current;
+    }),
+    // The Program Dependence Graph: the control flow chart with its data and control dependences drawn on it.
+    registerCommand('tsStructure.dependenceGraph', () => {
+      const editor = sourceEditor();
+      if (editor) controlFlow.showDependences(editor);
       return controlFlow.current;
     }),
   );
@@ -136,7 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
       } else {
         const editor = vscode.window.activeTextEditor;
         if (!editor || !supportedLanguages.has(editor.document.languageId) || editor.document.uri.scheme !== 'file') {
-          void vscode.window.showErrorMessage('Place the cursor on a symbol in a TypeScript or JavaScript file.');
+          void showProblem('Place the cursor on a symbol in a TypeScript or JavaScript file.', [remedies.openFile]);
           return;
         }
         scope = scopeArg ?? (await pickScope(context.workspaceState));
@@ -179,8 +190,8 @@ export function activate(context: vscode.ExtensionContext): void {
         await showResultsPicker(result, run);
         return result;
       } catch (error) {
-        const message = error instanceof AnalysisError ? error.message : `Test impact analysis failed: ${String(error)}`;
-        void vscode.window.showErrorMessage(message);
+        if (error instanceof AnalysisError) void showProblem(error.message, remediesFor(error));
+        else void showProblem(`Test impact analysis failed: ${String(error)}`, unexpectedRemedies('Test impact analysis', error));
       }
     }),
     registerCommand('tsImpact.analyzeFile', (uri?: vscode.Uri) => vscode.commands.executeCommand('tsImpact.analyze', uri ?? vscode.window.activeTextEditor?.document.uri)),
@@ -231,7 +242,8 @@ export function activate(context: vscode.ExtensionContext): void {
       const anchor = vscode.window.activeTextEditor?.document.uri.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       const changed = anchor ? (await changedFiles(anchor))?.filter((f) => /\.[cm]?[jt]sx?$/.test(f) && fs.existsSync(f)) : undefined;
       if (!changed?.length) {
-        void vscode.window.showInformationMessage(changed ? 'No TypeScript or JavaScript files have changed since the last commit.' : 'Changed files need a Git repository.');
+        if (changed) void showProblem('No TypeScript or JavaScript files have changed since the last commit.', [{ title: 'Test Impact at the Cursor', run: () => vscode.commands.executeCommand('tsImpact.analyze') }], 'info');
+        else void showProblem('Changed files need a Git repository.', [remedies.initGit, remedies.sourceControl]);
         return;
       }
       const merged = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Finding tests for ${changed.length} changed file${changed.length === 1 ? '' : 's'}…`, cancellable: true }, async (progress, token) => {

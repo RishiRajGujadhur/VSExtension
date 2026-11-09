@@ -163,6 +163,7 @@
       el('rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 8, class: 'frame' }, frames);
       el('text', { x: x0 + 8, y: y0 + 15, class: 'frame-label' }, frames).textContent = `↳ ${owner}()`;
     }
+    drawDependences();
     const nodes = el('g', { class: 'nodes' }, scene);
     for (const n of chart.nodes) {
       const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: n.kind === 'start' ? 0 : -1, role: 'button', 'aria-haspopup': 'menu' }, nodes);
@@ -201,6 +202,51 @@
     }
     drawMinimap();
     highlight();
+  }
+
+  // The program dependence graph over the flowchart: purple arcs on the left from where a variable is set to where
+  // that value is read, orange dashed arcs on the right from a decision to the boxes it controls. Hovering or focusing
+  // a box keeps only its own dependences.
+  let showDeps = !!state.deps;
+  function drawDependences() {
+    svg.classList.toggle('deps-on', showDeps);
+    if (!showDeps || !chart.dependences) return;
+    // With many arcs they stay faint until a box is hovered or focused, which lights up its own.
+    const busy = chart.dependences.data.length + chart.dependences.control.length > 40;
+    const layer = el('g', { class: `deps${busy ? ' quiet' : ''}`, 'aria-hidden': 'true' }, scene);
+    const side = (n, right) => ({ x: right ? n.x + n.width : n.x, y: n.y + n.height / 2 });
+    const arc = (a, b, right, cls, data) => {
+      const p = side(a, right);
+      const q = side(b, right);
+      const bulge = (right ? 1 : -1) * (30 + Math.min(160, Math.abs(q.y - p.y) * 0.25));
+      const g = el('g', { class: `dep ${cls}`, 'data-from': data.from, 'data-to': data.to }, layer);
+      el('path', { d: `M${p.x},${p.y} C${p.x + bulge},${p.y} ${q.x + bulge},${q.y} ${q.x + (right ? 3 : -3)},${q.y}`, 'marker-end': `url(#${cls}Arrow)` }, g);
+      if (data.name) {
+        const t = el('text', { x: Math.min(p.x, q.x) + bulge * 0.78, y: (p.y + q.y) / 2 + 4, 'text-anchor': right ? 'start' : 'end' }, g);
+        t.textContent = data.name;
+      }
+      return g;
+    };
+    for (const d of chart.dependences.data) arc(chart.nodes[d.from], chart.nodes[d.to], false, 'data', d);
+    for (const c of chart.dependences.control) arc(chart.nodes[c.from], chart.nodes[c.to], true, 'control', c);
+  }
+  function focusDependences(n) {
+    const layer = scene.querySelector('.deps');
+    if (!layer) return;
+    layer.classList.toggle('focused', !!n);
+    layer.querySelectorAll('.dep').forEach((g) => g.classList.toggle('mine', !!n && (Number(g.dataset.from) === n.id || Number(g.dataset.to) === n.id)));
+  }
+  function toggleDependences(on = !showDeps) {
+    showDeps = on;
+    state.deps = showDeps;
+    saveState();
+    const button = document.getElementById('deps');
+    button.setAttribute('aria-pressed', String(showDeps));
+    render();
+    if (showDeps && chart && chart.dependences) {
+      const { data, control, truncated } = chart.dependences;
+      info.textContent = `Dependences: ${data.length} data (purple, left), ${control.length} control (orange, right)${truncated ? ', some left out' : ''}. ${data.length + control.length > 40 ? 'Many arcs: hover or focus a box to light up its own.' : 'Hover a box to see only its own.'}`;
+    }
   }
 
   // What a screen reader says for a box.
@@ -492,7 +538,7 @@
   function drawFlows() {
     const lines = new Set();
     const elements = scene.querySelectorAll('.edge');
-    if (prefs.flow && chart) {
+    if (prefs.flow && chart && !showDeps) {
       const shownPath = preview >= 0 ? preview : selected;
       if (shownPath >= 0) {
         chart.paths[shownPath].edges.forEach((e) => lines.add(e));
@@ -603,6 +649,7 @@
     if (n !== hovered) {
       hovered = n;
       touchEdges(n);
+      focusDependences(n || focusedNode);
       showInfo(n || focusedNode);
       if (grid) grid.wake();
     }
@@ -756,6 +803,7 @@
       ...(unfolded.length ? [{ icon: 'fold', label: 'Fold All Calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
       { icon: 'list-tree', label: panel.hidden ? 'Show Path Explorer' : 'Hide Path Explorer', keys: 'P', run: () => togglePanel(panel.hidden) },
       { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
+      { icon: 'references', label: showDeps ? 'Hide Dependences' : 'Show Dependences (Program Dependence Graph)', keys: 'D', run: () => toggleDependences() },
       { icon: 'play-circle', label: 'Animate Every Path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },
       '-',
       { icon: 'markdown', label: 'Copy as Mermaid', run: () => copyMermaid() },
@@ -996,6 +1044,7 @@
     else if (e.key === 'c' || e.key === 'C') toCursor();
     else if (e.key === 'p' || e.key === 'P') togglePanel(panel.hidden);
     else if (e.key === 'm' || e.key === 'M') toggleMinimap();
+    else if (e.key === 'd' || e.key === 'D') toggleDependences();
     else if (e.key === 'Escape') {
       if (!legend.hidden) {
         legend.hidden = true;
@@ -1063,6 +1112,8 @@
       nodePins = [];
       renderList();
       highlight();
+    } else if (message.type === 'deps') {
+      toggleDependences(message.on !== false);
     } else if (message.type === 'cursor') {
       cursorNode = message.id;
       highlight();
@@ -1081,6 +1132,8 @@
     hovered: hovered ? onScreen(hovered) : undefined,
   }));
   kit.attachFlowLines(document.getElementById('flowLines'), () => view);
+  document.getElementById('deps').addEventListener('click', () => toggleDependences());
+  document.getElementById('deps').setAttribute('aria-pressed', String(showDeps));
   kit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });
 })();

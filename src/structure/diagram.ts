@@ -161,8 +161,25 @@ function buildDiagram(report: Report): Diagram {
       rightCaption: 'Flows out',
     };
   }
+  // Graphs with two sides: what comes in on the left of the subject, what goes out on the right.
+  const sides = twoSided[report.kind];
+  if (sides) {
+    const leftRows = roots.filter((r) => sides.left.includes(r.label));
+    const rightRows = roots.filter((r) => !sides.left.includes(r.label));
+    const open = (rows: ReportNode[]) => rows.flatMap((r) => (sides.unwrap ? (r.children ?? []) : [r])).map((r) => toNode(r));
+    return { title: report.title, center, left: open(leftRows), right: open(rightRows), leftCaption: sides.leftCaption, rightCaption: sides.rightCaption };
+  }
   return { title: report.title, center, left: [], right: roots.map((r) => toNode(r)) };
 }
+
+/**
+ * Reports drawn on both sides of their subject: the rows named in `left` go left. With `unwrap`, the group rows
+ * themselves aren't drawn, only what they hold (the captions say what each side is).
+ */
+const twoSided: Record<string, { left: string[]; leftCaption: string; rightCaption: string; unwrap?: boolean }> = {
+  callGraph: { left: ['Called by'], leftCaption: 'Called by', rightCaption: 'Calls', unwrap: true },
+  reactState: { left: ['Props', 'Context'], leftCaption: 'Inputs', rightCaption: 'State and effects' },
+};
 
 /**
  * The chart as a Mermaid flowchart, for Markdown, GitHub issues and pull requests. Folded boxes keep their

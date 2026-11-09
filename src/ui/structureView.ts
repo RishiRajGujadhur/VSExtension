@@ -51,6 +51,9 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   private readonly reportChanged = new vscode.EventEmitter<Report | undefined>();
   /** Fires when another report is shown, such as a new analysis or one from the history. */
   readonly onDidChangeReport = this.reportChanged.event;
+  private readonly reportAdded = new vscode.EventEmitter<Report>();
+  /** Fires only for a newly run analysis, not when going back and forth through the history or filtering. */
+  readonly onDidShowNewReport = this.reportAdded.event;
   readonly view: vscode.TreeView<ReportNode>;
   private history: Entry[] = [];
   private position = -1;
@@ -135,6 +138,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.hidden.clear();
     this.render();
     this.persist();
+    this.reportAdded.fire(report);
     if (config.get('focusView', true)) {
       await vscode.commands.executeCommand('tsStructure.report.focus');
     } else if (!this.view.visible) {

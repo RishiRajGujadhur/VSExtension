@@ -51,7 +51,7 @@ export function dataFlowSteps(project: VirtualProject, fileName: string, offset:
   }
   // undefined, length, window…: declared by a library and used everywhere, so following them would search the whole project.
   if (!symbol.declarations?.some((d) => !d.getSourceFile().isDeclarationFile)) {
-    throw new AnalysisError(`'${identifier.text}' is declared by a library, not in your code. Data Flow follows values your code declares.`);
+    throw new AnalysisError(`'${identifier.text}' is declared by a library, not in your code. Data Flow follows values your code declares.`, 'library');
   }
   const steps: FlowStep[] = [];
   for (const reference of referencesAt(project.service, fileName, identifier.getStart())) {

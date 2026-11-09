@@ -70,6 +70,18 @@ relatedAnalyses.variableMutations = [
   { command: 'tsStructure.semanticUsages', title: 'Every usage (Find Usages)' },
 ];
 
+relatedAnalyses.callGraph = [
+  { command: 'tsStructure.controlFlow', title: 'Every path through the function (Control Flow Graph)' },
+  { command: 'tsStructure.sideEffects', title: 'What else it does (Side Effects)' },
+  { command: 'tsStructure.semanticUsages', title: 'Every usage, not only calls (Find Usages)' },
+];
+
+relatedAnalyses.reactState = [
+  { command: 'tsStructure.dataFlow', title: 'Where a value comes from and goes (Data Flow)' },
+  { command: 'tsStructure.raceConditions', title: 'Async code changing state at the wrong time (Race Conditions)' },
+  { command: 'tsStructure.callGraph', title: 'Who renders this component (Call Graph)' },
+];
+
 relatedAnalyses.explainValue = [
   { command: 'tsStructure.controlFlow', title: 'Every path through the function (Control Flow Graph)' },
   { command: 'tsStructure.dataFlow', title: 'Where the value goes next (Data Flow)' },

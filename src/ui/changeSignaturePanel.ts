@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { remedies, showProblem } from './problems';
 import { ProjectService } from '../analysis/project';
 import { FunctionInfo, SignatureSpec, changeSignature, describeFunction } from '../refactor/changeSignature';
 import { applyRefactor, reportError } from './applyRefactor';
@@ -52,7 +53,7 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
         return;
       }
       if (document.version !== version) {
-        void vscode.window.showWarningMessage(`${vscode.workspace.asRelativePath(document.uri)} changed. Run Change Signature again.`);
+        void showProblem(`${vscode.workspace.asRelativePath(document.uri)} changed while Change Signature was open.`, [remedies.runAgain('tsStructure.changeSignature')], 'warning');
         return;
       }
       const spec: SignatureSpec = {

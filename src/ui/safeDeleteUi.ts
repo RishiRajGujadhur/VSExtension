@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { remedies, showProblem } from './problems';
 import { analyzeImpact } from '../analysis/impact';
 import { ProjectService } from '../analysis/project';
 import { SafeDeletePlan, planFileDelete, planSafeDelete } from '../refactor/safeDelete';
@@ -27,7 +28,7 @@ export async function safeDeleteSymbol(projects: ProjectService, editor: vscode.
 export async function safeDeleteFile(projects: ProjectService, uri: vscode.Uri | undefined): Promise<void> {
   const target = uri ?? vscode.window.activeTextEditor?.document.uri;
   if (!target || target.scheme !== 'file') {
-    void vscode.window.showErrorMessage('Select a TypeScript or JavaScript file to delete.');
+    void showProblem('Select a TypeScript or JavaScript file to delete.', [remedies.openFile]);
     return;
   }
   const root = vscode.workspace.getWorkspaceFolder(target)?.uri.fsPath;

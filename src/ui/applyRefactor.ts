@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { remedies, remediesFor, showProblem, unexpectedRemedies } from './problems';
 import { pathKey } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { RefactorError, RefactorResult } from '../refactor/types';
@@ -37,7 +38,7 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
 
   const stale = result.changes.find((c) => c.before !== undefined && currentText(c.file) !== c.before);
   if (stale) {
-    void vscode.window.showWarningMessage(`${path.basename(stale.file)} changed. Run the refactoring again.`);
+    void showProblem(`${path.basename(stale.file)} changed after the refactoring was prepared. Run it again.`, [remedies.howDoI], 'warning');
     return false;
   }
 
@@ -87,14 +88,17 @@ function minimalReplacement(before: string, after: string): { start: number; end
 export function reportError(error: unknown, label: string): void {
   const message = error instanceof Error ? error.message : String(error);
   // Expected failures explain themselves; anything else is a bug worth a stack trace.
-  const expected = error instanceof RefactorError || error instanceof AnalysisError;
-  if (expected) {
-    void vscode.window.showErrorMessage(message);
+  if (error instanceof AnalysisError) {
+    void showProblem(message, remediesFor(error));
+    return;
+  }
+  if (error instanceof RefactorError) {
+    void showProblem(message, [remedies.howDoI]);
     return;
   }
   // One short line in the notification; the whole message and stack are in the log.
   output.appendLine(`${label} failed: ${error instanceof Error ? error.stack : message}`);
-  void vscode.window.showErrorMessage(`${label} failed: ${shortMessage(message)}`, 'Show Log').then((choice) => choice && output.show(true));
+  void showProblem(`${label} failed: ${shortMessage(message)}`, unexpectedRemedies(label, error));
 }
 
 /** The first line of a message, cut to a length that fits a notification. */

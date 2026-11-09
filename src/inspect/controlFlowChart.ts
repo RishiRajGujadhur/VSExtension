@@ -1,6 +1,7 @@
 import ts = require('typescript');
 import { Cfg, CfgNode, buildCfg, callTargets, expandCalls } from './controlFlow';
 import { cfgPaths, describeChoice } from './paths';
+import { Dependences, dependencesOf } from './dependences';
 import { layoutFlow } from '../structure/flowLayout';
 import { mermaidText } from '../structure/diagram';
 import { ReportLocation } from '../structure/report';
@@ -34,6 +35,8 @@ export interface ControlFlowChart {
   edges: { from: number; to: number; kind: string; label?: string; back: boolean; points: { x: number; y: number }[]; labelAt: { x: number; y: number } }[];
   paths: { nodes: number[]; edges: number[]; steps: { text: string; edge: number }[]; ending: string; feasible: boolean; reason?: string }[];
   truncated: boolean;
+  /** The program dependence graph: data and control dependences between boxes. */
+  dependences: Dependences;
   width: number;
   height: number;
 }
@@ -119,6 +122,7 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
       reason: p.reason,
     })),
     truncated,
+    dependences: dependencesOf(cfg),
     // Room for the function's name, written to the right of the start circle.
     width: Math.max(layout.width, ...cfg.nodes.filter((n) => n.kind === 'start').map((n) => layout.nodes.get(n.id)!.x + TERMINAL + 16 + cfg.name.length * CHAR)),
     height: layout.height,

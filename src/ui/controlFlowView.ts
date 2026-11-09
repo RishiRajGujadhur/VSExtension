@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { showProblem, unexpectedRemedies } from './problems';
+import { offerSymbols } from './analysisActions';
 import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
 import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
@@ -83,8 +85,19 @@ export class ControlFlowPanel {
       };
       this.post();
     } catch (error) {
-      void vscode.window.showInformationMessage(error instanceof AnalysisError ? error.message : `Slice: ${String(error)}`);
+      if (error instanceof AnalysisError) void offerSymbols(direction === 'backward' ? 'tsStructure.sliceBackward' : 'tsStructure.sliceForward', error, editor);
+      else void showProblem(`Slice failed: ${String(error)}`, unexpectedRemedies('Slice', error));
     }
+  }
+
+  /** The dependence layer is turned on once the page is ready. */
+  private pendingDeps = false;
+
+  /** The Program Dependence Graph: the Control Flow view with its dependence layer on. */
+  showDependences(editor: vscode.TextEditor): void {
+    this.pendingDeps = true;
+    this.show(editor);
+    this.post();
   }
 
   /** Opens the view for the function at the editor's cursor (or the function called there). */
@@ -93,7 +106,7 @@ export class ControlFlowPanel {
     this.expanded.clear();
     this.slice = undefined;
     this.target = { uri, anchor: anchor ?? editor.document.offsetAt(editor.selection.active), folder: vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath };
-    if (!this.build(true)) return;
+    if (!this.build(editor)) return;
     if (this.panel) {
       this.panel.reveal(undefined, false);
       return;
@@ -150,7 +163,7 @@ export class ControlFlowPanel {
   }
 
   /** The chart for the target, sent to the page; false when there is no function there. */
-  private build(fromCommand = false): boolean {
+  private build(fromCommand?: vscode.TextEditor): boolean {
     if (!this.target) return false;
     try {
       const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
@@ -163,7 +176,8 @@ export class ControlFlowPanel {
       return true;
     } catch (error) {
       if (fromCommand) {
-        void vscode.window.showInformationMessage(error instanceof AnalysisError ? error.message : `Control Flow: ${String(error)}`);
+        if (error instanceof AnalysisError) void offerSymbols('tsStructure.controlFlow', error, fromCommand);
+        else void showProblem(`Control Flow failed: ${String(error)}`, unexpectedRemedies('Control Flow', error));
       }
       return false;
     }
@@ -174,6 +188,10 @@ export class ControlFlowPanel {
     this.panel.title = this.chart ? `Control Flow: ${this.chart.name}` : 'Control Flow';
     void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses() });
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
+    if (this.pendingDeps && this.chart) {
+      this.pendingDeps = false;
+      void this.panel.webview.postMessage({ type: 'deps', on: true });
+    }
   }
 
   /** For tests: the chart on screen. */
@@ -218,6 +236,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   ${button('effects', 'sparkle', 'Animated Grid: the dot grid behind the chart follows the pointer', 'aria-pressed="true"')}
   ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates every path through it (Escape stops it)', 'aria-pressed="true"')}
   </span>
+  ${button('deps', 'references', 'Dependences: the program dependence graph, where each value comes from and what controls each box (D)', 'aria-pressed="false"')}
   ${button('togglePaths', 'list-tree', 'Path Explorer: the paths through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
   ${button('legendButton', 'question', 'Legend: what the shapes, colors and keys mean', 'aria-expanded="false" aria-controls="legend"')}
 </header>
@@ -227,7 +246,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
 <canvas id="grid" aria-hidden="true"></canvas>
 <canvas id="flowLines" aria-hidden="true"></canvas>
 <svg id="canvas" class="off" tabindex="-1" role="group" aria-label="Control flow graph. Tab moves between boxes; Enter opens the code.">
-  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+  <defs><marker id="dataArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="controlArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <g id="scene"></g>
 </svg>
 <svg id="minimap" class="off" aria-hidden="true"><g class="mini-scene"></g><rect id="miniView"/></svg>
@@ -262,12 +281,14 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   <ul>
     <li><span class="line-sample"></span> Next step; dashed: back to a loop</li>
     <li><span class="line-sample on"></span> The picked path; orange: the one compared with it</li>
+    <li><span class="line-sample data"></span> Dependence (D): a value set there is read here</li>
+    <li><span class="line-sample control"></span> Dependence (D): the decision controls whether this runs</li>
   </ul>
   <h2>Keys</h2>
   <ul class="keys">
     <li><kbd>Tab</kbd> a box, <kbd>↑</kbd><kbd>↓</kbd> follow the flow, <kbd>←</kbd><kbd>→</kbd> the same row</li>
     <li><kbd>Enter</kbd> open its code, <kbd>Shift+F10</kbd> its menu, <kbd>F</kbd> animate its paths</li>
-    <li><kbd>Ctrl+F</kbd> find, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>0</kbd> fit, <kbd>C</kbd> cursor box, <kbd>P</kbd> paths, <kbd>Esc</kbd> clear</li>
+    <li><kbd>Ctrl+F</kbd> find, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>0</kbd> fit, <kbd>C</kbd> cursor box, <kbd>P</kbd> paths, <kbd>D</kbd> dependences, <kbd>M</kbd> minimap, <kbd>Esc</kbd> clear</li>
   </ul>
 </aside>`,
   });

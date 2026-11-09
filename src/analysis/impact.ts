@@ -71,7 +71,7 @@ function* impactSteps(project: LoadedProject, request: ImpactRequest, options: I
   const { program, checker } = project;
   const sourceFile = program.getSourceFiles().find((sf) => pathKey(sf.fileName) === pathKey(request.fileName));
   if (!sourceFile) {
-    throw new AnalysisError(`${path.basename(request.fileName)} isn't in the compiler project.`);
+    throw new AnalysisError(`${path.basename(request.fileName)} isn't in the compiler project.`, 'project');
   }
   if (!project.index) {
     project.index = yield* ReferenceIndex.building(program, checker);
@@ -335,7 +335,7 @@ function symbolSeeds(checker: ts.TypeChecker, sourceFile: ts.SourceFile, offset:
       if (declarations.length > 0) {
         return { declarations, directTests: [] };
       }
-      throw new AnalysisError(`'${resolved.getName()}' is declared in a library, so its callers can't be traced.`);
+      throw new AnalysisError(`'${resolved.getName()}' is declared in a library, so its callers can't be traced.`, 'library');
     }
   }
   // Not on a name: use the enclosing function, method, class or variable.

@@ -1,12 +1,16 @@
 /** Every action the sidebar's Actions view offers, by tab and category, with words people may search for. */
 export interface CatalogAction {
+  /** The entry's own id: its command, or `graph:<command>` for the same command in the Graphs tab. */
+  id?: string;
   command: string;
+  /** Draw the command's report as a chart after it runs (the Graphs tab). */
+  graph?: boolean;
   label: string;
   /** One short line under the label, short enough for a narrow sidebar. */
   detail: string;
   /** What the action does in full, shown in its info tooltip. */
   info: string;
-  tab: 'analyze' | 'edit';
+  tab: 'analyze' | 'edit' | 'graphs';
   category: string;
   /** Extra words for search, such as "references" for Find Usages. */
   keywords?: string;
@@ -17,6 +21,53 @@ export interface CatalogAction {
 export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string }[] = [
   { id: 'analyze', label: 'Analyze', icon: 'search-fuzzy' },
   { id: 'edit', label: 'Edit', icon: 'edit' },
+  { id: 'graphs', label: 'Graphs', icon: 'graph-scatter' },
+];
+
+/** An entry's id: what the view pins, hides and counts uses by. */
+export const actionId = (action: CatalogAction): string => action.id ?? action.command;
+
+/** A graph of the Graphs tab: a command whose result opens as a chart. Opening one that already draws a chart is the same entry. */
+const g = (category: string, command: string, label: string, detail: string, info: string, keywords?: string, opensChart = false): CatalogAction => ({
+  id: `graph:${command}`,
+  tab: 'graphs',
+  category,
+  command,
+  graph: !opensChart,
+  label,
+  detail,
+  info,
+  keywords: `graph chart diagram ${keywords ?? ''}`.trim(),
+});
+
+/** The Graph Explorer: every analysis that can be drawn, by what it shows. */
+const graphCatalog: CatalogAction[] = [
+  g('Execution', 'tsStructure.controlFlow', 'Control Flow Graph', 'Every path through a function',
+    'The function at the cursor as a flowchart, with the Path Explorer to list, compare and filter its paths.', 'cfg paths', true),
+  g('Execution', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
+    'Who calls the function at the cursor and what it calls, a few levels each way, as a butterfly chart.', 'callers callees butterfly', true),
+  g('Execution', 'tsStructure.exceptionFlow', 'Exception Flow Graph', 'Where errors go',
+    'Where the function at the cursor throws, and where each error is caught or escapes, as a chart.', 'throw catch errors'),
+  g('Execution', 'tsStructure.promiseRejections', 'Async Rejection Graph', 'Where rejections end up',
+    'The promises of an async function and where each rejection is handled or lost, as a chart.', 'async await promise'),
+  g('Data', 'tsStructure.dataFlowDiagram', 'Data Flow Graph', 'Where values come from and go',
+    'The variable at the cursor in the middle, where its values come from on the left and where they go on the right.', 'dfg values', true),
+  g('Data', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
+    'The control flow chart with purple arcs from where each variable is set to where it is read, and orange arcs from each decision to what it controls.', 'pdg why', true),
+  g('Data', 'tsStructure.mutationTrackingVariable', 'Mutation Graph', 'Every change to a variable',
+    'Every write to the variable at the cursor, by function, as a chart.', 'writes changes mutation'),
+  g('Data', 'tsStructure.argumentFlow', 'Argument Graph', 'Values passed to a parameter',
+    'The values each call passes to the parameter at the cursor, traced back through callers, as a chart.', 'parameter callers'),
+  g('Data', 'tsStructure.reactState', 'React State Graph', 'What each state change triggers',
+    'A React component or hook: props and context on the left; state, refs, memos and effects on the right, with what each sets, reads and triggers.', 'react hooks', true),
+  g('Structure', 'tsStructure.typeHierarchy', 'Inheritance Graph', 'Supertypes and subtypes',
+    'What the class or interface at the cursor extends and implements, and what extends it, as a chart.', 'class interface extends implements'),
+  g('Structure', 'tsStructure.overrideImpact', 'Override Graph', 'Overrides and their callers',
+    'Every override and implementation of the member at the cursor, and their callers, as a chart.', 'override method'),
+  g('Structure', 'tsStructure.whoImports', 'Importers Graph', 'Modules that import this one',
+    'The modules that import this file, directly or through re-exports, as a chart.', 'dependents imports'),
+  g('Structure', 'tsStructure.dependencyPath', 'Dependency Path Graph', 'Why one module needs another',
+    'The chain of imports from one module to another, as a chart.', 'import chain'),
 ];
 
 /** The longest description line, so it fits a narrow sidebar without being cut off. */
@@ -46,11 +97,15 @@ export const actionCatalog: CatalogAction[] = [
     'A forward slice: highlights every statement the value flows into and every decision it controls.', 'forward slice impact'),
   a('analyze', 'Values', 'tsStructure.mutationTrackingVariable', 'Mutation Tracking for This Variable', 'Every change to it',
     'Lists every write to the variable and flags the ones after an await, where other code may run in between.', 'writes changes'),
+  a('analyze', 'Values', 'tsStructure.reactState', 'React State Graph', 'What each state change triggers',
+    'For a React component or hook: its props and context, and its state, refs, memos and effects, with where each is set, read, rendered and listed as a dependency, and dependencies an effect forgot.', 'react hooks useState useEffect useMemo rerender'),
   a('analyze', 'Values', 'tsStructure.raceConditions', 'Race Conditions', 'Async changes between uses',
     'Finds code where an await sits between reading a value and writing it back, so another task may change it in the meantime.', 'await concurrency'),
 
   a('analyze', 'Control flow and errors', 'tsStructure.controlFlow', 'Control Flow Graph', 'A function as a flowchart',
     'Draws the function at the cursor as a flowchart, with a Path Explorer that lists, compares and filters every path and flags the impossible ones.', 'paths branches flowchart cfg'),
+  a('analyze', 'Control flow and errors', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
+    'The control flow chart with its dependences drawn on it: purple arcs from where each variable is set to where that value is read, orange arcs from each decision to the code it controls.', 'pdg data control dependence slice why'),
   a('analyze', 'Control flow and errors', 'tsStructure.exceptionFlow', 'Exception Flow', 'Errors thrown, caught or lost',
     'Shows where a function throws, where each error is caught, and which catch blocks swallow errors.', 'throw catch errors'),
   a('analyze', 'Control flow and errors', 'tsStructure.promiseRejections', 'Promise Rejections', 'Rejections handled or lost',
@@ -62,6 +117,8 @@ export const actionCatalog: CatalogAction[] = [
     'Finds every usage of the symbol at the cursor, grouped into reads, writes, calls, imports and type references.', 'references callers'),
   a('analyze', 'Navigate', 'tsStructure.semanticUsagesInFile', 'Find Usages in Current File', 'Usages in this file only',
     'Finds the usages of the symbol at the cursor in the current file, grouped like Find Usages.', 'references'),
+  a('analyze', 'Navigate', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
+    'A butterfly chart of the function at the cursor: who calls it (and who calls them) on the left, what it calls (and what those call) on the right.', 'callers callees call hierarchy butterfly'),
   a('analyze', 'Navigate', 'tsStructure.argumentFlow', 'Argument Propagation', 'Values passed to a parameter',
     'Follows a parameter back through every call to the values passed into it.', 'parameter callers values'),
   a('analyze', 'Navigate', 'tsStructure.typeHierarchy', 'Inheritance Hierarchy', 'Supertypes, subtypes, overrides',
@@ -120,6 +177,7 @@ export const actionCatalog: CatalogAction[] = [
     'Moves the cursor to the next problem in this file.', 'inspection warning', 'arrow-down'),
   a('edit', 'Problems', 'tsStructure.configureInspections', 'Configure Inspections…', 'Severity of each inspection',
     'Sets how each inspection is reported (error, warning or hint), or turns it off.', 'settings severity', 'settings'),
+  ...graphCatalog,
 ];
 
 /** Starting points before anything has been used, so the Most Used section is never empty. */
@@ -162,7 +220,7 @@ export const sectionIds = { pinned: 'pinned', mostUsed: 'mostUsed', hidden: 'hid
 /** Before anything is arranged: nothing pinned or hidden, and the Hidden section folded. */
 export const defaultLayout = (): ActionLayout => ({ pinned: [], hidden: [], collapsed: [sectionIds.hidden], compact: false, hideMostUsed: false });
 
-const known = new Set(actionCatalog.map((x) => x.command));
+const known = new Set(actionCatalog.map(actionId));
 
 /** A stored layout made safe: unknown or repeated commands dropped, missing parts filled in. */
 export function normalizeLayout(raw: unknown): ActionLayout {

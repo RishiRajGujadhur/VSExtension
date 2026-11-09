@@ -175,3 +175,24 @@ li.selected .path-steps { color: inherit; }
   .kind-icon, .line-badge, .edge-mark, .terminal-label, .node.start .title { fill: CanvasText; }
   .node.match .shape, .node.current-match .shape, .node.through .shape { stroke: Highlight; }
 }
+
+/* The program dependence graph (D): data arcs purple on the left, control arcs orange and dashed on the right. */
+.deps-on .edge { opacity: .35; }
+.dep path { fill: none; stroke-width: 1.4; opacity: .85; }
+.dep.data path { stroke: var(--vscode-charts-purple, #b180d7); }
+.dep.control path { stroke: var(--vscode-charts-orange, #d18616); stroke-dasharray: 5 4; }
+.dep text { font-size: 10px; font-family: var(--vscode-editor-font-family, monospace); fill: var(--vscode-charts-purple, #b180d7); }
+#dataArrow path { fill: var(--vscode-charts-purple, #b180d7); }
+#controlArrow path { fill: var(--vscode-charts-orange, #d18616); }
+.deps.quiet .dep { opacity: .18; }
+.deps.quiet .dep text { display: none; }
+.deps.focused .dep { opacity: .12; }
+.deps.focused .dep.mine text { display: inline; }
+.deps.focused .dep.mine { opacity: 1; }
+.deps.focused .dep.mine path { stroke-width: 2.2; }
+.line-sample.data { border-top: 2px solid var(--vscode-charts-purple, #b180d7); }
+.line-sample.control { border-top: 2px dashed var(--vscode-charts-orange, #d18616); }
+@media (forced-colors: active) {
+  .dep path { stroke: CanvasText; }
+  .dep text { fill: CanvasText; }
+}

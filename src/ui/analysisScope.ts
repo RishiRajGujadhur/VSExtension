@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { remedies, showProblem } from './problems';
 import * as path from 'path';
 import ts = require('typescript');
 import * as vscode from 'vscode';
@@ -129,7 +130,7 @@ export async function resolveScope(kind: ScopeKind, editor?: vscode.TextEditor):
     case 'open': {
       const files = openSourceFiles();
       if (files.length === 0) {
-        void vscode.window.showInformationMessage('No TypeScript or JavaScript files are open.');
+        void showProblem('No TypeScript or JavaScript files are open.', [remedies.openFile], 'info');
         return undefined;
       }
       return { kind, label: 'open editors', spec: { files } };
@@ -138,7 +139,7 @@ export async function resolveScope(kind: ScopeKind, editor?: vscode.TextEditor):
       const anchor = file ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       const changed = anchor ? await changedFiles(anchor) : undefined;
       if (!changed) {
-        void vscode.window.showErrorMessage('Changed files need a Git repository.');
+        void showProblem('Changed files need a Git repository. Pick another scope, or start tracking the folder with Git.', [remedies.initGit, remedies.sourceControl]);
         return undefined;
       }
       if (changed.length === 0) {
@@ -152,14 +153,14 @@ export async function resolveScope(kind: ScopeKind, editor?: vscode.TextEditor):
     case 'function': {
       const fn = editor && enclosingFunction(editor);
       if (!editor || !fn) {
-        void vscode.window.showInformationMessage('Place the cursor inside a function first.');
+        void showProblem('Place the cursor inside a function first.', [{ title: 'Go to a Function…', run: () => vscode.commands.executeCommand('workbench.action.gotoSymbol') }], 'info');
         return undefined;
       }
       return { kind, label: fn.name, spec: { lines: { file: editor.document.uri.fsPath, start: fn.start, end: fn.end } } };
     }
     case 'selection': {
       if (!editor || editor.selection.isEmpty) {
-        void vscode.window.showInformationMessage('Select the code to analyze first.');
+        void showProblem('Select the code to analyze first.', [{ title: 'Select All', run: () => vscode.commands.executeCommand('editor.action.selectAll') }], 'info');
         return undefined;
       }
       const { start, end } = editor.selection;

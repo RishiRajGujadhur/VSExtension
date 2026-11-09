@@ -23,6 +23,8 @@ import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
 import { dependencyPathReport, distancesFrom } from '../navigate/dependencyPaths';
 import { argumentFlowReport } from '../navigate/argumentFlow';
+import { callGraphReport } from '../navigate/callGraph';
+import { reactStateReport } from '../inspect/reactState';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints, programGraph } from '../navigate/moduleGraph';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -247,7 +249,7 @@ async function startingAtCursor(command: string, editor: vscode.TextEditor, comp
     return report && withNext(report, editor);
   } catch (error) {
     if (error instanceof AnalysisError) {
-      void offerSymbols(command, error.message, editor);
+      void offerSymbols(command, error, editor);
       return undefined;
     }
     throw error;
@@ -779,5 +781,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     }),
     editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
+    // Graphs: drawn as a chart as soon as they are ready (see extension.ts).
+    editorCommand('tsStructure.callGraph', 'Call graph', (t) =>
+      callGraphReport(t.project(), t.fileName, t.offset, { depth: vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('callGraph.depth', 3) }),
+    ),
+    editorCommand('tsStructure.reactState', 'React state', (t) => reactStateReport(t.project(), t.fileName, t.offset)),
   );
 }

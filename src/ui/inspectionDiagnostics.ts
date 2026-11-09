@@ -1,4 +1,5 @@
 import { inspectionStatusLabel } from '../structure/accessibility';
+import { remedies, showProblem } from './problems';
 import * as path from 'path';
 import ts = require('typescript');
 import * as vscode from 'vscode';
@@ -390,7 +391,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     }
     const editor = vscode.window.activeTextEditor;
     if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
-      void vscode.window.showErrorMessage('Open a TypeScript or JavaScript file first.');
+      void showProblem('Open a TypeScript or JavaScript file first, or right-click a folder in the Explorer to inspect it.', [remedies.openFile]);
       return;
     }
     const scope = await chooseScope({ id: 'inspectCode', title: 'Inspect Code', kinds: ['project', 'folder', 'pickFolder', 'open', 'changed', 'file', 'function', 'selection'], editor }, scopeArg);
@@ -627,7 +628,7 @@ async function applyReportFixes(view: StructureView, node: ReportNode, fixes: Ro
     void vscode.window.setStatusBarMessage(`Applied: ${applied.length === 1 ? applied[0].fix.title : `fixes in ${applied.length} files`}`, 3000);
   }
   if (stale.length) {
-    void vscode.window.showWarningMessage(`${stale.join(', ')} changed since the analysis. Re-run it to fix.`);
+    void showProblem(`${stale.join(', ')} changed since the analysis.`, [remedies.runAgain('tsStructure.inspectCode')], 'warning');
   }
 }
 

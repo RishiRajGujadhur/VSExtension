@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { remedies, showProblem } from './problems';
 import * as vscode from 'vscode';
 import { ProjectService } from '../analysis/project';
 import { normalizePath, pathKey } from '../analysis/paths';
@@ -56,7 +57,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     }
 
     if (document.version !== version) {
-      void vscode.window.showWarningMessage('The file changed. Run Move again.');
+      void showProblem('The file changed while Move was open.', [remedies.runAgain('tsStructure.moveMembers')], 'warning');
       return;
     }
     const result = moveMembers(projects.createVirtualProject(source, root), source, picked.map((p) => p.member.name), target, { keepReExport });

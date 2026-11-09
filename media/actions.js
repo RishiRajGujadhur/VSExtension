@@ -19,9 +19,9 @@
 
   const save = (patch) => vscode.setState(Object.assign(saved, patch));
   const send = (change) => vscode.postMessage({ type: 'layout', change });
-  const byCommand = (command) => data.actions.find((a) => a.command === command);
-  const isPinned = (a) => data.layout.pinned.includes(a.command);
-  const isHidden = (a) => data.layout.hidden.includes(a.command);
+  const byCommand = (id) => data.actions.find((a) => a.id === id);
+  const isPinned = (a) => data.layout.pinned.includes(a.id);
+  const isHidden = (a) => data.layout.hidden.includes(a.id);
 
   function make(tag, className, text) {
     const node = document.createElement(tag);
@@ -94,7 +94,7 @@
   function item(action, context) {
     const { words, inSearch, pinnedIndex } = context;
     const li = make('li', 'item');
-    li.dataset.command = action.command;
+    li.dataset.command = action.id;
     const run = make('button', 'run');
     run.type = 'button';
     const tile = make('span', 'tile');
@@ -107,7 +107,7 @@
     text.append(label, detail);
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
-    run.addEventListener('click', () => vscode.postMessage({ type: 'run', command: action.command }));
+    run.addEventListener('click', () => vscode.postMessage({ type: 'run', id: action.id }));
     li.append(run);
 
     // A hidden action found by search is dimmed, with a crossed-out eye on its tile.
@@ -121,7 +121,7 @@
     if (action.key) trail.append(keyCaps(action.key));
     const tools = make('span', 'tools');
     tools.append(toolButton('info', `About ${action.label}`, () => {}));
-    if (isHidden(action)) tools.append(toolButton('show', `Show ${action.label} Again`, () => send({ kind: 'show', command: action.command })));
+    if (isHidden(action)) tools.append(toolButton('show', `Show ${action.label} Again`, () => send({ kind: 'show', command: action.id })));
     else tools.append(toolButton('pin', isPinned(action) ? `Unpin ${action.label}` : `Pin ${action.label} to the Top`, () => togglePin(action), isPinned(action)));
     tools.append(toolButton('more', `More Actions for ${action.label}…`, (b) => openMenu(action, b)));
     tools.lastChild.setAttribute('aria-haspopup', 'menu');
@@ -156,7 +156,7 @@
       li.draggable = true;
       li.classList.add('draggable');
       li.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', action.command);
+        e.dataTransfer.setData('text/plain', action.id);
         e.dataTransfer.effectAllowed = 'move';
         li.classList.add('dragging');
       });
@@ -166,15 +166,15 @@
   }
 
   function togglePin(action) {
-    focusAfterRender = action.command;
-    send({ kind: isPinned(action) ? 'unpin' : 'pin', command: action.command });
+    focusAfterRender = action.id;
+    send({ kind: isPinned(action) ? 'unpin' : 'pin', command: action.id });
   }
 
   function movePinned(action, delta) {
-    const i = data.layout.pinned.indexOf(action.command);
+    const i = data.layout.pinned.indexOf(action.id);
     if (i < 0) return false;
-    focusAfterRender = action.command;
-    send({ kind: 'move', command: action.command, to: i + delta });
+    focusAfterRender = action.id;
+    send({ kind: 'move', command: action.id, to: i + delta });
     return true;
   }
 
@@ -190,7 +190,7 @@
     } else if (e.key === 'Delete' && !isHidden(action)) {
       e.preventDefault();
       moveFocusFrom(e.target);
-      send({ kind: 'hide', command: action.command });
+      send({ kind: 'hide', command: action.id });
     }
   }
 
@@ -376,7 +376,7 @@
         row.append(make('span', '', 'Shortcut'), keyCaps(action.key));
         facts.append(row);
       }
-      const runs = (data.usage && data.usage[action.command]) || 0;
+      const runs = (data.usage && data.usage[action.id]) || 0;
       const row = make('div', 'fact');
       row.append(make('span', '', 'Used'), make('span', '', runs ? `${runs} time${runs === 1 ? '' : 's'}` : 'not yet'));
       facts.append(row);
@@ -425,18 +425,18 @@
     const entries = [];
     const add = (label, iconName, onPick, key) => entries.push({ label, iconName, onPick, key });
     const sep = () => entries.push(undefined);
-    add('Run', 'play', () => vscode.postMessage({ type: 'run', command: action.command }), 'Enter');
+    add('Run', 'play', () => vscode.postMessage({ type: 'run', id: action.id }), 'Enter');
     sep();
-    if (isHidden(action)) add('Show Again', 'eye', () => send({ kind: 'show', command: action.command }));
+    if (isHidden(action)) add('Show Again', 'eye', () => send({ kind: 'show', command: action.id }));
     else {
       add(isPinned(action) ? 'Unpin' : 'Pin to Top', isPinned(action) ? 'pinned' : 'pin', () => togglePin(action));
-      const i = data.layout.pinned.indexOf(action.command);
+      const i = data.layout.pinned.indexOf(action.id);
       if (i > 0) add('Move Up', 'arrow-up', () => movePinned(action, -1), 'Alt+Up');
       if (i >= 0 && i < data.layout.pinned.length - 1) add('Move Down', 'arrow-down', () => movePinned(action, 1), 'Alt+Down');
       add('Hide', 'eye-closed', () => {
-        const run = list.querySelector(`.item[data-command="${CSS.escape(action.command)}"] .run`);
+        const run = list.querySelector(`.item[data-command="${CSS.escape(action.id)}"] .run`);
         if (run) moveFocusFrom(run);
-        send({ kind: 'hide', command: action.command });
+        send({ kind: 'hide', command: action.id });
       }, 'Delete');
     }
     sep();

@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { remedies, showProblem } from './problems';
 import * as path from 'path';
 import ts = require('typescript');
 import * as vscode from 'vscode';
@@ -136,7 +137,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       const sourceFile = parse(document);
       const insert = publicTagEdit(sourceFile, document.offsetAt(new vscode.Position(node.location.line, node.location.character)));
       if (!insert) {
-        void vscode.window.showWarningMessage(`${node.label}: declaration not found. Re-run the analysis.`);
+        void showProblem(`${node.label}: declaration not found; the code changed since the analysis.`, [remedies.rerun], 'warning');
         return;
       }
       const edit = new vscode.WorkspaceEdit();
@@ -153,7 +154,7 @@ export function registerReportActions(context: vscode.ExtensionContext, view: St
       const offset = document.offsetAt(new vscode.Position(node.location.line, node.location.character));
       const range = exportKeywordRange(parse(document), offset);
       if (!range) {
-        void vscode.window.showWarningMessage(`${node.label}: export not found. Re-run the analysis.`);
+        void showProblem(`${node.label}: export not found; the code changed since the analysis.`, [remedies.rerun], 'warning');
         return;
       }
       const edit = new vscode.WorkspaceEdit();

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: animated data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, refactorings, inspections and structural search. Deterministic, offline, no AI. Graph animations adapted from robot-components (MIT).",
-  "version": "0.35.1",
+  "version": "0.36.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -916,6 +916,24 @@
         "command": "tsStructure.actions.reset",
         "title": "Reset Actions View…",
         "category": "Code X-Ray Actions"
+      },
+      {
+        "command": "tsStructure.callGraph",
+        "title": "Call Graph",
+        "category": "Code X-Ray",
+        "icon": "$(call-outgoing)"
+      },
+      {
+        "command": "tsStructure.dependenceGraph",
+        "title": "Program Dependence Graph",
+        "category": "Code X-Ray",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "tsStructure.reactState",
+        "title": "React State Graph",
+        "category": "Code X-Ray",
+        "icon": "$(symbol-event)"
       }
     ],
     "viewsContainers": {
@@ -1245,6 +1263,24 @@
         "mac": "cmd+ctrl+s 0",
         "command": "tsStructure.explainValue",
         "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s shift+c",
+        "mac": "cmd+ctrl+s shift+c",
+        "command": "tsStructure.callGraph",
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s shift+d",
+        "mac": "cmd+ctrl+s shift+d",
+        "command": "tsStructure.dependenceGraph",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+      },
+      {
+        "key": "ctrl+alt+s shift+r",
+        "mac": "cmd+ctrl+s shift+r",
+        "command": "tsStructure.reactState",
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
       }
     ],
     "menus": {
@@ -1474,6 +1510,21 @@
         },
         {
           "command": "tsStructure.sliceForward",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@8"
+        },
+        {
+          "command": "tsStructure.callGraph",
+          "when": "config.tsStructure.features.usages",
+          "group": "3_analysis@6"
+        },
+        {
+          "command": "tsStructure.dependenceGraph",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@7"
+        },
+        {
+          "command": "tsStructure.reactState",
           "when": "config.tsStructure.features.dataFlow",
           "group": "3_analysis@8"
         }
@@ -2101,6 +2152,18 @@
         {
           "command": "tsStructure.sliceForward",
           "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.callGraph",
+          "when": "config.tsStructure.features.usages && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.dependenceGraph",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.reactState",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
         }
       ],
       "view/title": [
@@ -3224,6 +3287,14 @@
             "minimum": 1,
             "maximum": 20,
             "description": "How many calls the Argument Propagation Explorer follows in each direction.",
+            "scope": "resource"
+          },
+          "tsStructure.callGraph.depth": {
+            "type": "number",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 5,
+            "description": "How many levels of callers and callees the Call Graph shows on each side.",
             "scope": "resource"
           }
         }

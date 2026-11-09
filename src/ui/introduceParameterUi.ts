@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { remedies, showProblem } from './problems';
 import { ProjectService } from '../analysis/project';
 import { isValidIdentifier } from '../refactor/common';
 import { IntroduceParameterOptions, describeIntroduceParameter, introduceParameter } from '../refactor/introduceParameter';
@@ -59,7 +60,7 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     }
 
     if (document.version !== version) {
-      void vscode.window.showWarningMessage('The file changed. Run Introduce Parameter again.');
+      void showProblem('The file changed while Introduce Parameter was open.', [remedies.runAgain('tsStructure.introduceParameter')], 'warning');
       return;
     }
     const options: IntroduceParameterOptions = { name: name.trim(), mode: mode.mode, replaceAll };

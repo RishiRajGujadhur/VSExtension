@@ -65,4 +65,18 @@ export interface ImpactResult {
   warnings: string[];
 }
 
-export class AnalysisError extends Error {}
+/**
+ * Why an analysis couldn't start, so the message can offer the fix: the cursor is on the wrong thing (`cursor`, the
+ * default), the symbol comes from a library, the file isn't in the compiler project, the selection doesn't fit, or Git
+ * failed.
+ */
+export type AnalysisErrorReason = 'cursor' | 'library' | 'project' | 'selection' | 'git';
+
+export class AnalysisError extends Error {
+  constructor(
+    message: string,
+    readonly reason: AnalysisErrorReason = 'cursor',
+  ) {
+    super(message);
+  }
+}
