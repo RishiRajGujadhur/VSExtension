@@ -15,7 +15,6 @@
 .dup-badge rect { fill: var(--vscode-badge-background, #616161); stroke: var(--vscode-editor-background); }
 .dup-badge text { fill: var(--vscode-badge-foreground, #fff); font-size: 10px; font-weight: 700; }
 #canvas:focus { outline: none; }
-.node.center .halo { fill: none; stroke: var(--vscode-focusBorder, #007fd4); stroke-opacity: .35; stroke-width: 1.5; stroke-dasharray: 3 4; }
 .node.center .box-icon { fill: var(--vscode-button-foreground, #fff); font-size: 16px; }
 .node .port { fill: var(--vscode-editor-background); stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2; }
 .node .port.out { fill: var(--vscode-focusBorder, #007fd4); }

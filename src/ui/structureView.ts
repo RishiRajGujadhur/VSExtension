@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { polishReport } from '../structure/reportPolish';
 import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -127,6 +128,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   async show(report: Report, rerun?: Rerun): Promise<void> {
+    polishReport(report);
     // A new report drops any history ahead of the current one, like browser navigation.
     const config = vscode.workspace.getConfiguration('tsStructure.results');
     const historySize = Math.max(1, config.get('historySize', 20));
@@ -241,6 +243,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     }
     const report = await entry.rerun();
     if (report) {
+      polishReport(report);
       // Replace the entry in place: a refreshed report is not a new step in the history.
       report.ranAt ??= Date.now();
       this.history[this.position] = { report, rerun: entry.rerun };

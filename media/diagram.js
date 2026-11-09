@@ -256,8 +256,6 @@
       if (node === center) {
         // The subject: a circle, with a port where values come in and one where they go out.
         const r = node.w / 2;
-        el('circle', { cx: r, cy: H / 2, r: r + 5, class: 'halo' }, g);
-        window.chartKit.flowRing(g, r, H / 2, r + 5, 180, 0);
         el('circle', { cx: r, cy: H / 2, r, class: 'box' }, g);
         if (captions.left !== undefined) el('circle', { cx: 0, cy: H / 2, r: 5, class: 'port in' }, g);
         if (captions.right !== undefined) el('circle', { cx: node.w, cy: H / 2, r: 5, class: 'port out' }, g);
@@ -467,7 +465,11 @@
       const behind = (n) => visible(n).forEach((c) => { if (c.edgeEl) edges.push(c.edgeEl); behind(c); });
       behind(flowing);
     }
-    window.chartKit.drawFlows(scene, null, edges.filter((edge) => !edge.classList.contains('relation')));
+    const lines = edges.filter((edge) => !edge.classList.contains('relation'));
+    // The ring round the subject carries the flow too: in at its left, out at its right.
+    const c = diagram.center;
+    const rings = lines.length ? window.chartKit.ringPaths(c.px + c.w / 2, c.py + H / 2, c.w / 2 + 5, 180, 0) : [];
+    window.chartKit.drawFlows(scene, null, [...lines, ...rings]);
   }
 
   function stopFlow() {

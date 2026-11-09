@@ -37,29 +37,92 @@ export function intentionsAtCursor(editor: vscode.TextEditor | undefined, disabl
   return intentionsAt(parse(editor.document), editor.document.offsetAt(editor.selection.active), indentUnit(editor.document), disabled);
 }
 
+/** How often each rewrite was picked, so the ones you use come first. */
+let rewriteUses: vscode.Memento | undefined;
+export function rememberRewriteUses(memento: vscode.Memento): void {
+  rewriteUses = memento;
+}
+const usesKey = 'tsStructure.rewriteUses';
+
+/** The nearest line within a few lines of the cursor where rewrites apply, for when none apply at the cursor. */
+function nearestRewrites(editor: vscode.TextEditor, disabled: ReadonlySet<string>): { line: number; count: number } | undefined {
+  const sourceFile = parse(editor.document);
+  const here = editor.selection.active.line;
+  for (let distance = 1; distance <= 6; distance++) {
+    for (const line of [here - distance, here + distance]) {
+      if (line < 0 || line >= editor.document.lineCount) continue;
+      const text = editor.document.lineAt(line);
+      if (text.isEmptyOrWhitespace) continue;
+      const offset = editor.document.offsetAt(new vscode.Position(line, text.firstNonWhitespaceCharacterIndex));
+      const found = intentionsAt(sourceFile, offset, indentUnit(editor.document), disabled);
+      if (found.length) return { line, count: found.length };
+    }
+  }
+  return undefined;
+}
+
 /** Show Rewrites Here: the intentions that apply at the cursor, as a list that applies the one picked. */
 export async function showRewritesHere(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
-  const disabled = new Set(vscode.workspace.getConfiguration('tsStructure').get<string[]>('intentions.disabled', []));
+  const config = vscode.workspace.getConfiguration('tsStructure');
+  const disabled = new Set(config.get<string[]>('intentions.disabled', []));
   const rewrites = intentionsAtCursor(editor, disabled);
   if (!editor || rewrites.length === 0) {
-    const more = disabled.size ? `Choose Rewrites (${disabled.size} off)…` : undefined;
-    if (more && (await vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.', more)) === more) {
+    const near = editor && nearestRewrites(editor, disabled);
+    const buttons = [
+      ...(near ? [`Go to Line ${near.line + 1} (${near.count} rewrite${near.count === 1 ? '' : 's'})`] : []),
+      ...(disabled.size ? [`Choose Rewrites (${disabled.size} off)…`] : []),
+    ];
+    const choice = await vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.', ...buttons);
+    if (choice?.startsWith('Go to Line') && editor && near) {
+      const position = new vscode.Position(near.line, editor.document.lineAt(near.line).firstNonWhitespaceCharacterIndex);
+      editor.selection = new vscode.Selection(position, position);
+      editor.revealRange(new vscode.Range(position, position));
+      await showRewritesHere();
+    } else if (choice) {
       await vscode.commands.executeCommand('tsStructure.chooseIntentions');
-    } else if (!more) {
-      void vscode.window.showInformationMessage('No rewrites apply at the cursor. Try a condition, a loop, a function or a string.');
     }
     return;
   }
-  // The detail line shows the start of the new code, so the result is visible before applying it.
+  // Most used first; the detail line shows the start of the new code, the description which lines it changes.
+  const uses = rewriteUses?.get<Record<string, number>>(usesKey, {}) ?? {};
+  const ordered = [...rewrites].sort((a, b) => (uses[b.id] ?? 0) - (uses[a.id] ?? 0));
   const preview = (r: (typeof rewrites)[number]) => r.edits.map((e) => e.text).join(' ').replace(/\s+/g, ' ').trim().slice(0, 90);
-  const picked = await vscode.window.showQuickPick(rewrites.map((r) => ({ label: `$(wand) ${r.title}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, rewrite: r })), { title: 'Rewrites Here', placeHolder: 'Pick a rewrite to apply' });
+  const lines = (r: (typeof rewrites)[number]) => {
+    const first = editor.document.positionAt(Math.min(...r.edits.map((e) => e.start))).line + 1;
+    const last = editor.document.positionAt(Math.max(...r.edits.map((e) => e.end))).line + 1;
+    return first === last ? `line ${first}` : `lines ${first}–${last}`;
+  };
+  const turnOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('eye-closed'), tooltip: 'Turn this rewrite off (Choose Rewrites turns it back on)' };
+  type Item = vscode.QuickPickItem & { rewrite: (typeof rewrites)[number] };
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = 'Rewrites Here';
+  picker.placeholder = 'Pick a rewrite to apply';
+  picker.items = ordered.map((r) => ({ label: `$(wand) ${r.title}`, description: `${lines(r)}${uses[r.id] ? ` · used ${uses[r.id]}×` : ''}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, buttons: [turnOff], rewrite: r }));
+  picker.onDidTriggerItemButton(async (e) => {
+    await config.update('intentions.disabled', [...disabled, e.item.rewrite.id], vscode.ConfigurationTarget.Global);
+    disabled.add(e.item.rewrite.id);
+    picker.items = picker.items.filter((i) => i !== e.item);
+    void vscode.window.setStatusBarMessage(`Turned off "${e.item.rewrite.title}"`, 4000);
+  });
+  const picked = await new Promise<Item | undefined>((resolve) => {
+    picker.onDidAccept(() => resolve(picker.selectedItems[0]));
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
   if (picked) {
     const edit = new vscode.WorkspaceEdit();
     for (const e of picked.rewrite.edits) {
       edit.replace(editor.document.uri, new vscode.Range(editor.document.positionAt(e.start), editor.document.positionAt(e.end)), e.text);
     }
-    await vscode.workspace.applyEdit(edit);
+    const start = Math.min(...picked.rewrite.edits.map((e) => e.start));
+    if (await vscode.workspace.applyEdit(edit)) {
+      void rewriteUses?.update(usesKey, { ...uses, [picked.rewrite.id]: (uses[picked.rewrite.id] ?? 0) + 1 });
+      // The cursor stays where the rewritten code starts.
+      const at = editor.document.positionAt(start);
+      editor.selection = new vscode.Selection(at, at);
+    }
   }
 }
 

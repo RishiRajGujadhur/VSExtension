@@ -26,7 +26,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     const selected = editor.selection.isEmpty ? [] : members.filter((m) => m.endLine >= start.line && m.line <= end.line);
     const atCursor = selected.length ? selected : [...members].reverse().filter((m) => m.line <= start.line).slice(0, 1);
     const picked = await vscode.window.showQuickPick(
-      members.map((m) => ({ label: m.name, description: `${m.kind}${m.exported ? '' : ' · not exported'} · line ${m.line + 1}${atCursor.includes(m) ? ' · at cursor' : ''}`, picked: atCursor.includes(m), member: m })),
+      members.map((m) => ({ label: `$(${kindIcon(m.kind)}) ${m.name}`, description: `${m.kind}${m.exported ? '' : ' · not exported'} · line ${m.line + 1}${atCursor.includes(m) ? ' · at cursor' : ''}`, picked: atCursor.includes(m), member: m })),
       { title: `Move members of ${path.basename(source)}`, placeHolder: 'Select the declarations to move', canPickMany: true },
     );
     if (!picked || picked.length === 0) {
@@ -63,14 +63,22 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     const result = moveMembers(projects.createVirtualProject(source, root), source, picked.map((p) => p.member.name), target, { keepReExport });
     if (await applyRefactor(result, previewEnabled())) {
       const names = picked.map((p) => p.member.name);
-      const open = await vscode.window.showInformationMessage(`Moved ${names.length === 1 ? names[0] : `${names.length} declarations`} to ${path.basename(target)}.`, `Open ${path.basename(target)}`);
-      if (open) {
+      const openTarget = `Open ${path.basename(target)}`;
+      const open = await vscode.window.showInformationMessage(`Moved ${names.length === 1 ? names[0] : `${names.length} declarations`} to ${path.basename(target)}.`, openTarget, 'Show Changed Files');
+      if (open === openTarget) {
         await vscode.window.showTextDocument(vscode.Uri.file(target));
+      } else if (open) {
+        await vscode.commands.executeCommand('tsStructure.showLastRefactoring');
       }
     }
   } catch (error) {
     reportError(error, 'Move Members');
   }
+}
+
+/** The icon of a kind of declaration in the member list. */
+function kindIcon(kind: string): string {
+  return /function/.test(kind) ? 'symbol-function' : /class/.test(kind) ? 'symbol-class' : /interface/.test(kind) ? 'symbol-interface' : /type/.test(kind) ? 'symbol-type-parameter' : /enum/.test(kind) ? 'symbol-enum' : 'symbol-variable';
 }
 
 /** Project modules ordered by folder distance from the source, plus options for a new or browsed file. */

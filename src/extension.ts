@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
-import { remedies, remediesFor, showProblem, unexpectedRemedies } from './ui/problems';
+import { showLastRefactoring } from './ui/applyRefactor';
+import { rememberRewriteUses } from './ui/intentionProvider';
+import { registerWarmUp } from './ui/warmUp';
+import { remedies, remediesFor, runRemedy, showProblem, unexpectedRemedies } from './ui/problems';
 import { ProjectService } from './analysis/project';
 import { analyzeImpactAsync } from './analysis/impact';
 import { AnalysisError, AnalysisScope, ImpactResult, SourceLocation, TestCase } from './analysis/types';
@@ -45,6 +48,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // Only unsaved text: a saved document can lag behind a change made on disk (Git, a formatter, another tool).
     return vscode.workspace.textDocuments.find((d) => d.isDirty && d.uri.scheme === 'file' && pathKey(d.uri.fsPath) === key)?.getText();
   });
+  // The project of the file being edited is prepared in the background, so the first analysis is quick.
+  registerWarmUp(context, projects);
+  rememberRewriteUses(context.globalState);
   const results = new ResultsProvider();
   const view = vscode.window.createTreeView('tsImpact.results', { treeDataProvider: results, showCollapseAll: true });
   results.view = view;
@@ -74,7 +80,20 @@ export function activate(context: vscode.ExtensionContext): void {
   // Graph analyses open as a chart straight away; the results view keeps the same rows as a tree.
   const graphKinds = new Set(['callGraph', 'reactState']);
   // Only a newly run graph opens the chart: filtering it or going back to it in the results view doesn't.
-  context.subscriptions.push(structureView.onDidShowNewReport((report) => graphKinds.has(report.kind) && diagram.show()));
+  // With "always show as diagram" on, every new result opens as a chart too.
+  const alwaysDiagram = () => vscode.workspace.getConfiguration('tsStructure.results').get('alwaysShowDiagram', false);
+  context.subscriptions.push(
+    structureView.onDidShowNewReport((report) => (graphKinds.has(report.kind) || alwaysDiagram()) && diagram.show()),
+    registerCommand('tsStructure.report.diagramsOn', async () => {
+      await vscode.workspace.getConfiguration('tsStructure.results').update('alwaysShowDiagram', true, vscode.ConfigurationTarget.Global);
+      if (structureView.report) diagram.show();
+      void vscode.window.setStatusBarMessage('$(circuit-board) New results now open as diagrams too', 4000);
+    }),
+    registerCommand('tsStructure.report.diagramsOff', async () => {
+      await vscode.workspace.getConfiguration('tsStructure.results').update('alwaysShowDiagram', false, vscode.ConfigurationTarget.Global);
+      void vscode.window.setStatusBarMessage('Results no longer open as diagrams', 4000);
+    }),
+  );
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
@@ -124,6 +143,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
     registerCommand('tsStructure.shortcutSheet', () => showShortcutSheet(context.extension.packageJSON.contributes)),
     registerCommand('tsStructure.showLog', () => output.show(true)),
+    registerCommand('tsStructure.showLastRefactoring', () => showLastRefactoring()),
+    // A fix offered as a link in an error message.
+    vscode.commands.registerCommand('tsStructure.runRemedy', (id: unknown) => runRemedy(id)),
     registerCommand('tsStructure.togglePreview', () => toggleSetting('previewRefactorings', true, 'Refactoring preview')),
     registerCommand('tsStructure.toggleLiveInspections', () => toggleSetting('inspections.enabled', true, 'Live inspections')),
     registerCommand('tsStructure.howDoI', () => showHowDoI(process.platform === 'darwin' ? 'Cmd+Ctrl+S' : 'Ctrl+Alt+S')),
@@ -182,11 +204,20 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         results.set(result);
         if (result.tests.length === 0) {
-          void vscode.window.showInformationMessage(
-            `No tests found that depend on ${result.target.name} (${result.filesScanned} files, ${result.testFilesScanned} test files scanned).`,
+          // Nothing found: say how much was searched, and offer the wider search or a different question.
+          void showProblem(
+            `No tests found that depend on ${result.target.name} (${result.filesScanned} files, ${result.testFilesScanned} test files scanned).${result.testFilesScanned ? '' : ' No test files were found: they are named *.test.ts or *.spec.ts, sit in a test or __tests__ folder, or import a test framework.'}`,
+            [
+              ...(scope !== 'module' ? [{ title: 'Test the Whole File', run: () => vscode.commands.executeCommand('tsImpact.analyzeFile', document.uri) }] : []),
+              { title: 'Search Deeper', run: () => vscode.commands.executeCommand('workbench.action.openSettings', 'tsImpact.maxDepth') },
+              remedies.howDoI,
+            ],
+            'info',
           );
           return result;
         }
+        const confirmedCount = result.tests.filter((t) => t.confidence === 'confirmed').length;
+        void vscode.window.setStatusBarMessage(`$(beaker) ${result.tests.length} impacted test${result.tests.length === 1 ? '' : 's'} (${confirmedCount} confirmed) for ${result.target.name}`, 6000);
         await showResultsPicker(result, run);
         return result;
       } catch (error) {

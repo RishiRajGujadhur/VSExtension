@@ -44,7 +44,9 @@ test('side-effect report says when a function is pure', () => {
   const report = sideEffectReport(program, file, offsetIn(file, 'function pu|re'));
   assert.equal(report.description, 'pure');
   const track = sideEffectReport(program, file, offsetIn(file, 'function tra|ck'));
-  assert.deepEqual(track.roots.map((r) => r.label), ['Mutates arguments', 'Mutates module state', 'Input/output', 'Nondeterministic', 'By call']);
+  // A verdict first, then the effects by kind.
+  assert.match(track.roots[0].label, /^Not pure: /);
+  assert.deepEqual(track.roots.slice(1).map((r) => r.label), ['Mutates arguments', 'Mutates module state', 'Input/output', 'Nondeterministic', 'By call']);
 });
 
 test('mutation report groups writes by shared state', () => {
@@ -122,7 +124,8 @@ test('effects are also listed by the call that brings them in', () => {
   const byCall = report.roots.find((r) => r.label === 'By call');
   assert.deepEqual(
     byCall?.children?.map((c) => `${c.label} ${c.description}`),
-    ['addItem() mutates arguments', 'remember() mutates module state'],
+    // The call bringing in the most effects first.
+    ['remember() mutates module state', 'addItem() mutates arguments'],
   );
 });
 

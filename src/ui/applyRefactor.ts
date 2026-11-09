@@ -42,6 +42,13 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
     return false;
   }
 
+  // Many files changed without a preview: offer one first.
+  const files = result.changes.length;
+  if (!preview && files > 10) {
+    const choice = await vscode.window.showWarningMessage(`${result.label} changes ${files} files.`, { modal: true, detail: 'Preview lets you review and untick single changes before anything is written.' }, 'Apply', 'Preview First');
+    if (!choice) return false;
+    if (choice === 'Preview First') preview = true;
+  }
   const edit = new vscode.WorkspaceEdit();
   const metadata: vscode.WorkspaceEditEntryMetadata = { label: result.label, needsConfirmation: preview };
   for (const change of result.changes) {
@@ -56,7 +63,30 @@ export async function applyRefactor(result: RefactorResult, preview: boolean): P
       edit.replace(uri, new vscode.Range(document.positionAt(start), document.positionAt(end)), text, metadata);
     }
   }
-  return vscode.workspace.applyEdit(edit, { isRefactoring: true });
+  const applied = await vscode.workspace.applyEdit(edit, { isRefactoring: true });
+  if (applied) {
+    // What happened, where to see it again, and how to undo it.
+    lastRefactoring = { label: result.label, files: result.changes.map((c) => ({ file: c.file, kind: c.before === undefined ? 'created' : c.after === undefined ? 'deleted' : 'changed' })) };
+    output.appendLine(`${result.label}: ${result.changes.map((c) => `${c.before === undefined ? '+' : c.after === undefined ? '−' : '~'} ${vscode.workspace.asRelativePath(c.file)}`).join(', ')}`);
+    void vscode.window.setStatusBarMessage(`$(check) ${result.label}: ${files === 1 ? `changed ${path.basename(result.changes[0].file)}` : `changed ${files} files`} · Ctrl+Z in each file undoes it`, 6000);
+  }
+  return applied;
+}
+
+/** The files the last applied refactoring touched, for Show Last Refactoring's Changes. */
+let lastRefactoring: { label: string; files: { file: string; kind: string }[] } | undefined;
+
+/** Lists the files the last refactoring changed; the one picked opens. */
+export async function showLastRefactoring(): Promise<void> {
+  if (!lastRefactoring) {
+    void vscode.window.showInformationMessage('No refactoring has been applied yet in this window.');
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    lastRefactoring.files.map((f) => ({ label: `$(${f.kind === 'created' ? 'diff-added' : f.kind === 'deleted' ? 'diff-removed' : 'diff-modified'}) ${path.basename(f.file)}`, description: `${f.kind} · ${vscode.workspace.asRelativePath(path.dirname(f.file))}`, file: f.file, change: f.kind })),
+    { title: `${lastRefactoring.label}: ${lastRefactoring.files.length} files`, placeHolder: 'Open a changed file' },
+  );
+  if (picked && picked.change !== 'deleted') await vscode.window.showTextDocument(vscode.Uri.file(picked.file));
 }
 
 function currentText(fileName: string): string | undefined {

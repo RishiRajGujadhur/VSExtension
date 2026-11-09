@@ -10,7 +10,8 @@ const file = path.join(fixtures, 'inspect/src/nullable.ts');
 /** The tree's labels, indented by depth, without the How to fix advice. */
 function labels(nodes: readonly ReportNode[]): string[] {
   const result: string[] = [];
-  forEachReportNode(nodes.filter((n) => n.label !== 'How to fix'), (n, depth) => result.push(`${'  '.repeat(depth)}${n.label}`));
+  // The Declared row and any non-null assertions are tested on their own.
+  forEachReportNode(nodes.filter((n) => n.label !== 'How to fix' && n.label !== 'Declared' && !n.label.startsWith('Asserted non-null')), (n, depth) => result.push(`${'  '.repeat(depth)}${n.label}`));
   return result;
 }
 
@@ -94,4 +95,11 @@ test('uses of a property list its reads', () => {
 test('nullability copes with code that looks like a regular expression', () => {
   const syntax = path.join(fixtures, 'inspect/src/syntax.ts');
   assert.doesNotThrow(() => nullabilityReport(virtualProject('inspect', 'src/syntax.ts'), syntax, offsetIn(syntax, '.te|st(source)')));
+});
+
+test('nullability says where the value is declared', () => {
+  const report = nullabilityReport(virtualProject('inspect', 'src/nullable.ts'), file, offsetIn(file, '${la|bel}'));
+  const declared = report.roots.find((r) => r.label === 'Declared');
+  assert.ok(declared?.location, 'a Declared row with its location');
+  assert.match(declared!.description!, /nullable\.ts:\d+/);
 });

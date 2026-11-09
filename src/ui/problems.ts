@@ -11,13 +11,31 @@ export interface Remedy {
   run: () => unknown;
 }
 
-/** Shows a message with buttons; the one clicked runs. At most three are shown, the most useful first. */
+/** The fixes offered by recent messages, by id, for the links in those messages. */
+const pending = new Map<string, Remedy>();
+let nextId = 0;
+
+/** Runs a fix from a link in a message (the tsStructure.runRemedy command). */
+export async function runRemedy(id: unknown): Promise<void> {
+  const remedy = typeof id === 'string' ? pending.get(id) : undefined;
+  if (remedy) await remedy.run();
+}
+
+/**
+ * Shows a message with its fixes as links right after the text, on the left where they are read, rather than as
+ * buttons at the far right of the notification. At most three are offered, the most useful first.
+ */
 export async function showProblem(message: string, remedies: readonly Remedy[], severity: 'error' | 'warning' | 'info' = 'error'): Promise<void> {
   const shown = remedies.slice(0, 3);
+  const links = shown.map((r) => {
+    const id = String(nextId++);
+    pending.set(id, r);
+    return `[${r.title.replace(/[[\]]/g, '')}](command:tsStructure.runRemedy?${encodeURIComponent(JSON.stringify([id]))})`;
+  });
+  // Old fixes are forgotten once enough newer ones were offered.
+  for (const key of [...pending.keys()].slice(0, Math.max(0, pending.size - 30))) pending.delete(key);
   const show = severity === 'error' ? vscode.window.showErrorMessage : severity === 'warning' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
-  const choice = await show(message, ...shown.map((r) => r.title));
-  const remedy = shown.find((r) => r.title === choice);
-  if (remedy) await remedy.run();
+  await show(links.length ? `${message} ${links.join(' · ')}` : message);
 }
 
 const command = (title: string, id: string, ...args: unknown[]): Remedy => ({ title, run: () => vscode.commands.executeCommand(id, ...args) });

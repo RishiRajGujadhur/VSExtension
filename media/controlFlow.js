@@ -84,12 +84,10 @@
     const { width: w, height: h } = n;
     if (n.kind === 'start') {
       // Start: a filled circle with a play mark; the function's name is written beside it.
-      kit.flowRing(g, w / 2, h / 2, w / 2 + 5, -90, 90);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       kit.icon(g, 'play', w / 2 + 1, h / 2, 'terminal-icon');
     } else if (n.kind === 'end') {
       // End: a ring around a dot, like the end of a UML activity.
-      kit.flowRing(g, w / 2, h / 2, w / 2 + 5, -90, 90);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2, class: 'shape' }, g);
       el('circle', { cx: w / 2, cy: h / 2, r: w / 2 - 7, class: 'core' }, g);
     } else if (n.kind === 'decision' || n.kind === 'switch') {
@@ -596,7 +594,12 @@
         elements.forEach((g, i) => { if (!g.classList.contains('off')) lines.add(i); });
       }
     }
-    kit.drawFlows(scene, null, [...lines].filter((e) => elements[e]).map((e) => elements[e].querySelector('.line')));
+    const carried = [...lines].filter((e) => elements[e]).map((e) => elements[e].querySelector('.line'));
+    // Rings round start and end carry the flow too, from top to bottom like the lines.
+    const rings = carried.length
+      ? chart.nodes.filter(isTerminal).flatMap((n) => kit.ringPaths(n.x + n.width / 2, n.y + n.height / 2, n.width / 2 + 5, -90, 90))
+      : [];
+    kit.drawFlows(scene, null, [...carried, ...rings]);
   }
 
   function stopFlow() {

@@ -49,6 +49,8 @@ export interface Report {
   controls?: ReportControl[];
   /** Where its subject is written, such as the function a call graph is about. */
   subject?: ReportLocation;
+  /** Its finishing touches are applied (structure/reportPolish.ts). */
+  polished?: boolean;
 }
 
 /** Collects locations while a report is built, remembering the text each one was computed from. */

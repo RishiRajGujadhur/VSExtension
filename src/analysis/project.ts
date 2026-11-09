@@ -17,12 +17,6 @@ export interface LoadedProject {
   index?: ReferenceIndex;
 }
 
-interface CachedSourceFile {
-  text: string;
-  languageKey: string;
-  sourceFile: ts.SourceFile;
-}
-
 const inferredExtensions = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 const inferredExcludes = ['**/node_modules/**', '**/dist/**', '**/out/**', '**/build/**', '**/coverage/**', '**/.git/**'];
 const maxInferredFiles = 5000;
@@ -53,7 +47,6 @@ function includesFile(fileNames: readonly string[], key: string): boolean {
  * reused whole, together with its reference index.
  */
 export class ProjectService {
-  private readonly sourceFiles = new Map<string, CachedSourceFile>();
   private readonly projects = new Map<string, LoadedProject>();
   /** Parsed compiler configurations: parsing one lists the files it includes, which is slow on big projects. */
   private readonly configs = new Map<string, ts.ParsedCommandLine | undefined>();
@@ -63,21 +56,17 @@ export class ProjectService {
 
   constructor(private readonly overlay: OverlayProvider = () => undefined) {}
 
+  /**
+   * The file's project as a program and type checker, for inspections, test impact and the CodeLens. It is the same
+   * program the analyses use (analysisProject), read fresh from disk, so the project is parsed once for all of them.
+   */
   load(fileName: string, fallbackRoot?: string): LoadedProject {
     const file = normalizePath(fileName);
-    const { configPath, parsed } = this.resolve(file, fallbackRoot);
+    const { configPath } = this.resolve(file, fallbackRoot);
     const cacheKey = configPath ? pathKey(configPath) : `inferred:${pathKey(fallbackRoot ?? path.dirname(file))}`;
     const previous = this.projects.get(cacheKey);
-    const host = this.createHost(parsed.options);
-    const program = ts.createProgram({
-      rootNames: parsed.fileNames,
-      options: parsed.options,
-      projectReferences: parsed.projectReferences,
-      host,
-      oldProgram: previous?.program,
-    });
-
-    if (previous && sameSourceFiles(previous.program, program)) {
+    const program = this.analysisProject(file, fallbackRoot, true).program();
+    if (previous && (previous.program === program || sameSourceFiles(previous.program, program))) {
       return previous;
     }
     const project: LoadedProject = { configPath, program, checker: program.getTypeChecker() };
@@ -116,15 +105,15 @@ export class ProjectService {
    * to date, so running an analysis again (or another one) reuses the parse and type information
    * of every unchanged file instead of type-checking the project from scratch.
    */
-  analysisProject(fileName: string, fallbackRoot?: string): VirtualProject {
+  analysisProject(fileName: string, fallbackRoot?: string, fresh = false): VirtualProject {
     const { configPath, parsed } = this.resolve(fileName, fallbackRoot);
     const key = configPath ? pathKey(configPath) : `inferred:${pathKey(fallbackRoot ?? path.dirname(fileName))}`;
     let project = this.analysisProjects.get(key);
     const roots = parsed.fileNames.map(normalizePath);
     if (project && project.rootNames.length === roots.length && project.rootNames.every((f, i) => f === roots[i])) {
-      project.refresh();
+      project.refresh(fresh);
     } else {
-      project = new VirtualProject(parsed, this.overlay, configPath, (f) => this.readDisk(f, true));
+      project = new VirtualProject(parsed, this.overlay, configPath, (f, readFresh) => this.readDisk(f, !readFresh));
     }
     this.analysisProjects.delete(key);
     this.analysisProjects.set(key, project);
@@ -185,28 +174,6 @@ export class ProjectService {
       this.diskTexts.set(key, { mtimeMs: stat.mtimeMs, size: stat.size, text, checkedAt: Date.now() });
     }
     return text;
-  }
-
-  private createHost(options: ts.CompilerOptions): ts.CompilerHost {
-    const host = ts.createCompilerHost(options, true);
-    const readFile = (fileName: string) => this.overlay(fileName) ?? this.readDisk(fileName);
-    host.readFile = readFile;
-    host.getSourceFile = (fileName, languageVersion) => {
-      const text = readFile(fileName);
-      if (text === undefined) {
-        return undefined;
-      }
-      const key = pathKey(fileName);
-      const languageKey = JSON.stringify(languageVersion);
-      const cached = this.sourceFiles.get(key);
-      if (cached && cached.text === text && cached.languageKey === languageKey) {
-        return cached.sourceFile;
-      }
-      const sourceFile = ts.createSourceFile(fileName, text, languageVersion, true);
-      this.sourceFiles.set(key, { text, languageKey, sourceFile });
-      return sourceFile;
-    };
-    return host;
   }
 
   /**

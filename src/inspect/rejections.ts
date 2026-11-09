@@ -301,6 +301,24 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
   if (!isAsync(fn) && !returnsThenable(program.getTypeChecker(), fn)) {
     builder.warnings.push(`${functionLabel(fn)} is not async and does not return a promise.`);
   }
+  const awaited: ts.Node[] = [];
+  const chains: ts.CallExpression[] = [];
+  forEachInFunction(fn.body ?? fn, (n) => {
+    if (ts.isAwaitExpression(n)) awaited.push(n);
+    // x.then(…) whose chain never reaches .catch and isn't awaited or returned: a rejection goes nowhere.
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.name.text === 'then') {
+      let top: ts.Node = n;
+      const names = ['then'];
+      while (ts.isPropertyAccessExpression(top.parent) && ts.isCallExpression(top.parent.parent)) {
+        names.push(top.parent.name.text);
+        top = top.parent.parent;
+      }
+      const handled = names.includes('catch') || n.arguments.length > 1;
+      const passedOn = ts.isAwaitExpression(top.parent) || ts.isReturnStatement(top.parent) || (ts.isArrowFunction(top.parent) && top.parent.body === top);
+      if (!handled && !passedOn) chains.push(n);
+    }
+  });
+  if (isAsync(fn) && awaited.length === 0) builder.warnings.push(`${functionLabel(fn)} is async but never awaits: it could return a value, and any error it throws becomes a rejection.`);
   const sources = tracer.sources(fn);
   const destination = tracer.propagate(fn, `${functionLabel(fn)} rejects`, (fn as ts.FunctionDeclaration).name ?? fn, 0);
   const results = leaves(destination);
@@ -309,6 +327,16 @@ export function rejectionReport(project: VirtualProject, fileName: string, offse
     { label: 'Rejection sources', description: plural(sources.length, 'source'), icon: 'zap', expanded: true, children: sources.length ? sources : [{ label: 'no throws or awaits outside try/catch', icon: 'pass', tone: 'ok' }] },
     { ...destination, label: 'Where rejections go', description: `${count('ok') + count('info')} handled, ${count('error')} unhandled, ${count('warning')} swallowed or unknown` },
   ];
+  if (chains.length) {
+    roots.push({
+      label: 'Promise chains without .catch',
+      description: plural(chains.length, 'chain'),
+      icon: 'warning',
+      tone: 'warning',
+      expanded: true,
+      children: chains.map((c) => ({ label: nodeSnippet(c, 50), description: 'not awaited, returned or caught', icon: 'warning', tone: 'warning' as const, location: builder.at(c) })),
+    });
+  }
   const unhandled = unhandledPaths(destination);
   if (unhandled.length > 0) {
     roots.unshift({ label: 'Unhandled', description: plural(unhandled.length, 'path'), icon: 'error', tone: 'error', expanded: true, children: unhandled });

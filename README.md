@@ -261,7 +261,9 @@ The **Graphs** tab of the Actions view (**Graph Explorer**) lists every chart Co
 - `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here**, **Check for Null or Undefined Here**, and **More Analyses Here** (Mutation Tracking, Race Conditions, Side Effects, Exception Flow, Argument Propagation).
 - Green checks mark what was found safe, such as a value that is never null or undefined.
 - Graphs that can go deeper have a **Change Levels or Options…** button (layers icon) in the title bar.
-- When an analysis can't start, the message says why and offers the way forward: **Choose a Variable…** (or a function, class or parameter, whichever the analysis needs) lists the file's declarations that fit; another analysis that does fit the symbol at the cursor is offered by name; **Go to Syntax Error** appears when broken code is the likely cause; a library symbol offers **Go to Definition**; a file outside the project offers its tsconfig.json; and unexpected failures offer **Show Log**, **Copy Details** and **Report Issue**.
+- **Show as Diagram** in the title bar is a switch: turn it on and every new result also opens as a chart, until you turn it off (`tsStructure.results.alwaysShowDiagram`). `Ctrl+Alt+S 9` shows a single result as a chart.
+- Each report puts what matters first: Find Usages starts with the file you are in and the busiest files, in line order, and says how many functions use it, which calls are recursive, and when only tests use it; Inspect Code starts with the files with the most problems and names the most common one; unsafe Nullability uses, unhandled rejections and new import cycles come first. Rows in test files are marked across reports.
+- When an analysis can't start, the message says why and offers the way forward as links right after the text: **Choose a Variable…** (or a function, class or parameter, whichever the analysis needs) lists the file's declarations that fit; another analysis that does fit the symbol at the cursor is offered by name; **Go to Syntax Error** appears when broken code is the likely cause; a library symbol offers **Go to Definition**; a file outside the project offers its tsconfig.json; and unexpected failures offer **Show Log**, **Copy Details** and **Report Issue**.
 - Copy or export a report as Markdown, CSV or JSON, open it as a Markdown preview, or **Copy All Locations**. Remove reports from **Show Analysis History…** with their trash button.
 
 ![Usages limited to cart.ts](docs/images/limit-results.gif)
@@ -289,6 +291,10 @@ Run **Code X-Ray: Open Settings**. The ones you are most likely to change:
 | `tsStructure.lightbulbAnalyses` | `true` | analyses in the lightbulb's refactor menu |
 
 ![Choose Features](docs/images/choose-features.gif)
+
+## Speed
+
+The first analysis of a project parses all its files. Code X-Ray does this in the background a moment after you open a TypeScript or JavaScript file (`tsStructure.warmUp`), and every feature (analyses, live inspections, test impact, the CodeLens) shares that one parse, so later analyses start at once and only re-read files that changed.
 
 ## Development
 

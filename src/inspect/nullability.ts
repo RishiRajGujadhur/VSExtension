@@ -519,6 +519,23 @@ export function nullabilityReport(project: VirtualProject, fileName: string, off
       location: builder.at(expression),
     },
   ];
+  // Where it is declared, and every place it is asserted non-null with !.
+  const symbol = project.program().getTypeChecker().getSymbolAtLocation(identifier);
+  const declaration = symbol?.valueDeclaration ?? symbol?.declarations?.[0];
+  if (declaration && !declaration.getSourceFile().isDeclarationFile) {
+    const sf = declaration.getSourceFile();
+    roots.push({ label: 'Declared', description: `${sf.fileName.split(/[\\/]/).pop()}:${sf.getLineAndCharacterOfPosition(declaration.getStart()).line + 1} · ${nodeText(declaration).split('\n')[0].slice(0, 60)}`, icon: 'symbol-variable', location: builder.at(declaration) });
+  }
+  const asserted = referencesAt(project.service, fileName, identifier.getStart()).filter((r) => ts.isNonNullExpression(accessExpression(r).parent));
+  if (asserted.length) {
+    roots.push({
+      label: `Asserted non-null with ! (${asserted.length})`,
+      description: nullableHere ? `it can still be ${which}: a check is safer than !` : 'each one is a promise the type cannot check',
+      icon: 'warning',
+      tone: nullableHere ? 'warning' : 'info',
+      children: asserted.map((r) => ({ label: nodeText(accessExpression(r).parent), description: `line ${r.getSourceFile().getLineAndCharacterOfPosition(r.getStart()).line + 1}`, icon: 'warning', location: builder.at(r) })),
+    });
+  }
   const sources = explorer.sources(expression);
   if (sources.length > 0) {
     roots.push({ label: nullableHere ? `Paths that produce ${which}` : 'Possible null sources before narrowing', icon: 'git-merge', expanded: true, children: sources });

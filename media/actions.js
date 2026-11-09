@@ -320,7 +320,6 @@
     const context = { words: [] };
     if (tab === 'graphs') {
       // Graphs need something to start from: say so when no source file is open, else offer those that fit the cursor.
-      if (!hasEditor) list.append(make('p', 'note', 'Open a TypeScript or JavaScript file and put the cursor on what to graph: a function, a variable, a component or a class.'));
       const fitting = visible.filter((a) => cursorFits.includes(a.command));
       section('cursor', 'For the Cursor', fitting, { ...context, icon: 'target' });
     }

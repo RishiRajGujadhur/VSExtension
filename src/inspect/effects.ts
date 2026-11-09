@@ -5,6 +5,7 @@ import {
   calledFunction,
   enclosingFunction,
   forEachDescendant,
+  forEachInFunction,
   functionAtOffset,
   functionLabel,
   isFunctionWithBody,
@@ -594,6 +595,20 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
   const effects = new EffectAnalyzer(checker).effectsOf(fn);
   const builder = new ReportBuilder('sideEffects', `Side effects of ${functionLabel(fn)}`);
   const roots: ReportNode[] = [];
+  // Where an effect happens matters: after an await other code may have run; in a loop it repeats.
+  const awaits: number[] = [];
+  forEachInFunction(fn.body ?? fn, (n) => { if (ts.isAwaitExpression(n)) awaits.push(n.end); });
+  const inLoop = (node: ts.Node) => {
+    for (let n: ts.Node | undefined = node.parent; n && n !== fn; n = n.parent) {
+      if (ts.isIterationStatement(n, false)) return true;
+      if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && /^(forEach|map|flatMap|filter|reduce|some|every)$/.test(n.expression.name.text) && n.arguments.some((a) => a.pos <= node.pos && node.end <= a.end)) return true;
+    }
+    return false;
+  };
+  const marked = (e: Effect, row: ReportNode): ReportNode => {
+    const notes = [awaits.some((end) => end <= e.node.getStart()) ? 'after await' : '', inLoop(e.node) ? 'in a loop' : ''].filter(Boolean);
+    return notes.length ? { ...row, description: [row.description, ...notes].filter(Boolean).join(' · ') } : row;
+  };
   for (const kind of Object.keys(kindLabels) as EffectKind[]) {
     const ofKind = effects.filter((e) => e.kind === kind);
     if (ofKind.length > 0) {
@@ -603,7 +618,7 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
         icon: kindIcons[kind],
         tone: mutationKinds.has(kind) ? 'warning' : 'info',
         expanded: true,
-        children: ofKind.map((e) => effectNode(e, builder)),
+        children: ofKind.map((e) => marked(e, effectNode(e, builder))),
       });
     }
   }
@@ -617,7 +632,8 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
       label: 'By call',
       description: plural(byCall.size, 'call'),
       icon: 'call-outgoing',
-      children: [...byCall].map(([call, inherited]) => {
+      // The calls that bring in the most effects first.
+      children: [...byCall].sort((a, b) => b[1].length - a[1].length).map(([call, inherited]) => {
         const callee = inherited[0].via!.fn;
         return {
           label: `${functionLabel(callee)}()`,
@@ -636,7 +652,18 @@ export function sideEffectReport(program: ts.Program, fileName: string, offset: 
   const known = effects.filter((e) => e.kind !== 'unknown').length;
   const unfollowed = effects.length - known;
   const kinds = [...new Set(effects.filter((e) => e.kind !== 'unknown').map((e) => kindLabels[e.kind].toLowerCase()))];
-  return builder.finish(roots, [known ? `${plural(known, 'side effect')} (${kinds.join(', ')})` : unfollowed ? 'no known side effects' : 'pure', unfollowed ? plural(unfollowed, 'call') + ' not followed' : ''].filter(Boolean).join(', '));
+  // The verdict first: what the effects mean for testing and reuse.
+  if (known) {
+    roots.unshift({
+      label: `Not pure: ${kinds.join(', ')}`,
+      description: 'test it with fakes or mocks; calling it twice or caching its result changes what happens',
+      icon: 'info',
+      tone: 'info',
+      location: builder.at(functionNameOrSelf(fn)),
+    });
+  }
+  const inherited = effects.filter((e) => e.via).length;
+  return builder.finish(roots, [known ? `${plural(known, 'side effect')} (${kinds.join(', ')})` : unfollowed ? 'no known side effects' : 'pure', inherited ? `${inherited} through calls` : '', unfollowed ? plural(unfollowed, 'call') + ' not followed' : ''].filter(Boolean).join(', '));
 }
 
 /** The declaration of the state named at the offset (for `cart.items`, of `cart`), if the cursor is on a name. */

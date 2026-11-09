@@ -113,9 +113,13 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
 export async function showResultsPicker(result: ImpactResult, run: (tests: TestCase[]) => void): Promise<void> {
   type PickItem = vscode.QuickPickItem & { impacted?: ImpactedTest };
   const runButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('play'), tooltip: 'Run this test' };
+  const openButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('go-to-file'), tooltip: 'Open the test beside, keeping this list' };
   const items: PickItem[] = [];
   for (const confidence of ['confirmed', 'possible'] as const) {
-    const group = result.tests.filter((t) => t.confidence === confidence);
+    // The same order every time: by file, then by line, so a list run twice reads the same.
+    const group = result.tests
+      .filter((t) => t.confidence === confidence)
+      .sort((a, b) => a.test.file.localeCompare(b.test.file) || a.test.location.line - b.test.location.line);
     if (group.length === 0) {
       continue;
     }
@@ -126,7 +130,7 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
         label: `$(${confidence === 'confirmed' ? 'beaker' : 'question'}) ${testLabel(impacted.test)}`,
         description: `${vscode.workspace.asRelativePath(impacted.test.file)}:${impacted.test.location.line + 1}`,
         detail: impacted.path.map((s) => s.name).join('  →  '),
-        buttons: [runButton],
+        buttons: [runButton, openButton],
         impacted,
       });
     }
@@ -141,20 +145,28 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
   picker.items = items;
   // Run every impacted test without closing the list first.
   const runAll: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('run-all'), tooltip: `Run All ${countLabel(result.tests.length)}` };
+  const runConfirmed: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('beaker'), tooltip: `Run the ${countLabel(confirmed)} Confirmed Only` };
   const copy: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('copy'), tooltip: 'Copy Impacted Tests…' };
-  picker.buttons = [runAll, copy];
+  picker.buttons = confirmed && confirmed < result.tests.length ? [runAll, runConfirmed, copy] : [runAll, copy];
   picker.onDidTriggerButton((button) => {
     picker.hide();
     if (button === runAll) {
       run(result.tests.map((t) => t.test));
+    } else if (button === runConfirmed) {
+      run(result.tests.filter((t) => t.confidence === 'confirmed').map((t) => t.test));
     } else {
       void vscode.commands.executeCommand('tsImpact.copyTests');
     }
   });
   picker.onDidTriggerItemButton((e) => {
-    if (e.item.impacted) {
-      run([e.item.impacted.test]);
+    if (!e.item.impacted) return;
+    if (e.button === openButton) {
+      // Beside the code, with the list still open to pick the next one.
+      const at = e.item.impacted.test.location;
+      void vscode.window.showTextDocument(vscode.Uri.file(e.item.impacted.test.file), { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true, selection: new vscode.Range(at.line, at.character, at.line, at.character) });
+      return;
     }
+    run([e.item.impacted.test]);
   });
   picker.onDidAccept(() => {
     const selected = picker.selectedItems[0]?.impacted;

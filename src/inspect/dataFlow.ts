@@ -313,6 +313,14 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       children: races.map((r) => ({ label: r.message, tooltip: r.message, icon: 'watch', tone: 'warning', location: r.write ? builder.at(r.write.node) : r.fn ? builder.at(r.fn) : undefined })),
     });
   }
+  // Set but never read, and let that could be const.
+  const reads = steps.filter((s) => !['declaration', 'write', 'update', 'mutation', 'import'].includes(s.kind));
+  if (!reads.length && !outflows.length && steps.some((s) => s.kind === 'write' || s.kind === 'declaration')) {
+    builder.warnings.push(`${name} is set but never read: the assignments can go, or a use is missing.`);
+  }
+  if (declaration && ts.isVariableDeclaration(declaration) && ts.isVariableDeclarationList(declaration.parent) && declaration.parent.flags & ts.NodeFlags.Let && !steps.some((s) => s.kind === 'write' || s.kind === 'update')) {
+    builder.warnings.push(`${name} is declared with let but never reassigned: it can be const.`);
+  }
   const count = (kinds: FlowKind[]) => steps.filter((s) => kinds.includes(s.kind)).length;
   // Only the counts that aren't zero; the patterns have their own group.
   const counts = [

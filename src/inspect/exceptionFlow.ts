@@ -246,6 +246,16 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
     }
   });
 
+  // throw new Error('…') inside a catch, without { cause: e }: the original error and its stack are lost.
+  forEachInFunction(fn.body!, (node) => {
+    if (!ts.isCatchClause(node)) return;
+    const name = node.variableDeclaration && ts.isIdentifier(node.variableDeclaration.name) ? node.variableDeclaration.name.text : undefined;
+    forEachInFunction(node.block, (inner) => {
+      if (!ts.isThrowStatement(inner) || !inner.expression || !ts.isNewExpression(inner.expression)) return;
+      const keepsCause = inner.expression.arguments?.some((a) => ts.isObjectLiteralExpression(a) && a.properties.some((p) => p.name?.getText() === 'cause')) || (name && inner.expression.getText().includes(name));
+      if (!keepsCause) catches.push({ label: `${nodeSnippet(inner.expression, 40)} loses the original error`, description: `pass { cause: ${name ?? 'error'} } to keep it and its stack`, icon: 'info', tone: 'info', location: builder.at(inner) });
+    });
+  });
   const escaping = analyzer.escaping(fn);
   const roots: ReportNode[] = [
     { label: 'Thrown here', description: plural(own.length, 'error'), icon: 'zap', expanded: true, children: own.length ? own.map(pathRow) : [{ label: 'nothing thrown directly', icon: 'pass', tone: 'ok' }] },
@@ -285,6 +295,9 @@ export function exceptionFlowReport(project: VirtualProject, fileName: string, o
         'Put clean-up such as closing files or hiding spinners in finally, so it runs on every exit.',
       ]),
     );
+  }
+  if (isAsync(fn) && escaping.length) {
+    roots.push({ label: 'In an async function, a throw becomes a rejection', description: 'callers see it only if they await the call or add .catch', icon: 'info', tone: 'info' });
   }
   return builder.finish(roots, `${plural(raised.length, 'error source')}, ${escaping.length} escaping`);
 }

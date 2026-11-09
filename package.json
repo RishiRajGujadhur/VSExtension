@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: animated data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, refactorings, inspections and structural search. Deterministic, offline, no AI. Graph animations adapted from robot-components (MIT).",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -952,6 +952,24 @@
         "title": "Graph Explorer",
         "category": "Code X-Ray",
         "icon": "$(graph-line)"
+      },
+      {
+        "command": "tsStructure.report.diagramsOn",
+        "title": "Show as Diagram, and Keep Showing Results as Diagrams",
+        "category": "Code X-Ray",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "tsStructure.report.diagramsOff",
+        "title": "Diagrams On: Stop Showing Results as Diagrams",
+        "category": "Code X-Ray",
+        "icon": "$(pinned)"
+      },
+      {
+        "command": "tsStructure.showLastRefactoring",
+        "title": "Show Last Refactoring's Changes",
+        "category": "Code X-Ray",
+        "icon": "$(history)"
       }
     ],
     "viewsContainers": {
@@ -2191,6 +2209,14 @@
         {
           "command": "tsStructure.report.changeControls",
           "when": "tsStructure.reportHasControls"
+        },
+        {
+          "command": "tsStructure.report.diagramsOn",
+          "when": "!config.tsStructure.results.alwaysShowDiagram"
+        },
+        {
+          "command": "tsStructure.report.diagramsOff",
+          "when": "config.tsStructure.results.alwaysShowDiagram"
         }
       ],
       "view/title": [
@@ -2440,8 +2466,8 @@
           "group": "9_settings@6"
         },
         {
-          "command": "tsStructure.report.showDiagram",
-          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "command": "tsStructure.report.diagramsOn",
+          "when": "view == tsStructure.report && !config.tsStructure.results.alwaysShowDiagram",
           "group": "navigation@6"
         },
         {
@@ -2473,6 +2499,11 @@
           "command": "tsStructure.report.changeControls",
           "when": "view == tsStructure.report && tsStructure.reportHasControls",
           "group": "navigation@2"
+        },
+        {
+          "command": "tsStructure.report.diagramsOff",
+          "when": "view == tsStructure.report && config.tsStructure.results.alwaysShowDiagram",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
@@ -3018,6 +3049,16 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Data Flow: put the functions that write the value under **Flows in** and those that read it under **Flows out**, so each side collapses as one. Off: one group per function after Flows in and Flows out."
+          },
+          "tsStructure.results.alwaysShowDiagram": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Show every new analysis as a diagram as soon as it is ready, as well as in the results view. The **Show as Diagram** button in the results view turns this on and off."
+          },
+          "tsStructure.warmUp": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Prepare the project of the file you are editing in the background, a moment after you stop typing, so the first analysis starts at once. Turn off on very large projects if the editor feels slow right after opening a file."
           }
         }
       },
@@ -3361,16 +3402,15 @@
       {
         "id": "gettingStarted",
         "title": "Get Started with Code X-Ray",
-        "description": "Refactor, inspect and navigate TypeScript and JavaScript across files, in seven short steps.",
+        "description": "See inside your TypeScript and JavaScript code in eight short steps.",
         "when": "true",
         "steps": [
           {
             "id": "actions",
             "title": "One shortcut for everything",
-            "description": "Put the cursor on a function, variable or class in a TypeScript file and press **Ctrl+Alt+Shift+T** (**Analyze or Refactor This…**). Every refactoring and analysis that fits is listed, and you can type to filter. The same list is in the editor's right-click menu under **Code X-Ray**.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)",
+            "description": "Put the cursor on a function, variable or class and press **Ctrl+Alt+Shift+T** (**Analyze or Refactor This…**). Every analysis and refactoring that fits is listed.\n[Analyze or Refactor This…](command:tsStructure.actionsAtCursor)",
             "media": {
-              "image": "media/walkthrough/actions-at-cursor.png",
-              "altText": "The Analyze or Refactor This list at the cursor"
+              "markdown": "media/walkthrough/actions.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.actionsAtCursor"
@@ -3379,10 +3419,9 @@
           {
             "id": "keyboard",
             "title": "Everything from the keyboard",
-            "description": "Every analysis has a shortcut: Ctrl+Alt+S (Cmd+Ctrl+S on macOS), then a letter, such as D for Data Flow or U for Find Usages. Not sure which analysis answers your question? Ask How Do I…?\n[Show the Shortcuts](command:tsStructure.shortcutSheet)\n[How Do I…?](command:tsStructure.howDoI)",
+            "description": "**Ctrl+Alt+S** (**Cmd+Ctrl+S** on macOS), then a letter: **D** Data Flow, **U** Find Usages, **1** Control Flow. Not sure which one? Ask **How Do I…?**\n[Show the Shortcuts](command:tsStructure.shortcutSheet)\n[How Do I…?](command:tsStructure.howDoI)",
             "media": {
-              "image": "media/walkthrough/actions-at-cursor.png",
-              "altText": "The analyses with their shortcuts"
+              "markdown": "media/walkthrough/keyboard.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.shortcutSheet",
@@ -3392,10 +3431,9 @@
           {
             "id": "refactor",
             "title": "Refactor across files",
-            "description": "With the cursor on a function name, **Change Signature…** (**Ctrl+F6**) renames, adds, removes or reorders parameters and updates every call. **Safe Delete** (**Alt+Delete**) checks every usage first. VS Code's Refactor Preview lets you review each change before it is applied.\n[Change Signature…](command:tsStructure.changeSignature)",
+            "description": "**Change Signature…** (**Ctrl+F6**) renames, adds, removes or reorders parameters and updates every call. **Safe Delete** (**Alt+Delete**) checks every usage first.\n[Change Signature…](command:tsStructure.changeSignature)",
             "media": {
-              "image": "media/walkthrough/change-signature.png",
-              "altText": "The Change Signature dialog"
+              "markdown": "media/walkthrough/refactor.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.changeSignature"
@@ -3404,10 +3442,9 @@
           {
             "id": "inspections",
             "title": "Catch problems as you type",
-            "description": "Live inspections find what single-file linters miss, such as a promise dropped through a helper function. Findings appear in the Problems panel; press **Ctrl+.** on one for its fixes. **Inspect Code…** checks a whole file or project.\n[Inspect Code…](command:tsStructure.inspectCode)",
+            "description": "Live inspections find what linters miss, such as a promise dropped through a helper. Press **Ctrl+.** on a finding for its fixes.\n[Inspect Code…](command:tsStructure.inspectCode)",
             "media": {
-              "image": "media/walkthrough/missing-await.png",
-              "altText": "A missing-await finding with its explanation"
+              "markdown": "media/walkthrough/inspections.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.inspectCode"
@@ -3416,10 +3453,9 @@
           {
             "id": "understand",
             "title": "Understand code before changing it",
-            "description": "**Semantic Find Usages** (**Alt+F7**) groups references into reads, writes, calls and imports. **Data Flow** shows how a value changes, and **Nullability** shows which paths make it undefined. Results open in the Code X-Ray view, where you can filter, go back and forward, and re-run them.\n[Semantic Find Usages](command:tsStructure.semanticUsages)",
+            "description": "**Find Usages** (**Alt+F7**) groups reads, writes and calls. **Data Flow** and the **Graphs** tab draw how values and calls move.\n[Find Usages](command:tsStructure.semanticUsages)\n[Open Graph…](command:tsStructure.openGraph)",
             "media": {
-              "image": "media/walkthrough/semantic-usages.png",
-              "altText": "Semantic Find Usages grouped by kind"
+              "markdown": "media/walkthrough/understand.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.semanticUsages"
@@ -3428,10 +3464,9 @@
           {
             "id": "tests",
             "title": "Run only the tests a change affects",
-            "description": "With the cursor on a function, **Test Impact Analysis** finds the tests that reach it, through other functions too, and runs just those.\n[Test Impact Analysis](command:tsImpact.analyze)",
+            "description": "With the cursor on a function, **Test Impact** finds the tests that reach it, through other functions too, and runs only those.\n[Test Impact Analysis](command:tsImpact.analyze)",
             "media": {
-              "image": "media/walkthrough/test-impact.png",
-              "altText": "Tests that depend on the selected function"
+              "markdown": "media/walkthrough/tests.md"
             },
             "completionEvents": [
               "onCommand:tsImpact.analyze"
@@ -3440,10 +3475,9 @@
           {
             "id": "features",
             "title": "Turn on more features",
-            "description": "To keep things simple, eleven more analyses start off: side effects, dead exports, duplicates, structural search and replace, exception flow, dependency paths and more. Tick the ones you want; they then appear in the menus.\n[Choose Features…](command:tsStructure.configureFeatures)",
+            "description": "More analyses start off to keep menus short: side effects, dead exports, duplicates, structural search and more. Tick the ones you want.\n[Choose Features…](command:tsStructure.configureFeatures)",
             "media": {
-              "image": "media/walkthrough/choose-features.png",
-              "altText": "The Choose Features list"
+              "markdown": "media/walkthrough/features.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.configureFeatures"
@@ -3452,10 +3486,9 @@
           {
             "id": "scope",
             "title": "Leave files out",
-            "description": "Generated or vendored code can be left out of inspections and project-wide searches: right-click a file or folder in the Explorer and choose **Exclude from Code X-Ray Analysis**, or edit the whole scope here. Every option is in the settings.\n[Edit Analysis Scope…](command:tsStructure.editAnalysisScope)\n[Open Settings](command:tsStructure.openSettings)",
+            "description": "Leave generated or vendored code out: right-click a folder and choose **Exclude from Code X-Ray Analysis**, or edit the scope.\n[Edit Analysis Scope…](command:tsStructure.editAnalysisScope)\n[Open Settings](command:tsStructure.openSettings)",
             "media": {
-              "image": "media/walkthrough/analysis-scope.png",
-              "altText": "The analysis scope with include and exclude patterns"
+              "markdown": "media/walkthrough/scope.md"
             },
             "completionEvents": [
               "onCommand:tsStructure.editAnalysisScope"

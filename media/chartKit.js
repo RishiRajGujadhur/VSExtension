@@ -232,17 +232,16 @@
   }
 
   /**
-   * The ring around a circle that turns while lines flow: two arcs, one round each side, running from where the flow
-   * enters the circle to where it leaves, so its dashes move the same way as the lines. Angles are in degrees
-   * (0 is right, 90 is down).
+   * The ring around a circle while lines flow: two arcs, one round each side, from where the flow enters the circle
+   * to where it leaves. They are drawn by the flowing-lines canvas, so they look and move exactly like the lines.
+   * Angles are in degrees (0 is right, 90 is down).
    */
-  function flowRing(parent, cx, cy, r, fromDegrees, toDegrees) {
+  function ringPaths(cx, cy, r, fromDegrees, toDegrees) {
     const at = (deg) => ({ x: cx + r * Math.cos((deg * Math.PI) / 180), y: cy + r * Math.sin((deg * Math.PI) / 180) });
     const a = at(fromDegrees);
     const b = at(toDegrees);
-    const g = el('g', { class: 'ring', 'aria-hidden': 'true' }, parent);
-    for (const sweep of [1, 0]) el('path', { d: `M${a.x},${a.y} A${r},${r} 0 0 ${sweep} ${b.x},${b.y}` }, g);
-    return g;
+    // Path data in chart coordinates, for drawFlows: the canvas draws them like any flowing line.
+    return [1, 0].map((sweep) => `M${a.x},${a.y} A${r},${r} 0 0 ${sweep} ${b.x},${b.y}`);
   }
 
   /** An icon drawn in SVG at (x, y), its center; nothing when the icon is unknown. */
@@ -557,5 +556,5 @@
     }
   }
 
-  window.chartKit = { el, renderControls, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  window.chartKit = { el, renderControls, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

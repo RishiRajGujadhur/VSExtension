@@ -271,5 +271,14 @@ export function reexportChainReport(project: VirtualProject, fileName: string, o
       }),
     })),
   });
+  const viaBarrel = imports.filter((e) => e.from && !target.declarations?.some((d) => d.getSourceFile() === e.from)).length;
+  if (viaBarrel) {
+    roots.push({
+      label: `${plural(viaBarrel, 'import')} through re-exports`,
+      description: `right-click one for Import Directly from ${target.declarations?.[0] ? path.basename(target.declarations[0].getSourceFile().fileName) : 'its declaration'}`,
+      icon: 'info',
+      tone: 'info',
+    });
+  }
   return builder.finish(roots, `${chain.length > 1 ? plural(chain.length - 1, 'hop') + ' from the cursor' : 'no re-exports: declared where it is imported from'}, exported by ${plural(exported.length, 'module')}`);
 }
