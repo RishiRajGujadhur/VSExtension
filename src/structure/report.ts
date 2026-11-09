@@ -1,5 +1,6 @@
 import ts = require('typescript');
 import { hashText, normalizePath } from '../analysis/paths';
+import type { ReportControl } from './graphOptions';
 
 /** Zero-based range, matching both the TypeScript API and VS Code. */
 export interface ReportLocation {
@@ -44,6 +45,10 @@ export interface Report {
   durationMs?: number;
   /** When it ran (milliseconds since 1970), set by the UI. */
   ranAt?: number;
+  /** Options it can be run again with, such as how many levels deep a graph goes. */
+  controls?: ReportControl[];
+  /** Where its subject is written, such as the function a call graph is about. */
+  subject?: ReportLocation;
 }
 
 /** Collects locations while a report is built, remembering the text each one was computed from. */

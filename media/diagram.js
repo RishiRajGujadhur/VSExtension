@@ -775,6 +775,10 @@
   }
 
   document.getElementById('mermaid').addEventListener('click', copyMermaid);
+  document.getElementById('otherGraphs').addEventListener('click', () => vscode.postMessage({ type: 'otherGraphs' }));
+  window.addEventListener('keydown', (e) => {
+    if ((e.key === 'g' || e.key === 'G') && e.target !== searchBox && !e.ctrlKey && !e.metaKey && !e.altKey && !menu.isOpen) vscode.postMessage({ type: 'otherGraphs' });
+  });
   zoomLevel.addEventListener('click', () => window.chartKit.zoomPresets(menu, zoomLevel, view.k, (k) => zoom(k / view.k), () => fit(true)));
   // The minimap can be hidden (M); the choice is kept with the other viewer preferences.
   map.hidden = prefs.minimap === false;
@@ -836,6 +840,7 @@
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
     analyses = event.data.analyses || [];
+    window.chartKit.renderControls(document.getElementById('graphControls'), event.data.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
     closeMenu(false);
     focused = undefined;
     flowing = undefined;

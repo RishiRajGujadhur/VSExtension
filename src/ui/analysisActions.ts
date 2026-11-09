@@ -53,6 +53,12 @@ export function suggestedAt(document: vscode.TextDocument, offset: number): stri
   return symbol ? analyses.filter((a) => a.lightbulb && isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async)).map((a) => a.command) : [];
 }
 
+/** Every analysis (lightbulb or not) that fits the declaration at the offset, such as the graphs for the cursor. */
+export function fittingAt(document: vscode.TextDocument, offset: number): string[] {
+  const symbol = symbolAt(parse(document), offset);
+  return symbol ? analyses.filter((a) => isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async)).map((a) => a.command) : [];
+}
+
 /** Lightbulb entries that run an analysis on the declaration under the cursor, such as "Show data flow of 'total'". */
 export class AnalysisActionProvider implements vscode.CodeActionProvider {
   static readonly kinds = [analyzeKind];

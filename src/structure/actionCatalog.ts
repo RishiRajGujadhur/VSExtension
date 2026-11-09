@@ -5,6 +5,10 @@ export interface CatalogAction {
   command: string;
   /** Draw the command's report as a chart after it runs (the Graphs tab). */
   graph?: boolean;
+  /** What a graph starts from, such as "a function". */
+  startsFrom?: string;
+  /** What its levels control, for graphs that can go deeper. */
+  levels?: string;
   label: string;
   /** One short line under the label, short enough for a narrow sidebar. */
   detail: string;
@@ -28,6 +32,13 @@ export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string
 export const actionId = (action: CatalogAction): string => action.id ?? action.command;
 
 /** A graph of the Graphs tab: a command whose result opens as a chart. Opening one that already draws a chart is the same entry. */
+/** The Graphs tab's categories: an icon and what the graphs in it show. */
+export const graphCategories: Record<string, { icon: string; description: string }> = {
+  Execution: { icon: 'run-all', description: 'How code runs: paths, calls and errors' },
+  Data: { icon: 'symbol-variable', description: 'How values move, change and depend on each other' },
+  Structure: { icon: 'symbol-structure', description: 'How code is organized: types, overrides and imports' },
+};
+
 const g = (category: string, command: string, label: string, detail: string, info: string, keywords?: string, opensChart = false): CatalogAction => ({
   id: `graph:${command}`,
   tab: 'graphs',
@@ -38,7 +49,55 @@ const g = (category: string, command: string, label: string, detail: string, inf
   detail,
   info,
   keywords: `graph chart diagram ${keywords ?? ''}`.trim(),
+  ...graphFacts[command],
 });
+
+/** What each graph starts from and, for those that can go deeper, what its levels control. */
+const graphFacts: Record<string, { startsFrom: string; levels?: string }> = {
+  'tsStructure.controlFlow': {
+    'startsFrom': 'a function',
+    'levels': 'calls expanded inside it'
+  },
+  'tsStructure.callGraph': {
+    'startsFrom': 'a function',
+    'levels': 'callers and callees'
+  },
+  'tsStructure.exceptionFlow': {
+    'startsFrom': 'a function'
+  },
+  'tsStructure.promiseRejections': {
+    'startsFrom': 'an async function'
+  },
+  'tsStructure.dataFlowDiagram': {
+    'startsFrom': 'a variable, parameter or property'
+  },
+  'tsStructure.dependenceGraph': {
+    'startsFrom': 'a function',
+    'levels': 'calls expanded inside it'
+  },
+  'tsStructure.mutationTrackingVariable': {
+    'startsFrom': 'a variable or property'
+  },
+  'tsStructure.argumentFlow': {
+    'startsFrom': 'a parameter, or an argument in a call'
+  },
+  'tsStructure.reactState': {
+    'startsFrom': 'a React component or hook',
+    'levels': 'child components'
+  },
+  'tsStructure.typeHierarchy': {
+    'startsFrom': 'a class or interface'
+  },
+  'tsStructure.overrideImpact': {
+    'startsFrom': 'a method or property of a class'
+  },
+  'tsStructure.whoImports': {
+    'startsFrom': 'the current file'
+  },
+  'tsStructure.dependencyPath': {
+    'startsFrom': 'two files'
+  }
+};
 
 /** The Graph Explorer: every analysis that can be drawn, by what it shows. */
 const graphCatalog: CatalogAction[] = [

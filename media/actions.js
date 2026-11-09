@@ -16,6 +16,9 @@
   let data;
   let tab = saved.tab || 'analyze';
   let focusAfterRender;
+  // The graphs that fit the symbol at the cursor, and whether a TypeScript or JavaScript editor is open.
+  let cursorFits = [];
+  let hasEditor = true;
 
   const save = (patch) => vscode.setState(Object.assign(saved, patch));
   const send = (change) => vscode.postMessage({ type: 'layout', change });
@@ -106,7 +109,7 @@
     detail.append(marked(action.detail, words));
     text.append(label, detail);
     run.append(tile, text);
-    run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
+    run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
     run.addEventListener('click', () => vscode.postMessage({ type: 'run', id: action.id }));
     li.append(run);
 
@@ -210,7 +213,14 @@
     const toggle = make('button', 'section');
     toggle.type = 'button';
     toggle.setAttribute('aria-expanded', String(!folded));
-    toggle.append(icon(folded ? 'chevron-right' : 'chevron-down'), make('span', 'title', title), make('span', 'count', String(actions.length)));
+    toggle.append(icon(folded ? 'chevron-right' : 'chevron-down'));
+    // Graph categories carry their icon and say what they show.
+    const category = id.startsWith('category:') && data.categories && data.categories[id.slice(9)];
+    if (category) {
+      toggle.append(icon(category.icon));
+      toggle.title = category.description;
+    } else if (context.icon) toggle.append(icon(context.icon));
+    toggle.append(make('span', 'title', title), make('span', 'count', String(actions.length)));
     if (context.inSearch) toggle.disabled = true;
     else toggle.addEventListener('click', () => {
       focusAfterRender = `section:${id}`;
@@ -308,6 +318,12 @@
     const pinned = data.layout.pinned.map(byCommand).filter((a) => a && a.tab === tab && !isHidden(a));
     const top = data.layout.hideMostUsed ? [] : (data.mostUsed[tab] || []).map(byCommand).filter((a) => a && a.tab === tab);
     const context = { words: [] };
+    if (tab === 'graphs') {
+      // Graphs need something to start from: say so when no source file is open, else offer those that fit the cursor.
+      if (!hasEditor) list.append(make('p', 'note', 'Open a TypeScript or JavaScript file and put the cursor on what to graph: a function, a variable, a component or a class.'));
+      const fitting = visible.filter((a) => cursorFits.includes(a.command));
+      section('cursor', 'For the Cursor', fitting, { ...context, icon: 'target' });
+    }
     section('pinned', 'Pinned', pinned, context);
     section('mostUsed', data.usedOnce ? 'Most Used' : 'Start Here', top, context);
     const shown = new Set([...pinned, ...top]);
@@ -380,6 +396,16 @@
       const row = make('div', 'fact');
       row.append(make('span', '', 'Used'), make('span', '', runs ? `${runs} time${runs === 1 ? '' : 's'}` : 'not yet'));
       facts.append(row);
+      if (action.startsFrom) {
+        const from = make('div', 'fact');
+        from.append(make('span', '', 'Starts from'), make('span', '', action.startsFrom));
+        facts.append(from);
+      }
+      if (action.levels) {
+        const deep = make('div', 'fact');
+        deep.append(make('span', '', 'Levels'), make('span', '', `${action.levels}, set in the chart`));
+        facts.append(deep);
+      }
       const where = make('div', 'fact');
       where.append(make('span', '', 'Category'), make('span', '', `${data.tabs.find((t) => t.id === action.tab).label} › ${action.category}`));
       facts.append(where);
@@ -426,6 +452,9 @@
     const add = (label, iconName, onPick, key) => entries.push({ label, iconName, onPick, key });
     const sep = () => entries.push(undefined);
     add('Run', 'play', () => vscode.postMessage({ type: 'run', id: action.id }), 'Enter');
+    // An analysis that can also be drawn: run it as a chart.
+    const asGraph = action.tab !== 'graphs' && data.actions.find((a) => a.tab === 'graphs' && a.command === action.command);
+    if (asGraph) add('Open as Graph', 'graph-scatter', () => vscode.postMessage({ type: 'run', id: asGraph.id }));
     sep();
     if (isHidden(action)) add('Show Again', 'eye', () => send({ kind: 'show', command: action.id }));
     else {
@@ -555,6 +584,17 @@
   });
 
   window.addEventListener('message', (event) => {
+    if (event.data.type === 'cursor') {
+      cursorFits = event.data.fits || [];
+      hasEditor = event.data.hasEditor !== false;
+      if (data && tab === 'graphs') render();
+      return;
+    }
+    if (event.data.type === 'tab') {
+      if (data && data.tabs.some((t) => t.id === event.data.id)) choose(event.data.id, true);
+      else tab = event.data.id;
+      return;
+    }
     if (event.data.type !== 'actions') return;
     data = event.data;
     if (!data.tabs.some((t) => t.id === tab)) tab = data.tabs[0].id;

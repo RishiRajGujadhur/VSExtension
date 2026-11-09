@@ -131,3 +131,7 @@ kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, rgb
   .menuitem:focus { outline: 1px solid Highlight; }
   mark { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
+
+/* Graph Explorer: the note when nothing can be graphed, and category icons in headings. */
+.note { margin: 6px 2px; padding: 6px 8px; border-radius: 6px; font-size: 12px; color: var(--vscode-descriptionForeground); background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, .1)); }
+.section .codicon + .codicon { margin-left: -2px; opacity: .85; }

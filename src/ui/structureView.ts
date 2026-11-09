@@ -338,6 +338,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     void vscode.commands.executeCommand('setContext', 'tsStructure.limited', !!this.limit);
     void vscode.commands.executeCommand('setContext', 'tsStructure.narrowed', !!this.filter || !!this.limit || this.hidden.size > 0);
     void vscode.commands.executeCommand('setContext', 'tsStructure.reportKind', report?.kind);
+    void vscode.commands.executeCommand('setContext', 'tsStructure.reportHasControls', !!report?.controls?.length);
     this.reportChanged.fire(report);
     this.changed.fire();
     this.highlight();

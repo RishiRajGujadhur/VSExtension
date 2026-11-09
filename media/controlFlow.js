@@ -208,27 +208,71 @@
   // that value is read, orange dashed arcs on the right from a decision to the boxes it controls. Hovering or focusing
   // a box keeps only its own dependences.
   let showDeps = !!state.deps;
+  // Which kinds of arcs show (both by default), kept with the page.
+  let showData = state.depsData !== false;
+  let showControl = state.depsControl !== false;
+  // The data arcs drawn now: all of them, or those of the variable searched for.
+  const shownData = () => {
+    const all = chart.dependences.data;
+    if (!query) return all;
+    const named = all.filter((d) => d.name.toLowerCase().includes(query));
+    return named.length ? named : all;
+  };
+  const lineText = (n) => (n.kind === 'start' ? 'the start' : lineOf(n) ? `line ${lineOf(n)}` : 'the end');
   function drawDependences() {
     svg.classList.toggle('deps-on', showDeps);
     if (!showDeps || !chart.dependences) return;
+    const data = showData ? shownData() : [];
+    const control = showControl && !(query && data.length < chart.dependences.data.length) ? chart.dependences.control : [];
     // With many arcs they stay faint until a box is hovered or focused, which lights up its own.
-    const busy = chart.dependences.data.length + chart.dependences.control.length > 40;
-    const layer = el('g', { class: `deps${busy ? ' quiet' : ''}`, 'aria-hidden': 'true' }, scene);
+    const busy = data.length + control.length > 40;
+    const layer = el('g', { class: `deps${busy ? ' quiet' : ''}` }, scene);
     const side = (n, right) => ({ x: right ? n.x + n.width : n.x, y: n.y + n.height / 2 });
-    const arc = (a, b, right, cls, data) => {
+    const arc = (a, b, right, cls, d, tip) => {
       const p = side(a, right);
       const q = side(b, right);
       const bulge = (right ? 1 : -1) * (30 + Math.min(160, Math.abs(q.y - p.y) * 0.25));
-      const g = el('g', { class: `dep ${cls}`, 'data-from': data.from, 'data-to': data.to }, layer);
-      el('path', { d: `M${p.x},${p.y} C${p.x + bulge},${p.y} ${q.x + bulge},${q.y} ${q.x + (right ? 3 : -3)},${q.y}`, 'marker-end': `url(#${cls}Arrow)` }, g);
-      if (data.name) {
-        const t = el('text', { x: Math.min(p.x, q.x) + bulge * 0.78, y: (p.y + q.y) / 2 + 4, 'text-anchor': right ? 'start' : 'end' }, g);
-        t.textContent = data.name;
-      }
+      // Back up the chart: the value goes round a loop to the next time through.
+      const loop = b.y < a.y ? ' loop' : '';
+      const g = el('g', { class: `dep ${cls}${loop}${d.parameter ? ' parameter' : ''}`, 'data-from': d.from, 'data-to': d.to, 'data-name': d.name || '' }, layer);
+      const shape = `M${p.x},${p.y} C${p.x + bulge},${p.y} ${q.x + bulge},${q.y} ${q.x + (right ? 3 : -3)},${q.y}`;
+      el('path', { d: shape, 'marker-end': `url(#${cls}Arrow)` }, g);
+      el('path', { d: shape, class: 'dep-hit' }, g);
+      el('title', {}, g).textContent = tip + (loop ? ' (the next time round the loop)' : '');
+      if (d.name) el('text', { x: Math.min(p.x, q.x) + bulge * 0.78, y: (p.y + q.y) / 2 + 4, 'text-anchor': right ? 'start' : 'end' }, g).textContent = d.name;
       return g;
     };
-    for (const d of chart.dependences.data) arc(chart.nodes[d.from], chart.nodes[d.to], false, 'data', d);
-    for (const c of chart.dependences.control) arc(chart.nodes[c.from], chart.nodes[c.to], true, 'control', c);
+    for (const d of data) {
+      const a = chart.nodes[d.from];
+      const b = chart.nodes[d.to];
+      arc(a, b, false, 'data', d, d.parameter ? `${d.name}: a parameter, read on ${lineText(b)}` : `${d.name}: set on ${lineText(a)}, read on ${lineText(b)}`);
+    }
+    for (const c of control) arc(chart.nodes[c.from], chart.nodes[c.to], true, 'control', c, `The decision on ${lineText(chart.nodes[c.from])} controls whether ${lineText(chart.nodes[c.to])} runs`);
+  }
+
+  /** A box's dependences in words, for the info bar and screen readers. */
+  function dependenceSummary(n) {
+    if (!chart.dependences) return '';
+    const reads = chart.dependences.data.filter((d) => d.to === n.id);
+    const readBy = chart.dependences.data.filter((d) => d.from === n.id);
+    const controls = chart.dependences.control.filter((c) => c.to === n.id);
+    const decides = chart.dependences.control.filter((c) => c.from === n.id);
+    const group = (list, end) => {
+      const byName = new Map();
+      for (const d of list) byName.set(d.name, [...(byName.get(d.name) || []), d.parameter ? 'parameter' : lineText(chart.nodes[d[end]]).replace('line ', '')]);
+      return [...byName].map(([name, at]) => `${name} (${at.join(', ')})`).join(', ');
+    };
+    const parts = [];
+    if (reads.length) parts.push(`reads ${group(reads, 'from')}`);
+    if (controls.length) parts.push(`runs only for some branches of ${controls.map((c) => lineText(chart.nodes[c.from])).join(', ')}`);
+    if (readBy.length) parts.push(`its values are read at ${group(readBy, 'to')}`);
+    if (decides.length) parts.push(`decides whether ${decides.length === 1 ? lineText(chart.nodes[decides[0].to]) : `${decides.length} boxes`} run`);
+    return parts.length ? `Dependences: ${parts.join('; ')}.` : 'No dependences.';
+  }
+  function showDependencesOf(n) {
+    if (!showDeps) toggleDependences(true);
+    focusDependences(n);
+    info.textContent = dependenceSummary(n);
   }
   function focusDependences(n) {
     const layer = scene.querySelector('.deps');
@@ -586,7 +630,12 @@
     const through = pathsThrough(n);
     facts.textContent = n.unreachable ? 'unreachable' : `${through} possible path${through === 1 ? '' : 's'} through it`;
     info.append(head, facts);
-    if (!isTerminal(n)) {
+    if (showDeps && chart.dependences) {
+      const deps = document.createElement('span');
+      deps.className = 'facts';
+      deps.textContent = dependenceSummary(n);
+      info.appendChild(deps);
+    } else if (!isTerminal(n)) {
       const code = document.createElement('code');
       code.textContent = n.text.split('\n').slice(0, 3).join('  ⏎  ') + (n.text.split('\n').length > 3 ? '  …' : '');
       info.appendChild(code);
@@ -610,6 +659,15 @@
     afterPins();
   }
   scene.addEventListener('click', (e) => {
+    const dep = e.target.closest('.dep');
+    if (dep) {
+      scene.querySelectorAll('.dep.picked').forEach((g) => g.classList.remove('picked'));
+      scene.querySelectorAll('.node.dep-end').forEach((g) => g.classList.remove('dep-end'));
+      dep.classList.add('picked');
+      for (const id of [dep.dataset.from, dep.dataset.to]) scene.querySelector(`.node[data-node="${id}"]`)?.classList.add('dep-end');
+      info.textContent = dep.querySelector('title').textContent;
+      return;
+    }
     const expand = e.target.closest('.expand');
     if (expand) {
       e.stopPropagation();
@@ -727,6 +785,10 @@
     } else if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();
       animateFrom(n);
+    } else if ((e.key === 'd' || e.key === 'D') && showDeps) {
+      e.preventDefault();
+      e.stopPropagation();
+      showDependencesOf(n);
     } else if (e.key === 't' || e.key === 'T') {
       e.preventDefault();
       toggleThrough(n);
@@ -748,6 +810,7 @@
       { icon: 'play-circle', label: 'Animate Paths Through Here', keys: 'F', run: () => animateFrom(n) },
       { icon: 'filter', label: nodePins.includes(n.id) ? 'Stop Filtering by This Box' : 'Only Paths Through Here', keys: 'T', run: () => toggleThrough(n) },
       { icon: 'zoom-in', label: 'Zoom to This Box', run: () => zoomTo(n) },
+      { icon: 'references', label: 'Show Its Dependences', keys: 'D', run: () => showDependencesOf(n) },
     );
     if (n.calls && n.calls.length) {
       const openCalls = n.calls.every((c) => c.expanded);
@@ -804,6 +867,12 @@
       { icon: 'list-tree', label: panel.hidden ? 'Show Path Explorer' : 'Hide Path Explorer', keys: 'P', run: () => togglePanel(panel.hidden) },
       { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
       { icon: 'references', label: showDeps ? 'Hide Dependences' : 'Show Dependences (Program Dependence Graph)', keys: 'D', run: () => toggleDependences() },
+      ...(showDeps
+        ? [
+            { icon: showData ? 'check' : 'blank', label: 'Data Arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); } },
+            { icon: showControl ? 'check' : 'blank', label: 'Control Arcs (what decides whether code runs)', run: () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); } },
+          ]
+        : []),
       { icon: 'play-circle', label: 'Animate Every Path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },
       '-',
       { icon: 'markdown', label: 'Copy as Mermaid', run: () => copyMermaid() },
@@ -840,6 +909,7 @@
     matches = query && chart ? chart.nodes.filter((n) => `${n.text} ${n.kind === 'start' ? chart.name : ''}`.toLowerCase().includes(query)).map((n) => n.id) : [];
     matchAt = matches.length ? 0 : -1;
     searchCount.textContent = query ? (matches.length ? `1 of ${matches.length}` : 'No match') : '';
+    if (showDeps) render();
     highlight();
     if (matches.length) centerOn(chart.nodes[matches[0]]);
   }
@@ -929,7 +999,7 @@
   }
   let drag;
   svg.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || e.target.closest('.node') || e.target.closest('.edge')) return;
+    if (e.button !== 0 || e.target.closest('.node') || e.target.closest('.edge') || e.target.closest('.dep')) return;
     drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('dragging');
@@ -970,7 +1040,7 @@
   // Export: Mermaid text is made by the extension; SVG and PNG are the chart as drawn, with its colors written in.
   function copyMermaid() {
     const path = selected >= 0 ? chart.paths[selected] : undefined;
-    vscode.postMessage({ type: 'mermaid', path: path ? { nodes: path.nodes, edges: path.edges } : undefined });
+    vscode.postMessage({ type: 'mermaid', path: path ? { nodes: path.nodes, edges: path.edges } : undefined, dependences: showDeps });
   }
   const image = () => kit.exportSvg(svg, scene, ['.hit', '.expand']);
   function saveSvg() {
@@ -1045,6 +1115,7 @@
     else if (e.key === 'p' || e.key === 'P') togglePanel(panel.hidden);
     else if (e.key === 'm' || e.key === 'M') toggleMinimap();
     else if (e.key === 'd' || e.key === 'D') toggleDependences();
+    else if (e.key === 'g' || e.key === 'G') vscode.postMessage({ type: 'otherGraphs' });
     else if (e.key === 'Escape') {
       if (!legend.hidden) {
         legend.hidden = true;
@@ -1067,6 +1138,7 @@
       flowing = undefined;
       preview = -1;
       if (message.analyses) analyses = message.analyses;
+      kit.renderControls(document.getElementById('graphControls'), message.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
       empty.hidden = !!chart;
@@ -1133,6 +1205,7 @@
   }));
   kit.attachFlowLines(document.getElementById('flowLines'), () => view);
   document.getElementById('deps').addEventListener('click', () => toggleDependences());
+  document.getElementById('otherGraphs').addEventListener('click', () => vscode.postMessage({ type: 'otherGraphs' }));
   document.getElementById('deps').setAttribute('aria-pressed', String(showDeps));
   kit.bindToggles(prefs, grid, saveState, stopFlow);
   vscode.postMessage({ type: 'ready' });

@@ -111,3 +111,16 @@ body.vscode-high-contrast, body.vscode-high-contrast-light {
 @media (forced-colors: active) {
   .nodes { filter: none; }
 }
+
+/* A graph's options in the toolbar (chartKit.renderControls). */
+#graphControls { display: inline-flex; align-items: center; gap: 10px; }
+#graphControls[hidden] { display: none; }
+.control { display: inline-flex; align-items: center; gap: 2px; }
+.control-label { margin-right: 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.control-value { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+header .control button.step { min-width: 22px; min-height: 22px; padding: 0; font-size: 14px; line-height: 1; }
+header .control button.step:disabled { opacity: .4; cursor: default; }
+header .control button.choice { min-height: 22px; padding: 1px 8px; border-radius: 0; background: transparent; color: var(--vscode-foreground); border-color: var(--vscode-widget-border, rgba(128, 128, 128, .4)); font-size: 12px; }
+header .control button.choice:first-of-type { border-radius: 4px 0 0 4px; }
+header .control button.choice:last-of-type { border-radius: 0 4px 4px 0; }
+header .control button.choice[aria-pressed="true"] { background: var(--vscode-inputOption-activeBackground, rgba(0, 127, 212, .4)); border-color: var(--vscode-inputOption-activeBorder, var(--vscode-focusBorder)); }

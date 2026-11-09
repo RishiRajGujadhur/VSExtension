@@ -59,3 +59,23 @@ test('the program dependence graph links assignments to the reads they reach, an
   // The return runs on every path, so the decision doesn't control it.
   assert.ok(!deps.control.some((c) => c.to === box('return result')));
 });
+
+test('dependences: parameters come from the start, and changing a property keeps earlier assignments reaching', async () => {
+  const { dependencesOf } = await import('../inspect/dependences');
+  const { buildCfg } = await import('../inspect/controlFlow');
+  const ts = await import('typescript');
+  const source = ts.createSourceFile('pdg2.ts', `function g(items: number[], limit: number) {
+  const out = [];
+  out.push(limit);
+  out.length = 2;
+  return out;
+}`, ts.ScriptTarget.Latest, true);
+  const cfg = buildCfg(source.statements[0] as import('typescript').FunctionDeclaration);
+  const box = (text: string) => cfg.nodes.find((n) => n.lines.some((l) => l.includes(text)))!.id;
+  const deps = dependencesOf(cfg);
+  // limit comes from the parameters.
+  assert.ok(deps.data.some((d) => d.from === cfg.start && d.name === 'limit' && d.parameter));
+  // out.push and out.length change out without replacing it: the declaration still reaches the return.
+  const reaching = deps.data.filter((d) => d.to === box('return out') && d.name === 'out').map((d) => d.from);
+  assert.ok(reaching.includes(box('const out')), JSON.stringify(deps.data));
+});

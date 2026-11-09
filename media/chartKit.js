@@ -507,5 +507,55 @@
     }).observe(element);
   }
 
-  window.chartKit = { el, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  /**
+   * A graph's options in the toolbar: "Levels − 3 +" for how deep it goes, and a row of pressed buttons for a choice
+   * such as Callers / Both / Callees. `onChange(id, value)` runs the graph again with the new value.
+   */
+  function renderControls(container, controls, onChange) {
+    container.textContent = '';
+    container.hidden = !controls || !controls.length;
+    for (const c of controls || []) {
+      const group = document.createElement('span');
+      group.className = 'control';
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', c.label);
+      group.title = c.description;
+      const label = document.createElement('span');
+      label.className = 'control-label';
+      label.textContent = c.label;
+      group.appendChild(label);
+      if (c.kind === 'levels') {
+        const step = (delta, text, name) => {
+          const b = document.createElement('button');
+          b.className = 'icon step';
+          b.type = 'button';
+          b.textContent = text;
+          b.setAttribute('aria-label', `${name} ${c.label.toLowerCase()}`);
+          b.title = `${name} (${c.label}: ${c.value})`;
+          const next = Number(c.value) + delta;
+          b.disabled = next < (c.min ?? 1) || next > (c.max ?? 9);
+          b.addEventListener('click', () => onChange(c.id, next));
+          return b;
+        };
+        const value = document.createElement('output');
+        value.className = 'control-value';
+        value.textContent = String(c.value);
+        value.setAttribute('aria-live', 'polite');
+        group.append(step(-1, '−', 'Fewer'), value, step(1, '+', 'More'));
+      } else {
+        for (const choice of c.choices || []) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'choice';
+          b.textContent = choice.label;
+          b.setAttribute('aria-pressed', String(choice.id === c.value));
+          b.addEventListener('click', () => choice.id !== c.value && onChange(c.id, choice.id));
+          group.appendChild(b);
+        }
+      }
+      container.appendChild(group);
+    }
+  }
+
+  window.chartKit = { el, renderControls, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, flowRing, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

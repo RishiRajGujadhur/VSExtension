@@ -148,7 +148,7 @@ export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile,
  * The control flow as a Mermaid flowchart (top to bottom): decisions as hexagons, start and end as circles,
  * loop edges dotted, unreachable code dashed, a highlighted path drawn thick.
  */
-export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: number[]; edges: number[] }): string {
+export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: number[]; edges: number[] }, withDependences = false): string {
   const escape = mermaidText;
   const lines = ['flowchart TD'];
   for (const n of chart.nodes) {
@@ -162,6 +162,22 @@ export function chartMermaid(chart: ControlFlowChart, highlight?: { nodes: numbe
   });
   const unreachable = chart.nodes.filter((n) => n.unreachable).map((n) => `n${n.id}`);
   if (unreachable.length) lines.push('  classDef unreachable stroke-dasharray: 4 4,opacity:0.6', `  class ${unreachable.join(',')} unreachable`);
+  if (withDependences) {
+    // After the flow edges: data arcs labeled by variable, then control arcs, each kind in its own color.
+    let index = chart.edges.length;
+    const data: number[] = [];
+    const control: number[] = [];
+    for (const d of chart.dependences.data) {
+      lines.push(`  n${d.from} -. ${escape(d.name)} .-> n${d.to}`);
+      data.push(index++);
+    }
+    for (const c of chart.dependences.control) {
+      lines.push(`  n${c.from} -.-> n${c.to}`);
+      control.push(index++);
+    }
+    if (data.length) lines.push(`  linkStyle ${data.join(',')} stroke:#b180d7`);
+    if (control.length) lines.push(`  linkStyle ${control.join(',')} stroke:#d18616`);
+  }
   if (highlight?.nodes.length) {
     lines.push('  classDef onPath stroke-width:3px', `  class ${highlight.nodes.map((n) => `n${n}`).join(',')} onPath`);
     for (const e of highlight.edges) lines.push(`  linkStyle ${e} stroke-width:3px`);

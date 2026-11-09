@@ -196,3 +196,12 @@ li.selected .path-steps { color: inherit; }
   .dep path { stroke: CanvasText; }
   .dep text { fill: CanvasText; }
 }
+
+.dep .dep-hit { stroke: transparent; stroke-width: 10; fill: none; cursor: pointer; }
+.dep.loop path:not(.dep-hit) { stroke-dasharray: 2 3; }
+.dep.parameter path:not(.dep-hit) { stroke: var(--vscode-charts-blue, #3794ff); }
+.dep.parameter text { fill: var(--vscode-charts-blue, #3794ff); }
+.dep:hover path:not(.dep-hit), .dep.picked path:not(.dep-hit) { stroke-width: 2.6; opacity: 1; }
+.deps .dep.picked, .deps.quiet .dep.picked { opacity: 1; }
+.deps .dep.picked text { display: inline; }
+.node.dep-end .shape { stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 2.6; }

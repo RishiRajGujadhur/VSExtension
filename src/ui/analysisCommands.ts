@@ -1,4 +1,5 @@
 import ts = require('typescript');
+import { graphOption, setGraphOption } from '../structure/graphOptions';
 import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -23,7 +24,7 @@ import { reexportChainReport } from '../navigate/reexports';
 import { hierarchyReport, overrideImpactReport } from '../navigate/hierarchy';
 import { dependencyPathReport, distancesFrom } from '../navigate/dependencyPaths';
 import { argumentFlowReport } from '../navigate/argumentFlow';
-import { callGraphReport } from '../navigate/callGraph';
+import { CallDirection, callGraphReport } from '../navigate/callGraph';
 import { reactStateReport } from '../inspect/reactState';
 import { discoverTests } from '../analysis/testDiscovery';
 import { defaultEntryPoints, programGraph } from '../navigate/moduleGraph';
@@ -557,6 +558,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       }
     }),
     registerCommand('tsStructure.rerunAnalysis', () => view.rerun()),
+    // A graph's levels or other options, then the analysis again with them.
+    registerCommand('tsStructure.report.changeControls', (id?: string, value?: unknown) => changeControls(view, id, value)),
     registerCommand('tsStructure.clearReport', () => view.clear()),
     editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset, { byDirection: vscode.workspace.getConfiguration('tsStructure').get('dataFlow.groupByDirection', true) })),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
@@ -783,8 +786,37 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
     // Graphs: drawn as a chart as soon as they are ready (see extension.ts).
     editorCommand('tsStructure.callGraph', 'Call graph', (t) =>
-      callGraphReport(t.project(), t.fileName, t.offset, { depth: vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('callGraph.depth', 3) }),
+      callGraphReport(t.project(), t.fileName, t.offset, {
+        depth: graphOption('callGraph', 'levels', vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('callGraph.depth', 3)),
+        direction: graphOption('callGraph', 'direction', 'both') as CallDirection,
+      }),
     ),
-    editorCommand('tsStructure.reactState', 'React state', (t) => reactStateReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.reactState', 'React state', (t) => reactStateReport(t.project(), t.fileName, t.offset, { levels: graphOption('reactState', 'levels', 1) })),
   );
+}
+
+/** Sets one of the report's options (from the chart) or picks one (from the results view), then runs it again. */
+async function changeControls(view: StructureView, id?: string, value?: unknown): Promise<void> {
+  const report = view.report;
+  const controls = report?.controls ?? [];
+  if (!report || !controls.length) return;
+  let control = controls.find((c) => c.id === id);
+  if (!control) {
+    const picked = controls.length === 1 ? controls[0] : (await vscode.window.showQuickPick(controls.map((c) => ({ label: c.label, description: String(c.choices?.find((x) => x.id === c.value)?.label ?? c.value), detail: c.description, control: c })), { title: 'Change the Graph' }))?.control;
+    if (!picked) return;
+    control = picked;
+  }
+  if (value === undefined) {
+    const items =
+      control.kind === 'levels'
+        ? Array.from({ length: (control.max ?? 5) - (control.min ?? 1) + 1 }, (_, i) => (control!.min ?? 1) + i).map((n) => ({ label: `${n} ${n === 1 ? 'level' : 'levels'}`, picked: n === control!.value, value: n as unknown }))
+        : (control.choices ?? []).map((c) => ({ label: c.label, picked: c.id === control!.value, value: c.id as unknown }));
+    const chosen = await vscode.window.showQuickPick(
+      items.map((i) => ({ ...i, description: i.picked ? 'current' : undefined })),
+      { title: `${report.title}: ${control.label}`, placeHolder: control.description },
+    );
+    if (!chosen) return;
+    value = chosen.value;
+  }
+  if (setGraphOption(report.kind, control, value)) await view.rerun();
 }

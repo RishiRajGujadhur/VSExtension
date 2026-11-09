@@ -131,15 +131,31 @@ Each loop is taken zero or one times, and branches inside expressions (`&&`, `||
 
 #### Program Dependence Graph
 
-**Program Dependence Graph** (`Ctrl+Alt+S Shift+D`), or the **Dependences** button (`D`) in the Control Flow view, draws the function's dependences on its flowchart: purple arcs on the left run from where a variable is set to each place that value is read (an assignment that can reach the read without being overwritten), named by the variable; orange dashed arcs on the right run from a decision to each statement that runs only for some of its branches. Hover or focus a box to keep only its own arcs; in a large function the arcs stay faint until you do. Together they answer *why can this line run, and where did its values come from?* (Assignments through a property or a method such as `push` count as setting the variable.)
+**Program Dependence Graph** (`Ctrl+Alt+S Shift+D`), or the **Dependences** button (`D`) in the Control Flow view, draws the function's dependences on its flowchart: purple arcs on the left run from where a variable is set to each place that value is read, named by the variable; orange dashed arcs on the right run from a decision to each statement that runs only for some of its branches. Together they answer *why can this line run, and where did its values come from?*
+
+- **Levels**: **Calls expanded** in the toolbar (0 to 3) draws the functions it calls inside the chart, and their calls, so dependences follow values into them; the **ƒ+** buttons still expand single calls.
+- Parameters come from the start circle (blue arcs). Changing a property (`x.a = 1`) or calling `push` changes a value without replacing it, so earlier assignments still reach later reads. Arcs that go back up a loop are dotted: the value is read the next time round.
+- Hover or focus a box to keep only its arcs (in a large function they stay faint until you do), and the bar under the chart lists them in words: what it reads and from where, which decisions it depends on, and who reads its values. Right-click a box for **Show Its Dependences**, or press `D` on it.
+- Click an arc to light up both its boxes and read what it means; every arc has a tooltip. Search (`Ctrl+F`) for a variable to keep only its arcs. The background menu turns data or control arcs off, and **Copy as Mermaid** includes the arcs while they show.
 
 ### Call Graph
 
-**Call Graph** (`Ctrl+Alt+S Shift+C`) draws the function at the cursor as a butterfly: who calls it on the left (and who calls them, further out), what it calls on the right (and what those call), three levels each way (`tsStructure.callGraph.depth`). Calls are resolved with the type checker, so methods, imported functions, React components rendered in JSX and functions passed through variables are followed; a call made inside a callback, such as `setTimeout(() => submit())`, belongs to the function that set the callback up and says so. Top-level code shows as the module that runs it, recursion is marked and not followed again, and calls into libraries or through interfaces are counted in one box. The same rows are in the results view.
+**Call Graph** (`Ctrl+Alt+S Shift+C`) draws the function at the cursor as a butterfly: who calls it on the left (and who calls them, further out), what it calls on the right (and what those call).
+
+- **Levels** (1 to 5) and **Show** (Callers, Both, Callees) in the chart's toolbar, or the layers button of the results view, run it again deeper, shallower or one-sided. The starting depth is `tsStructure.callGraph.depth`.
+- Calls are resolved with the type checker: methods, imported functions, React components rendered in JSX and functions passed through variables are followed, and a call through an interface or abstract method leads to each implementation that may run. A call made inside a callback, such as `setTimeout(() => submit())`, belongs to the function that set the callback up.
+- Each box says where the function is, the line the call is on, how many calls there are, and whether it is async, a generator, a test, recursive or an implementation. Callees are listed in the order they are called; callers by how often they call.
+- A function that appears again is drawn once and then marked *shown above*, so the chart doesn't repeat whole branches. The top of each chain is marked as an entry point, and a function nothing calls is flagged unless it is exported.
+- Each side sums up its callers and callees and the files they are in; callers in test files have a beaker. Calls into libraries are counted in one box.
 
 ### React State Graph
 
-**React State Graph** (`Ctrl+Alt+S Shift+R`) shows how a React component or hook fits together. Its props and context are on the left; on the right are its state (`useState`, `useReducer`), refs, memoized values and callbacks, custom hooks and effects. For each value you see where it is set (in which handler or effect), where it is read or rendered, and which effects and memos it triggers as a dependency. Each effect says when it runs (*when userId changes*, *after every render*, *once*), what it sets and reads, whether it cleans up, and warns about a value it reads but doesn't list as a dependency. Values nothing reads are marked.
+**React State Graph** (`Ctrl+Alt+S Shift+R`) shows how a React component or hook fits together. Its props and context are on the left; on the right are its state (`useState`, `useReducer`), refs, memoized values and callbacks, custom hooks, effects, and the child components it renders.
+
+- **Child levels** (0 to 3) in the toolbar shows the components it renders, the props it gives each (`title ← label`) and, a level further, what those render.
+- For each value: where it is set (in which handler or effect), where it is read or rendered, which child component it is passed to and as which prop, and which effects and memos it triggers. `useReducer` dispatches list their action types (*dispatches 'add' in inline handler*).
+- Each effect says when it runs (*when userId changes*, *after every render*, *once*), what it sets and reads, and whether it cleans up.
+- It points out: dependencies an effect reads but doesn't list; dependencies it lists but doesn't read; functions or objects in a dependency list that are new on every render (so the effect runs every time); effects that only copy other values into state (compute them while rendering instead); state set while rendering; state that is never updated; `useState(compute())` that computes its initial value on every render; and `ref.current` read while rendering.
 
 ### Detect Design Patterns
 
@@ -228,7 +244,13 @@ Analyses over many files ask where to look: the whole project, a folder, the ope
 
 ### Graph Explorer
 
-The **Graphs** tab of the Actions view lists every chart Code X-Ray draws, by what it shows: **Execution** (Control Flow, Call Graph, Exception Flow, Async Rejections), **Data** (Data Flow, Program Dependence, Mutations, Arguments, React State) and **Structure** (Inheritance, Overrides, Importers, Dependency Path). Each one starts from the cursor and opens as a chart, with the same rows in the results view.
+The **Graphs** tab of the Actions view (**Graph Explorer**) lists every chart Code X-Ray draws, by what it shows: **Execution** (Control Flow, Call Graph, Exception Flow, Async Rejections), **Data** (Data Flow, Program Dependence, Mutations, Arguments, React State) and **Structure** (Inheritance, Overrides, Importers, Dependency Path). Each one starts from the cursor and opens as a chart, with the same rows in the results view.
+
+- **For the Cursor** at the top lists the graphs that fit what the cursor is on, and follows it as you move.
+- Each graph's tooltip says what it starts from and, for graphs that go deeper, what its levels control. With no source file open, the tab says what to open.
+- **Open Graph…** (`Ctrl+Alt+S Shift+G`) picks one from the Command Palette, those that fit the cursor first.
+- **Other Graphs** (`G`) in a chart's toolbar draws the same subject another way, such as the call graph of the function whose control flow is on screen.
+- An analysis in the Analyze tab that can be drawn has **Open as Graph** in its menu.
 
 ## Working with results
 
@@ -238,6 +260,7 @@ The **Graphs** tab of the Actions view lists every chart Code X-Ray draws, by wh
 - `F4` / `Shift+F4` walk through the results; the selected row follows your cursor.
 - `Ctrl+C` copies rows; right-click a row for **Find Usages Here**, **Data Flow Here**, **Check for Null or Undefined Here**, and **More Analyses Here** (Mutation Tracking, Race Conditions, Side Effects, Exception Flow, Argument Propagation).
 - Green checks mark what was found safe, such as a value that is never null or undefined.
+- Graphs that can go deeper have a **Change Levels or Options…** button (layers icon) in the title bar.
 - When an analysis can't start, the message says why and offers the way forward: **Choose a Variable…** (or a function, class or parameter, whichever the analysis needs) lists the file's declarations that fit; another analysis that does fit the symbol at the cursor is offered by name; **Go to Syntax Error** appears when broken code is the likely cause; a library symbol offers **Go to Definition**; a file outside the project offers its tsconfig.json; and unexpected failures offer **Show Log**, **Copy Details** and **Report Issue**.
 - Copy or export a report as Markdown, CSV or JSON, open it as a Markdown preview, or **Copy All Locations**. Remove reports from **Show Analysis History…** with their trash button.
 

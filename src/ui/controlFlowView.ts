@@ -7,6 +7,8 @@ import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '
 import { besideChartColumn, iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { sliceAt } from '../inspect/slice';
 import { boxAnalyses, menuAnalyses } from './diagramView';
+import { pickGraph } from './graphSwitch';
+import { graphOption, ReportControl, setGraphOption } from '../structure/graphOptions';
 import { ReportLocation } from '../structure/report';
 
 /**
@@ -116,7 +118,7 @@ export class ControlFlowPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = html(this.panel.webview, this.extensionUri);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; command?: string; direction?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; command?: string; direction?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean; id?: string; value?: unknown; dependences?: boolean }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post();
@@ -131,10 +133,17 @@ export class ControlFlowPanel {
         this.build();
       } else if (message.type === 'mermaid' && this.chart) {
         // The picked path, if any, is drawn thick in the copy too.
-        await vscode.env.clipboard.writeText(['```mermaid', chartMermaid(this.chart, message.path), '```', ''].join('\n'));
+        await vscode.env.clipboard.writeText(['```mermaid', chartMermaid(this.chart, message.path, message.dependences === true), '```', ''].join('\n'));
         void vscode.window.setStatusBarMessage('Copied the control flow as Mermaid: paste it into Markdown, a GitHub issue or a pull request', 5000);
       } else if (message.type === 'save' && message.svg && this.chart) {
         await saveImage(Buffer.from(message.svg, 'utf8'), 'svg', `control-flow-${this.chart.name}`);
+      } else if (message.type === 'otherGraphs' && this.chart) {
+        // Another graph of the same function: from its start.
+        const start = this.chart.nodes.find((n) => n.kind === 'start')?.location;
+        if (start) await pickGraph(start);
+      } else if (message.type === 'control' && message.id === 'callLevels') {
+        // How many levels of calls are expanded in place: the chart is drawn again with them.
+        if (setGraphOption('controlFlow', callLevelsControl(), message.value)) this.build();
       } else if (message.type === 'savePng' && message.png && this.chart) {
         await saveImage(Buffer.from(message.png, 'base64'), 'png', `control-flow-${this.chart.name}`);
       } else if (message.type === 'copy' && typeof message.text === 'string') {
@@ -167,7 +176,16 @@ export class ControlFlowPanel {
     if (!this.target) return false;
     try {
       const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
-      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, this.expanded);
+      // Calls expanded in place: those picked with ƒ+, and every call down to the chosen number of levels.
+      const levels = graphOption('controlFlow', 'callLevels', 0);
+      let keys = new Set(this.expanded);
+      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys);
+      for (let level = 0; level < levels; level++) {
+        const more = this.chart.nodes.flatMap((n) => n.calls.map((c) => c.key)).filter((k) => !keys.has(k));
+        if (!more.length) break;
+        keys = new Set([...keys, ...more]);
+        this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys);
+      }
       this.source = project.sourceFile(this.target.uri.fsPath);
       this.cursorId = undefined;
       // Follow the function itself from now on, not the cursor position it was found from.
@@ -186,7 +204,7 @@ export class ControlFlowPanel {
   private post(): void {
     if (!this.panel || !this.ready) return;
     this.panel.title = this.chart ? `Control Flow: ${this.chart.name}` : 'Control Flow';
-    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses() });
+    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl()] });
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
     if (this.pendingDeps && this.chart) {
       this.pendingDeps = false;
@@ -198,6 +216,19 @@ export class ControlFlowPanel {
   get current(): ControlFlowChart | undefined {
     return this.chart;
   }
+}
+
+/** The toolbar control for how many levels of calls are expanded in place. */
+function callLevelsControl(): ReportControl {
+  return {
+    id: 'callLevels',
+    label: 'Calls expanded',
+    description: 'How many levels of the functions it calls are drawn inside the chart: 0 is none; each ƒ+ button still expands one call',
+    kind: 'levels',
+    value: graphOption('controlFlow', 'callLevels', 0),
+    min: 0,
+    max: 3,
+  };
 }
 
 /** Opens code in an editor group other than the one the chart is in. */
@@ -215,6 +246,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     scripts: ['diagramGrid.js', 'chartKit.js', 'controlFlow.js'],
     body: `<header aria-label="Control flow tools">
   <span id="caption"></span>
+  <span id="graphControls" aria-label="Graph options" hidden></span>
   <span class="search-box" role="search">
     <i class="codicon codicon-search" aria-hidden="true"></i>
     <input id="search" type="search" placeholder="Find in boxes (Ctrl+F)" aria-label="Find boxes by their code" aria-describedby="searchCount">
@@ -236,6 +268,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   ${button('effects', 'sparkle', 'Animated Grid: the dot grid behind the chart follows the pointer', 'aria-pressed="true"')}
   ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates every path through it (Escape stops it)', 'aria-pressed="true"')}
   </span>
+  ${button('otherGraphs', 'graph-scatter', 'Other Graphs of This Function: draw it another way (G)')}
   ${button('deps', 'references', 'Dependences: the program dependence graph, where each value comes from and what controls each box (D)', 'aria-pressed="false"')}
   ${button('togglePaths', 'list-tree', 'Path Explorer: the paths through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
   ${button('legendButton', 'question', 'Legend: what the shapes, colors and keys mean', 'aria-expanded="false" aria-controls="legend"')}

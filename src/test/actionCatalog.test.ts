@@ -108,3 +108,14 @@ test('shortcuts follow the user’s keybindings.json: comments, removed defaults
   assert.deepEqual(parseKeybindingsJson('{ broken'), []);
   assert.equal(shortcuts(effectiveKeybindings(defaults, [], 'win32'), 'win32').get(cf), 'Ctrl+Alt+S 1');
 });
+
+test('every graph says what it starts from, and its category says what it shows', async () => {
+  const { graphCategories } = await import('../structure/actionCatalog');
+  const graphs = actionCatalog.filter((a) => a.tab === 'graphs');
+  for (const g of graphs) {
+    assert.ok(g.startsFrom, `${g.label} has no starting point`);
+    assert.ok(graphCategories[g.category], `${g.label}: ${g.category}`);
+  }
+  // The graphs with a levels control say what the levels mean.
+  assert.deepEqual(graphs.filter((g) => g.levels).map((g) => g.label).sort(), ['Call Graph', 'Control Flow Graph', 'Program Dependence Graph', 'React State Graph']);
+});

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: animated data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, refactorings, inspections and structural search. Deterministic, offline, no AI. Graph animations adapted from robot-components (MIT).",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -934,6 +934,24 @@
         "title": "React State Graph",
         "category": "Code X-Ray",
         "icon": "$(symbol-event)"
+      },
+      {
+        "command": "tsStructure.report.changeControls",
+        "title": "Change Levels or Options…",
+        "category": "Code X-Ray",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "tsStructure.openGraph",
+        "title": "Open Graph…",
+        "category": "Code X-Ray",
+        "icon": "$(graph-left)"
+      },
+      {
+        "command": "tsStructure.graphExplorer",
+        "title": "Graph Explorer",
+        "category": "Code X-Ray",
+        "icon": "$(graph-line)"
       }
     ],
     "viewsContainers": {
@@ -1281,6 +1299,11 @@
         "mac": "cmd+ctrl+s shift+r",
         "command": "tsStructure.reactState",
         "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
+      },
+      {
+        "key": "ctrl+alt+s shift+g",
+        "mac": "cmd+ctrl+s shift+g",
+        "command": "tsStructure.openGraph"
       }
     ],
     "menus": {
@@ -2164,6 +2187,10 @@
         {
           "command": "tsStructure.reactState",
           "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
+        },
+        {
+          "command": "tsStructure.report.changeControls",
+          "when": "tsStructure.reportHasControls"
         }
       ],
       "view/title": [
@@ -2441,6 +2468,11 @@
           "command": "tsStructure.actions.reset",
           "when": "view == tsStructure.actions",
           "group": "9_reset@1"
+        },
+        {
+          "command": "tsStructure.report.changeControls",
+          "when": "view == tsStructure.report && tsStructure.reportHasControls",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [

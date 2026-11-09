@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
-import { Report, ReportLocation } from '../structure/report';
+import { Report, ReportLocation, forEachReportNode } from '../structure/report';
+import { pickGraph } from './graphSwitch';
 import { StructureView } from './structureView';
 import { iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { commandIcons } from '../structure/icons';
@@ -62,7 +63,7 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string; id?: string; value?: unknown }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
@@ -85,6 +86,15 @@ export class DiagramPanel {
       } else if (message.type === 'analyze' && message.command && message.location && boxAnalyses.some((a) => a.command === message.command)) {
         // A choice from a box's right-click menu: the same command the results view runs on a row.
         await vscode.commands.executeCommand(message.command, { file: message.location.file, line: message.location.line, character: message.location.character });
+      } else if (message.type === 'otherGraphs') {
+        // The same subject in another graph: its location, or the first row's when the report has none.
+        const report = this.view.report;
+        let at = report?.subject;
+        forEachReportNode(report?.roots ?? [], (n) => { at ??= n.location; });
+        await pickGraph(at);
+      } else if (message.type === 'control' && typeof message.id === 'string') {
+        // Levels or another option of the graph: run it again with the new value.
+        await vscode.commands.executeCommand('tsStructure.report.changeControls', message.id, message.value);
       } else if (message.type === 'copy' && typeof message.text === 'string') {
         await vscode.env.clipboard.writeText(message.text);
         void vscode.window.setStatusBarMessage('Copied', 3000);
@@ -104,7 +114,7 @@ export class DiagramPanel {
     this.panel.title = report ? `Diagram: ${report.title}` : 'Analysis Diagram';
     // Only the analyses whose features are turned on appear in the right-click menu.
     const analyses = menuAnalyses();
-    void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses });
+    void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses, controls: report?.controls ?? [] });
   }
 
   private html(webview: vscode.Webview): string {
@@ -119,6 +129,8 @@ export class DiagramPanel {
   <span id="caption"></span>
   <input id="search" type="search" placeholder="Find a box (Ctrl+F)" aria-label="Find a box" title="Highlights boxes whose text contains this; Enter goes to the next, Shift+Enter to the previous">
   <span id="searchCount" aria-live="polite"></span>
+  <span id="graphControls" aria-label="Graph options" hidden></span>
+  ${button('otherGraphs', 'graph-scatter', 'Other Graphs of This Subject: draw it another way (G)')}
   <span class="group" role="group" aria-label="Folding">
   ${button('collapse', 'collapse-all', 'Fold All: show only the boxes next to the subject')}
   ${button('expand', 'expand-all', 'Unfold All: show every box')}

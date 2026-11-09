@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { ActionLayout, actionCatalog, actionId, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
-import { Report } from '../structure/report';
+import { graphCategories } from '../structure/actionCatalog';
+import { fittingAt } from './analysisActions';
+import { languageSelector } from './refactorCommands';
+import { pickGraph, runEntry } from './graphSwitch';
 import { featureOf } from '../structure/features';
 import { commandIcons } from '../structure/icons';
 import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } from '../structure/keys';
@@ -60,7 +63,42 @@ export class ActionsView implements vscode.WebviewViewProvider {
       vscode.commands.registerCommand('tsStructure.actions.toggleMostUsed', () => this.change({ kind: 'hideMostUsed', value: !this.layout().hideMostUsed })),
       vscode.commands.registerCommand('tsStructure.actions.showHidden', () => this.change({ kind: 'showAll' })),
       vscode.commands.registerCommand('tsStructure.actions.reset', () => this.reset()),
+      // The Graph Explorer: the Actions view on its Graphs tab.
+      vscode.commands.registerCommand('tsStructure.graphExplorer', async () => {
+        this.pendingTab = 'graphs';
+        await vscode.commands.executeCommand('tsStructure.actions.focus');
+        this.sendTab();
+      }),
+      vscode.commands.registerCommand('tsStructure.openGraph', () => pickGraph()),
+      // The graphs that fit the symbol at the cursor, shown at the top of the Graphs tab.
+      vscode.window.onDidChangeTextEditorSelection(() => this.cursorSoon()),
+      vscode.window.onDidChangeActiveTextEditor(() => this.cursorSoon()),
     );
+  }
+
+  private pendingTab: string | undefined;
+  private cursorTimer: NodeJS.Timeout | undefined;
+
+  private sendTab(): void {
+    if (this.view && this.pendingTab) {
+      void this.view.webview.postMessage({ type: 'tab', id: this.pendingTab });
+      this.pendingTab = undefined;
+    }
+  }
+
+  /** What fits the cursor, a moment after it stops moving, while the view is visible. */
+  private cursorSoon(): void {
+    clearTimeout(this.cursorTimer);
+    if (!this.view?.visible) return;
+    this.cursorTimer = setTimeout(() => this.sendCursor(), 250);
+  }
+
+  private sendCursor(): void {
+    if (!this.view) return;
+    const editor = vscode.window.activeTextEditor;
+    const source = !!editor && vscode.languages.match(languageSelector, editor.document) > 0;
+    const fits = source ? fittingAt(editor!.document, editor!.document.offsetAt(editor!.selection.active)) : [];
+    void this.view.webview.postMessage({ type: 'cursor', fits, hasEditor: source });
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -69,14 +107,16 @@ export class ActionsView implements vscode.WebviewViewProvider {
     view.webview.html = html(view.webview, this.extensionUri);
     view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
       if (message.type === 'ready') {
-        this.post();
+        void this.post().then(() => {
+          this.sendCursor();
+          this.sendTab();
+        });
       } else if (message.type === 'run' && entryOf(message.id)) {
         const entry = entryOf(message.id)!;
         recordActionUse(this.memento, actionId(entry));
         void this.post();
-        const result = await vscode.commands.executeCommand<Report | undefined>(entry.command);
-        // A graph of the Graphs tab: the report it made, drawn as a chart.
-        if (entry.graph && result && typeof result === 'object' && 'roots' in result) await vscode.commands.executeCommand('tsStructure.report.showDiagram');
+        // A graph of the Graphs tab: the report it makes is drawn as a chart.
+        await runEntry(entry);
       } else if (message.type === 'run' && footer.some((f) => f.command === message.command)) {
         await vscode.commands.executeCommand(message.command as string);
       } else if (message.type === 'layout' && message.change && typeof message.change === 'object') {
@@ -147,7 +187,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
-    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout });
+    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories });
   }
 }
 
