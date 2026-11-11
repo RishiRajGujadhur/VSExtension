@@ -27,7 +27,7 @@ import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
 import { activeFeature } from './ui/activeFeature';
-import { registerGuide } from './ui/guide';
+import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
 import { registerScopeCommands } from './ui/scopeCommands';

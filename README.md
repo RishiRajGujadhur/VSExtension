@@ -31,7 +31,11 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 
 <img src="docs/images/actions-active.png" width="320" alt="The Actions view with Control Flow Graph highlighted as the feature on screen, Nullability marked last run, and dots on the Analyze and Graphs tabs">
 
-Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
+Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?*
+
+The first time the extension starts, the **Welcome to Code X-Ray** page opens: animated lines of light behind the title, then eight short steps as cards, each with its buttons and a picture. A step is ticked once you try it. Reopen the page with **Guide Me** (the **?** in the view); VS Code's own walkthrough of the same steps is a button at the bottom, or **Open the Getting Started Walkthrough** in the Command Palette. The animation stops while the tab is hidden and is a still picture when your system asks for reduced motion.
+
+![The Welcome to Code X-Ray page: the title over animated vertical lines of light](docs/images/welcome.png)
 
 ![The right-click menu with Find Usages, Data Flow and Analyze or Refactor This at the top](docs/images/context-menu.gif)
 
@@ -322,5 +326,7 @@ VSCODE_EXECUTABLE="/path/to/Code.exe" npm run screenshots        # record the do
 The analysis engine (`src/analysis`, `src/refactor`, `src/intentions`, `src/inspect`, `src/navigate`, `src/search`, `src/structure`) has no `vscode` dependency and is unit-tested directly; `src/ui` is the VS Code layer. The extension ships as one esbuild bundle (`scripts/bundle.js`), with TypeScript kept as its own dependency, so it loads in a fraction of the time of the compiled files.
 
 ## Credits
+
+The lines of light behind the Welcome page are an original WebGL shader, written for Code X-Ray in the style of Framer University's Shader Lines component (no code taken from it).
 
 The animated graphs (the dot grid behind the charts, the flowing lines and the box style) are adapted from the node grid demo of [robot-components](https://github.com/dashrobotco/robot-components) by Robot FZCO, used under the MIT License. Its copyright and license notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.

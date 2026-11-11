@@ -33,7 +33,7 @@ export function webviewPage(
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source}; font-src ${source}; script-src ${source};${page.images ? ' img-src data:;' : ''}">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source}; font-src ${source}; script-src ${source};${page.images ? ` img-src ${source} data:;` : ''}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="${icons}">
 ${page.styles.map((s) => `<link rel="stylesheet" href="${mediaUri(webview, extensionUri, s)}">`).join('\n')}

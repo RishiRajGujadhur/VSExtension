@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: animated data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, refactorings, inspections and structural search. Deterministic, offline, no AI. Graph animations adapted from robot-components (MIT).",
-  "version": "0.39.0",
+  "version": "0.40.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -466,6 +466,11 @@
         "title": "Guide Me",
         "category": "Code X-Ray",
         "icon": "$(question)"
+      },
+      {
+        "command": "tsStructure.walkthrough",
+        "title": "Open the Getting Started Walkthrough",
+        "category": "Code X-Ray"
       },
       {
         "command": "tsStructure.report.traceValue",
