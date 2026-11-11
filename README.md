@@ -33,9 +33,9 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?*
 
-The first time the extension starts, the **Welcome to Code X-Ray** page opens: animated lines of light behind the title, then eight short steps as cards, each with its buttons and a picture. A step is ticked once you try it. Reopen the page with **Guide Me** (the **?** in the view); VS Code's own walkthrough of the same steps is a button at the bottom, or **Open the Getting Started Walkthrough** in the Command Palette. The animation stops while the tab is hidden and is a still picture when your system asks for reduced motion.
+The first time the extension starts, the **Welcome to Code X-Ray** page opens: the title in a pixel font over a moving field of ASCII characters, then eight short steps as panels, each with its buttons and a picture. A step is ticked once you try it. Reopen the page with **Guide Me** (the **?** in the view); VS Code's own walkthrough of the same steps is a button at the bottom, or **Open the Getting Started Walkthrough** in the Command Palette. The animation stops while the tab is hidden and is a still picture when your system asks for reduced motion.
 
-![The Welcome to Code X-Ray page: the title over animated vertical lines of light](docs/images/welcome.png)
+![The Welcome to Code X-Ray page: GET STARTED WITH CODE X-RAY in a pixel font beside a field of grey and teal ASCII characters](docs/images/welcome.png)
 
 ![The right-click menu with Find Usages, Data Flow and Analyze or Refactor This at the top](docs/images/context-menu.gif)
 
@@ -327,6 +327,6 @@ The analysis engine (`src/analysis`, `src/refactor`, `src/intentions`, `src/insp
 
 ## Credits
 
-The lines of light behind the Welcome page are an original WebGL shader, written for Code X-Ray in the style of Framer University's Shader Lines component (no code taken from it).
+The Welcome page's ASCII field and pixel-font title are original code and glyphs written for Code X-Ray in the style of Framer University's ASCII Shader component (no code or font taken from it).
 
 The animated graphs (the dot grid behind the charts, the flowing lines and the box style) are adapted from the node grid demo of [robot-components](https://github.com/dashrobotco/robot-components) by Robot FZCO, used under the MIT License. Its copyright and license notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.

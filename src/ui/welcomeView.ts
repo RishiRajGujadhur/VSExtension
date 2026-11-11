@@ -15,7 +15,7 @@ const extraCommands = [
 ];
 
 /**
- * The Code X-Ray Welcome page: animated shader lines behind the title, and the eight steps of the Getting Started
+ * The Code X-Ray Welcome page: a pixel-font title over a moving ASCII field, and the eight steps of the Getting Started
  * walkthrough as cards with their buttons and pictures. Guide Me opens it, and it opens once by itself the first
  * time the extension starts. VS Code's own walkthrough stays a link away.
  */

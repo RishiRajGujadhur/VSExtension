@@ -1,82 +1,71 @@
-/* The Code X-Ray Welcome page. It is dark in every theme: the lines of light need a black background. */
+/* The Code X-Ray Welcome page: a terminal look, dark in every theme, uppercase monospace text and square corners. */
 :root {
-  --ink: #f5f6f8;
-  --ink-soft: rgba(235, 238, 245, .66);
-  --ink-faint: rgba(235, 238, 245, .42);
-  --glass: rgba(12, 12, 14, .84);
-  --glass-border: rgba(255, 255, 255, .1);
-  --accent: #8fb4ff;
+  --ink: #ffffff;
+  --ink-soft: #9ba1a5;
+  --ink-faint: #61676b;
+  --line: #2a2d30;
+  --teal: #2fd4c9;
+  --panel: rgba(10, 10, 10, .9);
+  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
   --scrolled: 0;
 }
-html, body { margin: 0; padding: 0; min-height: 100%; background: #050506; color: var(--ink); }
-body { font-family: "Inter", "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 14px; line-height: 1.5;
-  -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+html, body { margin: 0; padding: 0; min-height: 100%; background: #0a0a0a; color: var(--ink); }
+body { font-family: var(--mono); font-size: 13px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 1px solid var(--teal); outline-offset: 3px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-#lines { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; opacity: calc(1 - var(--scrolled) * .45); }
-/* Without WebGL: soft glowing stripes in plain CSS. */
-body.no-webgl #lines { display: none; }
-body.no-webgl { background:
-  radial-gradient(ellipse 60% 45% at 50% 50%, #050506 40%, transparent 75%),
-  repeating-linear-gradient(90deg, rgba(143, 180, 255, .16) 0 2px, transparent 2px 9px, rgba(255, 200, 150, .08) 9px 10px, transparent 10px 17px),
-  #050506; background-attachment: fixed; }
-
+#lines { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; opacity: calc(1 - var(--scrolled) * .6); }
 main { position: relative; z-index: 1; }
 
-/* The title, centered over the lines. */
-.hero { min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 24px; text-align: center;
-  background: radial-gradient(ellipse 38% 26% at 50% 50%, rgba(5, 5, 6, .78), rgba(5, 5, 6, .35) 60%, transparent 100%); }
-.eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 18px; padding: 4px 12px; border: 1px solid var(--glass-border); border-radius: 999px;
-  background: rgba(255, 255, 255, .04); color: var(--ink-soft); font-size: 12px; letter-spacing: .01em; }
-.eyebrow .codicon { color: var(--accent); }
-.title { max-width: 14ch; margin: 0; font-size: clamp(38px, 7vw, 76px); font-weight: 700; line-height: 1.02; letter-spacing: -.045em; text-wrap: balance;
-  color: var(--ink); background: linear-gradient(180deg, #ffffff 30%, #c9d3e3 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 40px rgba(143, 180, 255, .12); }
-.lead { max-width: 36ch; margin: 18px 0 0; color: var(--ink-soft); font-size: clamp(15px, 1.6vw, 19px); font-weight: 500; line-height: 1.5; text-wrap: balance; }
-.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
-.progress { margin: 18px 0 0; color: var(--ink-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The title, top left, with the buttons along the bottom of the first screen. */
+.hero { min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: clamp(28px, 6vh, 64px) clamp(20px, 4vw, 48px); }
+.hero-top { max-width: min(560px, 100%); }
+.title { margin: 0; }
+.pixel-title { display: block; width: min(100%, 520px); height: auto; fill: var(--ink); shape-rendering: crispEdges; }
+.lead { max-width: 44ch; margin: 22px 0 0; color: var(--ink-soft); font-size: 13px; text-transform: uppercase; letter-spacing: .01em; }
+.tagline { max-width: 44ch; margin: 2px 0 0; color: var(--ink-faint); font-size: 13px; text-transform: uppercase; letter-spacing: .01em; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.progress { color: var(--ink-faint); text-transform: uppercase; font-size: 12px; }
 
-/* Glossy pill buttons. */
-.pill { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px;
-  background: linear-gradient(180deg, #34353a 0%, #17181b 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 6px 16px -6px rgba(0, 0, 0, .8);
-  color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: -.005em; cursor: pointer; transition: border-color .2s, transform .2s, background .2s; }
-.pill:hover { border-color: rgba(255, 255, 255, .32); background: linear-gradient(180deg, #3e4046 0%, #1c1d21 100%); }
-.pill:active { transform: translateY(1px); }
-.pill.primary { border-color: rgba(255, 255, 255, .5); background: linear-gradient(180deg, #ffffff 0%, #d9dee8 100%); color: #0b0c0f;
-  box-shadow: inset 0 1px 0 #fff, 0 8px 22px -8px rgba(143, 180, 255, .55); }
-.pill.primary:hover { background: linear-gradient(180deg, #ffffff 0%, #e8ecf3 100%); }
-.pill .codicon { font-size: 14px; }
+/* Buttons: a white box for the main action, uppercase links for the rest. */
+.box-button, .link-button { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 0;
+  font: inherit; font-size: 13px; text-transform: uppercase; letter-spacing: -.02em; cursor: pointer; }
+.box-button { background: var(--ink); color: #0a0a0a; }
+.box-button:hover { background: var(--teal); }
+.link-button { padding: 0 2px; background: transparent; color: var(--ink); }
+.link-button:hover { color: var(--teal); }
+.link-button:hover::before, .link-button:focus-visible::before { content: '>'; margin-right: 2px; color: var(--teal); }
+.box-button .codicon, .link-button .codicon { font-size: 14px; }
 
-/* The steps, as dark cards over the lines. (No backdrop blur: over a WebGL canvas it blanks the page in Chromium.) */
-.steps { max-width: 1080px; margin: 0 auto; padding: 0 24px 24px; }
-.step-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
-.step { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--glass-border); border-radius: 16px; background: var(--glass);
-  box-shadow: 0 24px 24px -12px rgba(0, 0, 0, .5); transition: border-color .2s; }
-.step:hover, .step:focus-within { border-color: rgba(255, 255, 255, .22); }
-.step-head { display: flex; align-items: center; gap: 10px; }
-.step-number { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .06); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.step-number .codicon { display: none; font-size: 14px; }
-.step.done .step-number { border-color: transparent; background: var(--accent); color: #0b0c0f; }
-.step.done .step-number .n { display: none; }
-.step.done .step-number .codicon { display: block; }
-.step-title { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
-.step-text { margin: 0; color: var(--ink-soft); }
+/* The steps, as framed panels over the field. */
+.steps { max-width: 1120px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px) 24px; }
+.step-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 0; margin: 0; padding: 0; list-style: none;
+  border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.step { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel); }
+.step:hover, .step:focus-within { background: rgba(18, 20, 21, .94); }
+.step-head { display: flex; align-items: baseline; gap: 12px; }
+.step-number { flex: none; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.step-title { margin: 0; flex: 1; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: -.01em; }
+.step-done { display: none; color: var(--teal); }
+.step.done .step-done { display: inline; }
+.step.done .step-number { color: var(--teal); }
+.step-text { margin: 0; color: var(--ink-soft); font-size: 12.5px; }
 .step-text strong { color: var(--ink); font-weight: 600; }
-.step-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.step-buttons .pill { min-height: 30px; padding: 0 13px; font-size: 12.5px; }
+.step-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.step-buttons .box-button, .step-buttons .link-button { min-height: 26px; font-size: 12px; }
 .step-picture { margin: 4px 0 0; }
-.step-picture img { display: block; width: 100%; max-height: 190px; object-fit: cover; object-position: top; border: 1px solid var(--glass-border); border-radius: 10px; }
-.step-picture figcaption { margin-top: 6px; color: var(--ink-faint); font-size: 12px; }
+.step-picture img { display: block; width: 100%; max-height: 180px; object-fit: cover; object-position: top; border: 1px solid var(--line); filter: grayscale(.35); transition: filter .2s; }
+.step:hover .step-picture img, .step:focus-within .step-picture img { filter: none; }
+.step-picture figcaption { margin-top: 6px; color: var(--ink-faint); font-size: 11.5px; text-transform: uppercase; }
 
-.more { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 1080px; margin: 0 auto; padding: 16px 24px 56px; }
+.more { display: flex; flex-wrap: wrap; gap: 8px 22px; max-width: 1120px; margin: 0 auto; padding: 18px clamp(20px, 4vw, 48px) 56px; box-sizing: border-box; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pill { transition: none; }
+  .step-picture img { transition: none; }
 }
 @media (forced-colors: active) {
   #lines { display: none; }
-  .title { -webkit-text-fill-color: CanvasText; background: none; }
-  .step, .pill, .eyebrow { border: 1px solid CanvasText; }
-  .step.done .step-number { background: Highlight; color: HighlightText; }
+  .pixel-title { fill: CanvasText; }
+  .box-button { border-color: ButtonText; }
+  .step { border-color: CanvasText; }
 }
