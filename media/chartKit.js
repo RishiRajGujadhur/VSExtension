@@ -256,78 +256,173 @@
   /**
    * A right-click menu drawn by the page, so it can show icons; it works like a menu from the keyboard too (the
    * WAI-ARIA menu pattern). Items are '-' for a separator, { heading } or { icon, label, keys, run }.
+   * A search field at the top filters the items as you type (Enter runs the first match, Escape clears it, then
+   * closes); the actions used last come first under "Recent"; `footer` is a line of context at the bottom, such
+   * as "Line 42 · cart.ts · 3 paths through".
    */
+  const recentKey = 'chartKit.recentActions';
+  function recentLabels() {
+    try {
+      const list = JSON.parse(localStorage.getItem(recentKey) || '[]');
+      return Array.isArray(list) ? list.filter((l) => typeof l === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  function rememberAction(label) {
+    try {
+      localStorage.setItem(recentKey, JSON.stringify([label, ...recentLabels().filter((l) => l !== label)].slice(0, 5)));
+    } catch {
+      // Without storage there is simply no Recent group.
+    }
+  }
   function menu(element) {
     let returnTo;
+    let entries = [];
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'menu-search';
+    search.placeholder = 'Search actions…';
+    search.setAttribute('aria-label', 'Search actions');
+    search.spellcheck = false;
+    const searchRow = document.createElement('div');
+    searchRow.className = 'menu-search-row';
+    const searchIcon = document.createElement('i');
+    searchIcon.className = 'codicon codicon-search';
+    searchIcon.setAttribute('aria-hidden', 'true');
+    searchRow.append(searchIcon, search);
+    const list = document.createElement('div');
+    list.className = 'menu-list';
+    list.setAttribute('role', 'menu');
+    list.setAttribute('aria-label', 'Actions');
+    const empty = document.createElement('div');
+    empty.className = 'menu-empty';
+    empty.textContent = 'No action matches';
+    const footer = document.createElement('div');
+    footer.className = 'menu-footer';
+
     function close(refocus) {
       if (element.hidden) return;
       element.hidden = true;
       if (refocus && returnTo && document.contains(returnTo)) returnTo.focus({ preventScroll: true });
     }
-    function open(items, x, y, from) {
-      returnTo = from;
-      element.textContent = '';
-      const tidy = items.filter((item, i, all) => item !== '-' || (i > 0 && i < all.length - 1 && all[i - 1] !== '-'));
+    function button(item) {
+      const b = document.createElement('button');
+      b.setAttribute('role', 'menuitem');
+      b.tabIndex = -1;
+      const i = document.createElement('i');
+      i.className = `codicon codicon-${item.icon || 'blank'}`;
+      i.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.className = 'menu-label';
+      label.textContent = item.label;
+      b.append(i, label);
+      if (item.keys) {
+        const keys = document.createElement('kbd');
+        keys.className = 'menu-keys';
+        keys.textContent = item.keys;
+        b.appendChild(keys);
+      }
+      b.addEventListener('click', () => {
+        close(false);
+        rememberAction(item.label);
+        item.run();
+      });
+      return b;
+    }
+    const words = (text) => text.toLowerCase().split(/\s+/).filter(Boolean);
+    // Every word typed is found in the label (or its shortcut), in any order: "dep sho" finds Show Its Dependences.
+    const matches = (item, query) => words(query).every((w) => `${item.label} ${item.keys || ''}`.toLowerCase().includes(w));
+    function fill() {
+      list.textContent = '';
+      const query = search.value.trim();
+      const actions = entries.filter((item) => item !== '-' && !item.heading);
+      let shown;
+      if (query) {
+        shown = actions.filter((item) => matches(item, query));
+      } else {
+        const recent = recentLabels().map((l) => actions.find((a) => a.label === l)).filter(Boolean).slice(0, 3);
+        // A short menu needs no Recent group: everything is in view already.
+        shown = recent.length && actions.length > 6 ? [{ heading: 'Recent' }, ...recent, '-', ...entries] : entries;
+      }
+      const tidy = shown.filter((item, i, all) => item !== '-' || (i > 0 && i < all.length - 1 && all[i - 1] !== '-' && !all[i - 1].heading));
       for (const item of tidy) {
         if (item === '-') {
-          element.appendChild(Object.assign(document.createElement('div'), { className: 'separator', role: 'separator' }));
-          continue;
-        }
-        if (item.heading) {
+          list.appendChild(Object.assign(document.createElement('div'), { className: 'separator', role: 'separator' }));
+        } else if (item.heading) {
           const heading = document.createElement('div');
           heading.className = 'menu-heading';
           heading.setAttribute('role', 'presentation');
           heading.textContent = item.heading;
-          element.appendChild(heading);
-          continue;
+          list.appendChild(heading);
+        } else {
+          list.appendChild(button(item));
         }
-        const button = document.createElement('button');
-        button.setAttribute('role', 'menuitem');
-        button.tabIndex = -1;
-        const i = document.createElement('i');
-        i.className = `codicon codicon-${item.icon || 'blank'}`;
-        i.setAttribute('aria-hidden', 'true');
-        const label = document.createElement('span');
-        label.className = 'menu-label';
-        label.textContent = item.label;
-        button.append(i, label);
-        if (item.keys) {
-          const keys = document.createElement('span');
-          keys.className = 'menu-keys';
-          keys.textContent = item.keys;
-          button.appendChild(keys);
-        }
-        button.addEventListener('click', () => {
-          close(false);
-          item.run();
-        });
-        element.appendChild(button);
       }
-      if (!element.querySelector('[role="menuitem"]')) return;
+      empty.hidden = !!list.querySelector('[role="menuitem"]');
+      const first = list.querySelector('[role="menuitem"]');
+      list.querySelectorAll('.first-match').forEach((b) => b.classList.remove('first-match'));
+      if (query && first) first.classList.add('first-match');
+    }
+    function open(items, x, y, from, context) {
+      returnTo = from;
+      entries = items;
+      // A menu covers the hover card's place: the card closes (a pinned one stays).
+      openCards.forEach((c) => c.hide());
+      if (!items.some((item) => item !== '-' && !item.heading)) return;
+      element.textContent = '';
+      search.value = '';
+      footer.textContent = context || '';
+      footer.hidden = !context;
+      element.append(searchRow, list, empty, footer);
+      fill();
       element.hidden = false;
       // Kept inside the window.
       const width = element.offsetWidth;
       const height = element.offsetHeight;
       element.style.left = `${Math.max(4, Math.min(x, window.innerWidth - width - 4))}px`;
       element.style.top = `${Math.max(4, Math.min(y, window.innerHeight - height - 4))}px`;
-      const first = element.querySelector('[role="menuitem"]');
-      if (first) first.focus();
+      search.focus();
     }
-    element.addEventListener('keydown', (e) => {
-      const items = [...element.querySelectorAll('[role="menuitem"]')];
+    search.addEventListener('input', fill);
+    search.addEventListener('keydown', (e) => {
+      const items = [...list.querySelectorAll('[role="menuitem"]')];
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (items.length) items[e.key === 'ArrowDown' ? 0 : items.length - 1].focus();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (items.length) items[0].click();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (search.value) {
+          search.value = '';
+          fill();
+        } else close(true);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        close(true);
+      }
+    });
+    list.addEventListener('keydown', (e) => {
+      const items = [...list.querySelectorAll('[role="menuitem"]')];
       const at = items.indexOf(document.activeElement);
       const move = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
       if (move !== undefined) {
         e.preventDefault();
-        items[(move + items.length) % items.length].focus();
+        // Up from the first item goes back to the search field.
+        if (move < 0) search.focus();
+        else items[move % items.length].focus();
       } else if (e.key === 'Escape' || e.key === 'Tab') {
         e.preventDefault();
         e.stopPropagation();
         close(true);
-      } else if (e.key.length === 1 && /\S/.test(e.key)) {
-        // A letter moves to the next item starting with it.
-        const next = [...items.slice(at + 1), ...items.slice(0, at + 1)].find((b) => b.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase()));
-        if (next) next.focus();
+      } else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Typing on an item searches: the letter goes into the search field.
+        search.focus();
+      } else if (e.key === 'Backspace') {
+        search.focus();
       }
     });
     element.addEventListener('focusout', (e) => { if (!element.contains(e.relatedTarget)) close(false); });
@@ -556,5 +651,175 @@
     }
   }
 
-  window.chartKit = { el, renderControls, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  /** Code as HTML with light syntax coloring: keywords, strings, numbers and called functions. */
+  const keywordSet = new Set('if else return let const var new typeof instanceof switch case default for of in while do throw catch finally try await async break continue true false null undefined this void delete yield function class import export from as interface type extends implements'.split(' '));
+  function highlightCode(text) {
+    const out = document.createDocumentFragment();
+    const pattern = /('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\b\d[\d_.]*\b|[A-Za-z_$][\w$]*|\s+|.)/g;
+    let match;
+    while ((match = pattern.exec(text))) {
+      const token = match[0];
+      const cls = /^['"`]/.test(token) ? 'string' : /^\d/.test(token) ? 'number' : keywordSet.has(token) ? 'keyword' : /^[A-Za-z_$]/.test(token) && text[pattern.lastIndex] === '(' ? 'call' : '';
+      if (!cls) {
+        out.append(token);
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = token;
+      out.append(span);
+    }
+    return out;
+  }
+
+  /**
+   * The hover card of a chart's boxes: what the box is, where, its code, facts about it and the keys that act on it.
+   * It opens a moment after the pointer rests on a box (at once on keyboard focus), stays while the pointer is on
+   * it, and its pin keeps it open to compare boxes. Escape closes it.
+   * Content: { icon, title, meta, code, facts: [[label, value]], keys: [[key, what]], note }.
+   */
+  const openCards = [];
+  function hoverCard() {
+    const card = document.createElement('div');
+    card.className = 'hover-card';
+    card.id = 'hoverCard';
+    card.setAttribute('role', 'tooltip');
+    card.hidden = true;
+    document.body.appendChild(card);
+    let timer;
+    let pinned = false;
+    let anchor;
+    let shownFor;
+    const iconEl = (name) => {
+      const i = document.createElement('i');
+      i.className = `codicon codicon-${name}`;
+      i.setAttribute('aria-hidden', 'true');
+      return i;
+    };
+    function render(c) {
+      card.textContent = '';
+      const head = document.createElement('div');
+      head.className = 'card-head';
+      if (c.icon) head.append(iconEl(c.icon));
+      const title = document.createElement('strong');
+      title.textContent = c.title;
+      head.append(title);
+      if (c.meta) {
+        const meta = document.createElement('span');
+        meta.className = 'card-meta';
+        meta.textContent = c.meta;
+        head.append(meta);
+      }
+      const pin = document.createElement('button');
+      pin.type = 'button';
+      pin.className = 'card-pin';
+      pin.title = pinned ? 'Unpin (Escape closes)' : 'Pin: keep this card open';
+      pin.setAttribute('aria-pressed', String(pinned));
+      pin.append(iconEl(pinned ? 'pinned' : 'pin'));
+      pin.addEventListener('click', () => {
+        pinned = !pinned;
+        card.classList.toggle('pinned', pinned);
+        render(c);
+      });
+      head.append(pin);
+      card.append(head);
+      if (c.code) {
+        const pre = document.createElement('pre');
+        pre.className = 'card-code';
+        pre.append(highlightCode(c.code));
+        card.append(pre);
+      } else if (c.loading) {
+        const pre = document.createElement('pre');
+        pre.className = 'card-code loading';
+        pre.textContent = 'Reading the code…';
+        card.append(pre);
+      }
+      if (c.note) {
+        const note = document.createElement('p');
+        note.className = 'card-note';
+        note.textContent = c.note;
+        card.append(note);
+      }
+      const facts = (c.facts || []).filter((f) => f && f[1] !== undefined && f[1] !== '');
+      if (facts.length) {
+        const grid = document.createElement('dl');
+        grid.className = 'card-facts';
+        for (const [label, value] of facts) {
+          const dt = document.createElement('dt');
+          dt.textContent = label;
+          const dd = document.createElement('dd');
+          dd.textContent = value;
+          grid.append(dt, dd);
+        }
+        card.append(grid);
+      }
+      if (c.keys && c.keys.length) {
+        const keys = document.createElement('div');
+        keys.className = 'card-keys';
+        for (const [key, what] of c.keys) {
+          const k = document.createElement('span');
+          const kbd = document.createElement('kbd');
+          kbd.textContent = key;
+          k.append(kbd, ` ${what}`);
+          keys.append(k);
+        }
+        card.append(keys);
+      }
+    }
+    function place() {
+      if (!anchor) return;
+      const r = anchor.getBoundingClientRect();
+      card.style.left = '0px';
+      card.style.top = '0px';
+      const w = card.offsetWidth;
+      const h = card.offsetHeight;
+      // Beside the box (right, or left when there is no room), level with its top, kept in the window.
+      let x = r.right + 10;
+      if (x + w > window.innerWidth - 6) x = Math.max(6, r.left - w - 10);
+      const y = Math.max(6, Math.min(r.top, window.innerHeight - h - 6));
+      card.style.left = `${x}px`;
+      card.style.top = `${y}px`;
+    }
+    function show(target, content, delay = 350, key) {
+      if (pinned) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        anchor = target;
+        shownFor = key;
+        render(content);
+        card.hidden = false;
+        place();
+      }, delay);
+    }
+    /** New content for the box already shown, such as its code once it has been read. */
+    function update(content, key) {
+      if (card.hidden || shownFor !== key) return;
+      render(content);
+      place();
+    }
+    function hide() {
+      clearTimeout(timer);
+      if (pinned) return;
+      card.hidden = true;
+      shownFor = undefined;
+    }
+    function hideSoon() {
+      clearTimeout(timer);
+      if (pinned) return;
+      timer = setTimeout(() => { if (!card.matches(':hover')) hide(); }, 200);
+    }
+    card.addEventListener('mouseleave', hideSoon);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !card.hidden) {
+        pinned = false;
+        card.classList.remove('pinned');
+        hide();
+      }
+    });
+    const api = { show, update, hide, hideSoon, get pinned() { return pinned; }, get key() { return card.hidden ? undefined : shownFor; } };
+    openCards.push(api);
+    return api;
+  }
+
+  window.chartKit = { el, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

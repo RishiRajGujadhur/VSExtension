@@ -174,6 +174,16 @@
       } else {
         const textX = isDecision(n) ? 26 : 13;
         n.lines.forEach((line, i) => codeLine(g, line, textX, 8 + 13 + i * 18));
+        // A long box shows its first lines and a chip for the rest; an unfolded one a chip to fold it back.
+        if (n.hiddenLines > 0 || n.unfolded) {
+          const chip = el('g', { class: 'fold-chip', transform: `translate(${textX},${8 + n.lines.length * 18 + 3})`, role: 'button', tabindex: -1, 'data-fold': n.foldKey, 'data-open': String(n.hiddenLines > 0), 'aria-label': n.hiddenLines > 0 ? `Show ${n.hiddenLines} more lines` : 'Fold this box' }, g);
+          const label = n.hiddenLines > 0 ? `+ ${n.hiddenLines} more line${n.hiddenLines === 1 ? '' : 's'}` : '− Fold';
+          el('rect', { x: 0, y: 0, width: label.length * 6.6 + 14, height: 15, rx: 7.5 }, chip);
+          el('text', { x: 7, y: 11 }, chip).textContent = label;
+        }
+        // Zoomed far out, the code is too small to read: one large line says what the box is instead.
+        const count = n.text.split('\n').length;
+        el('text', { x: n.width / 2, y: n.height / 2 + 6, 'text-anchor': 'middle', class: 'summary' }, g).textContent = n.kind !== 'statement' ? kindWords[n.kind] || n.kind : `${count} line${count === 1 ? '' : 's'}`;
         // Each kind carries an icon in its corner: ? for a decision, ↻ for a loop, ↩ for a return…
         const kindIcon = kindIcons[n.kind];
         if (kindIcon) kit.icon(g, kindIcon, isDecision(n) ? 13 : n.width - 11, isDecision(n) ? n.height / 2 : 11, `kind-icon ${n.kind}`);
@@ -182,10 +192,6 @@
         // It sits just above the box's top left corner, clear of the code and of the arrow coming in.
         if (line) el('text', { x: isDecision(n) && n.kind !== 'loop' ? 14 : 2, y: -4, class: 'line-badge' }, g).textContent = `L${line}`;
       }
-      const tip = [`${kindWords[n.kind] || n.kind}${lineOf(n) ? `, line ${lineOf(n)}` : ''}`, n.unreachable ? 'Unreachable: nothing leads here' : '', isTerminal(n) ? '' : n.text]
-        .filter(Boolean)
-        .join('\n');
-      el('title', {}, g).textContent = tip;
       if (n.calls && n.calls.length) {
         // Expand the called functions in place (or fold them back).
         const open = n.calls.every((c) => c.expanded);
@@ -645,6 +651,55 @@
     }
   }
 
+  // The hover card of a box: its whole code, where it is, the paths through it, what it reads and sets, what it
+  // controls and when it runs, and the keys that act on it.
+  const card = kit.hoverCard();
+  const fileName = () => (chart && chart.file ? chart.file.split(/[\\/]/).pop() : '');
+  // The branches of decision d that lead to n, from the paths through both: " → no", " → case 'member'".
+  function branchesTo(d, n) {
+    const labels = new Set();
+    for (const p of chart.paths) {
+      const at = p.nodes.indexOf(d.id);
+      if (!p.feasible || at < 0 || !p.nodes.includes(n.id, at)) continue;
+      const edge = chart.edges[p.edges[at]];
+      if (edge && edge.from === d.id && edge.label) labels.add(edge.label);
+    }
+    return labels.size ? ` → ${[...labels].join(' or ')}` : '';
+  }
+  function cardContent(n) {
+    const line = lineOf(n);
+    const content = {
+      icon: n.kind === 'start' ? 'debug-start' : n.kind === 'end' ? 'debug-stop' : kindIcons[n.kind] || 'symbol-variable',
+      title: n.kind === 'start' ? `${chart.name}()` : n.kind === 'end' ? 'End of the function' : kindWords[n.kind] || n.kind,
+      meta: line ? `${fileName()}:${line}` : fileName(),
+      code: isTerminal(n) ? '' : n.text,
+      note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
+      facts: [],
+      keys: [],
+    };
+    const through = pathsThrough(n);
+    const total = chart.paths.filter((p) => p.feasible).length;
+    if (!n.unreachable) content.facts.push(['Paths through', `${through} of ${total}`]);
+    const deps = chart.dependences;
+    if (deps && !isTerminal(n)) {
+      const names = (list) => [...new Set(list.map((d) => d.name))].join(', ');
+      const reads = deps.data.filter((d) => d.to === n.id);
+      const sets = deps.data.filter((d) => d.from === n.id);
+      content.facts.push(['Reads', names(reads)], ['Sets', names(sets)]);
+      const decides = deps.control.filter((c) => c.from === n.id);
+      if (decides.length) content.facts.push(['Controls', `${decides.length} box${decides.length === 1 ? '' : 'es'}: ${decides.slice(0, 4).map((c) => lineText(chart.nodes[c.to])).join(', ')}${decides.length > 4 ? '…' : ''}`]);
+      const when = deps.control.filter((c) => c.to === n.id).map((c) => chart.nodes[c.from]);
+      if (when.length) content.facts.push(['Runs when', when.map((d) => `${d.lines[0]}${branchesTo(d, n)} (${lineText(d)})`).join('; ')]);
+    }
+    if (n.calls && n.calls.length) content.facts.push(['Calls', [...new Set(n.calls.map((c) => `${c.name}()`))].join(', ')]);
+    if (n.location) content.keys.push(['Enter', 'open']);
+    content.keys.push(['F', 'animate'], ['T', 'filter']);
+    if (n.hiddenLines > 0 || n.unfolded) content.keys.push(['U', n.hiddenLines > 0 ? `${n.hiddenLines} more lines` : 'fold']);
+    if (deps) content.keys.push(['D', 'dependences']);
+    content.keys.push(['Shift+F10', 'menu']);
+    return content;
+  }
+
   // Clicks: a box opens its code; a branch label or line pins that branch; ƒ+ expands a call.
   const toggleCalls = (button) => vscode.postMessage({ type: 'expand', keys: JSON.parse(button.dataset.keys), expand: button.dataset.open !== 'true' });
   const nodeOf = (target) => {
@@ -675,6 +730,12 @@
     if (expand) {
       e.stopPropagation();
       toggleCalls(expand);
+      return;
+    }
+    const chip = e.target.closest('.fold-chip');
+    if (chip) {
+      e.stopPropagation();
+      vscode.postMessage({ type: 'unfold', id: chip.dataset.fold, expand: chip.dataset.open === 'true' });
       return;
     }
     const edge = e.target.closest('.edge');
@@ -709,6 +770,8 @@
     const n = nodeOf(e.target);
     if (n !== hovered) {
       hovered = n;
+      if (n) card.show(nodeEl(n), cardContent(n), 350, n.id);
+      else card.hideSoon();
       touchEdges(n);
       focusDependences(n || focusedNode);
       showInfo(n || focusedNode);
@@ -719,6 +782,7 @@
     const n = nodeOf(e.target);
     if (n) {
       focusedNode = n;
+      if (card.key !== n.id) card.show(nodeEl(n), cardContent(n), e.target.matches(':focus-visible') ? 0 : 350, n.id);
       showInfo(n);
     }
   });
@@ -774,6 +838,12 @@
     }
     const n = nodeOf(e.target);
     if (!n) return;
+    if ((e.key === 'u' || e.key === 'U') && (n.hiddenLines > 0 || n.unfolded)) {
+      // U shows the rest of a long box's code, or folds it again.
+      e.preventDefault();
+      vscode.postMessage({ type: 'unfold', id: n.foldKey, expand: n.hiddenLines > 0 });
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       open(n);
@@ -784,7 +854,7 @@
     } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
       e.preventDefault();
       const r = nodeEl(n).getBoundingClientRect();
-      menu.open(boxMenuItems(n), r.left + 12, r.bottom - 4, nodeEl(n));
+      menu.open(boxMenuItems(n), r.left + 12, r.bottom - 4, nodeEl(n), boxContext(n));
     } else if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();
       animateFrom(n);
@@ -813,6 +883,7 @@
       { icon: 'play-circle', label: 'Animate Paths Through Here', keys: 'F', run: () => animateFrom(n) },
       { icon: 'filter', label: nodePins.includes(n.id) ? 'Stop Filtering by This Box' : 'Only Paths Through Here', keys: 'T', run: () => toggleThrough(n) },
       { icon: 'zoom-in', label: 'Zoom to This Box', run: () => zoomTo(n) },
+      ...(n.hiddenLines > 0 || n.unfolded ? [{ icon: n.hiddenLines > 0 ? 'unfold' : 'fold', label: n.hiddenLines > 0 ? `Show ${n.hiddenLines} More Lines` : 'Fold This Box', keys: 'U', run: () => vscode.postMessage({ type: 'unfold', id: n.foldKey, expand: n.hiddenLines > 0 }) }] : []),
       { icon: 'references', label: 'Show Its Dependences', keys: 'D', run: () => showDependencesOf(n) },
     );
     if (n.calls && n.calls.length) {
@@ -835,6 +906,11 @@
     if (!isTerminal(n)) items.push('-', { icon: 'copy', label: 'Copy Code', run: () => vscode.postMessage({ type: 'copy', text: n.text }) });
     if (n.location) items.push({ icon: 'location', label: 'Copy Location', run: () => vscode.postMessage({ type: 'copy', text: `${n.location.file}:${n.location.line + 1}:${n.location.character + 1}` }) });
     return items;
+  }
+  /** The menu's line of context for a box: where it is and how many paths pass it. */
+  function boxContext(n) {
+    const through = pathsThrough(n);
+    return [lineOf(n) ? `Line ${lineOf(n)}` : kindWords[n.kind], fileName(), n.unreachable ? 'unreachable' : `${through} path${through === 1 ? '' : 's'} through`].filter(Boolean).join(' · ');
   }
   function edgeMenuItems(i) {
     const e = chart.edges[i];
@@ -898,11 +974,11 @@
     const edge = e.target.closest('.edge');
     if (n) {
       focus(n);
-      menu.open(boxMenuItems(n), e.clientX, e.clientY, nodeEl(n));
+      menu.open(boxMenuItems(n), e.clientX, e.clientY, nodeEl(n), boxContext(n));
     } else if (edge) {
       menu.open(edgeMenuItems(Number(edge.dataset.edge)), e.clientX, e.clientY, svg);
     } else {
-      menu.open(backgroundMenu(), e.clientX, e.clientY, svg);
+      menu.open(backgroundMenu(), e.clientX, e.clientY, svg, `${chart.name}() · ${fileName()} · ${chart.nodes.length} boxes · ${chart.paths.filter((p) => p.feasible).length} paths`);
     }
   });
 
@@ -953,6 +1029,7 @@
     if (grid) grid.wake();
     map.update();
     document.getElementById('zoomLevel').textContent = `${Math.round(view.k * 100)}%`;
+    svg.classList.toggle('low-detail', view.k < 0.45);
     rememberView();
   }
   let rememberTimer;
@@ -1002,6 +1079,7 @@
   }
   let drag;
   svg.addEventListener('pointerdown', (e) => {
+    card.hide();
     if (e.button !== 0 || e.target.closest('.node') || e.target.closest('.edge') || e.target.closest('.dep')) return;
     drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
@@ -1024,10 +1102,12 @@
   svg.addEventListener('pointerleave', () => {
     if (grid) grid.pointer(undefined);
     hovered = undefined;
+    card.hideSoon();
     touchEdges(undefined);
     showInfo(focusedNode);
   });
   svg.addEventListener('wheel', (e) => {
+    card.hide();
     e.preventDefault();
     if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
       // Shift+wheel moves the chart sideways.

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { peekLines } from '../structure/peekLines';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report, ReportLocation, forEachReportNode } from '../structure/report';
 import { pickGraph } from './graphSwitch';
@@ -70,11 +71,12 @@ export class DiagramPanel {
       } else if (message.type === 'peek' && message.location) {
         // The line a box points at, for the bar under the chart.
         const where = message.location;
-        const code = await vscode.workspace.openTextDocument(where.file).then(
-          (document) => (where.line < document.lineCount ? document.lineAt(where.line).text.trim().slice(0, 200) : ''),
-          () => '',
+        // The line a box points at for the bar, and up to 12 lines of it for the hover card.
+        const { code, block } = await vscode.workspace.openTextDocument(where.file).then(
+          (document) => peekLines((i) => document.lineAt(i).text, document.lineCount, where.line, where.endLine),
+          () => ({ code: '', block: '' }),
         );
-        void this.panel?.webview.postMessage({ type: 'peek', location: where, code });
+        void this.panel?.webview.postMessage({ type: 'peek', location: where, code, block });
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
         await this.view.revealLocation(message.location);
@@ -187,8 +189,9 @@ export class DiagramPanel {
   </ul>
 </aside>
 <svg id="minimap" class="off" aria-hidden="true"><g id="miniScene"></g><rect id="miniView"/></svg>
-<div id="boxMenu" role="menu" aria-label="Box actions" hidden></div>
+<div id="boxMenu" role="dialog" aria-label="Box actions" hidden></div>
 <footer id="info"></footer>`,
     });
   }
 }
+

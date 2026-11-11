@@ -27,6 +27,9 @@ See inside your TypeScript, JavaScript and React code in VS Code: where values c
 - Fold any section by its heading; the view's title bar folds them all, or hides the descriptions for a one-line list. Its **…** menu hides Most Used, shows every hidden action, or resets the view.
 - Type anywhere in the list, or press `/` or `Ctrl+F`, to search. Search covers every tab, hidden actions and shortcuts (try `F7`), and marks the matching words.
 - Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
+- The action whose result is on screen stands out: its row is raised with a colored bar on its left, its tab has a dot, and the action you ran before it says **last run**. Pick pink or your theme's focus color with `tsStructure.actions.accentColor`.
+
+<img src="docs/images/actions-active.png" width="320" alt="The Actions view with Control Flow Graph highlighted as the feature on screen, Nullability marked last run, and dots on the Analyze and Graphs tabs">
 
 Not sure which analysis answers your question? Run **How Do I…?** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?* The first time the extension starts, a short walkthrough opens; reopen it with **Guide Me** (the **?** in the view).
 
@@ -83,6 +86,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - Right-click the subject circle to animate every flow, fold or unfold everything, or fit; right-click the background for fitting, folding, the minimap and export. While lines flow, the ring around the subject runs with them: in at the left port, round both sides and out at the right.
 - Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
+- Resting the pointer on a box (or moving to it with the keyboard) opens its **hover card**: what it is, its file and line, its code with syntax colors (up to 12 lines, scrollable), the report's details, the way from the subject to it, and the keys that act on it. The card stays open while the pointer is on it, its pin keeps it open to compare boxes, and `Escape` closes it.
 - Hovering a box highlights its way to the subject. Selecting a row in the results view marks its box, and clicking a box selects its row.
 - Keys: `Tab` to the subject, arrow keys between boxes, `Enter` to open, `Space` to fold, `+` `−` to zoom, `0` to fit, `Home` to return.
 - Zoom, position and folding are kept when the same analysis runs again.
@@ -90,7 +94,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - **?** explains the colors, arrows and keys.
 - An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Every line is a blue wire with soft cyan pulses travelling along it the way the value goes; clicking a box keeps the pulses to the lines between it and the subject (clicking the background brings them all back). Boxes are rounded cards with a soft shadow, their border brightening on hover. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid, the flowing lines and the box style are adapted from [robot-components](https://github.com/dashrobotco/robot-components); see Credits.)
 
-![The data flow of payment as a chart: callers on the left, the receipt and the reading function on the right](docs/images/data-flow-diagram.gif)
+![The data flow of payment as a chart, with the hover card of placeOrder showing its code, where it is and the way to the subject](docs/images/data-flow-diagram.png)
 
 ### Control Flow Graph and Path Explorer
 
@@ -111,23 +115,30 @@ Finding your way around a large function:
 - **Right-click** a box to open its code, animate the paths through it, keep only the paths through it, zoom to it, expand or fold its calls, see what affects it or what it affects, run Data Flow, Find Usages or another analysis there, or copy its code. Right-click a branch label to filter by it or go to either end, a path in the list to pick, compare or copy it (as text or Mermaid), and the background to fit, expand or fold every call, go to unreachable code, or export.
 - A **minimap** appears when the function is bigger than the window, with the picked path lit up; click or drag in it to move.
 - **Find** (`Ctrl+F`) outlines the boxes whose code matches and fades the rest; `Enter` goes to the next match.
-- The bar under the chart shows the hovered or focused box: its kind, line, how many paths pass through it, and its code in full. Hovering a path in the list previews its route.
+- **Hover cards**: rest the pointer on a box, or focus it, for a card with its kind, file and line, its whole code with syntax colors, how many paths pass through it, what it reads and sets, which boxes it controls, and when it runs (*switch (user.role) → case 'member'*), with the keys that act on it. Pin the card to keep it open; `Escape` closes it. The bar under the chart shows the same box in one line, and hovering a path in the list previews its route.
+- **Long code**: long lines wrap instead of being cut off, and a box with more than four lines shows its first lines and a **+ N more lines** chip: click it, or press `U`, to unfold that box in place (its chip then folds it back). **Code in boxes** in the toolbar switches to **Show all code** in every box. Zoomed far out, each box shows one large line instead (*Decision*, *8 lines*) so the shape of the function stays readable.
 - Keys: `Tab` to the chart, `↑` `↓` to follow the flow, `←` `→` along a row, `Enter` to open, `F` to animate, `T` to filter by the box, `Shift+F10` for its menu, `C` for the box at the editor's cursor, `P` to show or hide the Path Explorer, `Home` and `End` for start and end. Shift+wheel scrolls sideways, double-click zooms to a box, and **?** explains every shape, color and key.
 - Zoom and position are kept per function, as is whether the Path Explorer is open.
 - Paths that end the same way are grouped under that ending (*returns permission · 4 paths*); hover a group to see all its paths at once, open it to pick one. Hovering a box lights up the lines into and out of it; while lines flow, the rings around start and end run from top to bottom, the way the lines go.
 
 Both charts:
 
+- **Search the right-click menu**: the menu opens with a search field at the top. Type to filter its actions (every word counts, in any order: *dep sho* finds **Show Its Dependences**), use the arrow keys to move, `Enter` to run the first match, `Escape` to clear the search and then to close. Shortcuts are listed on the right, the actions you used last come first under **Recent**, and a line at the bottom says where you are (*Line 16 · control.ts · 2 paths through*).
+
 - You can't lose the chart: dragging, zooming and scrolling always keep part of it in the window. Double-click the background, or press `0`, to fit it again; the chart refits when you resize the tab, until you move it yourself.
 - Click the zoom level for 50%, 75%, 100%, 150%, 200% or Fit. Fit and moving to a box glide there (at once when your system asks for reduced motion).
 - Click the background and use the arrow keys to pan (`Shift` for bigger steps); `M` hides or shows the minimap, and the choice is kept.
 - Right-click a box for **Copy Text** or **Copy Location** (`file:line:column`).
 
+![The right-click menu of a decision with the search field at the top, shortcuts on the right and the box's line, file and paths at the bottom](docs/images/graph-menu-search.png)
+
 The chart has the same animated grid as the Data Flow diagram, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
 
 Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
 
-![The control flow of deliveryDays beside its code, with the paths through it](docs/images/control-flow.gif)
+![The control flow of getPermission with the hover card of the sensitive decision: its code, the paths through it, what it reads and controls, and that it runs when the role is 'member'](docs/images/control-flow-card.png)
+
+![A long block of code folded to its first lines with a "+ 7 more lines" chip, and its hover card showing all of it](docs/images/control-flow-long-code.png)
 
 #### Program Dependence Graph
 
@@ -289,6 +300,8 @@ Run **Code X-Ray: Open Settings**. The ones you are most likely to change:
 | `tsStructure.contextMenu.topLevel` | `true` | the common analyses at the top of the right-click menu |
 | `tsStructure.results.progress` | `statusBar` | or `notification` |
 | `tsStructure.lightbulbAnalyses` | `true` | analyses in the lightbulb's refactor menu |
+| `tsStructure.results.alwaysShowDiagram` | `false` | every new result also opens as a chart |
+| `tsStructure.actions.accentColor` | `pink` | the color of the action on screen in the Actions view, or `theme` |
 
 ![Choose Features](docs/images/choose-features.gif)
 

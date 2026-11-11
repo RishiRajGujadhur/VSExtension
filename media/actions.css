@@ -135,3 +135,20 @@ kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, rgb
 /* Graph Explorer: the note when nothing can be graphed, and category icons in headings. */
 .note { margin: 6px 2px; padding: 6px 8px; border-radius: 6px; font-size: 12px; color: var(--vscode-descriptionForeground); background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, .1)); }
 .section .codicon + .codicon { margin-left: -2px; opacity: .85; }
+
+/* The action whose result is on screen: a raised row with an accent bar on its left, a dot on its tab, and the one
+   before it marked "last run". tsStructure.actions.accentColor picks pink or the theme's focus color. */
+body { --active-accent: #ec4899; --active-tint: rgba(236, 72, 153, .12); }
+body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: color-mix(in srgb, var(--vscode-focusBorder) 14%, transparent); }
+.item.active-feature { background: var(--active-tint); border-color: color-mix(in srgb, var(--active-accent) 35%, transparent); box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .5); }
+.item.active-feature::before { content: ''; position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--active-accent); }
+.item.active-feature .tile { border-color: var(--active-accent); color: var(--active-accent); }
+.item.active-feature .label { font-weight: 600; }
+.last-run { padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: 400; vertical-align: 1px;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, .25)); color: var(--vscode-badge-foreground, var(--vscode-foreground)); }
+.tab { position: relative; }
+.tab-dot { width: 6px; height: 6px; margin-left: 1px; border-radius: 50%; background: var(--active-accent); }
+@media (forced-colors: active) {
+  .item.active-feature { border-color: Highlight; }
+  .item.active-feature::before, .tab-dot { background: Highlight; }
+}

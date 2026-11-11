@@ -370,7 +370,46 @@
   }
 
   const codeLines = new Map();
+  const codeBlocks = new Map();
   let infoKey;
+
+  // The hover card of a box: what it is, where, its code (read from the file), the facts the report gives, the
+  // way to the subject and the keys that act on it.
+  const card = window.chartKit.hoverCard();
+  const cardKey = (node) => (node.location ? `${node.location.file}:${node.location.line}` : `node:${node.label}`);
+  function cardContent(node) {
+    const key = cardKey(node);
+    const where = node.location ? `${node.location.file.split(/[\\/]/).pop()}:${node.location.line + 1}` : '';
+    const way = [];
+    for (let p = node.parent; p && p !== diagram.center; p = p.parent) way.unshift(p.label);
+    const content = {
+      icon: node.icon || (node === diagram.center ? 'target' : 'symbol-misc'),
+      title: node.label,
+      meta: where,
+      code: node.location ? codeBlocks.get(key) : '',
+      loading: node.location && !codeBlocks.has(key),
+      facts: [
+        ['Detail', node.description],
+        node === diagram.center ? undefined : ['Way here', [diagram.center.label, ...way].join(' → ')],
+        node.children.length ? ['Below it', `${node.children.length} box${node.children.length === 1 ? '' : 'es'}${node.collapsed ? ' (folded)' : ''}`] : undefined,
+        node.duplicates > 1 ? ['Same box', `${node.duplicates} times in this report`] : undefined,
+        node.tone === 'warning' || node.tone === 'error' ? ['Note', node.tone === 'error' ? 'a problem' : 'worth a look'] : undefined,
+      ],
+      keys: [
+        ...(node.location ? [['Enter', 'open']] : []),
+        ...(node.children.length && node !== diagram.center ? [['Space', node.collapsed ? 'unfold' : 'fold']] : []),
+        ...(node !== diagram.center ? [['B', 'only this branch']] : []),
+        ['Shift+F10', 'menu'],
+      ],
+    };
+    return content;
+  }
+  let cardNode;
+  function showCard(node, delay) {
+    cardNode = node;
+    card.show(node.el, cardContent(node), delay, cardKey(node));
+    if (node.location && !codeBlocks.has(cardKey(node)) && !codeLines.has(cardKey(node))) vscode.postMessage({ type: 'peek', location: node.location });
+  }
   function showCode(code) {
     if (!code) return;
     const line = document.createElement('code');
@@ -609,6 +648,8 @@
     const node = boxOf(e.target);
     if (node === hovered) return;
     hovered = node;
+    if (node && node.el) showCard(node, 350);
+    else card.hideSoon();
     highlightPath(node || focused);
     showInfo(node || focused);
     if (grid) grid.wake();
@@ -617,6 +658,7 @@
     const node = boxOf(e.target);
     if (!node) return;
     focused = node;
+    if (node.el && card.key !== cardKey(node)) showCard(node, e.target.matches(':focus-visible') ? 0 : 350);
     highlightPath(node);
     showInfo(node);
   });
@@ -677,7 +719,8 @@
   const menu = window.chartKit.menu(boxMenu);
   function openMenu(node, x, y) {
     menuFor = node;
-    menu.open(menuItems(node), x, y, node.el);
+    const where = node.location ? `Line ${node.location.line + 1} · ${node.location.file.split(/[\\/]/).pop()}` : '';
+    menu.open(menuItems(node), x, y, node.el, [where, node.children.length ? `${node.children.length} below it` : '', node.description].filter(Boolean).join(' · '));
   }
   const closeMenu = (refocus) => menu.close(refocus);
   svg.addEventListener('contextmenu', (e) => {
@@ -697,6 +740,7 @@
   // Drag the background to pan; the wheel zooms around the pointer.
   let drag;
   svg.addEventListener('pointerdown', (e) => {
+    card.hide();
     if (e.button !== 0 || e.target.closest('.node')) return;
     drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
     svg.setPointerCapture(e.pointerId);
@@ -721,6 +765,7 @@
     svg.classList.remove('dragging');
   });
   svg.addEventListener('pointerleave', () => {
+    card.hideSoon();
     if (grid) grid.pointer(undefined);
     if (hovered) {
       hovered = undefined;
@@ -729,6 +774,7 @@
     }
   });
   svg.addEventListener('wheel', (e) => {
+    card.hide();
     e.preventDefault();
     const rect = svg.getBoundingClientRect();
     zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - rect.left, e.clientY - rect.top);
@@ -836,7 +882,10 @@
     if (event.data.type === 'peek') {
       const key = `${event.data.location.file}:${event.data.location.line}`;
       codeLines.set(key, event.data.code);
+      codeBlocks.set(key, event.data.block || event.data.code || '');
       if (key === infoKey) showCode(event.data.code);
+      // Several boxes can point at the same line: the card is updated for the box it was opened on.
+      if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);
       return;
     }
     if (event.data.type !== 'diagram') return;
@@ -844,6 +893,7 @@
     analyses = event.data.analyses || [];
     window.chartKit.renderControls(document.getElementById('graphControls'), event.data.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
     closeMenu(false);
+    card.hide();
     focused = undefined;
     flowing = undefined;
     selected = undefined;

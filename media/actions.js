@@ -98,6 +98,13 @@
     const { words, inSearch, pinnedIndex } = context;
     const li = make('li', 'item');
     li.dataset.command = action.id;
+    li.dataset.cmd = action.command;
+    if (data.active === action.command) {
+      li.classList.add('active-feature');
+      li.setAttribute('aria-current', 'true');
+    } else if (data.last === action.command) {
+      li.classList.add('last-feature');
+    }
     const run = make('button', 'run');
     run.type = 'button';
     const tile = make('span', 'tile');
@@ -108,6 +115,11 @@
     const detail = make('span', 'detail');
     detail.append(marked(action.detail, words));
     text.append(label, detail);
+    if (data.last === action.command && data.active !== action.command) {
+      const badge = make('span', 'last-run');
+      badge.textContent = 'last run';
+      label.append(' ', badge);
+    }
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
     run.addEventListener('click', () => vscode.postMessage({ type: 'run', id: action.id }));
@@ -277,6 +289,12 @@
       button.setAttribute('aria-controls', 'list');
       button.tabIndex = t.id === tab ? 0 : -1;
       button.append(icon(t.icon), document.createTextNode(t.label));
+      // A dot on the tab that has the action whose result is on screen.
+      if (data.active && data.actions.some((a) => a.tab === t.id && a.command === data.active)) {
+        const dot = make('span', 'tab-dot');
+        dot.title = 'The feature on screen is in this tab';
+        button.append(dot);
+      }
       button.addEventListener('click', () => choose(t.id));
       tabsBar.append(button);
     }
@@ -594,8 +612,17 @@
       else tab = event.data.id;
       return;
     }
+    if (event.data.type === 'active') {
+      if (!data) return;
+      data.active = event.data.active;
+      data.last = event.data.last;
+      renderTabs();
+      render();
+      return;
+    }
     if (event.data.type !== 'actions') return;
     data = event.data;
+    document.body.classList.toggle('accent-theme', data.accent === 'theme');
     if (!data.tabs.some((t) => t.id === tab)) tab = data.tabs[0].id;
     // Keep the focused action focused across the redraw.
     if (!focusAfterRender && list.contains(document.activeElement)) {

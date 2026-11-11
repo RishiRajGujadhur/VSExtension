@@ -9,6 +9,7 @@ import { commandIcons } from '../structure/icons';
 import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } from '../structure/keys';
 import { isFeatureEnabled } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
+import { activeFeature } from './activeFeature';
 
 const usageKey = 'tsStructure.actionUsage';
 const layoutKey = 'tsStructure.actionsLayout';
@@ -53,7 +54,9 @@ export class ActionsView implements vscode.WebviewViewProvider {
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(ActionsView.viewType, this),
       // Turning a feature on or off shows or hides its actions.
-      vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.features') && this.post()),
+      vscode.workspace.onDidChangeConfiguration((e) => (e.affectsConfiguration('tsStructure.features') || e.affectsConfiguration('tsStructure.actions.accentColor')) && this.post()),
+      // The action whose result is on screen is highlighted, and the one before it marked "last run".
+      activeFeature.onDidChange(() => this.sendActive()),
       watcher,
       watcher.onDidChange(refresh),
       watcher.onDidCreate(refresh),
@@ -77,6 +80,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
   }
 
   private pendingTab: string | undefined;
+
+  private sendActive(): void {
+    void this.view?.webview.postMessage({ type: 'active', active: activeFeature.active, last: activeFeature.last });
+  }
   private cursorTimer: NodeJS.Timeout | undefined;
 
   private sendTab(): void {
@@ -187,7 +194,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
-    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories });
+    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'pink'), active: activeFeature.active, last: activeFeature.last });
   }
 }
 

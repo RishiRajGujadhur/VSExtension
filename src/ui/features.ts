@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { Feature, enabledByDefault, featureOf, features } from '../structure/features';
 import { featureIcon } from '../structure/icons';
+import { actionCatalog } from '../structure/actionCatalog';
+import { activeFeature } from './activeFeature';
+
+/** The commands the Actions view lists: running one marks it as the feature on screen once its result shows. */
+const listed = new Set(actionCatalog.map((a) => a.command));
 
 export function isFeatureEnabled(id: string): boolean {
   const feature = features.find((f) => f.id === id);
@@ -18,6 +23,7 @@ export function registerCommand(id: string, handler: (...args: any[]) => unknown
       void offerToEnable(feature);
       return undefined;
     }
+    if (listed.has(id)) activeFeature.noteInvoked(id);
     return handler(...args);
   });
 }

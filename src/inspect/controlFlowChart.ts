@@ -19,6 +19,12 @@ export interface ControlFlowChart {
     id: number;
     kind: CfgNode['kind'];
     lines: string[];
+    /** Lines of code folded away under the box's "N more lines" chip; 0 when all of it is shown. */
+    hiddenLines: number;
+    /** The box has more code than a folded box shows and is unfolded: its chip folds it back. */
+    unfolded: boolean;
+    /** What the page sends to unfold or fold this box: where its code starts. */
+    foldKey: string;
     /** All of the box's code, for the info bar and tooltips, up to a limit. */
     text: string;
     unreachable: boolean;
@@ -44,44 +50,105 @@ export interface ControlFlowChart {
 /** Sizes for code in the editor font at 12px. */
 const CHAR = 7.2;
 const LINE = 18;
-const MAX_LINE = 72;
-const MAX_LINES = 8;
+/** Long lines wrap at this many characters; continued lines are indented. */
+const WRAP = 64;
+/** A folded box shows this many lines; the rest are behind its chip. */
+const FOLDED_LINES = 4;
+/** An unfolded box shows at most this many; the hover card has all of it. */
+const MAX_LINES = 40;
 
-function shownLines(node: CfgNode): string[] {
-  const lines = node.lines.map((l) => (l.length > MAX_LINE ? `${l.slice(0, MAX_LINE - 1)}…` : l));
-  return lines.length > MAX_LINES ? [...lines.slice(0, MAX_LINES - 1), `… ${lines.length - MAX_LINES + 1} more`] : lines;
+/** How the boxes show their code: folded boxes, except those unfolded by their chip, or all code. */
+export interface CodeOptions {
+  unfolded?: ReadonlySet<string>;
+  showAll?: boolean;
+}
+
+/** A line split where it is best broken (after a space, comma or bracket) so no part is longer than `width`. */
+export function wrapLine(line: string, width = WRAP): string[] {
+  if (line.length <= width) return [line];
+  const indent = /^\s*/.exec(line)![0];
+  const out: string[] = [];
+  let rest = line;
+  let lead = '';
+  while ((lead + rest).length > width) {
+    const room = width - lead.length;
+    let cut = -1;
+    for (let i = room; i > room / 2; i--) {
+      if (' ,([{'.includes(rest[i - 1]) || ' .'.includes(rest[i])) {
+        cut = i;
+        break;
+      }
+    }
+    if (cut < 0) cut = room;
+    out.push(lead + rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
+    lead = `${indent}  `;
+  }
+  if (rest) out.push(lead + rest);
+  return out;
+}
+
+/** The lines a box shows, wrapped, folded unless it is unfolded, and how many are folded away. */
+export function shownLines(node: CfgNode, open: boolean): { lines: string[]; hidden: number; foldable: boolean } {
+  const wrapped = node.lines.flatMap((l) => wrapLine(l));
+  const foldable = wrapped.length > FOLDED_LINES;
+  const limit = open ? MAX_LINES : FOLDED_LINES - 1;
+  if (!foldable || wrapped.length <= limit) return { lines: wrapped, hidden: 0, foldable };
+  return { lines: wrapped.slice(0, limit), hidden: wrapped.length - limit, foldable };
 }
 
 /** Start and end are circles of this size; the function's name is written beside the start circle. */
 export const TERMINAL = 34;
 const MAX_TEXT = 60;
 
+/** The code of a box of plain statements as written (not shortened to one line each), without its indentation. */
+function sourceLines(node: CfgNode): string[] | undefined {
+  if (!['statement', 'return', 'throw'].includes(node.kind) || !node.nodes.length) return undefined;
+  return node.nodes.flatMap((n) => {
+    const file = n.getSourceFile();
+    const start = n.getStart(file);
+    const column = start - file.getLineStarts()[file.getLineAndCharacterOfPosition(start).line];
+    return file.text.slice(start, n.end).split(/\r?\n/).map((l, i) => (i && /^\s*$/.test(l.slice(0, column)) ? l.slice(column) : l).trimEnd());
+  });
+}
+
 /** A box's code in full (within limits), for the info bar. */
 function fullText(node: CfgNode): string {
+  const source = sourceLines(node);
+  if (source) return (source.length > MAX_TEXT ? [...source.slice(0, MAX_TEXT), `… ${source.length - MAX_TEXT} more lines`] : source).join('\n');
   const lines = node.lines.length > MAX_TEXT ? [...node.lines.slice(0, MAX_TEXT), `… ${node.lines.length - MAX_TEXT} more lines`] : node.lines;
   return lines.join('\n');
 }
 
-function size(kind: CfgNode['kind'], lines: string[]): { width: number; height: number } {
+function size(kind: CfgNode['kind'], lines: string[], chip: boolean): { width: number; height: number } {
   if (kind === 'start' || kind === 'end') return { width: TERMINAL, height: TERMINAL };
-  const text = Math.max(...lines.map((l) => l.length)) * CHAR;
-  const height = lines.length * LINE + 16;
+  // The chip ("12 more lines" or "Fold") takes a line of its own under the code.
+  const text = Math.max(...lines.map((l) => l.length), chip ? 16 : 0) * CHAR;
+  const height = (lines.length + (chip ? 1 : 0)) * LINE + 16;
   if (kind === 'decision' || kind === 'switch' || kind === 'loop') return { width: Math.max(90, text + 52), height: height + 4 };
   return { width: Math.max(80, text + 26), height };
 }
 
-export function controlFlowChart(project: VirtualProject, fileName: string, offset: number, expanded: ReadonlySet<string> = new Set()): ControlFlowChart {
+export function controlFlowChart(project: VirtualProject, fileName: string, offset: number, expanded: ReadonlySet<string> = new Set(), code: CodeOptions = {}): ControlFlowChart {
   const sourceFile = project.sourceFile(fileName);
   const checker = project.program().getTypeChecker();
   const fn = functionAtOffset(sourceFile, offset, checker);
   const cfg = expandCalls(buildCfg(fn), checker, expanded);
-  return chartOf(cfg, fn.getSourceFile(), (node) => callTargets(node, checker).map((c) => ({ key: c.key, name: c.name, expanded: expanded.has(c.key) })));
+  return chartOf(cfg, fn.getSourceFile(), (node) => callTargets(node, checker).map((c) => ({ key: c.key, name: c.name, expanded: expanded.has(c.key) })), code);
 }
 
-export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => []): ControlFlowChart {
-  const lines = cfg.nodes.map(shownLines);
+export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => [], code: CodeOptions = {}): ControlFlowChart {
+  const foldKey = (node: CfgNode) => {
+    if (!node.nodes.length) return `#${node.id}`;
+    const file = node.nodes[0].getSourceFile();
+    return `${normalizePath(file.fileName)}:${node.nodes[0].getStart(file)}`;
+  };
+  const shown = cfg.nodes.map((n) => shownLines(n, !!code.showAll || !!code.unfolded?.has(foldKey(n))));
+  const lines = shown.map((s) => s.lines);
+  // A chip under the code: "N more lines" on a folded box, "Fold" on an unfolded one (not when all code is shown).
+  const chip = (i: number) => shown[i].hidden > 0 || (shown[i].foldable && !code.showAll);
   const layout = layoutFlow(
-    cfg.nodes.map((n, i) => ({ id: n.id, ...size(n.kind, lines[i]) })),
+    cfg.nodes.map((n, i) => ({ id: n.id, ...size(n.kind, lines[i], chip(i)) })),
     cfg.edges.map((e) => ({ from: e.from, to: e.to, back: e.kind === 'back' || e.kind === 'continue' })),
     cfg.start,
     cfg.end,
@@ -102,7 +169,7 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
     anchor: cfg.fn.getStart(sourceFile),
     nodes: cfg.nodes.map((n, i) => {
       const p = layout.nodes.get(n.id)!;
-      return { id: n.id, kind: n.kind, lines: lines[i], text: fullText(n), unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
+      return { id: n.id, kind: n.kind, lines: lines[i], hiddenLines: shown[i].hidden, unfolded: shown[i].foldable && shown[i].hidden === 0 && !code.showAll, foldKey: foldKey(n), text: fullText(n), unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
     }),
     edges: cfg.edges.map((e, i) => ({
       from: e.from,

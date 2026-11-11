@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside TypeScript, JavaScript and React code: animated data flow and control flow graphs with a path explorer, Explain Value Path and slices, test impact, nullability, refactorings, inspections and structural search. Deterministic, offline, no AI. Graph animations adapted from robot-components (MIT).",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -3054,6 +3054,19 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Show every new analysis as a diagram as soon as it is ready, as well as in the results view. The **Show as Diagram** button in the results view turns this on and off."
+          },
+          "tsStructure.actions.accentColor": {
+            "type": "string",
+            "enum": [
+              "pink",
+              "theme"
+            ],
+            "enumDescriptions": [
+              "A pink bar and tint, easy to spot in any theme.",
+              "The theme's focus color."
+            ],
+            "default": "pink",
+            "markdownDescription": "The color that marks the action whose result is on screen in the **Actions** view (a raised row with a bar on its left, and a dot on its tab)."
           },
           "tsStructure.warmUp": {
             "type": "boolean",

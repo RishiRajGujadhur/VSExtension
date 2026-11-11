@@ -26,6 +26,7 @@ import { showActionsAtCursor } from './ui/actionsAtCursor';
 import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
+import { activeFeature } from './ui/activeFeature';
 import { registerGuide } from './ui/guide';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -84,6 +85,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const alwaysDiagram = () => vscode.workspace.getConfiguration('tsStructure.results').get('alwaysShowDiagram', false);
   context.subscriptions.push(
     structureView.onDidShowNewReport((report) => (graphKinds.has(report.kind) || alwaysDiagram()) && diagram.show()),
+    // The Actions view highlights the action whose result is on screen.
+    structureView.onDidShowNewReport(() => activeFeature.reportShown()),
     registerCommand('tsStructure.report.diagramsOn', async () => {
       await vscode.workspace.getConfiguration('tsStructure.results').update('alwaysShowDiagram', true, vscode.ConfigurationTarget.Global);
       if (structureView.report) diagram.show();

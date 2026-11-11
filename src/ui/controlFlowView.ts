@@ -10,6 +10,7 @@ import { boxAnalyses, menuAnalyses } from './diagramView';
 import { pickGraph } from './graphSwitch';
 import { graphOption, ReportControl, setGraphOption } from '../structure/graphOptions';
 import { ReportLocation } from '../structure/report';
+import { activeFeature } from './activeFeature';
 
 /**
  * The Control Flow view: a function's flowchart in an editor tab, with the Path Explorer beside it. It redraws as
@@ -29,6 +30,8 @@ export class ControlFlowPanel {
   private cursorId: number | undefined;
   /** Calls expanded in place, by "file:offset"; cleared when another function is shown. */
   private expanded = new Set<string>();
+  /** Boxes whose code was unfolded with their chip. */
+  private unfolded = new Set<string>();
   /** The slice on screen, sent after each chart until the code is edited. */
   private slice: { nodes: number[]; at: number; direction: 'backward' | 'forward'; name: string; line: number } | undefined;
 
@@ -109,6 +112,7 @@ export class ControlFlowPanel {
     this.slice = undefined;
     this.target = { uri, anchor: anchor ?? editor.document.offsetAt(editor.selection.active), folder: vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath };
     if (!this.build(editor)) return;
+    activeFeature.set('tsStructure.controlFlow');
     if (this.panel) {
       this.panel.reveal(undefined, false);
       return;
@@ -131,6 +135,11 @@ export class ControlFlowPanel {
           else this.expanded.delete(key);
         }
         this.build();
+      } else if (message.type === 'unfold' && typeof message.id === 'string') {
+        // A box's "N more lines" chip, or its "Fold" chip: the chart is drawn again with the box's code shown or folded.
+        if (message.expand) this.unfolded.add(message.id);
+        else this.unfolded.delete(message.id);
+        this.build();
       } else if (message.type === 'mermaid' && this.chart) {
         // The picked path, if any, is drawn thick in the copy too.
         await vscode.env.clipboard.writeText(['```mermaid', chartMermaid(this.chart, message.path, message.dependences === true), '```', ''].join('\n'));
@@ -144,6 +153,12 @@ export class ControlFlowPanel {
       } else if (message.type === 'control' && message.id === 'callLevels') {
         // How many levels of calls are expanded in place: the chart is drawn again with them.
         if (setGraphOption('controlFlow', callLevelsControl(), message.value)) this.build();
+      } else if (message.type === 'control' && message.id === 'code') {
+        // Folded boxes, or all the code in every box.
+        if (setGraphOption('controlFlow', codeControl(), message.value)) {
+          this.unfolded.clear();
+          this.build();
+        }
       } else if (message.type === 'savePng' && message.png && this.chart) {
         await saveImage(Buffer.from(message.png, 'base64'), 'png', `control-flow-${this.chart.name}`);
       } else if (message.type === 'copy' && typeof message.text === 'string') {
@@ -168,6 +183,7 @@ export class ControlFlowPanel {
     this.panel.onDidDispose(() => {
       this.panel = undefined;
       this.chart = undefined;
+      activeFeature.closed('tsStructure.controlFlow');
     });
   }
 
@@ -179,12 +195,13 @@ export class ControlFlowPanel {
       // Calls expanded in place: those picked with ƒ+, and every call down to the chosen number of levels.
       const levels = graphOption('controlFlow', 'callLevels', 0);
       let keys = new Set(this.expanded);
-      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys);
+      const code = { unfolded: this.unfolded, showAll: graphOption<string>('controlFlow', 'code', 'fold') === 'all' };
+      this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys, code);
       for (let level = 0; level < levels; level++) {
         const more = this.chart.nodes.flatMap((n) => n.calls.map((c) => c.key)).filter((k) => !keys.has(k));
         if (!more.length) break;
         keys = new Set([...keys, ...more]);
-        this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys);
+        this.chart = controlFlowChart(project, this.target.uri.fsPath, this.target.anchor, keys, code);
       }
       this.source = project.sourceFile(this.target.uri.fsPath);
       this.cursorId = undefined;
@@ -204,7 +221,7 @@ export class ControlFlowPanel {
   private post(): void {
     if (!this.panel || !this.ready) return;
     this.panel.title = this.chart ? `Control Flow: ${this.chart.name}` : 'Control Flow';
-    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl()] });
+    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl(), codeControl()] });
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
     if (this.pendingDeps && this.chart) {
       this.pendingDeps = false;
@@ -298,7 +315,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   <ul id="paths" role="tree" aria-label="Paths through the function, grouped by how they end"></ul>
 </aside>
 </main>
-<div id="boxMenu" role="menu" aria-label="Box actions" hidden></div>
+<div id="boxMenu" role="dialog" aria-label="Box actions" hidden></div>
 <aside id="legend" aria-label="Legend" hidden>
   <h2>Shapes</h2>
   <ul>
@@ -325,4 +342,19 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   </ul>
 </aside>`,
   });
+}
+
+/** The toolbar control for how much code the boxes show: a few lines with a chip for the rest, or all of it. */
+function codeControl(): ReportControl {
+  return {
+    id: 'code',
+    label: 'Code in boxes',
+    description: 'Folded shows the first lines of a long box with a chip that unfolds it; All shows every line in every box',
+    kind: 'choice',
+    value: graphOption('controlFlow', 'code', 'fold'),
+    choices: [
+      { id: 'fold', label: 'Folded' },
+      { id: 'all', label: 'Show all code' },
+    ],
+  };
 }
