@@ -29,7 +29,7 @@ See inside your TypeScript, JavaScript and React code. Put the cursor on somethi
 - Fold any section by its heading; the view's title bar folds them all, or hides the descriptions for a one-line list. Its **…** menu hides Most Used, shows every hidden action, or resets the view.
 - Type anywhere in the list, or press `/` or `Ctrl+F`, to search. Search covers every tab, hidden actions and shortcuts (try `F7`), and marks the matching words.
 - Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
-- The action whose result is on screen stands out: its row is raised with a colored bar on its left, its tab has a dot, and the action you ran before it says **last run**. Pick pink or your theme's focus color with `tsStructure.actions.accentColor`.
+- The action whose result is on screen stands out: its row is raised with a colored bar on its left, its tab has a dot, and the action you ran before it says **last run**. It is cyan; pick pink or your theme's focus color with `tsStructure.actions.accentColor`.
 
 <img src="docs/images/actions-active.png" width="320" alt="The Actions view with Control Flow Graph highlighted as the feature on screen, Nullability marked last run, and dots on the Analyze and Charts tabs">
 
@@ -115,6 +115,10 @@ The functions that write the value sit under **Flows in** and those that read it
 The **path list** lists every path through the function with the branches it takes, in words (*user.active → user.role is 'member' → not sensitive*), and what it returns. Pick a path to light up its route; click a branch label (yes, no, case…) to keep only the paths through it. Paths that test the same unchanged condition both ways cannot happen and are hidden unless you ask for them. Click a box to open its code; the box your cursor is in is outlined, and the chart redraws as you edit.
 
 **Why this value** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
+
+The answer also shows as a **Value path** card at the bottom of the Actions view: each value on a timeline with how many ways lead to it and what has to be true, how long the analysis took, and buttons to copy it or open it in the Results view. Click a value to open its code; **Next** runs another analysis at the cursor.
+
+<img src="docs/images/actions-value-path.png" width="340" alt="The Value path card in the Actions view: permission can be 'write', 'limited', 'read' or 'none' at line 25, each with the conditions that lead to it, and a Next step">
 
 - **Expand calls in place**: a box that calls a function of your project has an **ƒ+** button. It splices the called function into the chart, in a labeled frame, with its returns leading on to what followed the call; paths then run through it.
 - **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.
@@ -313,7 +317,7 @@ Run **Code X-Ray: Settings**. The ones you are most likely to change:
 | `tsStructure.results.progress` | `statusBar` | or `notification` |
 | `tsStructure.lightbulbAnalyses` | `true` | analyses in the lightbulb's refactor menu |
 | `tsStructure.results.alwaysShowDiagram` | `false` | every new result also opens as a chart |
-| `tsStructure.actions.accentColor` | `pink` | the color of the action on screen in the Actions view, or `theme` |
+| `tsStructure.actions.accentColor` | `cyan` | the color of the action on screen and the Value path card in the Actions view: `cyan`, `pink` or `theme` |
 
 ![Choose Features](docs/images/choose-features.gif)
 

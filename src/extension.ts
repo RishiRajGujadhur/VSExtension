@@ -100,7 +100,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
-  new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []).register(context);
+  const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
+  actionsView.register(context);
+  // A Value Path also shows as a card at the bottom of the Actions view.
+  context.subscriptions.push(structureView.onDidShowNewReport((report) => actionsView.showResult(report)));
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {

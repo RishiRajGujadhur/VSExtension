@@ -619,6 +619,99 @@
     }
   });
 
+  /*
+   * The Value Path card: the latest "Why this value" result at the bottom of the view, as a timeline of the values
+   * the variable can have. A value opens its code; Next runs another analysis at the cursor.
+   */
+  const cardBox = document.getElementById('valuePath');
+  let cardOpen = true;
+  try {
+    cardOpen = (vscode.getState() || {}).cardOpen !== false;
+  } catch {
+    // No saved state: open.
+  }
+  function renderCard(card, fresh) {
+    cardBox.textContent = '';
+    cardBox.hidden = !card;
+    if (!card) return;
+    if (fresh) cardOpen = true;
+    cardBox.classList.toggle('folded', !cardOpen);
+    const head = make('div', 'card-head');
+    const fold = make('button', 'card-fold');
+    fold.type = 'button';
+    fold.setAttribute('aria-expanded', String(cardOpen));
+    fold.setAttribute('aria-label', cardOpen ? 'Fold the value path' : 'Unfold the value path');
+    fold.append(icon(cardOpen ? 'chevron-down' : 'chevron-right'));
+    fold.addEventListener('click', () => {
+      cardOpen = !cardOpen;
+      save({ cardOpen });
+      renderCard(card, false);
+    });
+    const title = make('span', 'card-title');
+    title.append(icon('git-merge'), make('strong', '', 'Value path'));
+    head.append(fold, title);
+    if (card.timing) {
+      const time = make('span', 'card-time');
+      time.title = 'How long the analysis took';
+      time.append(icon('clock'), card.timing);
+      head.append(time);
+    }
+    const tool = (name, label, type) => {
+      const b = make('button', 'card-tool');
+      b.type = 'button';
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.append(icon(name));
+      b.addEventListener('click', () => vscode.postMessage({ type }));
+      return b;
+    };
+    head.append(tool('copy', 'Copy as Markdown', 'cardCopy'), tool('link-external', 'Open in the Results view', 'cardResults'));
+    cardBox.append(head);
+    if (!cardOpen) return;
+
+    const summary = make('p', 'card-summary');
+    summary.append(make('code', '', card.subject), `: ${card.summary}.`);
+    cardBox.append(summary);
+    if (card.needs) cardBox.append(make('p', 'card-needs', card.needs));
+    for (const w of card.warnings) cardBox.append(make('p', 'card-warning', w));
+
+    const line = make('ol', 'timeline');
+    for (const v of card.values) {
+      const li = make('li', 'step value');
+      const box = make('button', 'step-card');
+      box.type = 'button';
+      box.disabled = !v.location;
+      if (v.location) box.title = 'Open where this value comes from';
+      const tile = make('span', 'step-tile');
+      tile.append(icon(v.icon === 'symbol-constant' ? 'symbol-constant' : 'symbol-variable'));
+      const text = make('span', 'step-text');
+      const top = make('span', 'step-top');
+      top.append(make('strong', '', v.title), make('span', 'step-badge', v.ways));
+      const when = make('span', 'step-when');
+      if (v.always) when.append(make('span', 'infinity', '∞'), ` ${v.when}`);
+      else when.append(icon('filter'), ` ${v.when}`);
+      text.append(top, when);
+      box.append(tile, text);
+      box.addEventListener('click', () => v.location && vscode.postMessage({ type: 'cardOpen', location: v.location }));
+      li.append(box);
+      line.append(li);
+    }
+    const next = make('li', 'step next');
+    const nextBox = make('button', 'step-card');
+    nextBox.type = 'button';
+    const nextTile = make('span', 'step-tile');
+    nextTile.append(icon('arrow-right'));
+    const nextText = make('span', 'step-text');
+    nextText.append(make('strong', '', 'Next'), make('span', 'step-when', 'Run another analysis here'));
+    nextBox.append(nextTile, nextText, icon('chevron-right'));
+    nextBox.addEventListener('click', () => vscode.postMessage({ type: 'cardNext' }));
+    next.append(nextBox);
+    line.append(next);
+    cardBox.append(line);
+    if (card.impossible) cardBox.append(make('p', 'card-needs', `Left out: ${card.impossible}.`));
+    if (fresh) cardBox.scrollIntoView({ block: 'nearest' });
+  }
+
   window.addEventListener('message', (event) => {
     if (event.data.type === 'cursor') {
       cursorFits = event.data.fits || [];
@@ -629,6 +722,10 @@
     if (event.data.type === 'tab') {
       if (data && data.tabs.some((t) => t.id === event.data.id)) choose(event.data.id, true);
       else tab = event.data.id;
+      return;
+    }
+    if (event.data.type === 'valuePath') {
+      renderCard(event.data.card, true);
       return;
     }
     if (event.data.type === 'active') {
@@ -642,6 +739,8 @@
     if (event.data.type !== 'actions') return;
     data = event.data;
     document.body.classList.toggle('accent-theme', data.accent === 'theme');
+    document.body.classList.toggle('accent-pink', data.accent === 'pink');
+    if (data.card) renderCard(data.card, false);
     if (!data.tabs.some((t) => t.id === tab)) tab = data.tabs[0].id;
     // Keep the focused action focused across the redraw.
     if (!focusAfterRender && list.contains(document.activeElement)) {

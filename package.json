@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.47.0",
+  "version": "0.48.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -3063,15 +3063,17 @@
           "tsStructure.actions.accentColor": {
             "type": "string",
             "enum": [
+              "cyan",
               "pink",
               "theme"
             ],
             "enumDescriptions": [
-              "A pink bar and tint, easy to spot in any theme.",
+              "A cyan bar and glow, easy to spot in any theme.",
+              "A pink bar and tint.",
               "The theme's focus color."
             ],
-            "default": "pink",
-            "markdownDescription": "The color that marks the action whose result is on screen in the **Actions** view (a raised row with a bar on its left, and a dot on its tab)."
+            "default": "cyan",
+            "markdownDescription": "The color that marks the action whose result is on screen in the **Actions** view (a raised row with a bar on its left, and a dot on its tab), and the **Value path** card."
           },
           "tsStructure.warmUp": {
             "type": "boolean",

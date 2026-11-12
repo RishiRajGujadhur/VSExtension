@@ -10,6 +10,8 @@ import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } fro
 import { isFeatureEnabled } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
 import { activeFeature } from './activeFeature';
+import { Report, ReportLocation } from '../structure/report';
+import { ValuePathCard, valuePathCard } from '../structure/valuePathCard';
 
 const usageKey = 'tsStructure.actionUsage';
 const layoutKey = 'tsStructure.actionsLayout';
@@ -80,6 +82,16 @@ export class ActionsView implements vscode.WebviewViewProvider {
   }
 
   private pendingTab: string | undefined;
+  /** The latest Value Path, drawn as a card at the bottom of the view. */
+  private card: ValuePathCard | undefined;
+
+  /** A new result: a Value Path shows as a card here; another kind of result leaves the last card. */
+  showResult(report: Report): void {
+    const card = valuePathCard(report);
+    if (!card) return;
+    this.card = card;
+    void this.view?.webview.postMessage({ type: 'valuePath', card });
+  }
 
   private sendActive(): void {
     void this.view?.webview.postMessage({ type: 'active', active: activeFeature.active, last: activeFeature.last });
@@ -112,7 +124,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
     view.webview.html = html(view.webview, this.extensionUri);
-    view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
+    view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange; location?: unknown }) => {
       if (message.type === 'ready') {
         void this.post().then(() => {
           this.sendCursor();
@@ -135,6 +147,18 @@ export class ActionsView implements vscode.WebviewViewProvider {
         void vscode.window.setStatusBarMessage(`Copied ${message.command}`, 3000);
       } else if (message.type === 'reset') {
         await this.reset();
+      } else if (message.type === 'cardOpen' && isLocation(message.location)) {
+        // A value of the card: its code.
+        const where = message.location;
+        await vscode.window.showTextDocument(vscode.Uri.file(where.file), { selection: new vscode.Range(where.line, where.character, where.endLine, where.endCharacter) });
+      } else if (message.type === 'cardCopy') {
+        await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
+      } else if (message.type === 'cardResults') {
+        await vscode.commands.executeCommand('tsStructure.report.focus');
+      } else if (message.type === 'cardNext') {
+        await vscode.commands.executeCommand('tsStructure.actionsAtCursor');
+      } else if (message.type === 'cardClose') {
+        this.card = undefined;
       }
     });
     view.onDidChangeVisibility(() => view.visible && this.post());
@@ -194,7 +218,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
-    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'pink'), active: activeFeature.active, last: activeFeature.last });
+    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan'), active: activeFeature.active, last: activeFeature.last, card: this.card });
   }
 }
 
@@ -218,7 +242,14 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
 </div>
 <div id="tip-hint" class="hint" hidden></div>
 <div id="list" aria-label="Actions"></div>
+<section id="valuePath" aria-label="Value path" hidden></section>
 <nav id="footer" aria-label="Help and settings"></nav>
 <div id="tip" role="tooltip" hidden></div>
 <div id="menu" role="menu" hidden></div>` });
+}
+
+/** A location sent back by the page, checked before it is opened. */
+function isLocation(value: unknown): value is ReportLocation {
+  const v = value as ReportLocation | undefined;
+  return !!v && typeof v.file === 'string' && [v.line, v.character, v.endLine, v.endCharacter].every((n) => typeof n === 'number');
 }
