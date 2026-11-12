@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { registerCommand } from './features';
 import { welcomeSteps } from '../structure/welcome';
 import { webviewPage, webviewRoots } from './webviewPage';
+import { shortcuts } from '../structure/keys';
 
 const shownKey = 'tsStructure.guideShown';
 const doneKey = 'tsStructure.welcomeDone';
@@ -52,7 +53,9 @@ export function registerGuide(context: vscode.ExtensionContext): void {
     const webview = panel.webview;
     panel.webview.onDidReceiveMessage(async (message: { type: string; command?: string; step?: string }) => {
       if (message.type === 'ready') {
-        const send = page.steps.map((s) => ({ ...s, image: s.image && { ...s.image, src: webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, s.image.file)).toString() } }));
+        // Each step shows the shortcut of its first button, so the keys are learned along the way.
+        const keys = shortcuts(context.extension.packageJSON.contributes?.keybindings ?? []);
+        const send = page.steps.map((s) => ({ ...s, key: s.buttons[0] && keys.get(s.buttons[0].command), image: s.image && { ...s.image, src: webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, s.image.file)).toString() } }));
         void webview.postMessage({ type: 'welcome', title: page.title, description: page.description, steps: send, extra: extraCommands, done: context.globalState.get<string[]>(doneKey) ?? [] });
       } else if (message.type === 'run' && message.command && allowed.has(message.command)) {
         if (message.step) {
@@ -61,6 +64,8 @@ export function registerGuide(context: vscode.ExtensionContext): void {
           await context.globalState.update(doneKey, [...done]);
         }
         await vscode.commands.executeCommand(message.command);
+      } else if (message.type === 'startOver') {
+        await context.globalState.update(doneKey, []);
       } else if (message.type === 'walkthrough') {
         await vscode.commands.executeCommand('workbench.action.openWalkthrough', walkthroughId, false);
       }

@@ -114,6 +114,10 @@
     label.append(marked(action.label, words));
     const detail = make('span', 'detail');
     detail.append(marked(action.detail, words));
+    // Found by its old name: say which, so the new one makes sense.
+    if (inSearch && action.formerly && words.length && words.some((w) => action.formerly.toLowerCase().includes(w)) && !words.every((w) => action.label.toLowerCase().includes(w))) {
+      detail.append(make('span', 'formerly', ` · was ${action.formerly}`));
+    }
     text.append(label, detail);
     if (data.last === action.command && data.active !== action.command) {
       const badge = make('span', 'last-run');
@@ -289,6 +293,8 @@
       button.setAttribute('aria-controls', 'list');
       button.tabIndex = t.id === tab ? 0 : -1;
       button.append(icon(t.icon), document.createTextNode(t.label));
+      const count = data.actions.filter((a) => a.tab === t.id && !(data.layout.hidden || []).includes(a.id)).length;
+      button.title = `${t.label}: ${count} action${count === 1 ? '' : 's'}`;
       // A dot on the tab that has the action whose result is on screen.
       if (data.active && data.actions.some((a) => a.tab === t.id && a.command === data.active)) {
         const dot = make('span', 'tab-dot');
@@ -324,9 +330,17 @@
     if (words.length) {
       // Search covers both tabs, hidden actions too.
       const hits = data.actions.filter((a) => matches(a, words));
-      found.textContent = hits.length ? `${hits.length} action${hits.length === 1 ? '' : 's'} found` : 'No action found';
+      const perTab = data.tabs.map((t) => [t.label, hits.filter((a) => a.tab === t.id).length]).filter(([, n]) => n);
+      found.textContent = hits.length ? `${hits.length} action${hits.length === 1 ? '' : 's'} found${perTab.length > 1 ? `: ${perTab.map(([l, n]) => `${n} in ${l}`).join(', ')}` : ''}` : 'No action found';
       section('search', 'Results', hits, { words, inSearch: true });
-      if (!hits.length) list.append(make('p', 'none', 'No action matches. Try other words, such as "null", "references", "rename" or a key like "F7".'));
+      if (!hits.length) {
+        const none = make('p', 'none', 'No action matches. Try other words, such as "null", "references", "rename" or a key like "F7", or ask in plain words: ');
+        const duck = make('button', 'link', 'Ask the rubber duck…');
+        duck.type = 'button';
+        duck.addEventListener('click', () => vscode.postMessage({ type: 'run', command: 'tsStructure.howDoI' }));
+        none.append(duck);
+        list.append(none);
+      }
       restoreFocus();
       return;
     }
@@ -413,6 +427,11 @@
       const row = make('div', 'fact');
       row.append(make('span', '', 'Used'), make('span', '', runs ? `${runs} time${runs === 1 ? '' : 's'}` : 'not yet'));
       facts.append(row);
+      if (action.formerly) {
+        const was = make('div', 'fact');
+        was.append(make('span', '', 'Formerly'), make('span', '', action.formerly));
+        facts.append(was);
+      }
       if (action.startsFrom) {
         const from = make('div', 'fact');
         from.append(make('span', '', 'Starts from'), make('span', '', action.startsFrom));

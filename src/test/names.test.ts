@@ -33,3 +33,10 @@ test('a renamed action is still found by its old, technical name', () => {
   const flowchart = actionCatalog.find((a) => a.command === 'tsStructure.controlFlow' && a.tab === 'analyze')!;
   assert.match(flowchart.keywords ?? '', /Control Flow Graph/);
 });
+
+test('a renamed action remembers its former name for the info tip', () => {
+  const flowchart = actionCatalog.find((a) => a.command === 'tsStructure.controlFlow' && a.tab === 'analyze')!;
+  assert.equal(flowchart.formerly, 'Control Flow Graph');
+  const usages = actionCatalog.find((a) => a.command === 'tsStructure.semanticUsages')!;
+  assert.equal(usages.formerly, 'Find Usages');
+});

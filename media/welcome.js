@@ -215,6 +215,12 @@
       if (firstCard) setTimeout(() => firstCard.focus({ preventScroll: true }), reducedMotion.matches ? 0 : 800);
     }, true));
     if (first) actions.append(button(first.label, () => run(first.command, data.steps[0].id)));
+    actions.append(button('Next step', () => {
+      const next = [...page.querySelectorAll('.step')].find((c) => !c.classList.contains('done')) || page.querySelector('.step');
+      if (!next) return;
+      next.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'center' });
+      setTimeout(() => next.focus({ preventScroll: true }), reducedMotion.matches ? 0 : 700);
+    }));
     const progress = make('span', 'progress');
     progress.id = 'progress';
     actions.append(progress);
@@ -238,6 +244,11 @@
       const mark = make('span', 'step-done', '[x]');
       mark.setAttribute('aria-hidden', 'true');
       head.append(number, make('h2', 'step-title', step.title), mark);
+      if (step.key) {
+        const key = make('kbd', 'step-key', step.key);
+        key.title = `${step.buttons[0].label} has this shortcut`;
+        head.append(key);
+      }
       const text = make('p', 'step-text');
       for (const piece of step.text) text.append(piece.bold ? make('strong', '', piece.text) : piece.text);
       const buttons = make('div', 'step-buttons');
@@ -266,7 +277,19 @@
 
   function updateProgress(total) {
     const progress = document.getElementById('progress');
-    if (progress) progress.textContent = done.size ? `${done.size}/${total} steps tried` : `${total} short steps`;
+    if (!progress) return;
+    progress.textContent = done.size >= total ? `All ${total} steps tried. You know your way around.` : done.size ? `${done.size}/${total} steps tried` : `${total} short steps`;
+    if (done.size) {
+      const again = make('button', 'link-button', 'Start over');
+      again.type = 'button';
+      again.addEventListener('click', () => {
+        done = new Set();
+        page.querySelectorAll('.step.done').forEach((c) => c.classList.remove('done'));
+        vscode.postMessage({ type: 'startOver' });
+        updateProgress(total);
+      });
+      progress.append(' ', again);
+    }
   }
 
   function run(command, step) {
@@ -305,6 +328,14 @@
     clearTimeout(note.timer);
     note.timer = setTimeout(() => note.classList.remove('shown'), 2600);
     window.dispatchEvent(new Event('resize'));
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || (e.target.closest && e.target.closest('input, textarea'))) return;
+    const card = page.querySelectorAll('.step')[Number(e.key) - 1];
+    if (!card) return;
+    card.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'center' });
+    card.focus({ preventScroll: true });
   });
 
   window.addEventListener('message', (event) => {

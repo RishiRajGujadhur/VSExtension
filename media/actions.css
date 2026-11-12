@@ -152,3 +152,8 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
   .item.active-feature { border-color: Highlight; }
   .item.active-feature::before, .tab-dot { background: Highlight; }
 }
+
+/* "was Control Flow Graph" after a hit found by its old name, and the rubber duck link. */
+.detail .formerly { color: var(--vscode-descriptionForeground); font-style: italic; }
+.none .link { padding: 0; border: 0; background: none; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; }
+.none .link:hover { text-decoration: underline; }

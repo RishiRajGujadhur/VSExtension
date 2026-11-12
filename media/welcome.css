@@ -74,3 +74,7 @@ main { position: relative; z-index: 1; }
 .note { position: fixed; left: 50%; bottom: 24px; z-index: 3; transform: translateX(-50%); padding: 6px 12px; border: 1px solid var(--line); background: #0a0a0a;
   color: var(--teal); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .note.shown { opacity: 1; }
+
+/* A step's shortcut, and the Start over link beside the progress. */
+.step-key { flex: none; padding: 1px 6px; border: 1px solid var(--line); color: var(--ink-soft); font: inherit; font-size: 11px; }
+.progress .link-button { min-height: 0; padding: 0; font-size: 12px; color: var(--ink-soft); text-decoration: underline; }

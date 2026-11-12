@@ -22,6 +22,8 @@ export interface CatalogAction {
   keywords?: string;
   /** The icon, when the command has none of its own in commandIcons. */
   icon?: string;
+  /** What it was called before the plain names, so people who knew it can find it. */
+  formerly?: string;
 }
 
 export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string }[] = [
@@ -52,6 +54,7 @@ const g = (category: string, command: string, label: string, detail: string, inf
   info,
   // The old, technical name still finds it.
   keywords: `graph chart diagram ${label} ${keywords ?? ''}`.trim(),
+  formerly: nameOf(command, label) !== label ? label : undefined,
   ...graphFacts[command],
 });
 
@@ -144,6 +147,7 @@ const a = (tab: CatalogAction['tab'], category: string, command: string, label: 
   info,
   // The old, technical name still finds it.
   keywords: `${label.replace(/…$/, '')} ${keywords ?? ''}`.trim(),
+  formerly: nameOf(command, label) !== label ? label.replace(/…$/, '') : undefined,
   icon,
 });
 

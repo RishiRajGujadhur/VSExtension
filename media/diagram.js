@@ -675,7 +675,7 @@
   function menuItems(node) {
     const items = [];
     if (node.location) {
-      items.push({ icon: 'go-to-file', label: 'Open Code', run: () => vscode.postMessage({ type: 'open', location: node.location }) });
+      items.push({ icon: 'go-to-file', label: 'Open code', run: () => vscode.postMessage({ type: 'open', location: node.location }) });
       const main = analyses.filter((a) => !a.more);
       const more = analyses.filter((a) => a.more);
       if (main.length) items.push('-', ...main.map((a) => ({ icon: a.icon, label: a.label, run: () => vscode.postMessage({ type: 'analyze', command: a.command, location: node.location }) })));
@@ -697,6 +697,7 @@
     }
     items.push('-', { icon: 'copy', label: 'Copy text', run: () => vscode.postMessage({ type: 'copy', text: [node.label, node.description].filter(Boolean).join(' · ') }) });
     if (node.location) items.push({ icon: 'location', label: 'Copy location', run: () => vscode.postMessage({ type: 'copy', text: `${node.location.file}:${node.location.line + 1}:${node.location.character + 1}` }) });
+    if (node !== diagram.center) items.push({ icon: 'arrow-right', label: 'Copy the way here', run: () => vscode.postMessage({ type: 'copy', text: wayHere(node) }) });
     return items;
   }
   function backgroundMenu() {
@@ -711,11 +712,41 @@
       { icon: 'play-circle', label: 'Animate every flow', run: () => { flowing = diagram.center; drawFlows(); } },
       { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
       '-',
+      ...(warnings().length ? [{ icon: 'warning', label: `Next warning (${warnings().length})`, run: nextWarning }] : []),
+      { icon: 'list-tree', label: 'Copy as an outline', run: () => vscode.postMessage({ type: 'copy', text: outlineText() }) },
+      { icon: 'location', label: 'Copy all locations', run: () => vscode.postMessage({ type: 'copy', text: allNodes().filter((n) => n.location).map((n) => `${n.location.file}:${n.location.line + 1}  ${n.label}`).join('\n') }) },
       { icon: 'markdown', label: 'Copy as Mermaid', run: copyMermaid },
       { icon: 'save', label: 'Save as SVG', run: saveSvg },
       { icon: 'file-media', label: 'Save as PNG', run: savePng },
     ];
   }
+  // The boxes that need a look, in reading order, and stepping through them.
+  const warnings = () => allNodes().filter((n) => n.tone === 'warning' || n.tone === 'error');
+  let warningAt = -1;
+  function nextWarning() {
+    const list = warnings();
+    if (!list.length) return;
+    warningAt = (warningAt + 1) % list.length;
+    const node = list[warningAt];
+    centerOn(node);
+    if (node.el) node.el.focus({ preventScroll: true });
+  }
+  // The chart as an indented outline: the subject, then each side with its boxes.
+  function outlineText() {
+    const lines = [diagram.center.label + (diagram.center.description ? ` (${diagram.center.description})` : '')];
+    const walk = (nodes, depth) => nodes.forEach((n) => {
+      lines.push(`${'  '.repeat(depth)}- ${n.label}${n.description ? ` · ${n.description}` : ''}${n.location ? ` (${n.location.file.split(/[\\/]/).pop()}:${n.location.line + 1})` : ''}`);
+      walk(n.children || [], depth + 1);
+    });
+    if (diagram.left.length) { lines.push('In:'); walk(diagram.left, 1); }
+    if (diagram.right.length) { lines.push('Out:'); walk(diagram.right, 1); }
+    return lines.join('\n');
+  }
+  const wayHere = (node) => {
+    const way = [];
+    for (let p = node; p && p !== diagram.center; p = p.parent) way.unshift(p.label);
+    return [diagram.center.label, ...way].join(' → ');
+  };
   const menu = window.chartKit.menu(boxMenu);
   function openMenu(node, x, y) {
     menuFor = node;
@@ -727,7 +758,10 @@
     const node = boxOf(e.target);
     e.preventDefault();
     if (node) openMenu(node, e.clientX, e.clientY);
-    else if (diagram) menu.open(backgroundMenu(), e.clientX, e.clientY, svg);
+    else if (diagram) {
+      const files = new Set(allNodes().filter((n) => n.location).map((n) => n.location.file)).size;
+      menu.open(backgroundMenu(), e.clientX, e.clientY, svg, `${diagram.center.label} · ${allNodes().length - 1} boxes${files ? ` · ${files} file${files === 1 ? '' : 's'}` : ''}${warnings().length ? ` · ${warnings().length} to look at` : ''}`);
+    }
   });
   // Double-clicking the background fits the chart; arrow keys pan it while the background has the focus.
   svg.addEventListener('dblclick', (e) => {
