@@ -342,6 +342,22 @@
     pinsBar.appendChild(button);
   }
 
+  // The slice's boxes in line order: their lines, stepping from one to the next, and the slice as text.
+  const sliceBoxes = () => (slice ? slice.nodes.map((id) => chart.nodes[id]).filter((n) => n && !isTerminal(n)).sort((a, b) => (lineOf(a) || 0) - (lineOf(b) || 0)) : []);
+  const sliceLines = () => [...new Set(sliceBoxes().map(lineOf).filter(Boolean))];
+  function stepSlice(from, direction) {
+    const boxes = sliceBoxes();
+    if (!boxes.length) return;
+    const at = boxes.indexOf(from);
+    const next = boxes[at < 0 ? 0 : (at + direction + boxes.length) % boxes.length];
+    focus(next);
+    ensureVisible(next);
+  }
+  function sliceText() {
+    const head = slice.direction === 'backward' ? `What feeds ${slice.name} at line ${slice.line} in ${chart.name}()` : `What ${slice.name} feeds from line ${slice.line} in ${chart.name}()`;
+    return [head, ...sliceBoxes().map((n) => `${String(lineOf(n)).padStart(4)}  ${n.text.split('\n').join('\n      ')}`)].join('\n');
+  }
+
   function renderList() {
     list.textContent = '';
     if (!chart) return;
@@ -351,7 +367,10 @@
     summary.textContent = `${possible} possible path${possible === 1 ? '' : 's'}${chart.paths.length > possible ? `, ${chart.paths.length - possible} impossible` : ''}${chart.truncated ? ' (first ' + chart.paths.length + ' shown)' : ''}${unreachable ? `, ${unreachable} unreachable box${unreachable === 1 ? '' : 'es'}` : ''}`;
     pinsBar.textContent = '';
     if (slice) {
-      chip(`${slice.direction === 'backward' ? '← What affects' : '→ What is affected by'} ${slice.name} (line ${slice.line}): ${slice.nodes.length} boxes`, 'Clear the slice', () => { slice = undefined; renderList(); highlight(); }, 'slice');
+      const others = slice.nodes.filter((id) => id !== slice.at);
+      const what = slice.direction === 'backward' ? `← What feeds ${slice.name}` : `→ What ${slice.name} feeds`;
+      const count = others.length ? `${others.length} other box${others.length === 1 ? '' : 'es'}` : slice.direction === 'backward' ? 'nothing before it: it gets its value here' : 'nothing after it uses it';
+      chip(`${what} (line ${slice.line}): ${count}`, `${sliceLines().length ? `Lines ${sliceLines().join(', ')}. ` : ''}N and Shift+N step through it. Click to clear the slice.`, () => { slice = undefined; renderList(); highlight(); }, 'slice');
     }
     for (const e of pins) {
       const edge = chart.edges[e];
@@ -691,6 +710,10 @@
       const when = deps.control.filter((c) => c.to === n.id).map((c) => chart.nodes[c.from]);
       if (when.length) content.facts.push(['Runs when', when.map((d) => `${d.lines[0]}${branchesTo(d, n)} (${lineText(d)})`).join('; ')]);
     }
+    if (slice && slice.nodes.includes(n.id)) {
+      content.facts.push(['Slice', n.id === slice.at ? `where ${slice.name} is looked at` : slice.direction === 'backward' ? `feeds ${slice.name} at line ${slice.line}` : `fed by ${slice.name} from line ${slice.line}`]);
+      content.keys.push(['N', 'next in slice']);
+    }
     if (n.calls && n.calls.length) content.facts.push(['Calls', [...new Set(n.calls.map((c) => `${c.name}()`))].join(', ')]);
     if (n.location) content.keys.push(['Enter', 'open']);
     content.keys.push(['F', 'animate'], ['T', 'filter']);
@@ -862,6 +885,9 @@
       e.preventDefault();
       e.stopPropagation();
       showDependencesOf(n);
+    } else if ((e.key === 'n' || e.key === 'N') && slice) {
+      e.preventDefault();
+      stepSlice(n, e.shiftKey ? -1 : 1);
     } else if (e.key === 't' || e.key === 'T') {
       e.preventDefault();
       toggleThrough(n);
@@ -943,6 +969,7 @@
       '-',
       ...(folded.length ? [{ icon: 'unfold', label: `Expand all calls (${folded.length})`, run: () => vscode.postMessage({ type: 'expand', keys: folded, expand: true }) }] : []),
       ...(unfolded.length ? [{ icon: 'fold', label: 'Fold all calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
+      ...(slice ? [{ icon: 'copy', label: `Copy the slice (${slice.nodes.length} boxes)`, run: () => vscode.postMessage({ type: 'copy', text: sliceText() }) }] : []),
       { icon: 'list-tree', label: panel.hidden ? 'Show path list' : 'Hide path list', keys: 'P', run: () => togglePanel(panel.hidden) },
       { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
       { icon: 'references', label: showDeps ? 'Hide what depends on what' : 'Show what depends on what', keys: 'D', run: () => toggleDependences() },

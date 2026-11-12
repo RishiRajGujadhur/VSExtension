@@ -338,7 +338,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   <ul class="keys">
     <li><kbd>Tab</kbd> a box, <kbd>↑</kbd><kbd>↓</kbd> follow the flow, <kbd>←</kbd><kbd>→</kbd> the same row</li>
     <li><kbd>Enter</kbd> open its code, <kbd>Shift+F10</kbd> its menu, <kbd>F</kbd> animate its paths</li>
-    <li><kbd>Ctrl+F</kbd> find, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>0</kbd> fit, <kbd>C</kbd> cursor box, <kbd>P</kbd> paths, <kbd>D</kbd> dependences, <kbd>M</kbd> minimap, <kbd>Esc</kbd> clear</li>
+    <li><kbd>Ctrl+F</kbd> find, <kbd>+</kbd> <kbd>−</kbd> zoom, <kbd>0</kbd> fit, <kbd>C</kbd> cursor box, <kbd>P</kbd> paths, <kbd>D</kbd> dependences, <kbd>N</kbd> next box of a slice, <kbd>M</kbd> minimap, <kbd>Esc</kbd> clear</li>
   </ul>
 </aside>`,
   });

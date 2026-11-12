@@ -269,6 +269,164 @@ Object.assign(polishers, {
   },
 });
 
+/** A literal or a freshly built object: a value written into the code, not one computed from elsewhere. */
+const isLiteral = (text: string) => /^(['"`].*['"`]|-?\d[\d_.]*n?|true|false|null|undefined|new [A-Z]\w*\(.*\)|\[.*\]|\{.*\})$/.test(text.trim());
+/** The kind of change a write makes, from its code. */
+const writeKind = (code: string) => (/(\+\+|--)/.test(code) ? 'increment' : /[-+*/%&|^]=|\?\?=|&&=|\|\|=/.test(code) ? 'compound assignment' : /\.(push|pop|shift|unshift|splice|sort|reverse|set|delete|add|clear)\(/.test(code) ? 'changed in place' : 'assignment');
+
+Object.assign(polishers, {
+  // Data Flow, more: call sites counted, literal values and values set at import time marked, the type and reach.
+  dataFlow: ((base: Polish) => (report: Report) => {
+    base(report);
+    const incoming = forEachFind(report.roots, (n) => n.label === 'Incoming values from call sites');
+    if (incoming?.children?.length) {
+      const callFiles = new Set(incoming.children.map((c) => c.description?.split(' · ').pop()).filter(Boolean)).size;
+      append(incoming, `${plural(incoming.children.length, 'call site')}${callFiles > 1 ? ` in ${plural(callFiles, 'file')}` : ''}`);
+      for (const c of incoming.children) {
+        if (isLiteral(c.label)) append(c, 'literal value');
+        if (/^module scope\b/.test(c.description ?? '')) append(c, 'set when the module loads');
+      }
+    }
+    // The type of the value, from the row at the cursor ("line 18 · PaymentMethod · at cursor").
+    const atCursor = forEachFind(report.roots, (n) => /(^| · )at cursor$/.test(n.description ?? ''));
+    const type = atCursor?.description?.split(' · ').slice(-2, -1)[0];
+    if (type && !/^line \d+$/.test(type) && report.description && !report.description.includes(' type ')) report.description += `, type ${type}`;
+    // How far the value travels: the functions it is read or passed on in.
+    const out = root(report, 'Flows out');
+    const reached = new Set<string>();
+    forEachReportNode(out?.children ?? [], (n) => {
+      const fn = (n.description ?? '').split(' · ').find((part) => part && !/^line \d+$|\.[cm]?[jt]sx?$|^then |^\d+ /.test(part));
+      if (fn && fn !== 'module scope') reached.add(fn);
+    });
+    if (out && reached.size > 1) append(out, `reaches ${plural(reached.size, 'function')}`);
+  })(polishers.dataFlow),
+
+  // Explain Value Path: conditions every value needs lifted out, branches in words, the simplest and commonest marked.
+  explainValue(report: Report) {
+    const values = report.roots.filter((r) => /^= /.test(r.label));
+    if (!values.length) return;
+    const conditionsOf = (v: ReportNode) => (v.children ?? []).flatMap((way) => way.children ?? []);
+    // A branch label in words: "yes" is "the yes branch"; "case 'admin'" stays.
+    for (const v of values) for (const c of conditionsOf(v)) {
+      if (c.description === 'yes' || c.description === 'no') c.description = `the ${c.description} branch`;
+    }
+    const ways = (v: ReportNode) => v.children?.length ?? 0;
+    const counts = values.map((v) => Math.max(0, ...(v.children ?? []).map((w) => w.children?.length ?? 0)));
+    for (const v of values) if (!conditionsOf(v).length) append(v, 'no condition: always, unless changed later');
+    const most = Math.max(...values.map(ways));
+    if (values.length > 1 && most > 1 && values.filter((v) => ways(v) === most).length === 1) append(values.find((v) => ways(v) === most)!, 'the most ways lead here');
+    // A condition on every way to every value is needed for the variable to be set here at all.
+    const everyWay = values.flatMap((v) => v.children ?? []);
+    const shared = everyWay.length > 1 ? (everyWay[0].children ?? []).map((c) => c.label).filter((label) => everyWay.every((w) => (w.children ?? []).some((c) => c.label === label))) : [];
+    if (shared.length && values.length > 1) report.roots.unshift({ label: `Every value needs ${shared.join(' and ')}`, description: 'true for all of them; the values differ only in the other conditions', icon: 'filter', tone: 'info' });
+    const deepest = Math.max(...counts);
+    if (deepest > 1 && report.description && !report.description.includes('condition')) report.description += `, up to ${plural(deepest, 'condition')} each`;
+  },
+
+  // Nullability, more: a clear "safe" result, how many ways it can be missing, tests marked, null and undefined, tips.
+  nullability: ((base: Polish) => (report: Report) => {
+    base(report);
+    const uses = root(report, 'Uses');
+    markTests(uses?.children);
+    const unsafe = (uses?.children ?? []).filter((n) => n.tone === 'warning' || n.tone === 'error');
+    if (uses?.children?.length && !unsafe.length && !report.roots.some((r) => r.label === 'Every use is safe')) {
+      report.roots.splice(1, 0, { label: 'Every use is safe', description: 'each one is checked first, or reads through ?. or ??', icon: 'pass', tone: 'ok' });
+    }
+    const paths = root(report, /^Paths that produce/);
+    if (paths?.children?.length) append(paths, plural(paths.children.length, 'way'));
+    const subject = report.roots[0]?.label ?? '';
+    if (/\bnull\b/.test(subject) && /\bundefined\b/.test(subject)) append(report.roots[0], 'null and undefined: != null checks both');
+    // The tips: folded when nothing is unsafe; ?. first when an unsafe use reads a property.
+    const tips = root(report, 'How to fix');
+    if (tips?.children) {
+      if (!unsafe.length) tips.expanded = false;
+      else if (unsafe.some((u) => /\.\w/.test(u.label))) tips.children.sort((a, b) => Number(/\?\./.test(b.label)) - Number(/\?\./.test(a.label)));
+    }
+  })(polishers.nullability),
+
+  // Mutations of a variable: what kind of change each write is, "could be const", writers counted, tests marked.
+  variableMutations(report: Report) {
+    const groups = report.roots.filter((r) => r.children?.length && r.label !== 'Possible race conditions' && !/^How to fix/.test(r.label));
+    let writers = 0;
+    let async = 0;
+    let changes = 0;
+    for (const g of groups) {
+      if (g.label === 'module scope' && g.children?.every((c) => /initial value/.test(c.description ?? ''))) {
+        g.expanded = false;
+        continue;
+      }
+      const writes = (g.children ?? []).filter((c) => !/initial value/.test(c.description ?? ''));
+      if (!writes.length) continue;
+      writers++;
+      if (/\basync\b|runs from/.test(g.description ?? '')) async++;
+      for (const w of writes) {
+        changes++;
+        append(w, writeKind(w.label));
+      }
+      markTests(writes);
+    }
+    if (!changes && report.roots[0]) {
+      report.roots.splice(1, 0, { label: 'Never changes after it starts', description: 'nothing writes to it: it could be const', icon: 'lightbulb', tone: 'info' });
+    }
+    if (writers > 1 && report.description && !report.description.includes('async')) report.description += async ? `, ${async} of ${writers} writers async` : `, ${writers} writers`;
+  },
+
+  // Race conditions: a clear "none found", x++ as one step, lost updates first, async writers counted, tests marked.
+  races(report: Report) {
+    const found = root(report, 'Possible race conditions');
+    if (!found) {
+      report.roots.splice(1, 0, { label: 'No race found', description: 'no await falls between reading and writing it, and at most one async writer', icon: 'pass', tone: 'ok' });
+    } else {
+      const rank = (n: ReportNode) => (/^Lost update/.test(n.label) ? 0 : 1);
+      found.children?.sort((a, b) => rank(a) - rank(b));
+    }
+    const users = root(report, 'Who uses it, in order');
+    for (const fn of users?.children ?? []) {
+      for (const use of fn.children ?? []) {
+        if (/(\+\+|--)/.test(use.label) && /write/.test(use.description ?? '')) append(use, 'read and write in one step: nothing can run in between');
+      }
+      markTests(fn.children);
+    }
+    const asyncWriters = (users?.children ?? []).filter((f) => /\basync\b|runs from/.test(f.description ?? '') && (f.children ?? []).some((c) => /write/.test(c.description ?? ''))).length;
+    if (asyncWriters && report.description && !report.description.includes('writer')) report.description += `, ${plural(asyncWriters, 'async writer')}`;
+  },
+
+  // React state: state never set or never read, refs read while rendering, unused props, missing dependencies first.
+  reactState(report: Report) {
+    const group = (label: string) => root(report, new RegExp(`^${label}\\b`));
+    const reads = (n: ReportNode) => (n.children ?? []).some((c) => /^(read|triggers|recomputed)/.test(c.label));
+    for (const s of group('State')?.children ?? []) {
+      if (!(s.children ?? []).some((c) => /^set in/.test(c.label))) append(s, 'never set: a constant or a prop would do');
+      if (!reads(s)) {
+        append(s, 'set but never read: it may not need to be state');
+        s.tone = s.tone ?? 'info';
+      }
+    }
+    for (const r of group('Refs')?.children ?? []) {
+      if ((r.children ?? []).some((c) => /^read in rendered/.test(c.label))) {
+        append(r, 'read while rendering: changing it does not re-render');
+        r.tone = 'warning';
+      }
+    }
+    for (const p of group('Props')?.children ?? []) if (!p.children?.length) append(p, 'not used');
+    for (const m of group('Memoized')?.children ?? []) if (!(m.children ?? []).some((c) => /^read/.test(c.label))) append(m, 'never read');
+    const effects = group('Effects');
+    if (effects?.children) {
+      const missing = (e: ReportNode) => (e.children ?? []).filter((c) => /missing from the dependencies/.test(c.label)).length;
+      effects.children.sort((a, b) => missing(b) - missing(a));
+      const total = effects.children.reduce((n, e) => n + missing(e), 0);
+      if (total && report.description && !report.description.includes('missing')) report.description += `, ${plural(total, 'missing dependency', 'missing dependencies')}`;
+    }
+  },
+});
+
+/** The first row, at any depth, that matches. */
+function forEachFind(nodes: readonly ReportNode[], test: (n: ReportNode) => boolean): ReportNode | undefined {
+  let found: ReportNode | undefined;
+  forEachReportNode(nodes, (n) => { if (!found && test(n)) found = n; });
+  return found;
+}
+
 /** Applies the finishing touches for the report's kind; a report polished twice is unchanged. */
 export function polishReport(report: Report): Report {
   if (report.polished) return report;
