@@ -36,7 +36,7 @@
 .toggle { cursor: pointer; }
 .toggle circle { fill: var(--vscode-badge-background, #4d4d4d); stroke: var(--vscode-editor-background); stroke-width: 2; }
 .toggle text { fill: var(--vscode-badge-foreground, #fff); font-size: 10px; font-weight: 600; }
-.side { fill: var(--vscode-descriptionForeground); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.side { fill: var(--vscode-descriptionForeground); font-size: 12px; font-weight: 500; }
 
 /* Find */
 #search { width: 180px; min-height: 22px; padding: 2px 6px; box-sizing: border-box; border: 1px solid var(--vscode-input-border, transparent); border-radius: 2px;
@@ -65,7 +65,7 @@ body { position: relative; }
 #legend { position: absolute; top: 44px; right: 12px; z-index: 2; max-width: 360px; padding: 8px 14px; border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, #454545)); border-radius: 4px;
   background: var(--vscode-editorWidget-background, #252526); box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); font-size: 12px; }
 #legend[hidden] { display: none; }
-#legend h2 { margin: 6px 0 4px; font-size: 12px; font-weight: 600; }
+#legend h2 { margin: 6px 0 4px; font-size: 12px; font-weight: 500; }
 #legend ul { margin: 0 0 6px; padding: 0; list-style: none; }
 #legend li { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 #legend .swatch { flex: none; width: 18px; height: 12px; border-radius: 3px; border: 2px solid var(--vscode-editorWidget-border, #454545); box-sizing: border-box; }

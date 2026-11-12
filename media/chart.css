@@ -63,7 +63,7 @@ header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgb
 #boxMenu .menu-label { flex: 1; }
 #boxMenu .menu-keys { margin-left: 16px; color: var(--vscode-descriptionForeground); font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; }
 #boxMenu .separator { height: 1px; margin: 4px 0; background: var(--vscode-menu-separatorBackground, var(--vscode-widget-border, #454545)); }
-#boxMenu .menu-heading { padding: 4px 14px 2px; color: var(--vscode-descriptionForeground); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+#boxMenu .menu-heading { padding: 4px 14px 2px; color: var(--vscode-descriptionForeground); font-size: 11px; }
 #minimap .mini.decision { fill: var(--vscode-charts-yellow, #cca700); }
 #minimap .mini.loop { fill: var(--vscode-charts-purple, #b180d7); }
 #minimap .mini.terminal { fill: var(--vscode-button-background, #0e639c); opacity: 1; }
@@ -169,3 +169,17 @@ svg.low-detail .node .code, svg.low-detail .node .fold-chip, svg.low-detail .nod
 .menu-empty { padding: 6px 14px; color: var(--vscode-descriptionForeground); }
 .menu-empty[hidden], .menu-footer[hidden] { display: none; }
 .menu-footer { margin-top: 4px; padding: 6px 12px 3px; border-top: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-widget-border, #454545)); color: var(--vscode-descriptionForeground); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* A note that fades by itself (chartKit.toast). */
+.kit-toast { position: fixed; left: 50%; bottom: 44px; z-index: 7; transform: translate(-50%, 8px); padding: 6px 12px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .35)); border-radius: 6px;
+  background: var(--vscode-editorWidget-background, #252526); color: var(--vscode-foreground); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.kit-toast.shown { opacity: 1; transform: translate(-50%, 0); }
+
+/* X-ray vision: an Easter egg. Type xray on a chart. */
+body.xray-vision { background: #020607; }
+body.xray-vision .node rect, body.xray-vision .node path, body.xray-vision .node circle, body.xray-vision .node polygon { fill: rgba(47, 212, 201, .04) !important; stroke: #2fd4c9 !important; }
+body.xray-vision .nodes { filter: drop-shadow(0 0 6px rgba(47, 212, 201, .55)); }
+body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !important; }
+@media (prefers-reduced-motion: reduce) {
+  .kit-toast { transition: none; }
+}

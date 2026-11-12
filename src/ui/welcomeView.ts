@@ -9,9 +9,9 @@ const doneKey = 'tsStructure.welcomeDone';
 
 /** Links under the steps, besides the steps' own buttons. */
 const extraCommands = [
-  { label: 'How Do I…?', command: 'tsStructure.howDoI', icon: 'question' },
-  { label: 'Shortcuts', command: 'tsStructure.shortcutSheet', icon: 'keyboard' },
-  { label: 'Open the Actions View', command: 'tsStructure.actions.focus', icon: 'layout-sidebar-left' },
+  { label: 'Ask the rubber duck…', command: 'tsStructure.howDoI', icon: 'question' },
+  { label: 'Cheat codes', command: 'tsStructure.shortcutSheet', icon: 'keyboard' },
+  { label: 'Open the Actions view', command: 'tsStructure.actions.focus', icon: 'layout-sidebar-left' },
 ];
 
 /**

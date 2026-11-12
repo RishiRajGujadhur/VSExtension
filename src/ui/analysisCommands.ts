@@ -363,11 +363,11 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const scope = await chooseScope(
         {
           id: 'limitResults',
-          title: 'Limit Results to Scope',
+          title: 'Limit results to scope',
           alwaysAsk: true,
           kinds: [...fineScopes],
           editor,
-          labels: { project: { label: '$(clear-all) All Results', description: 'Show every row again' } },
+          labels: { project: { label: '$(clear-all) All results', description: 'Show every row again' } },
         },
         arg,
       );
@@ -621,10 +621,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const scope = await chooseScope(
         {
           id: 'duplicates',
-          title: 'Find Structural Duplicates',
+          title: 'Find structural duplicates',
           kinds: ['selection', ...projectScopes],
           editor,
-          labels: { selection: { label: '$(selection) Copies of the Selection', description: 'Every place with the same structure as the selected statements' } },
+          labels: { selection: { label: '$(selection) Copies of the selection', description: 'Every place with the same structure as the selected statements' } },
         },
         scopeArg,
       );
@@ -802,7 +802,7 @@ async function changeControls(view: StructureView, id?: string, value?: unknown)
   if (!report || !controls.length) return;
   let control = controls.find((c) => c.id === id);
   if (!control) {
-    const picked = controls.length === 1 ? controls[0] : (await vscode.window.showQuickPick(controls.map((c) => ({ label: c.label, description: String(c.choices?.find((x) => x.id === c.value)?.label ?? c.value), detail: c.description, control: c })), { title: 'Change the Graph' }))?.control;
+    const picked = controls.length === 1 ? controls[0] : (await vscode.window.showQuickPick(controls.map((c) => ({ label: c.label, description: String(c.choices?.find((x) => x.id === c.value)?.label ?? c.value), detail: c.description, control: c })), { title: 'Change the graph' }))?.control;
     if (!picked) return;
     control = picked;
   }

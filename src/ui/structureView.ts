@@ -205,9 +205,9 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       })
       .reverse();
     // Each entry's trash button removes it from the history.
-    const remove: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Remove from History' };
+    const remove: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Remove from history' };
     const picker = vscode.window.createQuickPick<(typeof items)[number]>();
-    picker.title = 'Analysis History';
+    picker.title = 'Analysis history';
     picker.placeholder = 'Show an earlier report';
     picker.matchOnDescription = picker.matchOnDetail = true;
     picker.items = items.map((i) => ({ ...i, buttons: [remove] }));
@@ -253,7 +253,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
   }
 
   async setFilter(): Promise<void> {
-    const value = await vscode.window.showInputBox({ title: 'Filter Analysis Results', value: this.filter, placeHolder: 'Text in a row label or description, or file:name for rows in matching files; empty to clear' });
+    const value = await vscode.window.showInputBox({ title: 'Filter analysis results', value: this.filter, placeHolder: 'Text in a row label or description, or file:name for rows in matching files; empty to clear' });
     if (value !== undefined) {
       this.filter = value;
       this.render(true);
@@ -285,7 +285,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       (
         await vscode.window.showQuickPick(
           groups.map((label) => ({ label, picked: !this.hidden.has(label) })),
-          { title: 'Show Groups', canPickMany: true, placeHolder: 'Groups to show in the report' },
+          { title: 'Show groups', canPickMany: true, placeHolder: 'Groups to show in the report' },
         )
       )?.map((item) => item.label);
     if (chosen) {
@@ -469,7 +469,7 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
       // A Next row runs its analysis when clicked.
       item.command = { command: 'tsStructure.report.follow', title: 'Run', arguments: [node] };
     } else if (node.action?.kind === 'explain') {
-      item.command = { command: 'tsStructure.report.about', title: 'About This Analysis' };
+      item.command = { command: 'tsStructure.report.about', title: 'About this analysis' };
     }
     const done = this.done.get(rowKey(node));
     if (done) {

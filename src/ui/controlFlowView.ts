@@ -13,7 +13,7 @@ import { ReportLocation } from '../structure/report';
 import { activeFeature } from './activeFeature';
 
 /**
- * The Control Flow view: a function's flowchart in an editor tab, with the Path Explorer beside it. It redraws as
+ * The Control Flow view: a function's flowchart in an editor tab, with its paths listed beside it. It redraws as
  * the function is edited, outlines the box the editor's cursor is in, and opens the code of a clicked box.
  */
 export class ControlFlowPanel {
@@ -257,7 +257,7 @@ async function openBeside(location: ReportLocation): Promise<void> {
 function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   const button = iconButton;
   return webviewPage(webview, extensionUri, {
-    title: 'Control Flow',
+    title: 'Control flow',
     images: true,
     styles: ['chart.css', 'controlFlow.css'],
     scripts: ['diagramGrid.js', 'chartKit.js', 'controlFlow.js'],
@@ -287,7 +287,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   </span>
   ${button('otherGraphs', 'graph-scatter', 'Other Graphs of This Function: draw it another way (G)')}
   ${button('deps', 'references', 'Dependences: the program dependence graph, where each value comes from and what controls each box (D)', 'aria-pressed="false"')}
-  ${button('togglePaths', 'list-tree', 'Path Explorer: the paths through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
+  ${button('togglePaths', 'list-tree', 'Paths: every way through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
   ${button('legendButton', 'question', 'Legend: what the shapes, colors and keys mean', 'aria-expanded="false" aria-controls="legend"')}
 </header>
 <p id="empty">Put the cursor in a function and run <strong>Control Flow Graph</strong> (Ctrl+Alt+S 1) to draw it here.</p>
@@ -302,8 +302,8 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
 <svg id="minimap" class="off" aria-hidden="true"><g class="mini-scene"></g><rect id="miniView"/></svg>
 <div id="info" role="status" aria-live="polite"></div>
 </div>
-<aside id="explorer" aria-label="Path Explorer">
-  <h2>Path Explorer</h2>
+<aside id="explorer" aria-label="Paths">
+  <h2>Paths</h2>
   <div id="pathSummary" role="status"></div>
   <p class="hint">Pick a path to light up its route, Shift+click another to compare them, or click a branch label (yes, no, case…) to keep only the paths through it.</p>
   <div class="options">

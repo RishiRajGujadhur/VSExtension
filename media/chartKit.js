@@ -821,5 +821,44 @@
     return api;
   }
 
-  window.chartKit = { el, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  /**
+   * A small note at the bottom of a chart page that fades by itself (and is read out by screen readers).
+   */
+  function toast(text) {
+    let note = document.getElementById('kitToast');
+    if (!note) {
+      note = document.createElement('div');
+      note.id = 'kitToast';
+      note.className = 'kit-toast';
+      note.setAttribute('role', 'status');
+      document.body.appendChild(note);
+    }
+    note.textContent = text;
+    note.classList.add('shown');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => note.classList.remove('shown'), 2600);
+  }
+
+  /**
+   * Not in any menu: typing x, r, a, y on a chart (outside a text field) turns on X-ray vision, the boxes as glowing
+   * outlines on black, the way the extension's name promises. Typing it again turns it off.
+   */
+  (function xrayVision() {
+    const word = 'xray';
+    let typed = '';
+    let last = 0;
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) return;
+      const now = performance.now();
+      typed = (now - last < 1500 ? typed : '') + e.key.toLowerCase();
+      last = now;
+      if (!word.startsWith(typed)) typed = e.key.toLowerCase() === word[0] ? word[0] : '';
+      if (typed !== word) return;
+      typed = '';
+      const on = document.body.classList.toggle('xray-vision');
+      toast(on ? 'X-ray vision on. Type xray again to turn it off.' : 'X-ray vision off.');
+    });
+  })();
+
+  window.chartKit = { el, toast, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

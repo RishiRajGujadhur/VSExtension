@@ -1,4 +1,4 @@
-// The Control Flow view: a function's flowchart with its decisions, loops and returns, and the Path Explorer.
+// The Control Flow view: a function's flowchart with its decisions, loops and returns, and the list of its paths.
 // Start and end are circles; boxes, branch labels and the background each have a right-click menu; a minimap,
 // search, an info bar and keyboard moves along the flow help with large functions.
 (function () {
@@ -878,24 +878,24 @@
   const menu = kit.menu(document.getElementById('boxMenu'));
   function boxMenuItems(n) {
     const items = [];
-    if (n.location) items.push({ icon: 'go-to-file', label: 'Open Code', keys: 'Enter', run: () => open(n) });
+    if (n.location) items.push({ icon: 'go-to-file', label: 'Open code', keys: 'Enter', run: () => open(n) });
     items.push(
-      { icon: 'play-circle', label: 'Animate Paths Through Here', keys: 'F', run: () => animateFrom(n) },
-      { icon: 'filter', label: nodePins.includes(n.id) ? 'Stop Filtering by This Box' : 'Only Paths Through Here', keys: 'T', run: () => toggleThrough(n) },
-      { icon: 'zoom-in', label: 'Zoom to This Box', run: () => zoomTo(n) },
-      ...(n.hiddenLines > 0 || n.unfolded ? [{ icon: n.hiddenLines > 0 ? 'unfold' : 'fold', label: n.hiddenLines > 0 ? `Show ${n.hiddenLines} More Lines` : 'Fold This Box', keys: 'U', run: () => vscode.postMessage({ type: 'unfold', id: n.foldKey, expand: n.hiddenLines > 0 }) }] : []),
-      { icon: 'references', label: 'Show Its Dependences', keys: 'D', run: () => showDependencesOf(n) },
+      { icon: 'play-circle', label: 'Animate paths through here', keys: 'F', run: () => animateFrom(n) },
+      { icon: 'filter', label: nodePins.includes(n.id) ? 'Stop filtering by this box' : 'Only paths through here', keys: 'T', run: () => toggleThrough(n) },
+      { icon: 'zoom-in', label: 'Zoom to this box', run: () => zoomTo(n) },
+      ...(n.hiddenLines > 0 || n.unfolded ? [{ icon: n.hiddenLines > 0 ? 'unfold' : 'fold', label: n.hiddenLines > 0 ? `Show ${n.hiddenLines} more lines` : 'Fold this box', keys: 'U', run: () => vscode.postMessage({ type: 'unfold', id: n.foldKey, expand: n.hiddenLines > 0 }) }] : []),
+      { icon: 'references', label: 'What it depends on', keys: 'D', run: () => showDependencesOf(n) },
     );
     if (n.calls && n.calls.length) {
       const openCalls = n.calls.every((c) => c.expanded);
       const names = [...new Set(n.calls.map((c) => c.name))].join(', ');
-      items.push({ icon: openCalls ? 'fold' : 'unfold', label: `${openCalls ? 'Fold' : 'Expand'} ${names}() Here`, run: () => vscode.postMessage({ type: 'expand', keys: n.calls.map((c) => c.key), expand: !openCalls }) });
+      items.push({ icon: openCalls ? 'fold' : 'unfold', label: `${openCalls ? 'Fold' : 'Expand'} ${names}() here`, run: () => vscode.postMessage({ type: 'expand', keys: n.calls.map((c) => c.key), expand: !openCalls }) });
     }
     if (n.location && !isTerminal(n)) {
       items.push(
         '-',
-        { icon: 'arrow-left', label: 'What Affects This Box', run: () => vscode.postMessage({ type: 'sliceAt', location: n.location, direction: 'backward' }) },
-        { icon: 'arrow-right', label: 'What This Box Affects', run: () => vscode.postMessage({ type: 'sliceAt', location: n.location, direction: 'forward' }) },
+        { icon: 'arrow-left', label: 'What feeds this box', run: () => vscode.postMessage({ type: 'sliceAt', location: n.location, direction: 'backward' }) },
+        { icon: 'arrow-right', label: 'What this box feeds', run: () => vscode.postMessage({ type: 'sliceAt', location: n.location, direction: 'forward' }) },
       );
       const main = analyses.filter((a) => !a.more);
       const more = analyses.filter((a) => a.more);
@@ -903,8 +903,8 @@
       if (main.length) items.push('-', ...main.map((a) => ({ icon: a.icon, label: a.label, run: run(a) })));
       if (more.length) items.push({ heading: 'More analyses here' }, ...more.map((a) => ({ icon: a.icon, label: a.label, run: run(a) })));
     }
-    if (!isTerminal(n)) items.push('-', { icon: 'copy', label: 'Copy Code', run: () => vscode.postMessage({ type: 'copy', text: n.text }) });
-    if (n.location) items.push({ icon: 'location', label: 'Copy Location', run: () => vscode.postMessage({ type: 'copy', text: `${n.location.file}:${n.location.line + 1}:${n.location.character + 1}` }) });
+    if (!isTerminal(n)) items.push('-', { icon: 'copy', label: 'Copy code', run: () => vscode.postMessage({ type: 'copy', text: n.text }) });
+    if (n.location) items.push({ icon: 'location', label: 'Copy location', run: () => vscode.postMessage({ type: 'copy', text: `${n.location.file}:${n.location.line + 1}:${n.location.character + 1}` }) });
     return items;
   }
   /** The menu's line of context for a box: where it is and how many paths pass it. */
@@ -915,19 +915,19 @@
   function edgeMenuItems(i) {
     const e = chart.edges[i];
     const items = [];
-    if (e.label) items.push({ icon: 'filter', label: pins.includes(i) ? 'Stop Filtering by This Branch' : `Only Paths Taking “${e.label}”`, run: () => togglePin(i) });
+    if (e.label) items.push({ icon: 'filter', label: pins.includes(i) ? 'Stop filtering by this branch' : `Only paths taking “${e.label}”`, run: () => togglePin(i) });
     items.push(
-      { icon: 'arrow-up', label: 'Go to Where It Comes From', run: () => focus(chart.nodes[e.from]) },
-      { icon: 'arrow-down', label: 'Go to Where It Leads', run: () => focus(chart.nodes[e.to]) },
+      { icon: 'arrow-up', label: 'Go to where it comes from', run: () => focus(chart.nodes[e.from]) },
+      { icon: 'arrow-down', label: 'Go to where it leads', run: () => focus(chart.nodes[e.to]) },
     );
     return items;
   }
   function pathMenu(i) {
     return [
-      { icon: 'check', label: i === selected ? 'Unpick This Path' : 'Pick This Path', run: () => { compared = -1; select(i === selected ? -1 : i); } },
-      ...(selected >= 0 && i !== selected ? [{ icon: 'diff', label: 'Compare with the Picked Path', keys: 'Shift+Click', run: () => { compared = i; renderList(); highlight(); } }] : []),
-      { icon: 'copy', label: 'Copy Path as Text', run: () => vscode.postMessage({ type: 'copy', text: pathText(i) }) },
-      { icon: 'markdown', label: 'Copy as Mermaid with This Path', run: () => vscode.postMessage({ type: 'mermaid', path: { nodes: chart.paths[i].nodes, edges: chart.paths[i].edges } }) },
+      { icon: 'check', label: i === selected ? 'Unpick this path' : 'Pick this path', run: () => { compared = -1; select(i === selected ? -1 : i); } },
+      ...(selected >= 0 && i !== selected ? [{ icon: 'diff', label: 'Compare with the picked path', keys: 'Shift+Click', run: () => { compared = i; renderList(); highlight(); } }] : []),
+      { icon: 'copy', label: 'Copy path as text', run: () => vscode.postMessage({ type: 'copy', text: pathText(i) }) },
+      { icon: 'markdown', label: 'Copy as Mermaid with this path', run: () => vscode.postMessage({ type: 'mermaid', path: { nodes: chart.paths[i].nodes, edges: chart.paths[i].edges } }) },
     ];
   }
   function backgroundMenu() {
@@ -936,23 +936,23 @@
     const unfolded = withCalls.flatMap((n) => n.calls.filter((c) => c.expanded).map((c) => c.key));
     const unreachable = chart.nodes.filter((n) => n.unreachable);
     return [
-      { icon: 'screen-full', label: 'Fit the Whole Function', keys: '0', run: () => fit(true) },
-      { icon: 'zoom-in', label: 'Actual Size', run: () => zoom(1 / view.k) },
-      ...(cursorNode !== undefined ? [{ icon: 'target', label: 'Go to the Cursor Box', keys: 'C', run: () => focus(chart.nodes[cursorNode]) }] : []),
-      ...(unreachable.length ? [{ icon: 'warning', label: `Go to Unreachable Code (${unreachable.length})`, run: () => nextUnreachable() }] : []),
+      { icon: 'screen-full', label: 'Fit the whole function', keys: '0', run: () => fit(true) },
+      { icon: 'zoom-in', label: 'Actual size', run: () => zoom(1 / view.k) },
+      ...(cursorNode !== undefined ? [{ icon: 'target', label: 'Go to the cursor box', keys: 'C', run: () => focus(chart.nodes[cursorNode]) }] : []),
+      ...(unreachable.length ? [{ icon: 'warning', label: `Go to unreachable code (${unreachable.length})`, run: () => nextUnreachable() }] : []),
       '-',
-      ...(folded.length ? [{ icon: 'unfold', label: `Expand All Calls (${folded.length})`, run: () => vscode.postMessage({ type: 'expand', keys: folded, expand: true }) }] : []),
-      ...(unfolded.length ? [{ icon: 'fold', label: 'Fold All Calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
-      { icon: 'list-tree', label: panel.hidden ? 'Show Path Explorer' : 'Hide Path Explorer', keys: 'P', run: () => togglePanel(panel.hidden) },
-      { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
-      { icon: 'references', label: showDeps ? 'Hide Dependences' : 'Show Dependences (Program Dependence Graph)', keys: 'D', run: () => toggleDependences() },
+      ...(folded.length ? [{ icon: 'unfold', label: `Expand all calls (${folded.length})`, run: () => vscode.postMessage({ type: 'expand', keys: folded, expand: true }) }] : []),
+      ...(unfolded.length ? [{ icon: 'fold', label: 'Fold all calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
+      { icon: 'list-tree', label: panel.hidden ? 'Show path list' : 'Hide path list', keys: 'P', run: () => togglePanel(panel.hidden) },
+      { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
+      { icon: 'references', label: showDeps ? 'Hide what depends on what' : 'Show what depends on what', keys: 'D', run: () => toggleDependences() },
       ...(showDeps
         ? [
-            { icon: showData ? 'check' : 'blank', label: 'Data Arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); } },
-            { icon: showControl ? 'check' : 'blank', label: 'Control Arcs (what decides whether code runs)', run: () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); } },
+            { icon: showData ? 'check' : 'blank', label: 'Data arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); } },
+            { icon: showControl ? 'check' : 'blank', label: 'Control arcs (what decides whether code runs)', run: () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); } },
           ]
         : []),
-      { icon: 'play-circle', label: 'Animate Every Path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },
+      { icon: 'play-circle', label: 'Animate every path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },
       '-',
       { icon: 'markdown', label: 'Copy as Mermaid', run: () => copyMermaid() },
       { icon: 'save', label: 'Save as SVG', run: () => saveSvg() },

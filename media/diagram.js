@@ -684,32 +684,32 @@
     if (node === diagram.center) {
       // The subject: everything at once.
       items.push(
-        { icon: 'play-circle', label: 'Animate Every Flow', run: () => { flowing = diagram.center; drawFlows(); } },
-        { icon: 'unfold', label: 'Unfold All', run: () => setAll(false) },
-        { icon: 'fold', label: 'Fold All', run: () => setAll(true) },
-        ...(isolated ? [{ icon: 'filter', label: 'Show Whole Chart', run: () => isolate(undefined) }] : []),
-        { icon: 'screen-full', label: 'Fit the Whole Chart', keys: '0', run: () => fit(true) },
+        { icon: 'play-circle', label: 'Animate every flow', run: () => { flowing = diagram.center; drawFlows(); } },
+        { icon: 'unfold', label: 'Unfold all', run: () => setAll(false) },
+        { icon: 'fold', label: 'Fold all', run: () => setAll(true) },
+        ...(isolated ? [{ icon: 'filter', label: 'Show whole chart', run: () => isolate(undefined) }] : []),
+        { icon: 'screen-full', label: 'Fit the whole chart', keys: '0', run: () => fit(true) },
       );
     } else {
-      items.push('-', { icon: 'filter', label: node === isolated ? 'Show Whole Chart' : 'Show Only This Branch', keys: 'B', run: () => isolate(node === isolated ? undefined : node) });
-      if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? (node.duplicates ? `Show the ${node.duplicates} Duplicates` : `Unfold (${node.children.length})`) : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
-      items.push({ icon: 'play-circle', label: 'Animate Its Flow', run: () => { flowing = node; drawFlows(); } });
+      items.push('-', { icon: 'filter', label: node === isolated ? 'Show whole chart' : 'Show only this branch', keys: 'B', run: () => isolate(node === isolated ? undefined : node) });
+      if (node.children.length) items.push({ icon: node.collapsed ? 'unfold' : 'fold', label: node.collapsed ? (node.duplicates ? `Show the ${node.duplicates} duplicates` : `Unfold (${node.children.length})`) : 'Fold', keys: 'Space', run: () => { node.collapsed = !node.collapsed; render(); } });
+      items.push({ icon: 'play-circle', label: 'Animate its flow', run: () => { flowing = node; drawFlows(); } });
     }
-    items.push('-', { icon: 'copy', label: 'Copy Text', run: () => vscode.postMessage({ type: 'copy', text: [node.label, node.description].filter(Boolean).join(' · ') }) });
-    if (node.location) items.push({ icon: 'location', label: 'Copy Location', run: () => vscode.postMessage({ type: 'copy', text: `${node.location.file}:${node.location.line + 1}:${node.location.character + 1}` }) });
+    items.push('-', { icon: 'copy', label: 'Copy text', run: () => vscode.postMessage({ type: 'copy', text: [node.label, node.description].filter(Boolean).join(' · ') }) });
+    if (node.location) items.push({ icon: 'location', label: 'Copy location', run: () => vscode.postMessage({ type: 'copy', text: `${node.location.file}:${node.location.line + 1}:${node.location.character + 1}` }) });
     return items;
   }
   function backgroundMenu() {
     return [
-      { icon: 'screen-full', label: 'Fit the Whole Chart', keys: '0', run: () => fit(true) },
-      { icon: 'zoom-in', label: 'Actual Size', run: () => zoom(1 / view.k) },
-      { icon: 'home', label: 'Go to the Subject', keys: 'Home', run: () => centerOn(diagram.center) },
-      ...(isolated ? [{ icon: 'filter', label: 'Show Whole Chart', run: () => isolate(undefined) }] : []),
+      { icon: 'screen-full', label: 'Fit the whole chart', keys: '0', run: () => fit(true) },
+      { icon: 'zoom-in', label: 'Actual size', run: () => zoom(1 / view.k) },
+      { icon: 'home', label: 'Go to the subject', keys: 'Home', run: () => centerOn(diagram.center) },
+      ...(isolated ? [{ icon: 'filter', label: 'Show whole chart', run: () => isolate(undefined) }] : []),
       '-',
-      { icon: 'unfold', label: 'Unfold All', run: () => setAll(false) },
-      { icon: 'fold', label: 'Fold All', run: () => setAll(true) },
-      { icon: 'play-circle', label: 'Animate Every Flow', run: () => { flowing = diagram.center; drawFlows(); } },
-      { icon: 'map', label: map.hidden ? 'Show Minimap' : 'Hide Minimap', keys: 'M', run: () => toggleMinimap() },
+      { icon: 'unfold', label: 'Unfold all', run: () => setAll(false) },
+      { icon: 'fold', label: 'Fold all', run: () => setAll(true) },
+      { icon: 'play-circle', label: 'Animate every flow', run: () => { flowing = diagram.center; drawFlows(); } },
+      { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
       '-',
       { icon: 'markdown', label: 'Copy as Mermaid', run: copyMermaid },
       { icon: 'save', label: 'Save as SVG', run: saveSvg },

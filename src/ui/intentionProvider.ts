@@ -93,10 +93,10 @@ export async function showRewritesHere(): Promise<void> {
     const last = editor.document.positionAt(Math.max(...r.edits.map((e) => e.end))).line + 1;
     return first === last ? `line ${first}` : `lines ${first}–${last}`;
   };
-  const turnOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('eye-closed'), tooltip: 'Turn this rewrite off (Choose Rewrites turns it back on)' };
+  const turnOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('eye-closed'), tooltip: 'Turn this rewrite off (Choose rewrites… turns it back on)' };
   type Item = vscode.QuickPickItem & { rewrite: (typeof rewrites)[number] };
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = 'Rewrites Here';
+  picker.title = 'Rewrites here';
   picker.placeholder = 'Pick a rewrite to apply';
   picker.items = ordered.map((r) => ({ label: `$(wand) ${r.title}`, description: `${lines(r)}${uses[r.id] ? ` · used ${uses[r.id]}×` : ''}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, buttons: [turnOff], rewrite: r }));
   picker.onDidTriggerItemButton(async (e) => {
@@ -140,7 +140,7 @@ export async function chooseIntentions(): Promise<void> {
     id: intention.id,
   });
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = `Intention Actions (${intentionList.length})`;
+  picker.title = `Intention actions (${intentionList.length})`;
   picker.placeholder = 'Tick the rewrites to offer in the lightbulb menu';
   picker.canSelectMany = true;
   picker.matchOnDescription = true;
@@ -151,8 +151,8 @@ export async function chooseIntentions(): Promise<void> {
     ...intentionList.filter((i) => !conditionIntentions.has(i.id)).map(item),
   ];
   picker.selectedItems = picker.items.filter((i) => i.picked);
-  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn All On' };
-  const allOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('clear-all'), tooltip: 'Turn All Off' };
+  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn all on' };
+  const allOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('clear-all'), tooltip: 'Turn all off' };
   picker.buttons = [allOn, allOff];
   picker.onDidTriggerButton((b) => (picker.selectedItems = b === allOn ? picker.items.filter((i) => i.id) : []));
   const picked = await new Promise<readonly Item[] | undefined>((resolve) => {

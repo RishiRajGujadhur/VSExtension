@@ -38,7 +38,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 .hint > span { flex: 1; }
 
 /* Section headings fold their section and show how many actions it has. */
-h2 { margin: 10px 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-descriptionForeground);
+h2 { margin: 10px 0 2px; font-size: 11px; font-weight: 500; color: var(--vscode-descriptionForeground);
   display: flex; align-items: center; gap: 4px; }
 .section { flex: 1; display: flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 2px; border: 0; border-radius: 4px; background: transparent;
   color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; }
@@ -62,7 +62,7 @@ h2 { margin: 10px 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .04e
 .tile .codicon { font-size: 16px; }
 .item:hover .tile, .item:focus-within .tile { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
 .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.label { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail { color: var(--vscode-descriptionForeground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 mark { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, .33)); color: inherit; border-radius: 2px; }
 .item.is-hidden .run { opacity: .7; }
@@ -143,7 +143,7 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
 .item.active-feature { background: var(--active-tint); border-color: color-mix(in srgb, var(--active-accent) 35%, transparent); box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .5); }
 .item.active-feature::before { content: ''; position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--active-accent); }
 .item.active-feature .tile { border-color: var(--active-accent); color: var(--active-accent); }
-.item.active-feature .label { font-weight: 600; }
+.item.active-feature .label { color: var(--vscode-foreground); font-weight: 500; }
 .last-run { padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: 400; vertical-align: 1px;
   background: var(--vscode-badge-background, rgba(128, 128, 128, .25)); color: var(--vscode-badge-foreground, var(--vscode-foreground)); }
 .tab { position: relative; }

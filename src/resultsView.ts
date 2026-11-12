@@ -144,9 +144,9 @@ export async function showResultsPicker(result: ImpactResult, run: (tests: TestC
   picker.matchOnDetail = true;
   picker.items = items;
   // Run every impacted test without closing the list first.
-  const runAll: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('run-all'), tooltip: `Run All ${countLabel(result.tests.length)}` };
-  const runConfirmed: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('beaker'), tooltip: `Run the ${countLabel(confirmed)} Confirmed Only` };
-  const copy: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('copy'), tooltip: 'Copy Impacted Tests…' };
+  const runAll: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('run-all'), tooltip: `Run all ${countLabel(result.tests.length)}` };
+  const runConfirmed: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('beaker'), tooltip: `Run the ${countLabel(confirmed)} confirmed only` };
+  const copy: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('copy'), tooltip: 'Copy impacted tests…' };
   picker.buttons = confirmed && confirmed < result.tests.length ? [runAll, runConfirmed, copy] : [runAll, copy];
   picker.onDidTriggerButton((button) => {
     picker.hide();

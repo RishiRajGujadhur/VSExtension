@@ -250,7 +250,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
       ...(document && findings && fixAllEdits(findings).length
         ? [
             {
-              label: '$(check-all) Fix All in This File',
+              label: '$(check-all) Fix all in this file',
               description: `${fixAllEdits(findings).length} fix${fixAllEdits(findings).length === 1 ? '' : 'es'}`,
               run: async () => {
                 const edit = new vscode.WorkspaceEdit();
@@ -262,16 +262,16 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
             },
           ]
         : []),
-      { label: '$(list-flat) Show Problems in This File', description: findings ? `${findings.length}` : undefined, run: () => vscode.commands.executeCommand('workbench.actions.view.problems') },
-      { label: '$(file-code) Inspect Current File', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'file') },
-      { label: '$(git-compare) Inspect Changed Files', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed') },
-      { label: '$(project) Inspect Whole Project', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'project') },
-      { label: '$(settings) Configure Inspections…', run: () => vscode.commands.executeCommand('tsStructure.configureInspections') },
-      { label: '$(comment-discussion) How Do I…?', run: () => vscode.commands.executeCommand('tsStructure.howDoI') },
-      { label: '$(list-tree) Analyze or Refactor This…', run: () => vscode.commands.executeCommand('tsStructure.actionsAtCursor') },
+      { label: '$(list-flat) Show problems in this file', description: findings ? `${findings.length}` : undefined, run: () => vscode.commands.executeCommand('workbench.actions.view.problems') },
+      { label: '$(file-code) Inspect current file', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'file') },
+      { label: '$(git-compare) Inspect changed files', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'changed') },
+      { label: '$(project) Inspect whole project', run: () => vscode.commands.executeCommand('tsStructure.inspectCode', 'project') },
+      { label: '$(settings) Configure inspections…', run: () => vscode.commands.executeCommand('tsStructure.configureInspections') },
+      { label: '$(comment-discussion) How do I…?', run: () => vscode.commands.executeCommand('tsStructure.howDoI') },
+      { label: '$(list-tree) Analyze or refactor this…', run: () => vscode.commands.executeCommand('tsStructure.actionsAtCursor') },
       paused
         ? {
-            label: '$(debug-start) Resume Live Inspections',
+            label: '$(debug-start) Resume live inspections',
             detail: 'Inspects visible files as you type again.',
             run: async () => {
               const config = vscode.workspace.getConfiguration('tsStructure');
@@ -283,12 +283,12 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
             },
           }
         : {
-            label: '$(debug-pause) Pause Live Inspections',
+            label: '$(debug-pause) Pause live inspections',
             detail: 'Stops inspecting while you type, for this workspace. Turn back on in the settings or from this menu.',
             run: () => vscode.workspace.getConfiguration('tsStructure').update('inspections.enabled', false, vscode.ConfigurationTarget.Workspace),
           },
     ];
-    const picked = await vscode.window.showQuickPick(items, { title: 'Code X-Ray Inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action (Ctrl+Alt+S 5 jumps to the next one)' : undefined, matchOnDescription: true });
+    const picked = await vscode.window.showQuickPick(items, { title: 'Code X-Ray inspections', placeHolder: problems.length ? 'Pick a problem to go to it, or an action (Ctrl+Alt+S 5 jumps to the next one)' : undefined, matchOnDescription: true });
     await picked?.run?.();
   }
 
@@ -316,7 +316,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         { label: 'Off until turned on', kind: vscode.QuickPickItemKind.Separator },
         ...items.filter((i) => i.inspection.optIn),
       ];
-      const choice = await vscode.window.showQuickPick(grouped, { title: 'Configure Inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
+      const choice = await vscode.window.showQuickPick(grouped, { title: 'Configure inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
       const picked = choice && 'inspection' in choice ? choice : undefined;
       if (!picked) {
         return;

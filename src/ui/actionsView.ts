@@ -200,10 +200,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
 
 /** Links under the list: help to find the right action, and settings. */
 const footer = [
-  { command: 'tsStructure.howDoI', label: 'How Do I…?', icon: 'question' },
-  { command: 'tsStructure.guideMe', label: 'Guide Me', icon: 'book' },
+  { command: 'tsStructure.howDoI', label: 'Ask the rubber duck…', icon: 'question' },
+  { command: 'tsStructure.guideMe', label: 'Guided tour', icon: 'book' },
   { command: 'tsStructure.editKeybindings', label: 'Shortcuts', icon: 'keyboard' },
-  { command: 'tsStructure.configureFeatures', label: 'Features…', icon: 'extensions' },
+  { command: 'tsStructure.configureFeatures', label: 'Toolshed…', icon: 'tools' },
 ];
 
 function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {

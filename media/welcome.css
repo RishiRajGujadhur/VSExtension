@@ -1,4 +1,4 @@
-/* The Code X-Ray Welcome page: a terminal look, dark in every theme, uppercase monospace text and square corners. */
+/* The Code X-Ray Welcome page: a terminal look, dark in every theme, monospace sentence-case text and square corners (only the pixel title is in capitals). */
 :root {
   --ink: #ffffff;
   --ink-soft: #9ba1a5;
@@ -22,14 +22,14 @@ main { position: relative; z-index: 1; }
 .hero-top { max-width: min(560px, 100%); }
 .title { margin: 0; }
 .pixel-title { display: block; width: min(100%, 520px); height: auto; fill: var(--ink); shape-rendering: crispEdges; }
-.lead { max-width: 44ch; margin: 22px 0 0; color: var(--ink-soft); font-size: 13px; text-transform: uppercase; letter-spacing: .01em; }
-.tagline { max-width: 44ch; margin: 2px 0 0; color: var(--ink-faint); font-size: 13px; text-transform: uppercase; letter-spacing: .01em; }
+.lead { max-width: 44ch; margin: 22px 0 0; color: var(--ink-soft); font-size: 13px; }
+.tagline { max-width: 44ch; margin: 2px 0 0; color: var(--ink-faint); font-size: 13px; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
-.progress { color: var(--ink-faint); text-transform: uppercase; font-size: 12px; }
+.progress { color: var(--ink-faint); font-size: 12px; }
 
-/* Buttons: a white box for the main action, uppercase links for the rest. */
+/* Buttons: a white box for the main action, plain text links for the rest. */
 .box-button, .link-button { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 0;
-  font: inherit; font-size: 13px; text-transform: uppercase; letter-spacing: -.02em; cursor: pointer; }
+  font: inherit; font-size: 13px; letter-spacing: -.02em; cursor: pointer; }
 .box-button { background: var(--ink); color: #0a0a0a; }
 .box-button:hover { background: var(--teal); }
 .link-button { padding: 0 2px; background: transparent; color: var(--ink); }
@@ -45,7 +45,7 @@ main { position: relative; z-index: 1; }
 .step:hover, .step:focus-within { background: rgba(18, 20, 21, .94); }
 .step-head { display: flex; align-items: baseline; gap: 12px; }
 .step-number { flex: none; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.step-title { margin: 0; flex: 1; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: -.01em; }
+.step-title { margin: 0; flex: 1; font-size: 14px; font-weight: 500; }
 .step-done { display: none; color: var(--teal); }
 .step.done .step-done { display: inline; }
 .step.done .step-number { color: var(--teal); }
@@ -56,7 +56,7 @@ main { position: relative; z-index: 1; }
 .step-picture { margin: 4px 0 0; }
 .step-picture img { display: block; width: 100%; max-height: 180px; object-fit: cover; object-position: top; border: 1px solid var(--line); filter: grayscale(.35); transition: filter .2s; }
 .step:hover .step-picture img, .step:focus-within .step-picture img { filter: none; }
-.step-picture figcaption { margin-top: 6px; color: var(--ink-faint); font-size: 11.5px; text-transform: uppercase; }
+.step-picture figcaption { margin-top: 6px; color: var(--ink-faint); font-size: 11.5px; }
 
 .more { display: flex; flex-wrap: wrap; gap: 8px 22px; max-width: 1120px; margin: 0 auto; padding: 18px clamp(20px, 4vw, 48px) 56px; box-sizing: border-box; }
 
@@ -69,3 +69,8 @@ main { position: relative; z-index: 1; }
   .box-button { border-color: ButtonText; }
   .step { border-color: CanvasText; }
 }
+
+/* The note of the rain-mode Easter egg. */
+.note { position: fixed; left: 50%; bottom: 24px; z-index: 3; transform: translateX(-50%); padding: 6px 12px; border: 1px solid var(--line); background: #0a0a0a;
+  color: var(--teal); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.note.shown { opacity: 1; }

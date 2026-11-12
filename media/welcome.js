@@ -36,6 +36,9 @@
     return lerp(plane(zi), plane(zi + 1), w);
   }
   const field = (x, y, t) => noise(x * 0.09, y * 0.12, t) * 0.7 + noise(x * 0.23 + 40, y * 0.3, t * 1.7) * 0.3;
+  // Rain mode (an Easter egg, below): each column of the field falls at its own speed.
+  let rain = false;
+  const fall = (x, t) => (rain ? t * (14 + (perm[x & 255] % 9) * 3) : 0);
 
   function startAscii(canvas) {
     const ctx = canvas.getContext('2d');
@@ -71,7 +74,7 @@
         for (let x = 0; x < cols; x++) {
           // Faint on the left where the title is, full from about a third of the way across.
           const side = Math.min(1, Math.max(0, (x / cols - 0.22) / 0.3));
-          const v = field(x, y, t) * (0.25 + 0.75 * side);
+          const v = field(x, y - fall(x, t), t) * (0.25 + 0.75 * side);
           const level = Math.max(0, (v - 0.32) / 0.5);
           const index = Math.min(ramp.length - 1, Math.floor(level * ramp.length));
           if (index <= 0) continue;
@@ -204,7 +207,7 @@
     const tagline = make('p', 'tagline', 'Offline static analysis for TypeScript, JavaScript and React');
     const actions = make('div', 'hero-actions');
     const first = data.steps[0] && data.steps[0].buttons[0];
-    actions.append(button('Start the Tour', () => {
+    actions.append(button('Start the tour', () => {
       const target = document.getElementById('steps');
       target.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth' });
       const firstCard = target.querySelector('.step');
@@ -256,7 +259,7 @@
 
     const footer = make('footer', 'more');
     for (const c of data.extra) footer.append(button(c.label, () => run(c.command), false, c.icon));
-    footer.append(button('VS Code Walkthrough', () => vscode.postMessage({ type: 'walkthrough' }), false, 'book'));
+    footer.append(button('VS Code walkthrough', () => vscode.postMessage({ type: 'walkthrough' }), false, 'book'));
     page.append(hero, section, footer);
     updateProgress(data.steps.length);
   }
@@ -277,6 +280,32 @@
 
   // The field dims as you scroll down to the steps, so the cards read well over it.
   window.addEventListener('scroll', () => document.body.style.setProperty('--scrolled', String(Math.min(1, window.scrollY / (window.innerHeight * 0.6)))), { passive: true });
+
+  /*
+   * Not in any menu: the old cheat code, up up down down left right left right b a, makes the field rain.
+   * Entering it again stops the rain. With reduced motion it switches to a still picture of rain.
+   */
+  const cheat = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let entered = 0;
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    entered = key === cheat[entered] ? entered + 1 : key === cheat[0] ? 1 : 0;
+    if (entered < cheat.length) return;
+    entered = 0;
+    rain = !rain;
+    let note = document.getElementById('note');
+    if (!note) {
+      note = make('div', 'note');
+      note.id = 'note';
+      note.setAttribute('role', 'status');
+      document.body.append(note);
+    }
+    note.textContent = rain ? 'Rain mode. Enter the code again to stop it.' : 'Rain stopped.';
+    note.classList.add('shown');
+    clearTimeout(note.timer);
+    note.timer = setTimeout(() => note.classList.remove('shown'), 2600);
+    window.dispatchEvent(new Event('resize'));
+  });
 
   window.addEventListener('message', (event) => {
     if (event.data.type === 'welcome') render(event.data);

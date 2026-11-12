@@ -1,3 +1,5 @@
+import { nameOf } from './names';
+
 /** Every action the sidebar's Actions view offers, by tab and category, with words people may search for. */
 export interface CatalogAction {
   /** The entry's own id: its command, or `graph:<command>` for the same command in the Graphs tab. */
@@ -25,7 +27,7 @@ export interface CatalogAction {
 export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string }[] = [
   { id: 'analyze', label: 'Analyze', icon: 'search-fuzzy' },
   { id: 'edit', label: 'Edit', icon: 'edit' },
-  { id: 'graphs', label: 'Graphs', icon: 'graph-scatter' },
+  { id: 'graphs', label: 'Charts', icon: 'graph-scatter' },
 ];
 
 /** An entry's id: what the view pins, hides and counts uses by. */
@@ -34,9 +36,9 @@ export const actionId = (action: CatalogAction): string => action.id ?? action.c
 /** A graph of the Graphs tab: a command whose result opens as a chart. Opening one that already draws a chart is the same entry. */
 /** The Graphs tab's categories: an icon and what the graphs in it show. */
 export const graphCategories: Record<string, { icon: string; description: string }> = {
-  Execution: { icon: 'run-all', description: 'How code runs: paths, calls and errors' },
-  Data: { icon: 'symbol-variable', description: 'How values move, change and depend on each other' },
-  Structure: { icon: 'symbol-structure', description: 'How code is organized: types, overrides and imports' },
+  'How it runs': { icon: 'run-all', description: 'Paths, calls and errors' },
+  'How values move': { icon: 'symbol-variable', description: 'Where values come from, change and go' },
+  'How it is built': { icon: 'symbol-structure', description: 'Types, overrides and imports' },
 };
 
 const g = (category: string, command: string, label: string, detail: string, info: string, keywords?: string, opensChart = false): CatalogAction => ({
@@ -45,10 +47,11 @@ const g = (category: string, command: string, label: string, detail: string, inf
   category,
   command,
   graph: !opensChart,
-  label,
+  label: nameOf(command, label),
   detail,
   info,
-  keywords: `graph chart diagram ${keywords ?? ''}`.trim(),
+  // The old, technical name still finds it.
+  keywords: `graph chart diagram ${label} ${keywords ?? ''}`.trim(),
   ...graphFacts[command],
 });
 
@@ -99,33 +102,33 @@ const graphFacts: Record<string, { startsFrom: string; levels?: string }> = {
   }
 };
 
-/** The Graph Explorer: every analysis that can be drawn, by what it shows. */
+/** The Charts tab: every analysis that can be drawn, by what it shows. */
 const graphCatalog: CatalogAction[] = [
-  g('Execution', 'tsStructure.controlFlow', 'Control Flow Graph', 'Every path through a function',
+  g('How it runs', 'tsStructure.controlFlow', 'Control Flow Graph', 'Every path through a function',
     'The function at the cursor as a flowchart, with the Path Explorer to list, compare and filter its paths.', 'cfg paths', true),
-  g('Execution', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
+  g('How it runs', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
     'Who calls the function at the cursor and what it calls, a few levels each way, as a butterfly chart.', 'callers callees butterfly', true),
-  g('Execution', 'tsStructure.exceptionFlow', 'Exception Flow Graph', 'Where errors go',
+  g('How it runs', 'tsStructure.exceptionFlow', 'Exception Flow Graph', 'Where errors go',
     'Where the function at the cursor throws, and where each error is caught or escapes, as a chart.', 'throw catch errors'),
-  g('Execution', 'tsStructure.promiseRejections', 'Async Rejection Graph', 'Where rejections end up',
+  g('How it runs', 'tsStructure.promiseRejections', 'Async Rejection Graph', 'Where rejections end up',
     'The promises of an async function and where each rejection is handled or lost, as a chart.', 'async await promise'),
-  g('Data', 'tsStructure.dataFlowDiagram', 'Data Flow Graph', 'Where values come from and go',
+  g('How values move', 'tsStructure.dataFlowDiagram', 'Data Flow Graph', 'Where values come from and go',
     'The variable at the cursor in the middle, where its values come from on the left and where they go on the right.', 'dfg values', true),
-  g('Data', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
+  g('How values move', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
     'The control flow chart with purple arcs from where each variable is set to where it is read, and orange arcs from each decision to what it controls.', 'pdg why', true),
-  g('Data', 'tsStructure.mutationTrackingVariable', 'Mutation Graph', 'Every change to a variable',
+  g('How values move', 'tsStructure.mutationTrackingVariable', 'Mutation Graph', 'Every change to a variable',
     'Every write to the variable at the cursor, by function, as a chart.', 'writes changes mutation'),
-  g('Data', 'tsStructure.argumentFlow', 'Argument Graph', 'Values passed to a parameter',
+  g('How values move', 'tsStructure.argumentFlow', 'Argument Graph', 'Values passed to a parameter',
     'The values each call passes to the parameter at the cursor, traced back through callers, as a chart.', 'parameter callers'),
-  g('Data', 'tsStructure.reactState', 'React State Graph', 'What each state change triggers',
+  g('How values move', 'tsStructure.reactState', 'React State Graph', 'What each state change triggers',
     'A React component or hook: props and context on the left; state, refs, memos and effects on the right, with what each sets, reads and triggers.', 'react hooks', true),
-  g('Structure', 'tsStructure.typeHierarchy', 'Inheritance Graph', 'Supertypes and subtypes',
+  g('How it is built', 'tsStructure.typeHierarchy', 'Inheritance Graph', 'Supertypes and subtypes',
     'What the class or interface at the cursor extends and implements, and what extends it, as a chart.', 'class interface extends implements'),
-  g('Structure', 'tsStructure.overrideImpact', 'Override Graph', 'Overrides and their callers',
+  g('How it is built', 'tsStructure.overrideImpact', 'Override Graph', 'Overrides and their callers',
     'Every override and implementation of the member at the cursor, and their callers, as a chart.', 'override method'),
-  g('Structure', 'tsStructure.whoImports', 'Importers Graph', 'Modules that import this one',
+  g('How it is built', 'tsStructure.whoImports', 'Importers Graph', 'Modules that import this one',
     'The modules that import this file, directly or through re-exports, as a chart.', 'dependents imports'),
-  g('Structure', 'tsStructure.dependencyPath', 'Dependency Path Graph', 'Why one module needs another',
+  g('How it is built', 'tsStructure.dependencyPath', 'Dependency Path Graph', 'Why one module needs another',
     'The chain of imports from one module to another, as a chart.', 'import chain'),
 ];
 
@@ -136,10 +139,11 @@ const a = (tab: CatalogAction['tab'], category: string, command: string, label: 
   tab,
   category,
   command,
-  label,
+  label: nameOf(command, label),
   detail,
   info,
-  keywords,
+  // The old, technical name still finds it.
+  keywords: `${label.replace(/…$/, '')} ${keywords ?? ''}`.trim(),
   icon,
 });
 
@@ -161,54 +165,54 @@ export const actionCatalog: CatalogAction[] = [
   a('analyze', 'Values', 'tsStructure.raceConditions', 'Race Conditions', 'Async changes between uses',
     'Finds code where an await sits between reading a value and writing it back, so another task may change it in the meantime.', 'await concurrency'),
 
-  a('analyze', 'Control flow and errors', 'tsStructure.controlFlow', 'Control Flow Graph', 'A function as a flowchart',
+  a('analyze', 'Flow and errors', 'tsStructure.controlFlow', 'Control Flow Graph', 'A function as a flowchart',
     'Draws the function at the cursor as a flowchart, with a Path Explorer that lists, compares and filters every path and flags the impossible ones.', 'paths branches flowchart cfg'),
-  a('analyze', 'Control flow and errors', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
+  a('analyze', 'Flow and errors', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
     'The control flow chart with its dependences drawn on it: purple arcs from where each variable is set to where that value is read, orange arcs from each decision to the code it controls.', 'pdg data control dependence slice why'),
-  a('analyze', 'Control flow and errors', 'tsStructure.exceptionFlow', 'Exception Flow', 'Errors thrown, caught or lost',
+  a('analyze', 'Flow and errors', 'tsStructure.exceptionFlow', 'Exception Flow', 'Errors thrown, caught or lost',
     'Shows where a function throws, where each error is caught, and which catch blocks swallow errors.', 'throw catch errors'),
-  a('analyze', 'Control flow and errors', 'tsStructure.promiseRejections', 'Promise Rejections', 'Rejections handled or lost',
+  a('analyze', 'Flow and errors', 'tsStructure.promiseRejections', 'Promise Rejections', 'Rejections handled or lost',
     'Finds promises whose rejections are never handled, such as calls without await or catch.', 'async promise catch'),
-  a('analyze', 'Control flow and errors', 'tsStructure.sideEffects', 'Side Effects', 'What a function changes',
+  a('analyze', 'Flow and errors', 'tsStructure.sideEffects', 'Side Effects', 'What a function changes',
     'Lists what the function changes besides its result: parameters, outer variables, globals, I/O and the DOM.', 'pure impure io'),
 
-  a('analyze', 'Navigate', 'tsStructure.semanticUsages', 'Find Usages', 'Reads, writes and calls, grouped',
+  a('analyze', 'Finding your way', 'tsStructure.semanticUsages', 'Find Usages', 'Reads, writes and calls, grouped',
     'Finds every usage of the symbol at the cursor, grouped into reads, writes, calls, imports and type references.', 'references callers'),
-  a('analyze', 'Navigate', 'tsStructure.semanticUsagesInFile', 'Find Usages in Current File', 'Usages in this file only',
+  a('analyze', 'Finding your way', 'tsStructure.semanticUsagesInFile', 'Find Usages in Current File', 'Usages in this file only',
     'Finds the usages of the symbol at the cursor in the current file, grouped like Find Usages.', 'references'),
-  a('analyze', 'Navigate', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
+  a('analyze', 'Finding your way', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
     'A butterfly chart of the function at the cursor: who calls it (and who calls them) on the left, what it calls (and what those call) on the right.', 'callers callees call hierarchy butterfly'),
-  a('analyze', 'Navigate', 'tsStructure.argumentFlow', 'Argument Propagation', 'Values passed to a parameter',
+  a('analyze', 'Finding your way', 'tsStructure.argumentFlow', 'Argument Propagation', 'Values passed to a parameter',
     'Follows a parameter back through every call to the values passed into it.', 'parameter callers values'),
-  a('analyze', 'Navigate', 'tsStructure.typeHierarchy', 'Inheritance Hierarchy', 'Supertypes, subtypes, overrides',
+  a('analyze', 'Finding your way', 'tsStructure.typeHierarchy', 'Inheritance Hierarchy', 'Supertypes, subtypes, overrides',
     'Shows what a class or interface extends and implements, what extends it, and the members they override.', 'class interface extends implements'),
-  a('analyze', 'Navigate', 'tsStructure.overrideImpact', 'Override Impact', 'What changing a member reaches',
+  a('analyze', 'Finding your way', 'tsStructure.overrideImpact', 'Override Impact', 'What changing a member reaches',
     'Lists every override and implementation of a member, and their callers, that a change to it would reach.', 'override method'),
-  a('analyze', 'Navigate', 'tsStructure.reexportChain', 'Re-export Chain', 'A name through barrel files',
+  a('analyze', 'Finding your way', 'tsStructure.reexportChain', 'Re-export Chain', 'A name through barrel files',
     'Follows an imported name through aliases and barrel (index) files back to its declaration.', 'import export barrel'),
 
-  a('analyze', 'Modules', 'tsStructure.whoImports', 'Who Imports This File', 'Modules that import this one',
+  a('analyze', 'Imports', 'tsStructure.whoImports', 'Who Imports This File', 'Modules that import this one',
     'Lists the modules that import this file, directly or through re-exports.', 'dependents importers'),
-  a('analyze', 'Modules', 'tsStructure.dependencyPath', 'Dependency Path…', 'Why one module needs another',
+  a('analyze', 'Imports', 'tsStructure.dependencyPath', 'Dependency Path…', 'Why one module needs another',
     'Shows the chain of imports that makes one module depend on another.', 'import chain'),
-  a('analyze', 'Modules', 'tsStructure.findImportCycles', 'Find Import Cycles', 'Modules importing each other',
+  a('analyze', 'Imports', 'tsStructure.findImportCycles', 'Find Import Cycles', 'Modules importing each other',
     'Finds circular imports in the project and shows each cycle.', 'circular dependency'),
-  a('analyze', 'Modules', 'tsStructure.dependencyGraphDiff', 'Dependency Graph Diff…', 'Import changes since a revision',
+  a('analyze', 'Imports', 'tsStructure.dependencyGraphDiff', 'Dependency Graph Diff…', 'Import changes since a revision',
     'Compares the import graph with a Git revision and lists the dependencies added and removed.', 'git branch compare'),
 
-  a('analyze', 'Project health', 'tsStructure.inspectCode', 'Inspect Code…', 'Run every inspection',
+  a('analyze', 'Health check', 'tsStructure.inspectCode', 'Inspect Code…', 'Run every inspection',
     'Runs every inspection over the current file or the whole project and lists the problems found.', 'lint problems warnings'),
-  a('analyze', 'Project health', 'tsStructure.auditTypeAssertions', 'Audit Type Assertions', 'Risky casts, worst first',
+  a('analyze', 'Health check', 'tsStructure.auditTypeAssertions', 'Audit Type Assertions', 'Risky casts, worst first',
     'Lists every type assertion (as, <T> and the non-null !), ranked by how likely each is to hide a bug.', 'cast unsafe'),
-  a('analyze', 'Project health', 'tsStructure.findDuplicates', 'Find Duplicates…', 'Copied code, even renamed',
+  a('analyze', 'Health check', 'tsStructure.findDuplicates', 'Find Duplicates…', 'Copied code, even renamed',
     'Finds blocks of code that are copies of each other, even when variables were renamed.', 'copy paste clones'),
-  a('analyze', 'Project health', 'tsStructure.deadExports', 'Dead Exports', 'Exports nothing uses',
+  a('analyze', 'Health check', 'tsStructure.deadExports', 'Dead Exports', 'Exports nothing uses',
     'Finds exports that no reachable module imports, so they can be removed.', 'unused code'),
-  a('analyze', 'Project health', 'tsStructure.detectPatterns', 'Design Patterns…', 'Factories, observers and more',
+  a('analyze', 'Health check', 'tsStructure.detectPatterns', 'Design Patterns…', 'Factories, observers and more',
     'Detects design patterns such as factories, observers, strategies, singletons and React hooks.', 'architecture react hooks'),
-  a('analyze', 'Project health', 'tsStructure.mutationTracking', 'Mutation Tracking', 'Shared state this file changes',
+  a('analyze', 'Health check', 'tsStructure.mutationTracking', 'Mutation Tracking', 'Shared state this file changes',
     'Lists the functions in this file that change state shared with other code.', 'side effects state'),
-  a('analyze', 'Project health', 'tsStructure.mutationTrackingProject', 'Mutation Tracking (Project)', 'Shared state changes, everywhere',
+  a('analyze', 'Health check', 'tsStructure.mutationTrackingProject', 'Mutation Tracking (Project)', 'Shared state changes, everywhere',
     'Lists the functions in the whole project that change shared state.', 'state'),
 
   a('analyze', 'Tests', 'tsImpact.analyze', 'Test Impact', 'Tests that cover this code',
@@ -224,9 +228,9 @@ export const actionCatalog: CatalogAction[] = [
     'Moves declarations to another module and fixes the imports everywhere they are used.', 'move file'),
   a('edit', 'Refactor', 'tsStructure.safeDelete', 'Safe Delete…', 'Delete after checking usages',
     'Deletes a declaration only after checking that nothing still uses it, and shows what does.', 'remove'),
-  a('edit', 'Rewrite', 'tsStructure.showRewrites', 'Show Rewrites Here', 'Rewrites for the cursor',
+  a('edit', 'Quick rewrites', 'tsStructure.showRewrites', 'Show Rewrites Here', 'Rewrites for the cursor',
     'Lists the intention actions (rewrites) that apply to the code at the cursor.', 'intentions convert lightbulb', 'wand'),
-  a('edit', 'Rewrite', 'tsStructure.chooseIntentions', 'Choose Rewrites…', 'Turn rewrites on or off',
+  a('edit', 'Quick rewrites', 'tsStructure.chooseIntentions', 'Choose Rewrites…', 'Turn rewrites on or off',
     'Picks which rewrites the light bulb menu offers.', 'intentions settings'),
   a('edit', 'Search and replace', 'tsStructure.structuralSearch', 'Structural Search…', 'Find and replace by shape',
     'Finds code by its structure rather than its text, with placeholders, and can replace each match.', 'pattern regex replace'),

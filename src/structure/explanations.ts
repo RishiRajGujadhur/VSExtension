@@ -14,14 +14,14 @@ export const explanations: Record<string, Explanation> = {
       'A mutation changes state that outlives the function call: a module variable, an imported object, a global, a field of this, or an object passed in as an argument. ' +
       'Reassigning a local variable is not a mutation. Mutations make code harder to reason about because a call can change what other code sees later. ' +
       'This report lists the functions that mutate state, and, turned around, each piece of shared state with every function that writes it.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   variableMutations: {
     title: 'Mutation Tracking for one variable',
     text:
       'Every function in the project that assigns or changes this variable, in source order. Async functions, callbacks such as setTimeout or event handlers, and changes made after an await are marked, ' +
       'because those can run interleaved with other code. The first row says how widely the variable is shared: module-level and object properties are shared by every caller, a local variable is not.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   explainValue: {
     title: 'How is a value path found?',
@@ -29,7 +29,7 @@ export const explanations: Record<string, Explanation> = {
       'Code X-Ray follows every path through the function to the cursor, taking each loop zero or one times, and finds the last assignment of the variable on each. ' +
       'Paths that give the same value are grouped, with the branch conditions each one takes. A path that tests the same unchanged condition both ways cannot happen and is listed apart. ' +
       'Conditions inside expressions (&&, ||, ?:) and changes made by called functions are not followed.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   races: {
     title: 'What is a race condition?',
@@ -37,47 +37,47 @@ export const explanations: Record<string, Explanation> = {
       'JavaScript runs one thing at a time, but an await pauses a function and lets other code run before it continues. ' +
       'If a function reads or checks shared state, awaits, and then writes it, another call can change the state during the wait and that change is lost (a lost update), ' +
       'or two calls can both pass the check before either acts (check, then act). Fix it by reading after the await, by keeping one pending promise (for caches), or by queuing the work.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   dataFlow: {
     title: 'Data Flow',
     text: 'Every place the value is defined, changed, checked, passed on and read, grouped by function. Flows in shows what it is computed from, Flows out where it goes, and Design patterns how the code around it is organized.',
-    anchor: 'data-flow-path-explorer',
+    anchor: 'data-flow',
   },
   patterns: {
     title: 'What is a design pattern?',
     text: 'A well-known way of organizing code, such as a Factory that creates objects in one place, an Observer that notifies listeners, or a Strategy of interchangeable classes. They are recognized from the shape of the code, never from names alone; hover a pattern to read what it means.',
-    anchor: 'detect-design-patterns',
+    anchor: 'pattern-spotting',
   },
   callGraph: {
     title: 'Call Graph',
     text: 'Who calls a function and what it calls, a few levels each way: callers on the left (their callers further out), callees on the right. Calls are resolved with the type checker, so methods, imported functions and functions passed through variables are followed; calls into libraries are counted. A call made inside a callback, such as setTimeout(() => f()), belongs to the function that set the callback up.',
-    anchor: 'call-graph',
+    anchor: 'callers-and-calls',
   },
   reactState: {
     title: 'React State Graph',
     text: 'The props and context a component or hook receives, and its state, refs, memoized values, callbacks, custom hooks and effects: where each is set, read and rendered, which effects and memos it triggers as a dependency, when each effect runs and what it sets, and values an effect reads but does not list as a dependency.',
-    anchor: 'react-state-graph',
+    anchor: 'react-state',
   },
   sideEffects: {
     title: 'What is a side effect?',
     text: 'Anything a function does besides returning a value: changing state it does not own, input/output (console, network, storage, files), scheduling timers, or reading the clock or random numbers. A function without any is pure.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   nullability: {
     title: 'Nullability',
     text: 'Whether the value can be null or undefined at the cursor, every path that produces null or undefined, the checks that rule it out, and which uses still need a guard.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   rejections: {
     title: 'What is a promise rejection?',
     text: 'A promise rejects when the async code throws or awaits something that rejects. The rejection travels to whoever awaits or catches the promise; if nobody does, it is unhandled and can crash Node or be silently lost in browsers.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   exceptions: {
     title: 'Exception Flow',
     text: 'The errors a function can throw, directly or through the functions it calls, what each catch block does with them, and which callers they escape to.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   deadExports: {
     title: 'What is a dead export?',
@@ -92,7 +92,7 @@ export const explanations: Record<string, Explanation> = {
   usages: {
     title: 'Semantic Find Usages',
     text: 'Every reference to the symbol, grouped by what it does there: definitions, calls, writes, reads, type references, imports and exports. Usages through aliases and re-exports count.',
-    anchor: 'semantic-find-usages',
+    anchor: 'find-usages',
   },
   reexports: {
     title: 'What is a re-export chain?',
@@ -137,7 +137,7 @@ export const explanations: Record<string, Explanation> = {
   argumentFlow: {
     title: 'Argument Propagation',
     text: 'Where a parameter’s values come from, walking back through every caller to literals and omitted arguments, and where the value goes, walking forward into the functions it is passed to.',
-    anchor: 'nullability-side-effects-mutations-errors-and-arguments',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
   },
   inspectCode: {
     title: 'Inspect Code',

@@ -75,11 +75,11 @@ export async function configureFeatures(): Promise<void> {
     ...features.filter((f) => !enabledByDefault(f)).map(item),
   ];
   // Title buttons tick everything or go back to the defaults; each feature's gear opens its settings.
-  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn All On' };
-  const defaults: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Back to Defaults' };
-  const settings: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('gear'), tooltip: 'Settings of This Feature' };
+  const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn all on' };
+  const defaults: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Back to defaults' };
+  const settings: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('gear'), tooltip: 'Settings of this feature' };
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = 'Code X-Ray Features';
+  picker.title = 'Code X-Ray features';
   picker.placeholder = 'Tick the features you want; the rest stay out of your menus';
   picker.canSelectMany = true;
   picker.matchOnDetail = true;

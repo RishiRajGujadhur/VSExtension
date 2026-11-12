@@ -117,5 +117,5 @@ test('every graph says what it starts from, and its category says what it shows'
     assert.ok(graphCategories[g.category], `${g.label}: ${g.category}`);
   }
   // The graphs with a levels control say what the levels mean.
-  assert.deepEqual(graphs.filter((g) => g.levels).map((g) => g.label).sort(), ['Call Graph', 'Control Flow Graph', 'Program Dependence Graph', 'React State Graph']);
+  assert.deepEqual(graphs.filter((g) => g.levels).map((g) => g.command).sort(), ['tsStructure.callGraph', 'tsStructure.controlFlow', 'tsStructure.dependenceGraph', 'tsStructure.reactState']);
 });

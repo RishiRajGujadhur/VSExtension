@@ -72,14 +72,14 @@ async function editAnalysisScope(): Promise<void> {
     const include = scopeOf(folder, 'include');
     const exclude = scopeOf(folder, 'exclude');
     const items: Item[] = [
-      { label: '$(add) Exclude Files…', detail: 'A glob such as **/generated/** or a folder such as src/legacy', add: 'exclude' },
-      { label: '$(add) Only Analyze…', detail: 'Limit analysis to a glob or folder, such as src', add: 'include' },
+      { label: '$(add) Exclude files…', detail: 'A glob such as **/generated/** or a folder such as src/legacy', add: 'exclude' },
+      { label: '$(add) Only analyze…', detail: 'Limit analysis to a glob or folder, such as src', add: 'include' },
       { label: include.length ? 'Only these files are analyzed' : 'Every file in the project is analyzed', kind: vscode.QuickPickItemKind.Separator },
       ...include.map((glob) => ({ label: `$(pass) ${glob}`, description: 'Select to remove', key: 'include' as const, glob })),
       { label: exclude.length ? 'Except these' : 'Nothing is excluded', kind: vscode.QuickPickItemKind.Separator },
       ...exclude.map((glob) => ({ label: `$(circle-slash) ${glob}`, description: 'Select to remove', key: 'exclude' as const, glob })),
     ];
-    const picked = await vscode.window.showQuickPick(items, { title: `Analysis Scope: ${folder.name}`, placeHolder: 'Add a pattern, or select one to remove it' });
+    const picked = await vscode.window.showQuickPick(items, { title: `Analysis scope: ${folder.name}`, placeHolder: 'Add a pattern, or select one to remove it' });
     if (!picked) {
       return;
     }

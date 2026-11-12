@@ -211,8 +211,8 @@ export function activate(context: vscode.ExtensionContext): void {
           void showProblem(
             `No tests found that depend on ${result.target.name} (${result.filesScanned} files, ${result.testFilesScanned} test files scanned).${result.testFilesScanned ? '' : ' No test files were found: they are named *.test.ts or *.spec.ts, sit in a test or __tests__ folder, or import a test framework.'}`,
             [
-              ...(scope !== 'module' ? [{ title: 'Test the Whole File', run: () => vscode.commands.executeCommand('tsImpact.analyzeFile', document.uri) }] : []),
-              { title: 'Search Deeper', run: () => vscode.commands.executeCommand('workbench.action.openSettings', 'tsImpact.maxDepth') },
+              ...(scope !== 'module' ? [{ title: 'Test the whole file', run: () => vscode.commands.executeCommand('tsImpact.analyzeFile', document.uri) }] : []),
+              { title: 'Search deeper', run: () => vscode.commands.executeCommand('workbench.action.openSettings', 'tsImpact.maxDepth') },
               remedies.howDoI,
             ],
             'info',
@@ -257,8 +257,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const picked = await vscode.window.showQuickPick(
         [
-          { label: 'Test Names', description: 'file: suite › test, one per line', files: false },
-          { label: 'Test Files', description: 'each file once', files: true },
+          { label: 'Test names', description: 'file: suite › test, one per line', files: false },
+          { label: 'Test files', description: 'each file once', files: true },
         ],
         { title: `Copy ${countLabel(tests.length)}` },
       );
@@ -276,7 +276,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const anchor = vscode.window.activeTextEditor?.document.uri.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       const changed = anchor ? (await changedFiles(anchor))?.filter((f) => /\.[cm]?[jt]sx?$/.test(f) && fs.existsSync(f)) : undefined;
       if (!changed?.length) {
-        if (changed) void showProblem('No TypeScript or JavaScript files have changed since the last commit.', [{ title: 'Test Impact at the Cursor', run: () => vscode.commands.executeCommand('tsImpact.analyze') }], 'info');
+        if (changed) void showProblem('No TypeScript or JavaScript files have changed since the last commit.', [{ title: 'Test impact at the cursor', run: () => vscode.commands.executeCommand('tsImpact.analyze') }], 'info');
         else void showProblem('Changed files need a Git repository.', [remedies.initGit, remedies.sourceControl]);
         return;
       }
@@ -336,12 +336,12 @@ const lastScopeKey = 'tsImpact.lastScope';
 async function pickScope(memento: vscode.Memento): Promise<AnalysisScope | undefined> {
   const last = memento.get<AnalysisScope>(lastScopeKey);
   const items = [
-    { label: 'Function or Symbol at Cursor', description: 'Tests that depend on the selected symbol', scope: 'symbol' as const },
-    { label: 'Active Module', description: 'Tests that depend on anything in this file', scope: 'module' as const },
+    { label: 'Function or symbol at cursor', description: 'Tests that depend on the selected symbol', scope: 'symbol' as const },
+    { label: 'Active module', description: 'Tests that depend on anything in this file', scope: 'module' as const },
   ]
     .map((item) => (item.scope === last ? { ...item, description: `${item.description} · last used` } : item))
     .sort((a, b) => Number(b.scope === last) - Number(a.scope === last));
-  const picked = await vscode.window.showQuickPick(items, { title: 'Test Impact Analysis', placeHolder: 'Choose what changed' });
+  const picked = await vscode.window.showQuickPick(items, { title: 'Test impact analysis', placeHolder: 'Choose what changed' });
   if (picked) {
     void memento.update(lastScopeKey, picked.scope);
   }
@@ -364,7 +364,10 @@ function configuredInspections(): Inspection[] {
   return configured.inspections;
 }
 
-/** How Do I…?: the questions the extension answers, in plain words, each running its command. */
+/**
+ * Ask the rubber duck…: the questions the extension answers, in plain words, each running its command. Like any
+ * good rubber duck it listens; type "quack" and it answers back.
+ */
 async function showHowDoI(prefix: string): Promise<void> {
   const items = tasks.map((task) => {
     const feature = featureOf(task.command);
@@ -375,8 +378,29 @@ async function showHowDoI(prefix: string): Promise<void> {
       command: task.command,
     };
   });
-  const picked = await vscode.window.showQuickPick(items, { title: 'How Do I…?', placeHolder: 'Pick a question; its analysis runs at the cursor', matchOnDescription: true });
-  if (picked) {
+  type Item = vscode.QuickPickItem & { command?: string };
+  const picker = vscode.window.createQuickPick<Item>();
+  picker.title = 'Ask the rubber duck';
+  picker.placeholder = 'Pick a question; its analysis runs at the cursor';
+  picker.matchOnDescription = true;
+  picker.items = items;
+  const duck: Item = { label: '$(comment) Quack.', detail: 'Explaining the problem to me usually solves it. Now pick a question, or keep talking.', alwaysShow: true };
+  picker.onDidChangeValue((value) => {
+    const quacked = /^\s*quack[.!]*\s*$/i.test(value);
+    if (quacked !== picker.items.includes(duck)) picker.items = quacked ? [duck, ...items] : items;
+  });
+  const picked = await new Promise<Item | undefined>((resolve) => {
+    picker.onDidAccept(() => {
+      const item = picker.selectedItems[0];
+      if (item === duck) return;
+      resolve(item);
+      picker.hide();
+    });
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
+  if (picked?.command) {
     await vscode.commands.executeCommand(picked.command);
   }
 }
@@ -388,9 +412,9 @@ async function showShortcutSheet(contributes: { keybindings: Keybinding[]; comma
     .filter((c) => keys.has(c.command) && (!featureOf(c.command) || isFeatureEnabled(featureOf(c.command)!.id)))
     .map((c) => ({ label: `$(${commandIcons[c.command] ?? 'keyboard'}) ${c.title}`, description: keys.get(c.command), command: c.command }))
     .sort((a, b) => a.description!.localeCompare(b.description!));
-  const editShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Change Shortcuts…' };
+  const editShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Change shortcuts…' };
   const picker = vscode.window.createQuickPick<(typeof items)[number]>();
-  picker.title = 'Code X-Ray Shortcuts';
+  picker.title = 'Cheat codes';
   picker.placeholder = 'Pick one to run it';
   picker.matchOnDescription = true;
   picker.items = items;

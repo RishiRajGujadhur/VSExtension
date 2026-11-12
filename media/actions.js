@@ -136,9 +136,9 @@
     if (action.key) trail.append(keyCaps(action.key));
     const tools = make('span', 'tools');
     tools.append(toolButton('info', `About ${action.label}`, () => {}));
-    if (isHidden(action)) tools.append(toolButton('show', `Show ${action.label} Again`, () => send({ kind: 'show', command: action.id })));
-    else tools.append(toolButton('pin', isPinned(action) ? `Unpin ${action.label}` : `Pin ${action.label} to the Top`, () => togglePin(action), isPinned(action)));
-    tools.append(toolButton('more', `More Actions for ${action.label}…`, (b) => openMenu(action, b)));
+    if (isHidden(action)) tools.append(toolButton('show', `Show ${action.label} again`, () => send({ kind: 'show', command: action.id })));
+    else tools.append(toolButton('pin', isPinned(action) ? `Unpin ${action.label}` : `Pin ${action.label} to the top`, () => togglePin(action), isPinned(action)));
+    tools.append(toolButton('more', `More actions for ${action.label}…`, (b) => openMenu(action, b)));
     tools.lastChild.setAttribute('aria-haspopup', 'menu');
     trail.append(tools);
     li.append(trail);
@@ -339,10 +339,10 @@
     if (tab === 'graphs') {
       // Graphs need something to start from: say so when no source file is open, else offer those that fit the cursor.
       const fitting = visible.filter((a) => cursorFits.includes(a.command));
-      section('cursor', 'For the Cursor', fitting, { ...context, icon: 'target' });
+      section('cursor', 'For the cursor', fitting, { ...context, icon: 'target' });
     }
     section('pinned', 'Pinned', pinned, context);
-    section('mostUsed', data.usedOnce ? 'Most Used' : 'Start Here', top, context);
+    section('mostUsed', data.usedOnce ? 'Most used' : 'Start here', top, context);
     const shown = new Set([...pinned, ...top]);
     for (const category of [...new Set(visible.map((a) => a.category))]) {
       section(`category:${category}`, category, visible.filter((a) => a.category === category && !shown.has(a)), context);
@@ -471,14 +471,14 @@
     add('Run', 'play', () => vscode.postMessage({ type: 'run', id: action.id }), 'Enter');
     // An analysis that can also be drawn: run it as a chart.
     const asGraph = action.tab !== 'graphs' && data.actions.find((a) => a.tab === 'graphs' && a.command === action.command);
-    if (asGraph) add('Open as Graph', 'graph-scatter', () => vscode.postMessage({ type: 'run', id: asGraph.id }));
+    if (asGraph) add('Open as chart', 'graph-scatter', () => vscode.postMessage({ type: 'run', id: asGraph.id }));
     sep();
-    if (isHidden(action)) add('Show Again', 'eye', () => send({ kind: 'show', command: action.id }));
+    if (isHidden(action)) add('Show again', 'eye', () => send({ kind: 'show', command: action.id }));
     else {
-      add(isPinned(action) ? 'Unpin' : 'Pin to Top', isPinned(action) ? 'pinned' : 'pin', () => togglePin(action));
+      add(isPinned(action) ? 'Unpin' : 'Pin to top', isPinned(action) ? 'pinned' : 'pin', () => togglePin(action));
       const i = data.layout.pinned.indexOf(action.id);
-      if (i > 0) add('Move Up', 'arrow-up', () => movePinned(action, -1), 'Alt+Up');
-      if (i >= 0 && i < data.layout.pinned.length - 1) add('Move Down', 'arrow-down', () => movePinned(action, 1), 'Alt+Down');
+      if (i > 0) add('Move up', 'arrow-up', () => movePinned(action, -1), 'Alt+Up');
+      if (i >= 0 && i < data.layout.pinned.length - 1) add('Move down', 'arrow-down', () => movePinned(action, 1), 'Alt+Down');
       add('Hide', 'eye-closed', () => {
         const run = list.querySelector(`.item[data-command="${CSS.escape(action.id)}"] .run`);
         if (run) moveFocusFrom(run);
@@ -486,8 +486,8 @@
       }, 'Delete');
     }
     sep();
-    add(action.key ? 'Change Shortcut…' : 'Add a Shortcut…', 'keyboard', () => vscode.postMessage({ type: 'changeShortcut', command: action.command }));
-    add('Copy Command ID', 'copy', () => vscode.postMessage({ type: 'copyId', command: action.command }));
+    add(action.key ? 'Change shortcut…' : 'Add a shortcut…', 'keyboard', () => vscode.postMessage({ type: 'changeShortcut', command: action.command }));
+    add('Copy command ID', 'copy', () => vscode.postMessage({ type: 'copyId', command: action.command }));
     for (const entry of entries) {
       if (!entry) {
         menu.append(make('div', 'separator'));

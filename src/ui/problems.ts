@@ -74,7 +74,7 @@ export function syntaxErrorRemedy(editor: vscode.TextEditor): { remedy: Remedy; 
   return {
     count: errors.length,
     remedy: {
-      title: 'Go to Syntax Error',
+      title: 'Go to syntax error',
       run: async () => {
         const shown = await vscode.window.showTextDocument(editor.document, { selection: nearest });
         shown.revealRange(nearest, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
@@ -118,14 +118,14 @@ export function unexpectedRemedies(label: string, error: unknown): Remedy[] {
   return [
     remedies.showLog,
     {
-      title: 'Copy Details',
+      title: 'Copy details',
       run: async () => {
         await vscode.env.clipboard.writeText(text);
         void vscode.window.setStatusBarMessage('Copied the error details', 3000);
       },
     },
     {
-      title: 'Report Issue',
+      title: 'Report issue',
       run: () => vscode.env.openExternal(vscode.Uri.parse(`https://github.com/RishiRajGujadhur/VSExtension/issues/new?title=${encodeURIComponent(`${label} failed`)}`)),
     },
   ];

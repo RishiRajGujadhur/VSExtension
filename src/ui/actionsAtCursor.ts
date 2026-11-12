@@ -7,6 +7,7 @@ import { commandIcons } from '../structure/icons';
 import { intentionsAtCursor } from './intentionProvider';
 import { suggestedAt } from './analysisActions';
 import { recordActionUse } from './actionsView';
+import { nameOf } from '../structure/names';
 
 interface Action {
   command: string;
@@ -20,53 +21,53 @@ const groups: { title: string; actions: Action[] }[] = [
   {
     title: 'Refactor',
     actions: [
-      { command: 'tsStructure.changeSignature', label: 'Change Signature…', detail: 'Rename, add, remove or reorder parameters and update every call' },
-      { command: 'tsStructure.introduceParameter', label: 'Introduce Parameter…', detail: 'Turn the selected expression into a parameter', needsSelection: true },
-      { command: 'tsStructure.moveMembers', label: 'Move Members to Module…', detail: 'Move declarations to another file and update imports' },
-      { command: 'tsStructure.safeDelete', label: 'Safe Delete…', detail: 'Delete after checking every usage' },
+      { command: 'tsStructure.changeSignature', label: 'Change signature…', detail: 'Rename, add, remove or reorder parameters and update every call' },
+      { command: 'tsStructure.introduceParameter', label: 'Introduce parameter…', detail: 'Turn the selected expression into a parameter', needsSelection: true },
+      { command: 'tsStructure.moveMembers', label: 'Move members to module…', detail: 'Move declarations to another file and update imports' },
+      { command: 'tsStructure.safeDelete', label: 'Safe delete…', detail: 'Delete after checking every usage' },
     ],
   },
   {
     title: 'Inspect',
     actions: [
-      { command: 'tsStructure.dataFlow', label: 'Data Flow', detail: 'How the value changes through assignments, checks and calls' },
+      { command: 'tsStructure.dataFlow', label: 'Data flow', detail: 'How the value changes through assignments, checks and calls' },
       { command: 'tsStructure.nullability', label: 'Nullability', detail: 'Which paths make this value null or undefined' },
-      { command: 'tsStructure.sideEffects', label: 'Side Effects', detail: 'What this function changes or reads besides its result' },
-      { command: 'tsStructure.detectPatterns', label: 'Detect Design Patterns…', detail: 'Factories, observers, strategies, singletons and other patterns in the code' },
-      { command: 'tsStructure.mutationTracking', label: 'Mutation Tracking', detail: 'Functions in this file that mutate shared state' },
-      { command: 'tsStructure.mutationTrackingVariable', label: 'Mutation Tracking for This Variable', detail: 'Every change to the variable at the cursor, and whether it runs after an await' },
-      { command: 'tsStructure.controlFlow', label: 'Control Flow Graph', detail: 'Every decision, loop and return of this function as a flowchart, with its paths' },
-      { command: 'tsStructure.dependenceGraph', label: 'Program Dependence Graph', detail: 'Where each value of this function comes from, and which decisions control each statement' },
-      { command: 'tsStructure.callGraph', label: 'Call Graph', detail: 'Who calls this function and what it calls, a few levels each way' },
-      { command: 'tsStructure.reactState', label: 'React State Graph', detail: 'Props, state, effects and memos of this component, and what each one triggers' },
-      { command: 'tsStructure.sliceBackward', label: 'What Affects This Value', detail: 'The statements and decisions this value depends on (backward slice)' },
-      { command: 'tsStructure.sliceForward', label: 'What This Value Affects', detail: 'Everything this value flows into or decides (forward slice)' },
-      { command: 'tsStructure.explainValue', label: 'Explain Value Path', detail: 'Every value this variable can have here, and the conditions that lead to each' },
-      { command: 'tsStructure.raceConditions', label: 'Race Conditions', detail: 'Whether async code can change this variable between a read and a write' },
-      { command: 'tsStructure.mutationTrackingProject', label: 'Mutation Tracking (Project)', detail: 'Every function in the project that mutates shared state' },
-      { command: 'tsStructure.promiseRejections', label: 'Promise Rejections', detail: 'Where this function’s rejections are handled or lost' },
-      { command: 'tsStructure.exceptionFlow', label: 'Exception Flow', detail: 'Where errors are thrown, caught, transformed or swallowed' },
+      { command: 'tsStructure.sideEffects', label: 'Side effects', detail: 'What this function changes or reads besides its result' },
+      { command: 'tsStructure.detectPatterns', label: 'Detect design patterns…', detail: 'Factories, observers, strategies, singletons and other patterns in the code' },
+      { command: 'tsStructure.mutationTracking', label: 'Mutation tracking', detail: 'Functions in this file that mutate shared state' },
+      { command: 'tsStructure.mutationTrackingVariable', label: 'Mutation tracking for this variable', detail: 'Every change to the variable at the cursor, and whether it runs after an await' },
+      { command: 'tsStructure.controlFlow', label: 'Control flow graph', detail: 'Every decision, loop and return of this function as a flowchart, with its paths' },
+      { command: 'tsStructure.dependenceGraph', label: 'Program dependence graph', detail: 'Where each value of this function comes from, and which decisions control each statement' },
+      { command: 'tsStructure.callGraph', label: 'Call graph', detail: 'Who calls this function and what it calls, a few levels each way' },
+      { command: 'tsStructure.reactState', label: 'React state graph', detail: 'Props, state, effects and memos of this component, and what each one triggers' },
+      { command: 'tsStructure.sliceBackward', label: 'What affects this value', detail: 'The statements and decisions this value depends on (backward slice)' },
+      { command: 'tsStructure.sliceForward', label: 'What this value affects', detail: 'Everything this value flows into or decides (forward slice)' },
+      { command: 'tsStructure.explainValue', label: 'Explain value path', detail: 'Every value this variable can have here, and the conditions that lead to each' },
+      { command: 'tsStructure.raceConditions', label: 'Race conditions', detail: 'Whether async code can change this variable between a read and a write' },
+      { command: 'tsStructure.mutationTrackingProject', label: 'Mutation tracking (project)', detail: 'Every function in the project that mutates shared state' },
+      { command: 'tsStructure.promiseRejections', label: 'Promise rejections', detail: 'Where this function’s rejections are handled or lost' },
+      { command: 'tsStructure.exceptionFlow', label: 'Exception flow', detail: 'Where errors are thrown, caught, transformed or swallowed' },
       { command: 'tsStructure.inspectCode', label: 'Inspect Code…', detail: 'Run every inspection over the file or project' },
-      { command: 'tsStructure.auditTypeAssertions', label: 'Audit Type Assertions', detail: 'Every as, <T> and ! in the project, riskiest first' },
-      { command: 'tsStructure.findDuplicates', label: 'Find Structural Duplicates…', detail: 'Copies of code with renamed variables or changed values' },
-      { command: 'tsStructure.deadExports', label: 'Dead Exports', detail: 'Exports nothing reachable from the entry points uses' },
-      { command: 'tsImpact.analyze', label: 'Test Impact Analysis', detail: 'Tests that depend on this symbol or file' },
+      { command: 'tsStructure.auditTypeAssertions', label: 'Audit type assertions', detail: 'Every as, <T> and ! in the project, riskiest first' },
+      { command: 'tsStructure.findDuplicates', label: 'Find structural duplicates…', detail: 'Copies of code with renamed variables or changed values' },
+      { command: 'tsStructure.deadExports', label: 'Dead exports', detail: 'Exports nothing reachable from the entry points uses' },
+      { command: 'tsImpact.analyze', label: 'Test impact analysis', detail: 'Tests that depend on this symbol or file' },
     ],
   },
   {
     title: 'Navigate',
     actions: [
-      { command: 'tsStructure.semanticUsagesInFile', label: 'Find Usages in Current File', detail: 'The same search, limited to this file' },
-      { command: 'tsStructure.semanticUsages', label: 'Semantic Find Usages', detail: 'References grouped by reads, writes, calls, imports, types and JSX' },
-      { command: 'tsStructure.argumentFlow', label: 'Argument Propagation', detail: 'Where a parameter’s values come from and where they go' },
-      { command: 'tsStructure.reexportChain', label: 'Re-export Chain', detail: 'Follow this name through aliases and barrel files' },
-      { command: 'tsStructure.typeHierarchy', label: 'Inheritance Hierarchy', detail: 'Supertypes, subtypes and overrides' },
-      { command: 'tsStructure.overrideImpact', label: 'Override Impact', detail: 'What a change to this member reaches through overrides' },
-      { command: 'tsStructure.dependencyPath', label: 'Dependency Path…', detail: 'Why this module depends on another one' },
-      { command: 'tsStructure.whoImports', label: 'Who Imports This File', detail: 'Modules that import this file, directly or indirectly' },
-      { command: 'tsStructure.findImportCycles', label: 'Find Import Cycles', detail: 'Modules that import each other at run time' },
-      { command: 'tsStructure.dependencyGraphDiff', label: 'Dependency Graph Diff…', detail: 'How imports changed since a Git revision' },
-      { command: 'tsStructure.structuralSearch', label: 'Structural Search…', detail: 'Find and replace code by shape, with typed placeholders' },
+      { command: 'tsStructure.semanticUsagesInFile', label: 'Find usages in current file', detail: 'The same search, limited to this file' },
+      { command: 'tsStructure.semanticUsages', label: 'Semantic find usages', detail: 'References grouped by reads, writes, calls, imports, types and JSX' },
+      { command: 'tsStructure.argumentFlow', label: 'Argument propagation', detail: 'Where a parameter’s values come from and where they go' },
+      { command: 'tsStructure.reexportChain', label: 'Re-export chain', detail: 'Follow this name through aliases and barrel files' },
+      { command: 'tsStructure.typeHierarchy', label: 'Inheritance hierarchy', detail: 'Supertypes, subtypes and overrides' },
+      { command: 'tsStructure.overrideImpact', label: 'Override impact', detail: 'What a change to this member reaches through overrides' },
+      { command: 'tsStructure.dependencyPath', label: 'Dependency path…', detail: 'Why this module depends on another one' },
+      { command: 'tsStructure.whoImports', label: 'Who imports this file', detail: 'Modules that import this file, directly or indirectly' },
+      { command: 'tsStructure.findImportCycles', label: 'Find import cycles', detail: 'Modules that import each other at run time' },
+      { command: 'tsStructure.dependencyGraphDiff', label: 'Dependency graph diff…', detail: 'How imports changed since a Git revision' },
+      { command: 'tsStructure.structuralSearch', label: 'Structural search…', detail: 'Find and replace code by shape, with typed placeholders' },
     ],
   },
 ];
@@ -87,8 +88,8 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
   };
   const keys = shortcuts(keybindings);
   // Each entry's keyboard button opens its shortcut for remapping.
-  const remap: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Change Keyboard Shortcut' };
-  const item = (action: Action): Item => ({ label: `$(${commandIcons[action.command] ?? 'symbol-misc'}) ${action.label}`, description: keys.get(action.command), detail: action.detail, command: action.command, buttons: [remap] });
+  const remap: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Change keyboard shortcut' };
+  const item = (action: Action): Item => ({ label: `$(${commandIcons[action.command] ?? 'symbol-misc'}) ${nameOf(action.command, action.label)}`, description: keys.get(action.command), detail: action.detail, command: action.command, buttons: [remap] });
   const all = groups.flatMap((g) => g.actions);
   const recent = (memento?.get<string[]>(recentKey) ?? [])
     .map((command) => all.find((a) => a.command === command))
@@ -114,14 +115,14 @@ export async function showActionsAtCursor(memento?: vscode.Memento, keybindings:
   }
   const hidden = features.filter((f) => !isFeatureEnabled(f.id)).length;
   if (hidden > 0) {
-    items.push({ label: '', kind: vscode.QuickPickItemKind.Separator }, { label: '$(add) More Features…', detail: `${hidden} more analyses and tools are turned off; choose which to turn on`, command: 'tsStructure.configureFeatures' });
+    items.push({ label: '', kind: vscode.QuickPickItemKind.Separator }, { label: '$(tools) Toolshed…', detail: `${hidden} more analyses and tools are turned off; choose which to turn on`, command: 'tsStructure.configureFeatures' });
   }
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = 'Analyze or Refactor This';
+  picker.title = 'Analyze or refactor this';
   picker.placeholder = 'Type to filter refactorings, inspections and navigation';
   picker.matchOnDetail = true;
   picker.items = items;
-  const allShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Keyboard Shortcuts for Code X-Ray' };
+  const allShortcuts: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('keyboard'), tooltip: 'Keyboard shortcuts for Code X-Ray' };
   picker.buttons = [allShortcuts];
   const picked = await new Promise<Item | undefined>((resolve) => {
     picker.onDidAccept(() => resolve(picker.selectedItems[0]));

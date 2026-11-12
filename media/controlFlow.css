@@ -6,7 +6,7 @@ main { flex: 1; min-height: 0; display: flex; }
 /* Path Explorer */
 #explorer { width: 300px; flex: none; display: flex; flex-direction: column; border-left: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
 #explorer[hidden] { display: none; }
-#explorer h2 { margin: 0; padding: 8px 12px 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-sideBarTitle-foreground, var(--vscode-foreground)); }
+#explorer h2 { margin: 0; padding: 8px 12px 2px; font-size: 11px; font-weight: 500; color: var(--vscode-sideBarTitle-foreground, var(--vscode-foreground)); }
 #pathSummary, .hint { padding: 0 12px 6px; color: var(--vscode-descriptionForeground); font-size: 12px; }
 .options { display: flex; align-items: center; gap: 8px; padding: 0 12px 6px; font-size: 12px; }
 .options label { display: inline-flex; align-items: center; gap: 4px; }
@@ -151,7 +151,7 @@ li.selected .path-steps { color: inherit; }
 #legend { position: absolute; top: 44px; right: 12px; z-index: 4; width: 320px; max-height: calc(100% - 60px); overflow: auto; padding: 8px 12px; border-radius: 6px;
   border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, #454545)); background: var(--vscode-editorWidget-background, #252526); box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, .36)); font-size: 12px; }
 #legend[hidden] { display: none; }
-#legend h2 { margin: 6px 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+#legend h2 { margin: 6px 0 4px; font-size: 11px; font-weight: 500; color: var(--vscode-descriptionForeground); }
 #legend ul { margin: 0; padding: 0; list-style: none; }
 #legend li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
 #legend kbd { padding: 0 4px; border: 1px solid var(--vscode-keybindingLabel-border, rgba(128, 128, 128, .4)); border-bottom-width: 2px; border-radius: 3px; font-family: inherit; font-size: 11px;

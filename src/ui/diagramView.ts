@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { peekLines } from '../structure/peekLines';
+import { nameOf } from '../structure/names';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
 import { Report, ReportLocation, forEachReportNode } from '../structure/report';
 import { pickGraph } from './graphSwitch';
@@ -11,14 +12,14 @@ import { isFeatureEnabled } from './features';
 
 /** The analyses a box's right-click menu offers, with the icon each has everywhere else. */
 export const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
-  { command: 'tsStructure.report.usagesHere', runs: 'tsStructure.semanticUsages', label: 'Find Usages Here' },
-  { command: 'tsStructure.report.dataFlowHere', runs: 'tsStructure.dataFlow', label: 'Data Flow Here' },
-  { command: 'tsStructure.report.nullabilityHere', runs: 'tsStructure.nullability', label: 'Check for Null or Undefined Here' },
-  { command: 'tsStructure.report.mutationsHere', runs: 'tsStructure.mutationTrackingVariable', label: 'Mutation Tracking for This Variable', more: true },
-  { command: 'tsStructure.report.racesHere', runs: 'tsStructure.raceConditions', label: 'Race Conditions', more: true },
-  { command: 'tsStructure.report.sideEffectsHere', runs: 'tsStructure.sideEffects', label: 'Side Effects', more: true },
-  { command: 'tsStructure.report.exceptionsHere', runs: 'tsStructure.exceptionFlow', label: 'Exception Flow', more: true },
-  { command: 'tsStructure.report.argumentsHere', runs: 'tsStructure.argumentFlow', label: 'Argument Propagation', more: true },
+  { command: 'tsStructure.report.usagesHere', runs: 'tsStructure.semanticUsages', label: 'Find usages here' },
+  { command: 'tsStructure.report.dataFlowHere', runs: 'tsStructure.dataFlow', label: 'Data flow here' },
+  { command: 'tsStructure.report.nullabilityHere', runs: 'tsStructure.nullability', label: 'Check for null or undefined here' },
+  { command: 'tsStructure.report.mutationsHere', runs: 'tsStructure.mutationTrackingVariable', label: 'Mutation tracking for this variable', more: true },
+  { command: 'tsStructure.report.racesHere', runs: 'tsStructure.raceConditions', label: 'Race conditions', more: true },
+  { command: 'tsStructure.report.sideEffectsHere', runs: 'tsStructure.sideEffects', label: 'Side effects', more: true },
+  { command: 'tsStructure.report.exceptionsHere', runs: 'tsStructure.exceptionFlow', label: 'Exception flow', more: true },
+  { command: 'tsStructure.report.argumentsHere', runs: 'tsStructure.argumentFlow', label: 'Argument propagation', more: true },
 ];
 
 /** The box analyses whose features are on, with their icons, for a chart's right-click menu. */
@@ -28,7 +29,7 @@ export function menuAnalyses(): { command: string; label: string; icon: string; 
       const feature = featureOf(a.command);
       return !feature || isFeatureEnabled(feature.id);
     })
-    .map((a) => ({ command: a.command, label: a.label, icon: commandIcons[a.runs], more: !!a.more }));
+    .map((a) => ({ command: a.command, label: nameOf(a.command, a.label), icon: commandIcons[a.runs], more: !!a.more }));
 }
 
 /**
@@ -122,7 +123,7 @@ export class DiagramPanel {
   private html(webview: vscode.Webview): string {
     const button = iconButton;
     return webviewPage(webview, this.extensionUri, {
-      title: 'Analysis Diagram',
+      title: 'Analysis diagram',
       styles: ['chart.css', 'diagram.css'],
       scripts: ['diagramGrid.js', 'chartKit.js', 'diagram.js'],
       images: true,
