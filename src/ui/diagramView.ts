@@ -175,12 +175,13 @@ export class DiagramPanel {
     <li><span class="swatch info">i</span>Worth knowing, such as a write</li>
     <li><span class="swatch group"></span>A group (dashed): gathers the boxes behind it and has no code of its own</li>
     <li><span class="swatch pattern"></span>A design pattern (purple hexagon, dotted line): how the code around the value is organized, not a place the value goes</li>
+    <li><span class="swatch test">⚗</span>In a test file (cyan outline and a test tube), such as cart.spec.tsx</li>
     <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
     <li><span class="glyph">3</span>A folded box and how many boxes it hides; click it, or press Space, to unfold</li>
   </ul>
   <h2>Keys</h2>
   <ul>
-    <li><kbd>Tab</kbd> then arrow keys: move between boxes</li>
+    <li><kbd>Tab</kbd> <kbd>Shift+Tab</kbd> move between boxes · arrow keys follow the branches</li>
     <li><kbd>Enter</kbd> open the code · <kbd>Space</kbd> fold or unfold</li>
     <li><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>0</kbd> fit · <kbd>Home</kbd> back to the subject</li>
     <li>Double-click a box, or <kbd>B</kbd>: show only its branch · <kbd>Escape</kbd> the whole chart again</li>

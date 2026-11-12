@@ -83,6 +83,7 @@
     else if (node.side < 0 && diagram.leftCaption) parts.push(diagram.leftCaption);
     else if (node.side > 0 && diagram.rightCaption) parts.push(diagram.rightCaption);
     if (node.kind === 'pattern') parts.push('design pattern');
+    if (node.test) parts.push('in a test');
     if (node.duplicates) parts.push(`${node.duplicates} the same`);
     if (node.children.length && node.collapsed && node !== diagram.center) parts.push(`${node.children.length} folded`);
     if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
@@ -254,7 +255,7 @@
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
       // A box with no code of its own only gathers the boxes behind it: drawn as a dashed outline.
       const group = !node.location && node.children.length && !node.kind && node !== center ? ' group' : '';
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: 0 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${node.test ? ' test' : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: 0 }, layer);
       node.el = g;
       g.diagramNode = node;
       // A button screen readers announce with its words, where it sits and what the keys do.

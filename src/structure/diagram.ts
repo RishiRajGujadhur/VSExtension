@@ -1,4 +1,5 @@
 import { Report, ReportLocation, ReportNode, Tone, titleParts } from './report';
+import { isTestPath } from './reportPolish';
 
 /** One box of a diagram: a result row, with the rows below it as its children. */
 export interface DiagramNode {
@@ -10,6 +11,8 @@ export interface DiagramNode {
   kind?: 'pattern';
   /** The codicon its row has in the results view, or one for common groups such as Design patterns. */
   icon?: string;
+  /** It is in a test file (cart.spec.tsx, __tests__/…): drawn with a test tube and a cyan outline. */
+  test?: boolean;
   /** A stack of boxes that read the same: how many, with each one as a child, told apart by its line. */
   duplicates?: number;
   /** Folded: the children are hidden until the node's button is clicked. */
@@ -43,8 +46,18 @@ function isPattern(row: ReportNode): boolean {
 function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramNode['kind']): DiagramNode {
   const kind = inherited ?? (isPattern(row) ? 'pattern' : undefined);
   const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind));
-  const icon = boxIcon(row, kind);
-  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), collapsed: children.length > 0 && collapsed, children };
+  const test = isTestRow(row);
+  const icon = test ? 'beaker' : boxIcon(row, kind);
+  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), ...(test ? { test } : {}), collapsed: children.length > 0 && collapsed, children };
+}
+
+/** A test file's name, as a label or a description names it: cart.spec.tsx, price.test.ts. */
+const testFileName = /(^|[\s/\\·(])[\w.-]+[._](test|spec)\.[cm]?[jt]sx?\b/;
+
+/** A row about a test: it points into a test file, names one, or was marked as one ("· test"). */
+export function isTestRow(row: ReportNode): boolean {
+  if (row.location) return isTestPath(row.location.file);
+  return testFileName.test(row.label) || testFileName.test(row.description ?? '') || /(^| · )test( · |$)/.test(row.description ?? '');
 }
 
 /** Icons for groups that appear in many analyses, used when their row has none of its own. */

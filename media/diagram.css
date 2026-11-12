@@ -140,3 +140,14 @@ body { position: relative; }
   .toggle circle:not(.hit) { fill: ButtonFace; stroke: ButtonText; }
   .toggle text { fill: ButtonText; }
 }
+
+/* A box in a test file: a cyan outline and a test tube. */
+.node.test .box { stroke: #22d3ee; stroke-width: 1.4; }
+.node.test.located:hover .box { stroke: #67e8f9; }
+.node.test .box-icon { fill: #22d3ee; opacity: 1; }
+body.vscode-light .node.test .box { stroke: #0891b2; }
+body.vscode-light .node.test .box-icon { fill: #0891b2; }
+@media (forced-colors: active) {
+  .node.test .box { stroke: Highlight; stroke-dasharray: 4 2; }
+}
+#legend .swatch.test { border-color: #22d3ee; color: #22d3ee; }
