@@ -719,7 +719,7 @@ Object.assign(polishers, {
     if (busiest && perFile.size > 1 && report.description) report.description += `; busiest file: ${busiest[0]} (${busiest[1]})`;
   })(polishers.inspectCode),
 
-  // Risky casts: where to start, casts to the same type, what as any does, unnecessary ones safe to delete, tests.
+  // Type assertions: where to start, assertions to the same type, what as any does, unnecessary ones safe to delete, tests.
   assertionAudit(report: Report) {
     const groups = report.roots.filter((g) => g.children?.length && g.label !== 'How to fix');
     const first = groups.find((g) => g.tone === 'error')?.children?.[0] ?? groups.find((g) => g.tone === 'warning')?.children?.[0];
@@ -734,7 +734,7 @@ Object.assign(polishers, {
       }
       markTests(g.children);
     }
-    for (const [type, count] of targets) if (count > 2) report.warnings.push(`${count} casts to ${type}: one type guard, function is${type}(value): value is ${type}, would check them all.`);
+    for (const [type, count] of targets) if (count > 2) report.warnings.push(`${count} assertions to ${type}: one type guard, function is${type}(value): value is ${type}, would check them all.`);
   },
 
   // Déjà vu, more: lines that could go, what the extracted function needs, small copies, copies across folders.

@@ -43,7 +43,7 @@ export const names: Record<string, string> = {
   'tsStructure.dependencyGraphDiff': 'Import changes since…',
   // Health check
   'tsStructure.inspectCode': 'Inspect code…',
-  'tsStructure.auditTypeAssertions': 'Risky casts',
+  'tsStructure.auditTypeAssertions': 'Type assertions',
   'tsStructure.findDuplicates': 'Déjà vu…',
   'tsStructure.deadExports': 'Ghost exports',
   'tsStructure.detectPatterns': 'Pattern spotting…',
@@ -81,7 +81,7 @@ export const names: Record<string, string> = {
   'tsStructure.inspectOpen': 'Inspect open files',
   'tsStructure.copyProblems': 'Copy problems in this file',
   'tsStructure.explainFinding': 'Explain this problem',
-  'tsStructure.toggleAssertionTests': 'Check casts in test files on or off',
+  'tsStructure.toggleAssertionTests': 'Type assertions in test files on or off',
   'tsStructure.toggleLiveInspections': 'Quiet mode (pause live inspections)',
   'tsStructure.togglePreview': 'Preview refactorings on or off',
   'tsStructure.showLastRefactoring': 'What the last refactoring changed',

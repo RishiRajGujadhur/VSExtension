@@ -1,15 +1,17 @@
 # Code X-Ray
 
-See inside your TypeScript, JavaScript and React code in VS Code: where values come from and where they go, every path a function can take, which tests a change affects, what can be null, and much more, with refactorings, inspections and structural search. Everything is offline static analysis with the TypeScript compiler: no AI, no network, and nothing leaves your machine.
+See inside your TypeScript, JavaScript and React code. Put the cursor on something and ask: where does this come from, what runs here, what breaks if I change it? Every answer comes from the TypeScript compiler on your machine: offline, no AI, and nothing leaves your computer.
 
-**At a glance**
+**At a glance**, grouped the way the Actions view is:
 
-- **Understand values**: Data flow with a live chart, Why this value (*why does this variable have this value here?*), what feeds a value and what it feeds, Null checks, Changes to a variable and Race conditions.
-- **Understand control flow**: a flowchart of any function with a path list that lists, compares and filters every path, expands calls in place and flags impossible paths.
-- **Know what a change affects**: Affected tests (also for uncommitted changes), Find usages grouped by reads, writes and calls, Override reach, Who imports this and Import changes since….
-- **Change code safely**: Change parameters, Make it a parameter, Move to another file, Delete safely, 70 quick rewrites and search by shape.
-- **Find problems**: live inspections (missing await, unsafe type assertions and more), déjà vu for copied code, ghost exports, import loops and pattern spotting.
-- **Built to be used**: an Actions view you can search, pin, reorder and trim, a shortcut for every analysis, interactive charts you can export as Mermaid, SVG or PNG, and screen reader, keyboard and high contrast support.
+- **Values**: Data flow, Why this value, What feeds this value, What this value feeds, Null checks, Changes to this variable and Race conditions.
+- **Flow and errors**: a Flowchart of any function with every path listed, compared and filtered; What depends on what, Error paths, Promise rejections and Side effects.
+- **Finding your way**: Find usages, Callers and calls, Arguments passed in, Family tree, Override reach and Re-export trail.
+- **Imports**: Who imports this, Why this import, Import loops and Import changes since.
+- **Health check**: Inspect code, Type assertions, Déjà vu for copied code, Ghost exports, Pattern spotting and Shared state changes.
+- **Tests**: Affected tests, and Tests for my changes before you commit.
+- **Edit**: Change parameters, Make it a parameter, Move to another file, Delete safely, 70 quick rewrites, Search by shape and Your own checks.
+- **Around it all**: an Actions view you can search, pin and trim, a shortcut for everything (the Cheat codes), Ask the rubber duck when you don't know which to pick, the Toolshed of optional tools, charts you can save as Mermaid, SVG or PNG, and screen reader, keyboard and high contrast support.
 
 ![Analyze or Refactor This: every refactoring and analysis for the cursor in one list, each with its shortcut](docs/images/actions-at-cursor.gif)
 
@@ -65,7 +67,7 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `K` | Cheat codes | `/` | Ask the rubber duck… |
 | `W` | Rewrites here | `B` | Move to another file |
 | `J` | Who imports this | `Q` | Import loops |
-| `2` | Risky casts | `3` | Shared state changes (project) |
+| `2` | Type assertions | `3` | Shared state changes (project) |
 | `4` | Tests for my changes | `5` | Next inspection problem |
 | `6` | Changes to this variable | `7` | Race conditions |
 | `1` | Flowchart | `0` | Why this value |
@@ -254,7 +256,7 @@ Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorin
 
   Style checks such as `console.log`, `==` and `await` in loops are off until you turn them on in **Inspection settings…**. The status bar shows error, warning and info counts; click it for the file's problems and a menu. `Ctrl+Alt+S 5` jumps to the next one, and **Copy problems in this file** copies them.
 - **Inspect code…** runs every inspection over a scope you choose; **Fix all** fixes a whole group. **Inspect changed files** and **Inspect open files** skip the scope question.
-- **Ghost exports**, **Déjà vu** and **Risky casts** clean up a project or folder.
+- **Ghost exports**, **Déjà vu** and **Type assertions** clean up a project or folder.
 - **Search by shape** finds code by shape with `$placeholders$`, and can save a pattern as your own inspection.
 
 ![A missing await underlined, explained and listed](docs/images/missing-await.gif)

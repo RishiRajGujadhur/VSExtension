@@ -206,7 +206,7 @@ export const actionCatalog: CatalogAction[] = [
 
   a('analyze', 'Health check', 'tsStructure.inspectCode', 'Inspect Code…', 'Run every inspection',
     'Runs every inspection over the current file or the whole project and lists the problems found.', 'lint problems warnings'),
-  a('analyze', 'Health check', 'tsStructure.auditTypeAssertions', 'Audit Type Assertions', 'Risky casts, worst first',
+  a('analyze', 'Health check', 'tsStructure.auditTypeAssertions', 'Audit Type Assertions', 'Every as and !, riskiest first',
     'Lists every type assertion (as, <T> and the non-null !), ranked by how likely each is to hide a bug.', 'cast unsafe'),
   a('analyze', 'Health check', 'tsStructure.findDuplicates', 'Find Duplicates…', 'Copied code, even renamed',
     'Finds blocks of code that are copies of each other, even when variables were renamed.', 'copy paste clones'),

@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
-  "description": "See inside your TypeScript, JavaScript and React code, offline and without AI. Flowcharts, data flow, why a value is what it is, null checks, affected tests, safe refactorings, inspections and search by shape, with plain names and a few surprises. Chart animations adapted from robot-components (MIT).",
-  "version": "0.46.0",
+  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
+  "version": "0.47.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -316,7 +316,7 @@
       },
       {
         "command": "tsStructure.auditTypeAssertions",
-        "title": "Risky casts",
+        "title": "Type assertions",
         "category": "Code X-Ray",
         "icon": "$(shield)"
       },
@@ -764,7 +764,7 @@
       },
       {
         "command": "tsStructure.toggleAssertionTests",
-        "title": "Check casts in test files on or off",
+        "title": "Type assertions in test files on or off",
         "category": "Code X-Ray"
       },
       {
@@ -3420,7 +3420,7 @@
       {
         "id": "gettingStarted",
         "title": "Get started with Code X-Ray",
-        "description": "See inside your TypeScript and JavaScript code in eight short steps.",
+        "description": "See inside your code in eight short steps.",
         "when": "true",
         "steps": [
           {

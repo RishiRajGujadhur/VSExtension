@@ -17,11 +17,11 @@ const find = (report: Report, test: (n: ReportNode) => boolean) => {
   return found;
 };
 
-test('risky casts: where to start, casts to one type, as any explained, unnecessary ones safe to delete', () => {
+test('type assertions: where to start, assertions to one type, as any explained, unnecessary ones safe to delete', () => {
   const program = virtualProject('inspect', 'src/assertions.ts').program();
   const r = polishReport(assertionAuditReport(program, [program.getSourceFile(file('src/assertions.ts'))!]));
   assert.match(r.roots[0].label, /^Start with: /);
-  assert.ok(r.warnings.some((w) => /3 casts to Circle/.test(w)));
+  assert.ok(r.warnings.some((w) => /3 assertions to Circle/.test(w)));
   assert.ok(find(r, (n) => /as any/.test(n.label) && /turns off type checking/.test(n.description ?? '')));
   assert.ok(find(r, (n) => /safe to delete/.test(n.description ?? '')));
 });

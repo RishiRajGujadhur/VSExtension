@@ -204,7 +204,7 @@
     const title = make('h1', 'title');
     title.append(make('span', 'visually-hidden', data.title), pixelTitle(data.title));
     const lead = make('p', 'lead', data.description);
-    const tagline = make('p', 'tagline', 'Offline static analysis for TypeScript, JavaScript and React');
+    const tagline = make('p', 'tagline', 'Plain answers about TypeScript, JavaScript and React code, offline and without AI');
     const actions = make('div', 'hero-actions');
     const first = data.steps[0] && data.steps[0].buttons[0];
     actions.append(button('Start the tour', () => {
