@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ImpactedTest, ImpactResult, PathStep, SourceLocation, TestCase } from './analysis/types';
 import { hashText, pathKey } from './analysis/paths';
+import { distance, fileCounts, groupByFile, statusOf, viewMessage } from './structure/impactView';
 
 type Item =
   | { kind: 'file'; file: string; tests: ImpactedTest[] }
@@ -25,9 +26,10 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
   set(result: ImpactResult | undefined): void {
     this.current = result;
     if (result) {
-      this.status.name = 'Impacted Tests';
-      this.status.text = `$(beaker) ${countLabel(result.tests.length)}`;
-      this.status.tooltip = `Tests impacted by ${result.target.name}. Click to see or run them.`;
+      this.status.name = 'Affected tests';
+      const status = statusOf(result);
+      this.status.text = status.text;
+      this.status.tooltip = status.tooltip;
       this.status.accessibilityInformation = { label: `${countLabel(result.tests.length)} impacted by ${result.target.name}. Show them.`, role: 'button' };
       this.status.command = 'tsImpact.showLastResults';
       this.status.show();
@@ -36,7 +38,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
     }
     if (this.view) {
       this.view.description = result ? `${result.target.name} · ${countLabel(result.tests.length)}` : undefined;
-      this.view.message = result?.warnings.length ? result.warnings.join(' ') : undefined;
+      this.view.message = result ? viewMessage(result) : undefined;
     }
     this.changed.fire();
   }
@@ -47,13 +49,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
       return [];
     }
     if (!item) {
-      const byFile = new Map<string, ImpactedTest[]>();
-      for (const impacted of result.tests) {
-        const list = byFile.get(impacted.test.file) ?? [];
-        list.push(impacted);
-        byFile.set(impacted.test.file, list);
-      }
-      return [...byFile].map(([file, tests]) => ({ kind: 'file', file, tests }));
+      return groupByFile(result.tests).map(({ file, tests }) => ({ kind: 'file' as const, file, tests }));
     }
     if (item.kind === 'file') {
       return item.tests.map((impacted) => ({ kind: 'test', impacted }));
@@ -68,7 +64,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
     switch (item.kind) {
       case 'file': {
         const tree = new vscode.TreeItem(path.basename(item.file), vscode.TreeItemCollapsibleState.Expanded);
-        tree.description = vscode.workspace.asRelativePath(path.dirname(item.file));
+        tree.description = `${vscode.workspace.asRelativePath(path.dirname(item.file))} · ${fileCounts(item.tests)}`;
         tree.resourceUri = vscode.Uri.file(item.file);
         tree.iconPath = vscode.ThemeIcon.File;
         tree.contextValue = 'file';
@@ -78,7 +74,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<Item> {
       case 'test': {
         const { test, confidence } = item.impacted;
         const tree = new vscode.TreeItem(testLabel(test), vscode.TreeItemCollapsibleState.Collapsed);
-        tree.description = [confidence === 'possible' ? 'possible' : '', test.parameterized ? 'parameterized' : ''].filter(Boolean).join(' · ');
+        tree.description = [confidence === 'possible' ? 'possible' : '', test.parameterized ? 'parameterized' : '', distance(item.impacted)].filter(Boolean).join(' · ');
         tree.tooltip = testTooltip(item.impacted);
         tree.iconPath = new vscode.ThemeIcon(confidence === 'confirmed' ? 'beaker' : 'question');
         tree.contextValue = 'test';

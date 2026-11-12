@@ -27,13 +27,13 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     const atCursor = selected.length ? selected : [...members].reverse().filter((m) => m.line <= start.line).slice(0, 1);
     const picked = await vscode.window.showQuickPick(
       members.map((m) => ({ label: `$(${kindIcon(m.kind)}) ${m.name}`, description: `${m.kind}${m.exported ? '' : ' · not exported'} · line ${m.line + 1}${atCursor.includes(m) ? ' · at cursor' : ''}`, picked: atCursor.includes(m), member: m })),
-      { title: `Move members of ${path.basename(source)}`, placeHolder: 'Select the declarations to move', canPickMany: true },
+      { title: `Move to another file: ${path.basename(source)}`, placeHolder: 'Tick the declarations to move (the box at the top ticks all)', canPickMany: true },
     );
     if (!picked || picked.length === 0) {
       return;
     }
 
-    const target = await pickTarget(projects, source, root, memento?.get<string[]>(recentTargetsKey) ?? []);
+    const target = await pickTarget(projects, source, root, memento?.get<string[]>(recentTargetsKey) ?? [], picked[0].member.name);
     if (!target) {
       return;
     }
@@ -57,14 +57,15 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     }
 
     if (document.version !== version) {
-      void showProblem('The file changed while Move was open.', [remedies.runAgain('tsStructure.moveMembers')], 'warning');
+      void showProblem('The file changed while Move to another file was open.', [remedies.runAgain('tsStructure.moveMembers')], 'warning');
       return;
     }
     const result = moveMembers(projects.createVirtualProject(source, root), source, picked.map((p) => p.member.name), target, { keepReExport });
     if (await applyRefactor(result, previewEnabled())) {
       const names = picked.map((p) => p.member.name);
       const openTarget = `Open ${path.basename(target)}`;
-      const open = await vscode.window.showInformationMessage(`Moved ${names.length === 1 ? names[0] : `${names.length} declarations`} to ${path.basename(target)}.`, openTarget, 'Show Changed Files');
+      const what = names.length <= 3 ? names.join(', ') : `${names.length} declarations`;
+      const open = await vscode.window.showInformationMessage(`Moved ${what} to ${path.basename(target)}${result.changes.length > 2 ? `; imports updated in ${result.changes.length - 2} other file${result.changes.length === 3 ? '' : 's'}` : ''}.`, openTarget, 'Show changed files');
       if (open === openTarget) {
         await vscode.window.showTextDocument(vscode.Uri.file(target));
       } else if (open) {
@@ -72,7 +73,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
       }
     }
   } catch (error) {
-    reportError(error, 'Move Members');
+    reportError(error, 'Move to another file');
   }
 }
 
@@ -82,15 +83,17 @@ function kindIcon(kind: string): string {
 }
 
 /** Project modules ordered by folder distance from the source, plus options for a new or browsed file. */
-async function pickTarget(projects: ProjectService, source: string, root: string | undefined, recent: readonly string[]): Promise<string | undefined> {
+async function pickTarget(projects: ProjectService, source: string, root: string | undefined, recent: readonly string[], firstName: string): Promise<string | undefined> {
   const files = projectSourceFiles(projects.load(source, root).program)
     .map((sf) => normalizePath(sf.fileName))
     .filter((f) => pathKey(f) !== pathKey(source));
   const distance = (file: string) => path.posix.relative(path.posix.dirname(source), path.posix.dirname(file)).split('/').filter(Boolean).length;
-  files.sort((a, b) => distance(a) - distance(b) || a.localeCompare(b));
+  // Test files last: code rarely moves into a test.
+  const isTest = (file: string) => /(\.|_)(test|spec)\.[cm]?[jt]sx?$|[\\/](__tests__|tests?)[\\/]/.test(file);
+  files.sort((a, b) => Number(isTest(a)) - Number(isTest(b)) || distance(a) - distance(b) || a.localeCompare(b));
 
   type Item = vscode.QuickPickItem & { file?: string; action?: 'new' | 'browse' };
-  const item = (file: string): Item => ({ label: path.basename(file), description: vscode.workspace.asRelativePath(path.dirname(file)), file });
+  const item = (file: string): Item => ({ label: path.basename(file), description: [vscode.workspace.asRelativePath(path.dirname(file)), distance(file) === 0 ? 'same folder' : '', isTest(file) ? 'test' : ''].filter(Boolean).join(' · '), file });
   // Modules moved to recently come first: moving several things to one place is usually done in a row.
   const keys = new Set(files.map(pathKey));
   const recentFiles = recent.filter((f) => keys.has(pathKey(f)));
@@ -102,7 +105,7 @@ async function pickTarget(projects: ProjectService, source: string, root: string
     { label: 'Project modules', kind: vscode.QuickPickItemKind.Separator },
     ...files.filter((f) => !recentKeys.has(pathKey(f))).map(item),
   ];
-  const picked = await vscode.window.showQuickPick(items, { title: 'Move to module', placeHolder: 'Type to search for the target module', matchOnDescription: true });
+  const picked = await vscode.window.showQuickPick(items, { title: 'Move to which file?', placeHolder: 'Type to search; files in the same folder come first', matchOnDescription: true });
   if (!picked) {
     return undefined;
   }
@@ -121,8 +124,9 @@ async function pickTarget(projects: ProjectService, source: string, root: string
   const name = await vscode.window.showInputBox({
     title: 'New module',
     prompt: `Path relative to ${vscode.workspace.asRelativePath(path.dirname(source))}`,
-    value: `newModule${extension}`,
-    valueSelection: [0, 'newModule'.length],
+    // Named after the first declaration moved, which is usually what the new file is about.
+    value: `${firstName}${extension}`,
+    valueSelection: [0, firstName.length],
     validateInput: (value) => (/\.[cm]?[jt]sx?$/i.test(value.trim()) ? undefined : 'Use a .ts, .tsx, .js or .jsx file name.'),
   });
   return name ? normalizePath(path.resolve(path.dirname(source), name.trim())) : undefined;

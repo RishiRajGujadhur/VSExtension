@@ -492,8 +492,8 @@ async function analysisCommandsFlow(): Promise<void> {
 
   await vscode.commands.executeCommand('tsStructure.structuralSearch');
   await new Promise((resolve) => setTimeout(resolve, 500));
-  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Structural Search');
-  assert.ok(tab, 'Structural Search panel did not open');
+  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Search by shape');
+  assert.ok(tab, 'Search by shape panel did not open');
   await vscode.window.tabGroups.close(tab);
   console.log('analysis commands ok');
 }

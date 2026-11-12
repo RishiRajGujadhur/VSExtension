@@ -123,6 +123,7 @@ ${buttonCss}
   .hint { color: var(--vscode-descriptionForeground); font-size: .92em; }
   input[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
   .problems { color: var(--vscode-errorForeground); min-height: 1em; margin: 4px 0 0; }
+  .summary { color: var(--vscode-descriptionForeground); margin: 4px 0 0; }
 </style>
 </head>
 <body>
@@ -136,15 +137,16 @@ ${buttonCss}
   <thead><tr><th scope="col">Name</th><th scope="col" class="typed">Type</th><th scope="col">Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th scope="col">Value for existing callers${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Leave it empty for an optional parameter or one with a default value.')}</th><th scope="col" class="typed">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th scope="col"><span class="visually-hidden">Move or remove</span></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
-<button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add Parameter</span></button>
+<button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add parameter</span></button>
 <p class="hint">Existing parameters keep the argument each caller passes. For a new parameter, the value for existing callers is inserted at every call site; leave it empty when the parameter is optional or has a default value.</p>
 <pre id="preview"></pre>
+<p id="summary" class="summary" aria-live="polite"></p>
 <p id="problems" class="problems" role="status" aria-live="polite"></p>
 <div class="actions">
-  <button class="primary" id="previewBtn" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview Changes</span></button>
+  <button class="primary" id="previewBtn" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview changes</span></button>
   <button id="apply" aria-describedby="problems" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
   <span class="spacer"></span>
-  <button id="copy" title="Copy the signature shown in the preview">${icon('copy')}<span>Copy Signature</span></button>
+  <button id="copy" title="Copy the signature shown in the preview">${icon('copy')}<span>Copy signature</span></button>
   <button id="reset" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
   <button id="cancel" title="Close without changing anything (Escape)">${icon('close')}<span>Cancel</span></button>
 </div>
@@ -153,7 +155,7 @@ ${buttonCss}
   const { info, rows } = ${state};
   const initialRows = JSON.stringify(rows);
   const $ = (id) => document.getElementById(id);
-  $('title').textContent = 'Change signature of ' + info.kind + ' ' + info.name;
+  $('title').textContent = 'Change parameters of ' + info.kind + ' ' + info.name;
   $('name').value = info.name;
   $('returnType').value = info.returnType;
   if (!info.typed) {
@@ -230,7 +232,9 @@ ${buttonCss}
     // A disabled button (first row moved to the top) cannot take focus; its row's name can.
     (target && !target.disabled ? target : tr ? tr.querySelector('input') : $('add')).focus();
   }
-  const identifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+  const plainIdentifier = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+  const reserved = new Set('break case catch class const continue debugger default delete do else enum export extends false finally for function if import in instanceof new null return super switch this throw true try typeof var void while with yield let static implements interface package private protected public await'.split(' '));
+  const identifier = { test: (name) => plainIdentifier.test(name) && !reserved.has(name) };
   /** What stops the refactoring, checked as you type so the buttons say why they are off. */
   function problems() {
     const found = [];
@@ -241,7 +245,8 @@ ${buttonCss}
       const name = r.name.trim();
       // Destructured parameters keep their pattern and can't be renamed.
       if (original && !original.renamable) return;
-      if (!identifier.test(name)) found.push('"' + name + '" is not a valid parameter name.');
+      if (reserved.has(name)) found.push('"' + name + '" is a reserved word and can\'t be a parameter name.');
+      else if (!identifier.test(name)) found.push('"' + name + '" is not a valid parameter name.');
       else if (seen.has(name)) found.push('Two parameters are named "' + name + '".');
       seen.add(name);
       if (!original && !r.optional && !r.initializer.trim() && !r.callValue.trim()) found.push('New parameter "' + name + '" needs a value for existing callers' + (info.typed ? ', a default value, or to be optional.' : ' or a default value.'));
@@ -277,6 +282,25 @@ ${buttonCss}
     const ret = info.typed && $('returnType').value.trim() ? ': ' + $('returnType').value.trim() : '';
     const after = $('name').value + '(' + params.join(', ') + ')' + ret;
     $('preview').textContent = beforeText && beforeText !== after ? 'Before: ' + beforeText + '\\nAfter:  ' + after : after;
+    $('summary').textContent = changeSummary();
+    $('reset').disabled = !isDirty();
+  }
+  /** What the edit does, in words: renamed, added, removed and moved parameters, and the function's new name. */
+  function changeSummary() {
+    const parts = [];
+    const newName = $('name').value.trim();
+    if (newName && newName !== info.name) parts.push('renames ' + info.name + ' to ' + newName);
+    const kept = rows.filter((r) => r.originalIndex !== null);
+    const renamed = kept.filter((r) => r.name.trim() !== info.parameters[r.originalIndex].name).map((r) => info.parameters[r.originalIndex].name + ' → ' + r.name.trim());
+    if (renamed.length) parts.push('renames ' + renamed.join(', '));
+    const added = rows.filter((r) => r.originalIndex === null).map((r) => r.name.trim() || 'a parameter');
+    if (added.length) parts.push('adds ' + added.join(', '));
+    const removed = info.parameters.filter((p, i) => !rows.some((r) => r.originalIndex === i)).map((p) => p.name);
+    if (removed.length) parts.push('removes ' + removed.join(', '));
+    const order = kept.map((r) => r.originalIndex);
+    if (order.some((v, i) => i > 0 && v < order[i - 1])) parts.push('reorders the parameters');
+    if (info.typed && $('returnType').value.trim() !== info.returnType) parts.push('changes the return type');
+    return parts.length ? 'This ' + parts.join('; ') + ', and updates every call.' : 'Nothing changed yet.';
   }
   function submit(preview) {
     if (problems().length) return;

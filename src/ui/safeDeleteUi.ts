@@ -21,7 +21,7 @@ export async function safeDeleteSymbol(projects: ProjectService, editor: vscode.
     };
     await confirmAndApply(plan, tests, showUsages);
   } catch (error) {
-    reportError(error, 'Safe Delete');
+    reportError(error, 'Delete safely');
   }
 }
 
@@ -36,7 +36,7 @@ export async function safeDeleteFile(projects: ProjectService, uri: vscode.Uri |
     const plan = planFileDelete(projects.createVirtualProject(target.fsPath, root), target.fsPath);
     await confirmAndApply(plan, impactedTestCount(projects, target.fsPath, 0, 'module', root));
   } catch (error) {
-    reportError(error, 'Safe Delete');
+    reportError(error, 'Delete safely');
   }
 }
 
@@ -44,7 +44,13 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   const blocking = plan.usages.filter((u) => !u.removable);
   const removable = plan.usages.length - blocking.length;
   const what = plan.kind === 'file' ? plan.name : `${plan.kind} '${plan.name}'`;
-  const testNote = tests > 0 ? `${tests} test${tests === 1 ? '' : 's'} depend on it (see Test Impact Analysis).` : '';
+  const testNote = tests > 0 ? `${tests} test${tests === 1 ? '' : 's'} depend on it (see Affected tests).` : '';
+  // The usages in order: this file first, then by file and line; tests marked.
+  const isTest = (file: string) => /(\.|_)(test|spec)\.[cm]?[jt]sx?$|[\\/](__tests__|tests?)[\\/]/.test(file);
+  const here = plan.usages[0]?.location.file;
+  blocking.sort((a, b) => Number(a.location.file !== here) - Number(b.location.file !== here) || a.location.file.localeCompare(b.location.file) || a.location.line - b.location.line);
+  const files = new Set(blocking.map((u) => u.location.file)).size;
+  const onlyTests = blocking.length > 0 && blocking.every((u) => isTest(u.location.file));
 
   // Nothing uses it, nothing else changes and nothing outside can see it: delete without asking, if the setting allows.
   if (blocking.length === 0 && removable === 0 && !plan.exported && tests === 0 && !vscode.workspace.getConfiguration('tsStructure').get('safeDelete.confirmUnused', true)) {
@@ -73,9 +79,9 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
 
   type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages' | 'copy'; usage?: SafeDeletePlan['usages'][number] };
   const items: Item[] = [
-    { label: '$(trash) Delete Anyway', description: 'The usages listed below will no longer compile', detail: 'Use this when you will fix the usages next; Ctrl+Z undoes the delete.', action: 'delete' },
-    ...(showUsages ? [{ label: '$(references) Show Usages in Results View', description: 'Keep the list open while you remove them', detail: 'Then run Safe Delete again once nothing uses it.', action: 'usages' as const }] : []),
-    { label: '$(copy) Copy Usage Locations', description: 'file:line of each, for a ticket or a note', action: 'copy' },
+    { label: '$(trash) Delete anyway', description: onlyTests ? 'Only tests use it: delete or update those tests too' : 'The usages listed below will no longer compile', detail: 'Use this when you will fix the usages next; Ctrl+Z undoes the delete.', action: 'delete' },
+    ...(showUsages ? [{ label: '$(references) Show usages in the Results view', description: 'Keep the list open while you remove them', detail: 'Then run Delete safely again once nothing uses it.', action: 'usages' as const }] : []),
+    { label: '$(copy) Copy usage locations', description: 'file:line of each, for a ticket or a note', action: 'copy' },
     { label: '$(close) Cancel', action: 'cancel' },
     { label: `Usages that block deletion (${blocking.length})`, kind: vscode.QuickPickItemKind.Separator },
     ...blocking.map((usage) => usageItem(usage)),
@@ -85,8 +91,8 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     items.push(...plan.usages.filter((u) => u.removable).map((usage) => usageItem(usage)));
   }
   const picked = await vscode.window.showQuickPick(items, {
-    title: `${what} is used in ${blocking.length} place${blocking.length === 1 ? '' : 's'}${testNote ? ` · ${testNote}` : ''}`,
-    placeHolder: 'Select a usage to open it, or choose Delete Anyway',
+    title: `${what} is used in ${blocking.length} place${blocking.length === 1 ? '' : 's'}${files > 1 ? ` in ${files} files` : ''}${testNote ? ` · ${testNote}` : ''}`,
+    placeHolder: 'Select a usage to open it, or choose Delete anyway',
     matchOnDescription: true,
   });
   if (picked?.action === 'delete') {
@@ -106,7 +112,7 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   function usageItem(usage: SafeDeletePlan['usages'][number]): Item {
     return {
       label: `$(${usage.removable ? 'check' : 'warning'}) ${usage.lineText}`,
-      description: `${vscode.workspace.asRelativePath(usage.location.file)}:${usage.location.line + 1}`,
+      description: `${vscode.workspace.asRelativePath(usage.location.file)}:${usage.location.line + 1}${isTest(usage.location.file) ? ' · test' : ''}`,
       usage,
     };
   }

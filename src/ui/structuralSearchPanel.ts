@@ -69,7 +69,7 @@ export class StructuralSearchPanel {
       }
       return StructuralSearchPanel.current;
     }
-    const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Structural Search', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
+    const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Search by shape', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
     StructuralSearchPanel.current.folderRoot = initial?.folder;
     // A preset is part of the page, since messages posted before its script runs are lost.
@@ -306,7 +306,8 @@ export class StructuralSearchPanel {
         const program = this.projects.analysisProject(this.anchor, this.folder()).program();
         this.matches = structuralSearch(program, clean(message.spec), await this.scopeOf(message.scope));
         // The count in the tab, so it shows while another editor is in front.
-        this.panel.title = `Structural Search (${this.matches.length})`;
+        const files = new Set(this.matches.map((m) => m.sourceFile.fileName)).size;
+        this.panel.title = `Search by shape (${this.matches.length}${files > 1 ? ` in ${files} files` : ''})`;
         void this.remember(clean(message.spec));
         void this.panel.webview.postMessage({
           type: 'results',
@@ -349,23 +350,24 @@ async function saveCustomInspections(configs: CustomInspectionConfig[]): Promise
 /** Custom inspections in one list, with buttons to edit, enable or disable and delete each, and a way to add one. */
 async function manageCustomInspections(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): Promise<void> {
   type Item = vscode.QuickPickItem & { config?: CustomInspectionConfig };
-  const editButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Edit in Structural Search' };
+  const editButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Edit in Search by shape' };
   const deleteButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Delete' };
   const toggleButton = (config: CustomInspectionConfig) =>
-    config.enabled === false ? { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Enable' } : { iconPath: new vscode.ThemeIcon('circle-slash'), tooltip: 'Disable' };
+    config.enabled === false ? { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Turn on' } : { iconPath: new vscode.ThemeIcon('circle-slash'), tooltip: 'Turn off' };
   const items = (): Item[] => [
-    ...customInspectionConfigs().map((config) => ({
+    ...[...customInspectionConfigs()].sort((a, b) => Number(a.enabled === false) - Number(b.enabled === false) || a.id.localeCompare(b.id)).map((config) => ({
       label: `${config.enabled === false ? '$(circle-slash)' : '$(pass)'} ${config.id}`,
       description: config.pattern.replace(/\s+/g, ' '),
       detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}${config.include ? ` · ${config.include}` : ''}`,
       buttons: [editButton, toggleButton(config), deleteButton],
       config,
     })),
-    { label: '$(add) New inspection from a structural search…' },
+    { label: '$(add) New check from a search by shape…', detail: 'Write a pattern, then Save as your own check: it warns as you type, with your message and fix' },
   ];
   const pick = vscode.window.createQuickPick<Item>();
-  pick.title = 'Custom Inspections';
-  pick.placeholder = 'Enter edits the selected inspection; the buttons enable, disable or delete it';
+  const count = customInspectionConfigs().length;
+  pick.title = `Your own checks${count ? ` (${count})` : ''}`;
+  pick.placeholder = count ? 'Enter edits the selected check; the buttons turn it on or off, or delete it' : 'No checks yet: start one from a search by shape';
   pick.items = items();
   pick.onDidTriggerItemButton(async ({ item, button }) => {
     const config = item.config!;
@@ -375,9 +377,15 @@ async function manageCustomInspections(context: vscode.ExtensionContext, project
       return;
     }
     const configs = customInspectionConfigs();
+    if (button === deleteButton) {
+      // Deleting can't be undone from here: ask first.
+      const sure = await vscode.window.showWarningMessage(`Delete your check '${config.id}'?`, { modal: true, detail: `${config.message}\nPattern: ${config.pattern}` }, 'Delete');
+      if (sure !== 'Delete') return;
+    }
     await saveCustomInspections(
       button === deleteButton ? configs.filter((c) => c.id !== config.id) : configs.map((c) => (c.id === config.id ? { ...c, enabled: c.enabled === false } : c)),
     );
+    void vscode.window.setStatusBarMessage(button === deleteButton ? `Deleted your check '${config.id}'` : config.enabled === false ? `Turned on '${config.id}'` : `Turned off '${config.id}'`, 4000);
     pick.items = items();
   });
   pick.onDidAccept(() => {
@@ -403,7 +411,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
     }),
     registerCommand('tsStructure.disableCustomInspection', async (id: string) => {
       await saveCustomInspections(customInspectionConfigs().map((c) => (c.id === id ? { ...c, enabled: false } : c)));
-      void vscode.window.setStatusBarMessage(`Disabled custom inspection '${id}'. Enable it again with Manage Custom Inspections…`, 5000);
+      void vscode.window.setStatusBarMessage(`Turned off your check '${id}'. Your own checks… turns it back on.`, 5000);
     }),
     registerCommand('tsStructure.manageCustomInspections', async () => {
       try {
@@ -429,7 +437,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
           preset: { pattern: '', scope: 'folder', folderLabel: vscode.workspace.asRelativePath(uri) },
         });
       } catch (error) {
-        reportError(error, 'Structural Search');
+        reportError(error, 'Search by shape');
       }
     }),
     registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
@@ -442,7 +450,7 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
           preset: preset?.pattern ? preset : undefined,
         });
       } catch (error) {
-        reportError(error, 'Structural Search');
+        reportError(error, 'Search by shape');
       }
     }),
   );
@@ -491,7 +499,7 @@ ${buttonCss}
 </style>
 </head>
 <body>
-  <h1 class="visually-hidden">Structural Search and Replace</h1>
+  <h1 class="visually-hidden">Search by shape</h1>
   <div class="row">
     <select id="templates" aria-label="Start from an example"><option value="">Start from an example…</option></select>
     <select id="history" aria-label="Recent searches"><option value="">Recent searches…</option></select>
@@ -506,11 +514,14 @@ ${buttonCss}
       <li><button class="link" data-pattern="$x$ === $x$">$x$ === $x$</button> the same code on both sides</li>
       <li><button class="link" data-pattern="await $_$">await $_$</button> any awaited expression</li>
       <li><button class="link" data-pattern="&lt;$Tag$ $props*$ /&gt;">&lt;$Tag$ $props*$ /&gt;</button> any self-closing JSX element</li>
+      <li><button class="link" data-pattern="console.log($args*$)">console.log($args*$)</button> every console.log left in the code</li>
+      <li><button class="link" data-pattern="$a$ == null">$a$ == null</button> loose null checks</li>
+      <li><button class="link" data-pattern="JSON.parse(JSON.stringify($x$))">JSON.parse(JSON.stringify($x$))</button> deep copies that structuredClone() could do</li>
     </ul>
   </details>
   <div class="row tools">
-    <button id="makePlaceholder" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">${icon('add')}<span>Make Placeholder</span></button>
-    <button id="fromSelection" title="Use the code selected in the editor as the pattern">${icon('copy')}<span>From Editor Selection</span></button>
+    <button id="makePlaceholder" title="Replace the text selected in the pattern, and every copy of it, with a placeholder (Alt+P)">${icon('add')}<span>Make placeholder</span></button>
+    <button id="fromSelection" title="Use the code selected in the editor as the pattern">${icon('copy')}<span>From editor selection</span></button>
     <button id="clear" title="Empty the pattern, constraints, replacement and results">${icon('close')}<span>Clear</span></button>
   </div>
   <div id="patternProblem" class="error" aria-live="polite"></div>
@@ -521,16 +532,16 @@ ${buttonCss}
     <label>Scope <select id="scope"><option value="project">Whole project</option><option value="file">Current file</option><option value="selection">Selection in the editor</option><option value="open">Open editors</option><option value="changed">Changed files</option><option value="pickFolder">Choose folder…</option></select></label>
     <button id="search" class="primary" title="Ctrl+Enter in the pattern">${icon('search')}<span>Search</span></button>
     <span id="count" class="hint" role="status" aria-live="polite"></span>
-    <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as Keybinding</span></button>
+    <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as keybinding</span></button>
   </div>
   <h2 id="templateHeading">Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
   <p class="hint" id="templateHint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)" aria-labelledby="templateHeading" aria-describedby="templateHint templateProblem"></textarea>
   <div id="templateProblem" class="error" aria-live="polite"></div>
   <div class="row">
-    <button id="copyPattern" title="Start the replacement from the pattern, to edit only what changes">${icon('copy')}<span>Copy Pattern</span></button>
-    <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview Replacements</span></button>
-    <button id="replace" title="Ctrl+Enter in the replacement">${icon('replace')}<span>Replace All…</span></button>
+    <button id="copyPattern" title="Start the replacement from the pattern, to edit only what changes">${icon('copy')}<span>Copy pattern</span></button>
+    <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview replacements</span></button>
+    <button id="replace" title="Ctrl+Enter in the replacement">${icon('replace')}<span>Replace all…</span></button>
   </div>
   <h2>Save as inspection${helpTip('Keeps the pattern as your own inspection: matches are underlined in open files and listed in the Problems panel, with the replacement as a quick fix.')}</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
@@ -538,7 +549,7 @@ ${buttonCss}
     <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()" aria-label="Inspection message" aria-describedby="messageProblem">
     <input id="include" type="text" style="width: 160px" placeholder="all files, or src/**" title="Only inspect files whose path matches this glob, such as src/** or **/*.tsx" aria-label="Files to inspect, as a glob such as src/**">
     <select id="severity" aria-label="Severity"><option value="warning">Warning</option><option value="error">Error</option><option value="info">Information</option><option value="hint">Hint</option></select>
-    <button id="saveInspection">${icon('save')}<span>Save as Inspection</span></button>
+    <button id="saveInspection">${icon('save')}<span>Save as your own check</span></button>
   </div>
   <div class="row tools" id="messagePlaceholders"></div>
   <div id="messageProblem" class="error" aria-live="polite"></div>

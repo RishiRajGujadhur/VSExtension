@@ -112,15 +112,22 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const editor = vscode.window.activeTextEditor;
         const findings = editor && [...(this.findingsFor(editor.document) ?? [])].sort((a, b) => a.start - b.start);
         if (!editor || !findings?.length) {
-          void vscode.window.setStatusBarMessage('No Code X-Ray problems in this file', 3000);
+          // Nothing here: say where else there is something, among the open files.
+          const elsewhere = vscode.workspace.textDocuments.filter((d) => d !== editor?.document && (this.findingsFor(d)?.length ?? 0) > 0);
+          void vscode.window.setStatusBarMessage(elsewhere.length ? `No Code X-Ray problems in this file; ${elsewhere.length} other open file${elsewhere.length === 1 ? ' has' : 's have'} some (${elsewhere.slice(0, 3).map((d) => vscode.workspace.asRelativePath(d.uri)).join(', ')})` : 'No Code X-Ray problems in this file', 5000);
           return;
         }
         const offset = editor.document.offsetAt(editor.selection.active);
-        const next = findings.find((f) => f.start > offset) ?? findings[0];
+        const after = findings.find((f) => f.start > offset);
+        const next = after ?? findings[0];
         const range = new vscode.Range(editor.document.positionAt(next.start), editor.document.positionAt(next.end));
         editor.selection = new vscode.Selection(range.start, range.end);
         editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-        void vscode.window.setStatusBarMessage(`$(${next.severity === 'error' ? 'error' : next.severity === 'warning' ? 'warning' : 'info'}) ${next.message}`, 5000);
+        const title = this.inspections().find((i) => i.id === next.inspection)?.title;
+        const position = `${findings.indexOf(next) + 1} of ${findings.length}${after ? '' : ', back at the first'}`;
+        void vscode.window.setStatusBarMessage(`$(${next.severity === 'error' ? 'error' : next.severity === 'warning' ? 'warning' : 'info'}) ${position}: ${next.message}${title ? ` (${title})` : ''}${next.fixes?.length ? ` · ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+. for a fix` : ''}`, 6000);
+        // The message right where the cursor landed.
+        void vscode.commands.executeCommand('editor.action.showHover');
       }),
       registerCommand('tsStructure.copyProblems', async () => {
         const document = vscode.window.activeTextEditor?.document;
@@ -296,27 +303,39 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   private async configureInspections(): Promise<void> {
     const uri = vscode.window.activeTextEditor?.document.uri;
     const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+    const document = vscode.window.activeTextEditor?.document;
+    const here = new Map<string, number>();
+    for (const f of (document && this.findingsFor(document)) ?? []) here.set(f.inspection, (here.get(f.inspection) ?? 0) + 1);
     for (;;) {
       const config = vscode.workspace.getConfiguration('tsStructure', uri);
       const overrides = config.get<Record<string, string>>('inspections.severity', {});
       const items = this.inspections().map((inspection) => {
         const setting = overrides[inspection.id] ?? 'default';
+        const count = here.get(inspection.id);
         return {
           label: inspection.title,
-          description: setting === 'default' ? (inspection.optIn ? 'off until turned on' : inspection.defaultSeverity) : setting === 'off' ? 'off' : `${setting} (default ${inspection.optIn ? 'off' : inspection.defaultSeverity})`,
+          description: [setting === 'default' ? (inspection.optIn ? 'off until turned on' : inspection.defaultSeverity) : setting === 'off' ? 'off' : `${setting} (default ${inspection.optIn ? 'off' : inspection.defaultSeverity})`, count ? `${count} in this file` : ''].filter(Boolean).join(' · '),
           detail: inspection.id,
           inspection,
         };
       });
       // Inspections that report on their own first, then those that wait to be turned on.
       type Row = (typeof items)[number] | vscode.QuickPickItem;
+      const changed = items.filter((i) => overrides[i.inspection.id] !== undefined);
+      const reset: vscode.QuickPickItem & { reset: true } = { label: '$(discard) Back to defaults', description: `undo your ${changed.length} change${changed.length === 1 ? '' : 's'}`, reset: true };
       const grouped: Row[] = [
+        ...(changed.length ? [{ label: 'Changed by you', kind: vscode.QuickPickItemKind.Separator }, ...changed, reset] : []),
         { label: 'On', kind: vscode.QuickPickItemKind.Separator },
-        ...items.filter((i) => !i.inspection.optIn),
+        ...items.filter((i) => !i.inspection.optIn && !changed.includes(i)),
         { label: 'Off until turned on', kind: vscode.QuickPickItemKind.Separator },
-        ...items.filter((i) => i.inspection.optIn),
+        ...items.filter((i) => i.inspection.optIn && !changed.includes(i)),
       ];
-      const choice = await vscode.window.showQuickPick(grouped, { title: 'Configure inspections', placeHolder: 'Pick an inspection to change its severity', matchOnDetail: true });
+      const choice = await vscode.window.showQuickPick(grouped, { title: 'Inspection settings', placeHolder: 'Pick an inspection to change how loudly it reports', matchOnDetail: true });
+      if (choice && 'reset' in choice) {
+        await config.update('inspections.severity', undefined, target);
+        void vscode.window.setStatusBarMessage('Every inspection is back to its default', 4000);
+        continue;
+      }
       const picked = choice && 'inspection' in choice ? choice : undefined;
       if (!picked) {
         return;
@@ -340,6 +359,7 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
           before[picked.inspection.id] = severity.value;
         }
         await config.update('inspections.severity', Object.keys(before).length ? before : undefined, target);
+        void vscode.window.setStatusBarMessage(`${picked.inspection.title}: ${severity.value === 'default' ? `back to ${picked.inspection.optIn ? 'off' : picked.inspection.defaultSeverity}` : severity.value === 'off' ? 'turned off' : `now reported as ${severity.value}`}`, 4000);
       }
     }
   }
