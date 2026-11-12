@@ -40,6 +40,7 @@ export const names: Record<string, string> = {
   'tsStructure.whoImports': 'Who imports this',
   'tsStructure.dependencyPath': 'Why this import…',
   'tsStructure.findImportCycles': 'Import loops',
+  'tsStructure.bundleWeight': 'Bundle weight',
   'tsStructure.dependencyGraphDiff': 'Import changes since…',
   // Health check
   'tsStructure.inspectCode': 'Inspect code…',

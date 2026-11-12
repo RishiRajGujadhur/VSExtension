@@ -50,6 +50,7 @@ relatedAnalyses.overrideImpact = [
 relatedAnalyses.reexports = [
   { command: 'tsStructure.semanticUsages', title: 'Every usage under any name (Find Usages)' },
   { command: 'tsStructure.whoImports', title: 'Which files import this one' },
+  { command: 'tsStructure.bundleWeight', title: 'What this file pulls in to run, and how heavy it is' },
 ];
 
 relatedAnalyses.usages = [

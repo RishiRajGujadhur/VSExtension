@@ -23,6 +23,7 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'What breaks if I change this method?', command: 'tsStructure.overrideImpact', key: 'O' },
   { question: 'Why does this file import that one?', command: 'tsStructure.dependencyPath', key: 'P' },
   { question: 'Which files import this one?', command: 'tsStructure.whoImports', key: 'J' },
+  { question: 'What does this file pull in when it runs, and how heavy is it?', command: 'tsStructure.bundleWeight' },
   { question: 'Are there import cycles?', command: 'tsStructure.findImportCycles', key: 'Q' },
   { question: 'How did imports change on my branch?', command: 'tsStructure.dependencyGraphDiff', key: 'G' },
   { question: 'Where is this name really declared?', command: 'tsStructure.reexportChain', key: 'C' },

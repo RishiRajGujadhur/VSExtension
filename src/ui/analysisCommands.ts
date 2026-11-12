@@ -1,4 +1,5 @@
 import ts = require('typescript');
+import { bundleWeightReport } from '../navigate/bundleWeight';
 import { graphOption, setGraphOption } from '../structure/graphOptions';
 import { termFor } from '../structure/glossary';
 import * as path from 'path';
@@ -604,6 +605,13 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       if (!file) return;
       const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
       return runAnalysis(view, `Finding importers of ${path.basename(file)}`, () => dependentsReport(projects.analysisProject(file, folder).program(), normalizePath(file), folder));
+    }),
+    // Bundle weight: the runtime imports of a file and how much each one brings in.
+    registerCommand('tsStructure.bundleWeight', (uri?: vscode.Uri) => {
+      const file = uri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
+      if (!file) return;
+      const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
+      return runAnalysis(view, `Weighing what ${path.basename(file)} pulls in`, () => bundleWeightReport(projects.analysisProject(file, folder).program(), normalizePath(file), folder));
     }),
     scopedCommand('tsStructure.findImportCycles', 'Finding import cycles', { id: 'cycles', kinds: projectScopes }, (t, scope) => cyclesReport(t.project().program(), t.folder, scopeFilter(scope.spec))),
     editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),

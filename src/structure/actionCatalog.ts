@@ -197,6 +197,8 @@ export const actionCatalog: CatalogAction[] = [
 
   a('analyze', 'Imports', 'tsStructure.whoImports', 'Who Imports This File', 'Modules that import this one',
     'Lists the modules that import this file, directly or through re-exports.', 'dependents importers'),
+  a('analyze', 'Imports', 'tsStructure.bundleWeight', 'Bundle Weight', 'What this file pulls in to run',
+    'Follows the runtime imports of this file through the project and weighs every module it pulls in; each import line says how much it brings in, and how much cutting it would save. Packages show the size of the file they load first.', 'bundle size weight heavy imports packages'),
   a('analyze', 'Imports', 'tsStructure.dependencyPath', 'Dependency Path…', 'Why one module needs another',
     'Shows the chain of imports that makes one module depend on another.', 'import chain'),
   a('analyze', 'Imports', 'tsStructure.findImportCycles', 'Find Import Cycles', 'Modules importing each other',

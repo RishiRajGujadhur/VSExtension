@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.53.0",
+  "version": "0.54.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -721,6 +721,12 @@
         "title": "Who imports this",
         "category": "Code X-Ray",
         "icon": "$(arrow-circle-up)"
+      },
+      {
+        "command": "tsStructure.bundleWeight",
+        "title": "Bundle weight",
+        "category": "Code X-Ray",
+        "icon": "$(package)"
       },
       {
         "command": "tsStructure.cancelAnalysis",
@@ -1515,6 +1521,11 @@
           "group": "4_navigate@6"
         },
         {
+          "command": "tsStructure.bundleWeight",
+          "when": "config.tsStructure.features.dependencyPath",
+          "group": "4_navigate@7"
+        },
+        {
           "command": "tsStructure.introduceOptionalParameter",
           "when": "config.tsStructure.features.refactorings",
           "group": "1_refactor@3"
@@ -1635,6 +1646,11 @@
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
           "group": "7_modification@91"
+        },
+        {
+          "command": "tsStructure.bundleWeight",
+          "when": "config.tsStructure.features.dependencyPath && resourceExtname =~ /^\\.[cm]?[jt]sx?$/ && !explorerResourceIsFolder",
+          "group": "7_modification@92"
         },
         {
           "command": "tsStructure.findImportCycles",
@@ -2077,6 +2093,10 @@
         },
         {
           "command": "tsStructure.whoImports",
+          "when": "config.tsStructure.features.dependencyPath"
+        },
+        {
+          "command": "tsStructure.bundleWeight",
           "when": "config.tsStructure.features.dependencyPath"
         },
         {
@@ -2747,6 +2767,11 @@
           "command": "tsStructure.whoImports",
           "when": "config.tsStructure.features.dependencyPath && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
           "group": "3_tsStructure@3"
+        },
+        {
+          "command": "tsStructure.bundleWeight",
+          "when": "config.tsStructure.features.dependencyPath && resourceScheme == file && resourceExtname =~ /^\\.[cm]?[jt]sx?$/",
+          "group": "3_tsStructure@4"
         }
       ],
       "tsStructure.report.analyzeHere": [

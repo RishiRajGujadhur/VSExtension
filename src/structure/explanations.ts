@@ -129,6 +129,11 @@ export const explanations: Record<string, Explanation> = {
     text: 'Every module that imports the file, directly or through other modules, nearest first. These are the files a change to it can affect, and where to look for broken imports after a move or rename.',
     anchor: 'types-modules-and-tests',
   },
+  bundleWeight: {
+    title: 'Bundle weight',
+    text: 'What the file pulls in when it runs: its imports followed through the project, each module weighed by its source size. Each import line of the file says how much it brings in and how much only it brings in, which is what cutting that line would save. Type-only imports cost nothing, import() loads later, and packages show the size of the file they load first; a bundler can make the real numbers smaller.',
+    anchor: 'types-modules-and-tests',
+  },
   graphDiff: {
     title: 'Dependency Graph Diff',
     text: 'How the import graph changed since a Git revision: new and removed import cycles, added, removed and changed imports, and modules whose number of importers changed most.',
