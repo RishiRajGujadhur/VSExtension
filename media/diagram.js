@@ -928,6 +928,7 @@
     window.chartKit.renderControls(document.getElementById('graphControls'), event.data.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
     closeMenu(false);
     card.hide();
+    card.unpin();
     focused = undefined;
     flowing = undefined;
     selected = undefined;

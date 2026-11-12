@@ -183,3 +183,10 @@ body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !impor
 @media (prefers-reduced-motion: reduce) {
   .kit-toast { transition: none; }
 }
+
+/* The pinned card: one at a time, moved by its header. */
+.hover-card.pinned { z-index: 7; box-shadow: 0 18px 32px -12px rgba(0, 0, 0, .6), 0 0 0 1px var(--vscode-focusBorder); }
+.hover-card.pinned .card-head { cursor: grab; user-select: none; }
+.hover-card.pinned.dragging .card-head { cursor: grabbing; }
+/* The card being hovered is drawn over the pinned one. */
+#hoverCard { z-index: 8; }

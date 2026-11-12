@@ -674,32 +674,43 @@
 
   /**
    * The hover card of a chart's boxes: what the box is, where, its code, facts about it and the keys that act on it.
-   * It opens a moment after the pointer rests on a box (at once on keyboard focus), stays while the pointer is on
-   * it, and its pin keeps it open to compare boxes. Escape closes it.
+   * It opens a moment after the pointer rests on a box (at once on keyboard focus), below the box so the boxes
+   * beside it stay clickable (above it when there is no room below), and stays while the pointer is on it.
+   * Its pin copies it into the pinned card: one at a time (pinning another box replaces it), draggable by its
+   * header, and hovering other boxes keeps working beside it. Escape closes the hover card, then the pinned one.
    * Content: { icon, title, meta, code, facts: [[label, value]], keys: [[key, what]], note }.
    */
   const openCards = [];
   function hoverCard() {
-    const card = document.createElement('div');
-    card.className = 'hover-card';
-    card.id = 'hoverCard';
-    card.setAttribute('role', 'tooltip');
-    card.hidden = true;
-    document.body.appendChild(card);
+    const makeCard = (id, pinnedCard) => {
+      const el = document.createElement('div');
+      el.className = `hover-card${pinnedCard ? ' pinned' : ''}`;
+      el.id = id;
+      el.setAttribute('role', pinnedCard ? 'dialog' : 'tooltip');
+      if (pinnedCard) el.setAttribute('aria-label', 'Pinned box');
+      el.hidden = true;
+      document.body.appendChild(el);
+      return el;
+    };
+    const card = makeCard('hoverCard', false);
+    const pinnedCard = makeCard('pinnedCard', true);
     let timer;
-    let pinned = false;
     let anchor;
     let shownFor;
+    let content;
+    let pinnedFor;
+    let pinnedContent;
     const iconEl = (name) => {
       const i = document.createElement('i');
       i.className = `codicon codicon-${name}`;
       i.setAttribute('aria-hidden', 'true');
       return i;
     };
-    function render(c) {
-      card.textContent = '';
+    function render(target, c, isPinned) {
+      target.textContent = '';
       const head = document.createElement('div');
       head.className = 'card-head';
+      if (isPinned) head.title = 'Drag to move';
       if (c.icon) head.append(iconEl(c.icon));
       const title = document.createElement('strong');
       title.textContent = c.title;
@@ -713,32 +724,28 @@
       const pin = document.createElement('button');
       pin.type = 'button';
       pin.className = 'card-pin';
-      pin.title = pinned ? 'Unpin (Escape closes)' : 'Pin: keep this card open';
-      pin.setAttribute('aria-pressed', String(pinned));
-      pin.append(iconEl(pinned ? 'pinned' : 'pin'));
-      pin.addEventListener('click', () => {
-        pinned = !pinned;
-        card.classList.toggle('pinned', pinned);
-        render(c);
-      });
+      pin.title = isPinned ? 'Unpin (Escape)' : 'Pin: keep this box open; pinning another one replaces it';
+      pin.setAttribute('aria-pressed', String(isPinned));
+      pin.append(iconEl(isPinned ? 'pinned' : 'pin'));
+      pin.addEventListener('click', () => (isPinned ? unpin() : pinCurrent()));
       head.append(pin);
-      card.append(head);
+      target.append(head);
       if (c.code) {
         const pre = document.createElement('pre');
         pre.className = 'card-code';
         pre.append(highlightCode(c.code));
-        card.append(pre);
+        target.append(pre);
       } else if (c.loading) {
         const pre = document.createElement('pre');
         pre.className = 'card-code loading';
         pre.textContent = 'Reading the code…';
-        card.append(pre);
+        target.append(pre);
       }
       if (c.note) {
         const note = document.createElement('p');
         note.className = 'card-note';
         note.textContent = c.note;
-        card.append(note);
+        target.append(note);
       }
       const facts = (c.facts || []).filter((f) => f && f[1] !== undefined && f[1] !== '');
       if (facts.length) {
@@ -751,7 +758,7 @@
           dd.textContent = value;
           grid.append(dt, dd);
         }
-        card.append(grid);
+        target.append(grid);
       }
       if (c.keys && c.keys.length) {
         const keys = document.createElement('div');
@@ -763,9 +770,11 @@
           k.append(kbd, ` ${what}`);
           keys.append(k);
         }
-        card.append(keys);
+        target.append(keys);
       }
     }
+    const clampX = (x, w) => Math.max(6, Math.min(x, window.innerWidth - w - 6));
+    const clampY = (y, h) => Math.max(6, Math.min(y, window.innerHeight - h - 6));
     function place() {
       if (!anchor) return;
       const r = anchor.getBoundingClientRect();
@@ -773,50 +782,115 @@
       card.style.top = '0px';
       const w = card.offsetWidth;
       const h = card.offsetHeight;
-      // Beside the box (right, or left when there is no room), level with its top, kept in the window.
-      let x = r.right + 10;
-      if (x + w > window.innerWidth - 6) x = Math.max(6, r.left - w - 10);
-      const y = Math.max(6, Math.min(r.top, window.innerHeight - h - 6));
+      // Under the box, lined up with its left edge; above it when there is no room below.
+      const x = clampX(r.left, w);
+      let y = r.bottom + 8;
+      if (y + h > window.innerHeight - 6 && r.top - h - 8 >= 6) y = r.top - h - 8;
       card.style.left = `${x}px`;
-      card.style.top = `${y}px`;
+      card.style.top = `${clampY(y, h)}px`;
     }
-    function show(target, content, delay = 350, key) {
-      if (pinned) return;
+    function show(target, c, delay = 350, key) {
       clearTimeout(timer);
       timer = setTimeout(() => {
+        // The pinned box is already open; no second card for it.
+        if (key !== undefined && key === pinnedFor && !pinnedCard.hidden) {
+          card.hidden = true;
+          shownFor = undefined;
+          return;
+        }
         anchor = target;
         shownFor = key;
-        render(content);
+        content = c;
+        render(card, c, false);
         card.hidden = false;
         place();
       }, delay);
     }
-    /** New content for the box already shown, such as its code once it has been read. */
-    function update(content, key) {
-      if (card.hidden || shownFor !== key) return;
-      render(content);
-      place();
+    /** New content for a box on show, such as its code once it has been read. */
+    function update(c, key) {
+      if (!card.hidden && shownFor === key) {
+        content = c;
+        render(card, c, false);
+        place();
+      }
+      if (!pinnedCard.hidden && pinnedFor === key) {
+        pinnedContent = c;
+        render(pinnedCard, c, true);
+      }
+    }
+    /** The card on show becomes the pinned one, where it is; a box pinned before is let go. */
+    function pinCurrent() {
+      if (!content) return;
+      pinnedFor = shownFor;
+      pinnedContent = content;
+      render(pinnedCard, content, true);
+      pinnedCard.style.left = card.style.left;
+      pinnedCard.style.top = card.style.top;
+      pinnedCard.hidden = false;
+      card.hidden = true;
+      shownFor = undefined;
+      const unpinButton = pinnedCard.querySelector('.card-pin');
+      if (unpinButton) unpinButton.focus({ preventScroll: true });
+    }
+    function unpin() {
+      pinnedCard.hidden = true;
+      pinnedFor = undefined;
+      pinnedContent = undefined;
     }
     function hide() {
       clearTimeout(timer);
-      if (pinned) return;
       card.hidden = true;
       shownFor = undefined;
     }
     function hideSoon() {
       clearTimeout(timer);
-      if (pinned) return;
       timer = setTimeout(() => { if (!card.matches(':hover')) hide(); }, 200);
     }
     card.addEventListener('mouseleave', hideSoon);
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !card.hidden) {
-        pinned = false;
-        card.classList.remove('pinned');
-        hide();
-      }
+    // The pinned card moves with its header.
+    let drag;
+    pinnedCard.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !e.target.closest('.card-head') || e.target.closest('button')) return;
+      const r = pinnedCard.getBoundingClientRect();
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
+      pinnedCard.setPointerCapture(e.pointerId);
+      pinnedCard.classList.add('dragging');
+      e.preventDefault();
     });
-    const api = { show, update, hide, hideSoon, get pinned() { return pinned; }, get key() { return card.hidden ? undefined : shownFor; } };
+    pinnedCard.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      pinnedCard.style.left = `${clampX(e.clientX - drag.dx, pinnedCard.offsetWidth)}px`;
+      pinnedCard.style.top = `${clampY(e.clientY - drag.dy, pinnedCard.offsetHeight)}px`;
+    });
+    const endDrag = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag = undefined;
+      pinnedCard.classList.remove('dragging');
+    };
+    pinnedCard.addEventListener('pointerup', endDrag);
+    pinnedCard.addEventListener('pointercancel', endDrag);
+    // The arrow keys move it too, from its unpin button or anywhere inside it.
+    pinnedCard.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 40 : 10;
+      const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!move || !e.altKey) return;
+      e.preventDefault();
+      const r = pinnedCard.getBoundingClientRect();
+      pinnedCard.style.left = `${clampX(r.left + move[0], r.width)}px`;
+      pinnedCard.style.top = `${clampY(r.top + move[1], r.height)}px`;
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!card.hidden) hide();
+      else if (!pinnedCard.hidden) unpin();
+    });
+    window.addEventListener('resize', () => {
+      if (pinnedCard.hidden) return;
+      const r = pinnedCard.getBoundingClientRect();
+      pinnedCard.style.left = `${clampX(r.left, r.width)}px`;
+      pinnedCard.style.top = `${clampY(r.top, r.height)}px`;
+    });
+    const api = { show, update, hide, hideSoon, unpin, get pinned() { return !pinnedCard.hidden; }, get pinnedKey() { return pinnedCard.hidden ? undefined : pinnedFor; }, get key() { return card.hidden ? undefined : shownFor; } };
     openCards.push(api);
     return api;
   }
