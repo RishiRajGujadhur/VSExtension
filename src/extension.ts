@@ -105,8 +105,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
   registerLastSubjects(context);
   actionsView.register(context);
-  // A Value path result shows as a card in the Value path panel, in the Results view's place.
-  new ValuePathView(context.extensionUri, structureView).register(context);
+  // Every result shows as a card in the panel at the bottom, in the Results list's place.
+  new ValuePathView(context.extensionUri, structureView, context.globalState).register(context);
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {

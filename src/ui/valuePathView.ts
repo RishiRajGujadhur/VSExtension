@@ -1,32 +1,34 @@
 import * as vscode from 'vscode';
 import { Report, ReportLocation } from '../structure/report';
-import { ValuePathCard, valuePathCard } from '../structure/valuePathCard';
+import { ResultCard, resultCard } from '../structure/resultCard';
+import { registerCommand } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
 import { StructureView } from './structureView';
 
-const shownContext = 'tsStructure.valuePathShown';
+const shownContext = 'tsStructure.cardShown';
+const listKey = 'tsStructure.results.asList';
 
 /**
- * The Value path panel at the bottom of the Code X-Ray sidebar. While the result on show is a "Why this value",
- * it takes the place of the Results list, with the result drawn as a card: the values on a timeline, each with
- * how many ways lead to it and what has to be true, and a Next step. "Show as a list" brings the Results list back
- * for that result; the next Value path shows as a card again.
+ * The result panel at the bottom of the Code X-Ray sidebar: every result drawn as a card, in the Results list's
+ * place. A Value path shows its values on a timeline with what leads to each; any other result shows its groups as
+ * steps with their rows. "Show as a list" brings back the Results list (with its filters, history and row menus)
+ * and keeps it until "Show as card" in the list's title bar.
  */
 export class ValuePathView implements vscode.WebviewViewProvider {
   static readonly viewType = 'tsStructure.valuePath';
   private view: vscode.WebviewView | undefined;
-  private card: ValuePathCard | undefined;
-  /** The Results list was asked for, for the result on show. */
-  private asList = false;
+  private card: ResultCard | undefined;
+  private asList: boolean;
   private stale = false;
 
-  constructor(private readonly extensionUri: vscode.Uri, private readonly results: StructureView) {}
+  constructor(private readonly extensionUri: vscode.Uri, private readonly results: StructureView, private readonly memento: vscode.Memento) {
+    this.asList = memento.get<boolean>(listKey, false);
+  }
 
   register(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(ValuePathView.viewType, this),
       this.results.onDidShowNewReport(() => {
-        this.asList = false;
         this.stale = false;
         this.follow(true);
       }),
@@ -39,18 +41,29 @@ export class ValuePathView implements vscode.WebviewViewProvider {
         }
       }),
       vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.actions.accentColor') && this.post()),
+      // From the Results list's title bar: back to cards.
+      registerCommand('tsStructure.report.showAsCard', async () => {
+        await this.setList(false);
+        this.follow(true);
+      }),
     );
     this.follow(false);
   }
 
-  /** Shows the card when the result on show is a Value path, and the Results list otherwise. */
+  private async setList(asList: boolean): Promise<void> {
+    this.asList = asList;
+    await this.memento.update(listKey, asList);
+  }
+
+  /** Shows the result on show as a card, unless the list was chosen. */
   private follow(fresh: boolean): void {
     const report: Report | undefined = this.results.report;
-    this.card = report ? valuePathCard(report) : undefined;
+    this.card = report ? resultCard(report) : undefined;
+    if (this.view) this.view.title = this.card?.heading ?? 'Result';
     const shown = !!this.card && !this.asList;
     void vscode.commands.executeCommand('setContext', shownContext, shown);
     this.post();
-    // A new Value path comes into view, as the Results list does for other results.
+    // A new result comes into view, as the Results list would.
     if (shown && fresh) {
       if (this.view) this.view.show(true);
       else void vscode.commands.executeCommand(`${ValuePathView.viewType}.focus`).then(() => vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup'));
@@ -60,7 +73,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
-    view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Value path', styles: ['valuePath.css'], scripts: ['valuePath.js'], body: '<main id="card"></main>' });
+    if (this.card) view.title = this.card.heading;
+    view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['valuePath.js'], body: '<main id="card"></main>' });
     view.webview.onDidReceiveMessage(async (message: { type: string; location?: unknown }) => {
       if (message.type === 'ready') {
         this.post();
@@ -70,8 +84,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
       } else if (message.type === 'copy') {
         await vscode.commands.executeCommand('tsStructure.report.copyMarkdown');
       } else if (message.type === 'list') {
-        // The Results list for this result, with its filters, history and row menus.
-        this.asList = true;
+        // The Results list, with its filters, history and row menus, until Show as card.
+        await this.setList(true);
         await vscode.commands.executeCommand('setContext', shownContext, false);
         await vscode.commands.executeCommand('tsStructure.report.focus');
       } else if (message.type === 'rerun') {

@@ -119,7 +119,7 @@ The **path list** lists every path through the function with the branches it tak
 
 **Why this value** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
 
-The answer shows in the **Value path** panel at the bottom of the sidebar, in the Results view's place: each value on a timeline with how many ways lead to it and what has to be true, and how long the analysis took. Click a value to open its code; **Next** runs another analysis at the cursor. When files change it offers **Run it again**. The list button shows the same result as a list in the Results view, with its filters and history; any other result shows there too.
+The answer shows as a card in the panel at the bottom of the sidebar: each value on a timeline with how many ways lead to it and what has to be true, and how long the analysis took. Click a value to open its code; **Next** runs another analysis at the cursor.
 
 <img src="docs/images/actions-value-path.png" width="340" alt="The Value path panel: permission can be 'write', 'limited', 'read' or 'none' at line 25, each with the conditions that lead to it, and a Next step">
 
@@ -289,6 +289,7 @@ The **Charts** tab of the Actions view (**Charts tab**) lists every chart Code X
 
 ## Working with results
 
+- Every result shows as a **card** at the bottom of the sidebar: the analysis and its subject, the summary and how long it took, then its groups as steps on a timeline, each with its first rows (click **+ N more** for the rest, the arrows for rows inside rows, a row to open its code). **Next** runs another analysis at the cursor, and the card says when files changed since it ran. The list button switches to the **Results** list, with its filters, history and row menus, and keeps it until **Show as card** in the list's title bar.
 - **Clear** (the orange button) goes back to the start page. Too many buttons? **Fewer buttons** in the **...** menu keeps only the essentials (`tsStructure.results.toolbar`), or right-click the title bar to hide single buttons.
 - **Back and forward** through earlier reports, **re-run** (`F5`, or `Ctrl+Alt+S L` from anywhere; the button turns into a warning when files changed).
 - **Filter** rows (`Ctrl+F`): text, `file:cart` for rows in matching files, `is:warning` (or `is:error`, `is:info`) by tone, `-test` to drop matches. Also **Only in…** and **Groups…**; `Escape` shows every row again.

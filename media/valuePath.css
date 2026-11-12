@@ -52,3 +52,29 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: linear-gradient(160deg, color-mix(in srgb, var(--active-accent) 16%, var(--vscode-sideBar-background, #181818)) 0%, var(--vscode-sideBar-background, #181818) 45%);
   box-shadow: 0 12px 24px -12px rgba(0, 0, 0, .6), 0 0 18px -8px var(--active-accent); }
 .card-title strong { font-family: var(--vscode-editor-font-family, monospace); color: var(--active-accent); }
+
+/* The general card: a heading and subject, groups as steps, rows under each. */
+.card-heading { font-weight: 500; }
+.card-subject { margin-left: 6px; font-family: var(--vscode-editor-font-family, monospace); color: var(--active-accent); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-title { min-width: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.step.tone-warning .step-tile { color: var(--vscode-editorWarning-foreground, #cca700); border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 60%, transparent); }
+.step.tone-error .step-tile { color: var(--vscode-editorError-foreground, #f14c4c); border-color: color-mix(in srgb, var(--vscode-editorError-foreground, #f14c4c) 60%, transparent); }
+.step.tone-ok .step-tile { color: var(--vscode-testing-iconPassed, #73c991); }
+.rows { margin: 4px 0 0; padding: 0 0 0 10px; list-style: none; }
+.rows .rows { padding-left: 16px; }
+.row-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; padding: 2px 0; }
+.row-fold, .row-fold-space { flex: none; width: 18px; height: 18px; }
+.row-fold { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--vscode-foreground); }
+.row-fold:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.row-label { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; }
+button.row-label:hover .row-text { text-decoration: underline; color: var(--vscode-textLink-foreground); }
+.row-label .codicon { flex: none; font-size: 13px; position: relative; top: 2px; color: var(--vscode-descriptionForeground); }
+.row-text { overflow-wrap: break-word; }
+.row-desc { flex: 1 1 140px; min-width: 0; padding-left: 24px; margin-left: -24px; color: var(--vscode-descriptionForeground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.tone-warning .row-tone { color: var(--vscode-editorWarning-foreground, #cca700); }
+.row.tone-error .row-tone { color: var(--vscode-editorError-foreground, #f14c4c); }
+.row.tone-ok .row-tone { color: var(--vscode-testing-iconPassed, #73c991); }
+.row.tone-info .row-tone { color: var(--vscode-editorInfo-foreground, #3794ff); }
+.more-row { padding: 2px 0 2px 22px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.timeline .step.value:has(.rows)::after { bottom: -14px; }

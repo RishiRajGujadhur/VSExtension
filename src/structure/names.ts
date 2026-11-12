@@ -176,6 +176,7 @@ export const names: Record<string, string> = {
   'tsStructure.report.flowByDirection': 'Group by in and out',
   'tsStructure.report.flowByFunction': 'Group by function',
   'tsStructure.report.showDiagram': 'Draw as chart',
+  'tsStructure.report.showAsCard': 'Show as card',
   'tsStructure.report.diagramsOn': 'Always draw as chart',
   'tsStructure.report.diagramsOff': 'Stop always drawing charts',
   'tsStructure.report.changeControls': 'Levels and options…',

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -993,6 +993,12 @@
         "title": "What the last refactoring changed",
         "category": "Code X-Ray",
         "icon": "$(history)"
+      },
+      {
+        "command": "tsStructure.report.showAsCard",
+        "title": "Show as card",
+        "category": "Code X-Ray",
+        "icon": "$(preview)"
       }
     ],
     "viewsContainers": {
@@ -2272,9 +2278,18 @@
         {
           "command": "tsStructure.report.diagramsOff",
           "when": "config.tsStructure.results.alwaysShowDiagram"
+        },
+        {
+          "command": "tsStructure.report.showAsCard",
+          "when": "tsStructure.hasReport"
         }
       ],
       "view/title": [
+        {
+          "command": "tsStructure.report.showAsCard",
+          "when": "view == tsStructure.report && tsStructure.hasReport",
+          "group": "navigation@0"
+        },
         {
           "command": "tsImpact.analyze",
           "when": "config.tsStructure.features.testImpact && view == tsImpact.results",
@@ -2838,13 +2853,13 @@
           "id": "tsStructure.report",
           "name": "Results",
           "visibility": "collapsed",
-          "when": "!tsStructure.valuePathShown"
+          "when": "!tsStructure.cardShown"
         },
         {
           "type": "webview",
           "id": "tsStructure.valuePath",
-          "name": "Value path",
-          "when": "tsStructure.valuePathShown"
+          "name": "Result",
+          "when": "tsStructure.cardShown"
         }
       ],
       "test": [
