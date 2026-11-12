@@ -129,6 +129,16 @@ export const explanations: Record<string, Explanation> = {
     text: 'Every module that imports the file, directly or through other modules, nearest first. These are the files a change to it can affect, and where to look for broken imports after a move or rename.',
     anchor: 'types-modules-and-tests',
   },
+  valueTimeline: {
+    title: 'Value timeline',
+    text: 'Every change to the variable, in the order the code makes them: how it starts, what each pass of a loop does to it and after which check, what one pass hands to the next, and how a counter steps from pass to pass. It reads the code, so it shows each change once with its condition rather than running the loop.',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
+  },
+  asyncTimeline: {
+    title: 'Async timeline',
+    text: 'What an async function does over time, in order: each await (where it stops until a promise settles), calls started together with Promise.all, awaits inside loops that run one after another, promises started early and waited for later, and promises nobody waits for, whose errors are lost.',
+    anchor: 'null-checks-side-effects-changes-errors-and-arguments',
+  },
   bundleWeight: {
     title: 'Bundle weight',
     text: 'What the file pulls in when it runs: its imports followed through the project, each module weighed by its source size. Each import line of the file says how much it brings in and how much only it brings in, which is what cutting that line would save. Type-only imports cost nothing, import() loads later, and packages show the size of the file they load first; a bundler can make the real numbers smaller.',

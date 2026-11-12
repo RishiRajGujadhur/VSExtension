@@ -35,6 +35,8 @@ export const tasks: { question: string; command: string; key?: string }[] = [
   { question: 'Can async code change this variable at the wrong time?', command: 'tsStructure.raceConditions', key: '7' },
   { question: 'Which paths can this function take, and what does each return?', command: 'tsStructure.controlFlow', key: '1' },
   { question: 'Why does this variable have this value here?', command: 'tsStructure.explainValue', key: '0' },
+  { question: 'How does this variable change, pass by pass through a loop?', command: 'tsStructure.valueTimeline' },
+  { question: 'What does this async function wait for, and what runs at the same time?', command: 'tsStructure.asyncTimeline' },
   { question: 'What does this value depend on?', command: 'tsStructure.sliceBackward' },
   { question: 'Who calls this function, and what does it call?', command: 'tsStructure.callGraph' },
   { question: 'Why can this line run, and where do its values come from?', command: 'tsStructure.dependenceGraph' },

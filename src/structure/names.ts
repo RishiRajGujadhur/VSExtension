@@ -16,6 +16,7 @@ export const names: Record<string, string> = {
   'tsStructure.dataFlow': 'Data flow',
   'tsStructure.dataFlowDiagram': 'Data flow chart',
   'tsStructure.explainValue': 'Why this value',
+  'tsStructure.valueTimeline': 'Value timeline',
   'tsStructure.nullability': 'Null checks',
   'tsStructure.sliceBackward': 'What feeds this value',
   'tsStructure.sliceForward': 'What this value feeds',
@@ -27,6 +28,7 @@ export const names: Record<string, string> = {
   'tsStructure.dependenceGraph': 'What depends on what',
   'tsStructure.exceptionFlow': 'Error paths',
   'tsStructure.promiseRejections': 'Promise rejections',
+  'tsStructure.asyncTimeline': 'Async timeline',
   'tsStructure.sideEffects': 'Side effects',
   // Finding your way
   'tsStructure.semanticUsages': 'Find usages',

@@ -27,6 +27,8 @@ const analyses: readonly CursorAnalysis[] = [
   { command: 'tsStructure.mutationTrackingVariable', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Track every change to '${s.name}'` },
   { command: 'tsStructure.raceConditions', feature: 'dataFlow', kinds: ['variable', 'member'], accepts: notMethod, lightbulb: (s) => `Check '${s.name}' for race conditions` },
   { command: 'tsStructure.explainValue', feature: 'dataFlow', kinds: ['variable', 'parameter'], lightbulb: (s) => `Explain the possible values of '${s.name}' here` },
+  { command: 'tsStructure.valueTimeline', feature: 'dataFlow', kinds: ['variable', 'parameter'], lightbulb: (s) => `Show how '${s.name}' changes, pass by pass` },
+  { command: 'tsStructure.asyncTimeline', feature: 'promiseRejections', kinds: ['function', 'member'], accepts: (s) => notProperty(s) && !!s.async, lightbulb: (s) => `Show what ${qualified(s)}() waits for` },
   { command: 'tsStructure.dataFlowDiagram', feature: 'dataFlow', kinds: ['variable', 'parameter', 'member'], accepts: notMethod },
   { command: 'tsStructure.sliceBackward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },
   { command: 'tsStructure.sliceForward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },

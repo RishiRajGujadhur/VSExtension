@@ -43,7 +43,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Data flow and changes',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph', 'tsStructure.reactState'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.valueTimeline', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph', 'tsStructure.reactState'],
   },
   {
     id: 'sideEffects',
@@ -62,7 +62,7 @@ export const features: Feature[] = [
     id: 'promiseRejections',
     title: 'Promise rejections',
     description: 'Where a function’s promise rejections are handled or lost.',
-    commands: ['tsStructure.promiseRejections'],
+    commands: ['tsStructure.promiseRejections', 'tsStructure.asyncTimeline'],
   },
   {
     id: 'deadExports',

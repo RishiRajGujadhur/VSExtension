@@ -4,8 +4,8 @@ See inside your TypeScript, JavaScript and React code. Put the cursor on somethi
 
 **At a glance**, grouped the way the Actions view is:
 
-- **Values**: Data flow, Why this value, What feeds this value, What this value feeds, Null checks, Changes to this variable and Race conditions.
-- **Flow and errors**: a Flowchart of any function with every path listed, compared and filtered; What depends on what, Error paths, Promise rejections and Side effects.
+- **Values**: Data flow, Why this value, Value timeline, What feeds this value, What this value feeds, Null checks, Changes to this variable and Race conditions.
+- **Flow and errors**: a Flowchart of any function with every path listed, compared and filtered; What depends on what, Error paths, Async timeline, Promise rejections and Side effects.
 - **Finding your way**: Find usages, Callers and calls, Arguments passed in, Family tree, Override reach and Re-export trail.
 - **Imports**: Who imports this, Bundle weight, Why this import, Import loops and Import changes since.
 - **Health check**: Inspect code, Type assertions, Déjà vu for copied code, Ghost exports, Pattern spotting and Shared state changes.
@@ -207,6 +207,9 @@ References grouped by what they do: definitions, calls, writes, reads, type refe
 ![Usages of calculateSubtotal grouped by kind](docs/images/semantic-usages.gif)
 
 ### Null checks, side effects, changes, errors and arguments
+
+- **Value timeline**: every change to a variable in the order the code makes it, in phases: at the start, on every pass of a loop, and after it. Each change shows its line and the condition it waits for (*+= item.price when item.inStock*); each loop says what one pass hands to the next, and a counter shows how it steps (*start, then start − 1, start − 2, …*). A variable nothing changes says it could be `const`.
+- **Async timeline**: what an async function does over time, step by step: each `await`, calls started together with `Promise.all`, waits inside a loop that run one after another (with how to start them together), promises started early and the line that waits for them, promises started on purpose with `void`, and promises nobody waits for, whose errors are lost.
 
 | Analysis | Put the cursor on | Shows |
 | --- | --- | --- |

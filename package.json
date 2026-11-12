@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -158,6 +158,12 @@
         "title": "Promise rejections",
         "category": "Code X-Ray",
         "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "tsStructure.asyncTimeline",
+        "title": "Async timeline",
+        "category": "Code X-Ray",
+        "icon": "$(merge)"
       },
       {
         "command": "tsStructure.deadExports",
@@ -890,6 +896,12 @@
         "icon": "$(debug-breakpoint-data)"
       },
       {
+        "command": "tsStructure.valueTimeline",
+        "title": "Value timeline",
+        "category": "Code X-Ray",
+        "icon": "$(versions)"
+      },
+      {
         "command": "tsStructure.sliceBackward",
         "title": "What feeds this value",
         "category": "Code X-Ray",
@@ -1424,6 +1436,11 @@
           "when": "config.tsStructure.features.promiseRejections"
         },
         {
+          "command": "tsStructure.asyncTimeline",
+          "group": "3_analysis@7",
+          "when": "config.tsStructure.features.promiseRejections"
+        },
+        {
           "command": "tsStructure.deadExports",
           "group": "3_analysis@7",
           "when": "config.tsStructure.features.deadExports"
@@ -1559,6 +1576,11 @@
           "command": "tsStructure.explainValue",
           "when": "config.tsStructure.features.dataFlow",
           "group": "3_analysis@6"
+        },
+        {
+          "command": "tsStructure.valueTimeline",
+          "when": "config.tsStructure.features.dataFlow",
+          "group": "3_analysis@7"
         },
         {
           "command": "tsStructure.sliceBackward",
@@ -1857,6 +1879,10 @@
         },
         {
           "command": "tsStructure.promiseRejections",
+          "when": "config.tsStructure.features.promiseRejections"
+        },
+        {
+          "command": "tsStructure.asyncTimeline",
           "when": "config.tsStructure.features.promiseRejections"
         },
         {
@@ -2209,6 +2235,10 @@
         },
         {
           "command": "tsStructure.explainValue",
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        },
+        {
+          "command": "tsStructure.valueTimeline",
           "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
         },
         {

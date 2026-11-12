@@ -154,6 +154,8 @@ const a = (tab: CatalogAction['tab'], category: string, command: string, label: 
 export const actionCatalog: CatalogAction[] = [
   a('analyze', 'Values', 'tsStructure.dataFlow', 'Data Flow', 'Where values come from and go',
     'Traces the variable at the cursor from every assignment to every read, across functions, and draws it as a diagram you can explore.', 'trace variable assignments'),
+  a('analyze', 'Values', 'tsStructure.valueTimeline', 'Value Timeline', 'How it changes, pass by pass',
+    'Every change to the variable at the cursor in order: before a loop, on every pass of it and after it, with the conditions each change waits for, what one pass hands to the next, and how a counter steps.', 'loop iteration pass history changes over time'),
   a('analyze', 'Values', 'tsStructure.explainValue', 'Explain Value Path', 'Every value it can have here',
     'Lists each value the variable can hold at the cursor, with the assignments and conditions on the path that lead to it.', 'why condition'),
   a('analyze', 'Values', 'tsStructure.nullability', 'Nullability', 'Paths that make it null',
@@ -175,6 +177,8 @@ export const actionCatalog: CatalogAction[] = [
     'The control flow chart with its dependences drawn on it: purple arcs from where each variable is set to where that value is read, orange arcs from each decision to the code it controls.', 'pdg data control dependence slice why'),
   a('analyze', 'Flow and errors', 'tsStructure.exceptionFlow', 'Exception Flow', 'Errors thrown, caught or lost',
     'Shows where a function throws, where each error is caught, and which catch blocks swallow errors.', 'throw catch errors'),
+  a('analyze', 'Flow and errors', 'tsStructure.asyncTimeline', 'Async Timeline', 'What runs and what waits',
+    'For an async function: every await, the calls it starts together, the waits inside loops that run one after another, promises started early, and promises nobody waits for, in the order they run.', 'await promise parallel sequential concurrency Promise.all'),
   a('analyze', 'Flow and errors', 'tsStructure.promiseRejections', 'Promise Rejections', 'Rejections handled or lost',
     'Finds promises whose rejections are never handled, such as calls without await or catch.', 'async promise catch'),
   a('analyze', 'Flow and errors', 'tsStructure.sideEffects', 'Side Effects', 'What a function changes',
