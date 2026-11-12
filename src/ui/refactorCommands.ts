@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { activeFeature } from './activeFeature';
 import { remedies, showProblem } from './problems';
 import { ProjectService } from '../analysis/project';
 import { openChangeSignature } from './changeSignaturePanel';
@@ -17,9 +18,16 @@ export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescr
 
 /** The active editor when it holds a TypeScript or JavaScript file on disk, otherwise an explanation. */
 export function sourceEditor(): vscode.TextEditor | undefined {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
-    void showProblem('Open a TypeScript or JavaScript file first.', [remedies.openFile]);
+  const isSource = (e: vscode.TextEditor | undefined) => !!e && vscode.languages.match(languageSelector, e.document) > 0;
+  // A chart, the output or a Markdown file in front: the TypeScript file shown beside it is the one meant.
+  const editor = isSource(vscode.window.activeTextEditor) ? vscode.window.activeTextEditor : vscode.window.visibleTextEditors.find(isSource);
+  if (!editor || !isSource(editor)) {
+    // No file open: straight to picking one (and then the symbol), instead of a message with a link to click.
+    if (vscode.workspace.workspaceFolders?.length) {
+      void import('./analysisActions').then((m) => m.openFileThenRun(activeFeature.recent()));
+    } else {
+      void showProblem('Open a folder or a TypeScript or JavaScript file first.', [remedies.openFile]);
+    }
     return undefined;
   }
   return editor;

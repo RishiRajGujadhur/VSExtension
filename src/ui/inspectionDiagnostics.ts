@@ -409,9 +409,13 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     if (Array.isArray(scopeArg)) {
       return this.inspectPaths(view, scopeArg);
     }
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
-      void showProblem('Open a TypeScript or JavaScript file first, or right-click a folder in the Explorer to inspect it.', [remedies.openFile]);
+    const isSource = (e: vscode.TextEditor | undefined) => !!e && vscode.languages.match(languageSelector, e.document) > 0;
+    const editor = isSource(vscode.window.activeTextEditor) ? vscode.window.activeTextEditor : vscode.window.visibleTextEditors.find(isSource);
+    if (!editor) {
+      // No file to start from: the whole workspace is what is meant, without asking for a file first.
+      const folders = vscode.workspace.workspaceFolders ?? [];
+      if (folders.length) return this.inspectPaths(view, folders.map((f) => f.uri));
+      void showProblem('Open a folder or a TypeScript or JavaScript file first.', [remedies.openFile]);
       return;
     }
     const scope = await chooseScope({ id: 'inspectCode', title: 'Inspect Code', kinds: ['project', 'folder', 'pickFolder', 'open', 'changed', 'file', 'function', 'selection'], editor }, scopeArg);

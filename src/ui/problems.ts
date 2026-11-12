@@ -23,8 +23,8 @@ export async function runRemedy(id: unknown): Promise<void> {
 }
 
 /**
- * Shows a message with its fixes as links right after the text, on the left where they are read, rather than as
- * buttons at the far right of the notification. At most three are offered, the most useful first.
+ * Shows a message with its fixes as links before the text: a notification cuts long text off at its end, under its
+ * own icons, so links at the start always stay visible and clickable. At most three, the most useful first.
  */
 export async function showProblem(message: string, remedies: readonly Remedy[], severity: 'error' | 'warning' | 'info' = 'error'): Promise<void> {
   const shown = remedies.slice(0, 3);
@@ -36,7 +36,7 @@ export async function showProblem(message: string, remedies: readonly Remedy[], 
   // Old fixes are forgotten once enough newer ones were offered.
   for (const key of [...pending.keys()].slice(0, Math.max(0, pending.size - 30))) pending.delete(key);
   const show = severity === 'error' ? vscode.window.showErrorMessage : severity === 'warning' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
-  await show(links.length ? `${message} ${links.join(' · ')}` : message);
+  await show(links.length ? `${links.join(' · ')} — ${message}` : message);
 }
 
 const command = (title: string, id: string, ...args: unknown[]): Remedy => ({ title, run: () => vscode.commands.executeCommand(id, ...args) });

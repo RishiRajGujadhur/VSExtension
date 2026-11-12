@@ -6,6 +6,7 @@ import { commandIcons } from '../structure/icons';
 import { AnalysisError } from '../analysis/types';
 import { Remedy, remedies, showProblem, syntaxErrorRemedy, withSyntaxNote } from './problems';
 import { nameOf } from '../structure/names';
+import { all as lastSubjects } from './lastSubjects';
 
 /** An analysis that starts from a named thing at the cursor, and the things it can start from. */
 interface CursorAnalysis {
@@ -96,15 +97,34 @@ const icons: Record<SymbolKind, string> = {
   import: 'symbol-namespace',
 };
 
+/** The symbol an analysis was just run on by itself, so it is not tried twice in a row. */
+let lastAutoRun: string | undefined;
+
 /**
  * After an analysis found nothing to start from at the cursor, offers the file's declarations it can
- * start from, and runs it on the one picked.
+ * start from, and runs it on the one picked. When only one fits (on the cursor's line, or in the file), it runs
+ * on that one straight away.
  */
 export async function offerSymbols(command: string, error: string | AnalysisError, editor: vscode.TextEditor): Promise<void> {
   const message = typeof error === 'string' ? error : error.message;
   const reason = typeof error === 'string' ? 'cursor' : error.reason;
   const analysis = analyses.find((a) => a.command === command);
   const symbols = analysis ? fileSymbols(parse(editor.document)).filter((s) => fits(analysis, s)) : [];
+  // One click less: when only one thing fits on the cursor's line, or in the whole file, it runs on that one.
+  if (analysis && reason === 'cursor') {
+    const line = editor.selection.active.line;
+    const onLine = symbols.filter((s) => s.line === line);
+    const only = onLine.length === 1 ? onLine[0] : symbols.length === 1 ? symbols[0] : undefined;
+    // Once per symbol: if it fails there too, the message below explains, instead of trying again and again.
+    const key = only && `${command}:${editor.document.uri.toString()}:${only.offset}`;
+    if (only && key !== lastAutoRun) {
+      lastAutoRun = key;
+      setTimeout(() => { if (lastAutoRun === key) lastAutoRun = undefined; }, 3000);
+      void vscode.window.setStatusBarMessage(`${nameOf(command)}: ran on ${only.name}, ${onLine.length === 1 ? 'on the cursor’s line' : `the only ${kindWord(only)} in this file`}`, 5000);
+      await runOn(editor, only, command);
+      return;
+    }
+  }
   const syntax = syntaxErrorRemedy(editor);
   const buttons: Remedy[] = [];
   // Broken code first: a syntax error is the likeliest reason nothing was found at the cursor.
@@ -136,7 +156,7 @@ export async function offerSymbols(command: string, error: string | AnalysisErro
  * from a variable, a function or a class, that file's declarations it can start from; and the analysis runs on the
  * one picked. Other commands just run on the file.
  */
-export async function openFileThenRun(command?: string): Promise<void> {
+export async function openFileThenRun(command?: string, note?: string): Promise<void> {
   const name = command ? nameOf(command) : undefined;
   const files = await vscode.workspace.findFiles('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', '{**/node_modules/**,**/dist/**,**/out/**,**/*.d.ts}', 5000);
   if (!files.length) {
@@ -146,13 +166,21 @@ export async function openFileThenRun(command?: string): Promise<void> {
   const open = new Set(vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => (t.input instanceof vscode.TabInputText ? t.input.uri.toString() : '')));
   type Item = vscode.QuickPickItem & { uri?: vscode.Uri };
   const item = (uri: vscode.Uri): Item => ({ label: `$(file-code) ${uri.path.split('/').pop()}`, description: vscode.workspace.asRelativePath(uri.with({ path: uri.path.replace(/\/[^/]*$/, '') })), uri });
-  const sorted = [...files].sort((a, b) => vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
-  const opened = sorted.filter((u) => open.has(u.toString()));
+  // Files the feature is likely to fit first: components for React state, then the rest by path.
+  const likely = (u: vscode.Uri) => (command === 'tsStructure.reactState' ? /\.[jt]sx$/.test(u.path) : true) && !/(\.|_)(test|spec)\.[cm]?[jt]sx?$/.test(u.path);
+  const sorted = [...files].sort((a, b) => Number(likely(b)) - Number(likely(a)) || vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
+  // Where this feature last ran comes first of all.
+  const lastFile = command ? lastSubjects()[command]?.file : undefined;
+  const last = lastFile ? sorted.find((u) => u.fsPath.toLowerCase() === lastFile.toLowerCase()) : undefined;
+  const opened = sorted.filter((u) => open.has(u.toString()) && u !== last);
+  const rest = sorted.filter((u) => !open.has(u.toString()) && u !== last);
   const items: Item[] = [
-    ...(opened.length ? [{ label: 'Open in the editor', kind: vscode.QuickPickItemKind.Separator }, ...opened.map(item), { label: 'All files', kind: vscode.QuickPickItemKind.Separator }] : []),
-    ...sorted.filter((u) => !open.has(u.toString())).map(item),
+    ...(last ? [{ label: 'Where it last ran', kind: vscode.QuickPickItemKind.Separator }, item(last)] : []),
+    ...(opened.length ? [{ label: 'Open in the editor', kind: vscode.QuickPickItemKind.Separator }, ...opened.map(item)] : []),
+    ...(last || opened.length ? [{ label: 'All files', kind: vscode.QuickPickItemKind.Separator }] : []),
+    ...rest.map(item),
   ];
-  const picked = await vscode.window.showQuickPick(items, { title: name ? `${name}: which file?` : 'Open a file', placeHolder: 'Type to search the project', matchOnDescription: true });
+  const picked = await vscode.window.showQuickPick(items, { title: note ?? (name ? `${name}: which file?` : 'Open a file'), placeHolder: 'Type to search the project', matchOnDescription: true });
   if (!picked?.uri) return;
   const editor = await vscode.window.showTextDocument(picked.uri);
   if (!command) return;
@@ -164,11 +192,18 @@ export async function openFileThenRun(command?: string): Promise<void> {
   }
   const symbols = fileSymbols(parse(editor.document)).filter((s) => fits(analysis, s));
   if (!symbols.length) {
-    void showProblem(`Nothing in ${picked.uri.path.split('/').pop()} fits ${name}: it starts from ${chooseTitle(analysis).replace(/^Choose (a |an )?|…$/g, '').toLowerCase()}.`, [{ title: 'Pick another file…', run: () => openFileThenRun(command) }], 'info');
+    // Straight back to the file list, saying why, instead of a message to click through.
+    await openFileThenRun(command, `Nothing in ${picked.uri.path.split('/').pop()} fits ${name} (it starts from ${chooseTitle(analysis).replace(/^Choose (a |an )?|…$/g, '').toLowerCase()}): pick another file`);
     return;
   }
-  const symbol = await pickSymbol(editor, symbols, `${name}: ${chooseTitle(analysis).replace(/…$/, '')}`);
+  // Only one thing fits: no list to pick from.
+  const symbol = symbols.length === 1 ? symbols[0] : await pickSymbol(editor, symbols, `${name}: ${chooseTitle(analysis).replace(/…$/, '')}`);
   if (symbol) await runOn(editor, symbol, command);
+}
+
+/** "variable", "function", "class": a symbol's kind in words. */
+function kindWord(symbol: FileSymbol): string {
+  return symbol.kind === 'member' ? (symbol.callable ? 'method' : 'property') : symbol.kind;
 }
 
 /** "Choose a Variable…", "Choose a Function…": what the analysis starts from, in words. */
