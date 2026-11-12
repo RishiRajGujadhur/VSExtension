@@ -126,7 +126,7 @@
     }
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
-    run.addEventListener('click', () => vscode.postMessage({ type: 'run', id: action.id }));
+    run.addEventListener('click', (e) => vscode.postMessage({ type: e.altKey && data.lastSubjects && data.lastSubjects[action.command] ? 'runAgain' : 'run', id: action.id }));
     li.append(run);
 
     // A hidden action found by search is dimmed, with a crossed-out eye on its tile.
@@ -427,6 +427,12 @@
       const row = make('div', 'fact');
       row.append(make('span', '', 'Used'), make('span', '', runs ? `${runs} time${runs === 1 ? '' : 's'}` : 'not yet'));
       facts.append(row);
+      const lastOn = data.lastSubjects && data.lastSubjects[action.command];
+      if (lastOn) {
+        const at = make('div', 'fact');
+        at.append(make('span', '', 'Last ran on'), make('span', '', `${lastOn} · Alt+click runs it there again`));
+        facts.append(at);
+      }
       if (action.formerly) {
         const was = make('div', 'fact');
         was.append(make('span', '', 'Formerly'), make('span', '', action.formerly));
@@ -488,6 +494,8 @@
     const add = (label, iconName, onPick, key) => entries.push({ label, iconName, onPick, key });
     const sep = () => entries.push(undefined);
     add('Run', 'play', () => vscode.postMessage({ type: 'run', id: action.id }), 'Enter');
+    const last = data.lastSubjects && data.lastSubjects[action.command];
+    if (last) add(`Run again on ${last}`, 'history', () => vscode.postMessage({ type: 'runAgain', id: action.id }), 'Alt+Click');
     // An analysis that can also be drawn: run it as a chart.
     const asGraph = action.tab !== 'graphs' && data.actions.find((a) => a.tab === 'graphs' && a.command === action.command);
     if (asGraph) add('Open as chart', 'graph-scatter', () => vscode.postMessage({ type: 'run', id: asGraph.id }));

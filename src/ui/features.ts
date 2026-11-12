@@ -3,6 +3,7 @@ import { Feature, enabledByDefault, featureOf, features } from '../structure/fea
 import { featureIcon } from '../structure/icons';
 import { actionCatalog } from '../structure/actionCatalog';
 import { activeFeature } from './activeFeature';
+import { noteSubject } from './lastSubjects';
 
 /** The commands the Actions view lists: running one marks it as the feature on screen once its result shows. */
 const listed = new Set(actionCatalog.map((a) => a.command));
@@ -23,7 +24,10 @@ export function registerCommand(id: string, handler: (...args: any[]) => unknown
       void offerToEnable(feature);
       return undefined;
     }
-    if (listed.has(id)) activeFeature.noteInvoked(id);
+    if (listed.has(id)) {
+      noteSubject(id);
+      activeFeature.noteInvoked(id);
+    }
     return handler(...args);
   });
 }

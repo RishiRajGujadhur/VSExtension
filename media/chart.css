@@ -190,3 +190,7 @@ body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !impor
 .hover-card.pinned.dragging .card-head { cursor: grabbing; }
 /* The card being hovered is drawn over the pinned one. */
 #hoverCard { z-index: 8; }
+
+/* Code on a hover card that opens with a double-click. */
+.card-code.openable { cursor: pointer; }
+.card-code.openable:hover { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }

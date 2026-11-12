@@ -29,13 +29,22 @@ export class ActiveFeature {
     this.invoked = { command, at: this.now() };
   }
 
+  /** The command started in the last few seconds, such as the one that found no file open. */
+  recent(withinMs = 10_000): string | undefined {
+    return this.invoked && this.now() - this.invoked.at < withinMs ? this.invoked.command : undefined;
+  }
+
   /** A report was shown: the command that ran just before it becomes the active feature. */
   reportShown(): void {
     if (this.invoked && this.now() - this.invoked.at < 120_000) this.set(this.invoked.command);
   }
 
   set(command: string): void {
-    if (command === this.current) return;
+    // The same feature again: still a new result (its subject may have changed).
+    if (command === this.current) {
+      this.fire();
+      return;
+    }
     if (this.current) this.previous = this.current;
     this.current = command;
     this.fire();

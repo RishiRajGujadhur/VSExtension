@@ -10,6 +10,7 @@ import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } fro
 import { isFeatureEnabled } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
 import { activeFeature } from './activeFeature';
+import { all as lastSubjects, goToSubject, onDidChangeSubjects } from './lastSubjects';
 import { Report, ReportLocation } from '../structure/report';
 import { ValuePathCard, valuePathCard } from '../structure/valuePathCard';
 
@@ -59,6 +60,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
       vscode.workspace.onDidChangeConfiguration((e) => (e.affectsConfiguration('tsStructure.features') || e.affectsConfiguration('tsStructure.actions.accentColor')) && this.post()),
       // The action whose result is on screen is highlighted, and the one before it marked "last run".
       activeFeature.onDidChange(() => this.sendActive()),
+      onDidChangeSubjects(() => this.post()),
       watcher,
       watcher.onDidChange(refresh),
       watcher.onDidCreate(refresh),
@@ -147,6 +149,15 @@ export class ActionsView implements vscode.WebviewViewProvider {
         void vscode.window.setStatusBarMessage(`Copied ${message.command}`, 3000);
       } else if (message.type === 'reset') {
         await this.reset();
+      } else if (message.type === 'runAgain' && entryOf(message.id)) {
+        // Back where it last ran, then the same action again.
+        const entry = entryOf(message.id)!;
+        if (await goToSubject(entry.command)) {
+          recordActionUse(this.memento, actionId(entry));
+          await runEntry(entry);
+        } else {
+          void vscode.window.showInformationMessage(`${entry.label} last ran in a file that is gone. Run it from the cursor instead.`);
+        }
       } else if (message.type === 'cardOpen' && isLocation(message.location)) {
         // A value of the card: its code.
         const where = message.location;
@@ -218,7 +229,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
-    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan'), active: activeFeature.active, last: activeFeature.last, card: this.card });
+    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan'), active: activeFeature.active, last: activeFeature.last, card: this.card, lastSubjects: Object.fromEntries(Object.entries(lastSubjects()).map(([command, s]) => [command, s.label])) });
   }
 }
 

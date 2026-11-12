@@ -387,6 +387,7 @@
       title: node.label,
       meta: where,
       code: node.location ? codeBlocks.get(key) : '',
+      open: node.location ? () => vscode.postMessage({ type: 'open', location: node.location }) : undefined,
       loading: node.location && !codeBlocks.has(key),
       facts: [
         ['Detail', node.description],

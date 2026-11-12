@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { activeFeature } from './activeFeature';
 import { AnalysisError, AnalysisErrorReason } from '../analysis/types';
 import { parse } from './codeActions';
 
@@ -42,7 +43,8 @@ const command = (title: string, id: string, ...args: unknown[]): Remedy => ({ ti
 
 /** Buttons shared by many messages. */
 export const remedies = {
-  openFile: command('Open a File…', 'workbench.action.quickOpen'),
+  // A file of the project, then (for an analysis that starts from a symbol) the symbol, and the analysis runs.
+  openFile: { title: 'Open a file…', run: async () => (await import('./analysisActions')).openFileThenRun(activeFeature.recent(300_000)) } as Remedy,
   findInProject: command('Search the Project…', 'workbench.action.showAllSymbols'),
   howDoI: command('How Do I…?', 'tsStructure.howDoI'),
   showLog: command('Show Log', 'tsStructure.showLog'),

@@ -719,6 +719,7 @@
       title: n.kind === 'start' ? `${chart.name}()` : n.kind === 'end' ? 'End of the function' : kindWords[n.kind] || n.kind,
       meta: line ? `${fileName()}:${line}` : fileName(),
       code: isTerminal(n) ? '' : n.text,
+      open: n.location ? () => open(n) : undefined,
       note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
       facts: [],
       keys: [],

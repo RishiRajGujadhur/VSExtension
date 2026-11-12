@@ -27,6 +27,7 @@ import { CompilerErrorActions } from './ui/compilerErrorActions';
 import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
 import { activeFeature } from './ui/activeFeature';
+import { registerLastSubjects } from './ui/lastSubjects';
 import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -101,6 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
   controlFlow.register(context);
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
+  registerLastSubjects(context);
   actionsView.register(context);
   // A Value Path also shows as a card at the bottom of the Actions view.
   context.subscriptions.push(structureView.onDidShowNewReport((report) => actionsView.showResult(report)));

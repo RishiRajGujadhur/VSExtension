@@ -678,7 +678,8 @@
    * beside it stay clickable (above it when there is no room below), and stays while the pointer is on it.
    * Its pin copies it into the pinned card: one at a time (pinning another box replaces it), draggable by its
    * header, and hovering other boxes keeps working beside it. Escape closes the hover card, then the pinned one.
-   * Content: { icon, title, meta, code, facts: [[label, value]], keys: [[key, what]], note }.
+   * Content: { icon, title, meta, code, facts: [[label, value]], keys: [[key, what]], note, open }; open() is what
+   * double-clicking the code does, such as opening it in the editor.
    */
   const openCards = [];
   function hoverCard() {
@@ -734,6 +735,16 @@
         const pre = document.createElement('pre');
         pre.className = 'card-code';
         pre.append(highlightCode(c.code));
+        // Double-clicking the code opens it in the editor.
+        if (c.open) {
+          pre.classList.add('openable');
+          pre.title = 'Double-click to open in the editor';
+          pre.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            window.getSelection()?.removeAllRanges();
+            c.open();
+          });
+        }
         target.append(pre);
       } else if (c.loading) {
         const pre = document.createElement('pre');

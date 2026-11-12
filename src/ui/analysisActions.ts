@@ -5,6 +5,7 @@ import { isFeatureEnabled } from './features';
 import { commandIcons } from '../structure/icons';
 import { AnalysisError } from '../analysis/types';
 import { Remedy, remedies, showProblem, syntaxErrorRemedy, withSyntaxNote } from './problems';
+import { nameOf } from '../structure/names';
 
 /** An analysis that starts from a named thing at the cursor, and the things it can start from. */
 interface CursorAnalysis {
@@ -112,12 +113,12 @@ export async function offerSymbols(command: string, error: string | AnalysisErro
   // On a function, a class or an import, offer the analysis that fits it, such as Side Effects for Data Flow on a function.
   const here = symbolAt(parse(editor.document), editor.document.offsetAt(editor.selection.active));
   const fitting = here && analyses.find((a) => a.command !== command && a.lightbulb && isFeatureEnabled(a.feature) && fits(a, here) && (a.command !== 'tsStructure.promiseRejections' || here.async));
-  if (fitting) buttons.push({ title: `${titles[fitting.command] ?? 'Analyze'} of ${here!.name}`, run: () => vscode.commands.executeCommand(fitting.command) });
+  if (fitting) buttons.push({ title: `${nameOf(fitting.command, 'Analyze')} of ${here!.name}`, run: () => vscode.commands.executeCommand(fitting.command) });
   if (analysis && symbols.length) {
     buttons.push({
       title: chooseTitle(analysis),
       run: async () => {
-        const picked = await pickSymbol(editor, symbols, `${titles[command] ?? 'Analyze'}: ${chooseTitle(analysis).replace(/…$/, '')}`);
+        const picked = await pickSymbol(editor, symbols, `${nameOf(command, 'Analyze')}: ${chooseTitle(analysis).replace(/…$/, '')}`);
         if (picked) await runOn(editor, picked, command);
       },
     });
@@ -128,6 +129,46 @@ export async function offerSymbols(command: string, error: string | AnalysisErro
   // The choose button matters most when there is no syntax error to fix.
   const ordered = syntax && reason === 'cursor' ? buttons : [...buttons.filter((b) => b.title.startsWith('Choose')), ...buttons.filter((b) => !b.title.startsWith('Choose'))];
   await showProblem(withSyntaxNote(message, reason === 'cursor' ? syntax?.count : undefined), ordered);
+}
+
+/**
+ * Open a file…: the project's TypeScript and JavaScript files (open ones first); then, for an analysis that starts
+ * from a variable, a function or a class, that file's declarations it can start from; and the analysis runs on the
+ * one picked. Other commands just run on the file.
+ */
+export async function openFileThenRun(command?: string): Promise<void> {
+  const name = command ? nameOf(command) : undefined;
+  const files = await vscode.workspace.findFiles('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', '{**/node_modules/**,**/dist/**,**/out/**,**/*.d.ts}', 5000);
+  if (!files.length) {
+    void showProblem('This workspace has no TypeScript or JavaScript files.', [{ title: 'Open a folder…', run: () => vscode.commands.executeCommand('workbench.action.files.openFolder') }], 'info');
+    return;
+  }
+  const open = new Set(vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => (t.input instanceof vscode.TabInputText ? t.input.uri.toString() : '')));
+  type Item = vscode.QuickPickItem & { uri?: vscode.Uri };
+  const item = (uri: vscode.Uri): Item => ({ label: `$(file-code) ${uri.path.split('/').pop()}`, description: vscode.workspace.asRelativePath(uri.with({ path: uri.path.replace(/\/[^/]*$/, '') })), uri });
+  const sorted = [...files].sort((a, b) => vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
+  const opened = sorted.filter((u) => open.has(u.toString()));
+  const items: Item[] = [
+    ...(opened.length ? [{ label: 'Open in the editor', kind: vscode.QuickPickItemKind.Separator }, ...opened.map(item), { label: 'All files', kind: vscode.QuickPickItemKind.Separator }] : []),
+    ...sorted.filter((u) => !open.has(u.toString())).map(item),
+  ];
+  const picked = await vscode.window.showQuickPick(items, { title: name ? `${name}: which file?` : 'Open a file', placeHolder: 'Type to search the project', matchOnDescription: true });
+  if (!picked?.uri) return;
+  const editor = await vscode.window.showTextDocument(picked.uri);
+  if (!command) return;
+  const analysis = analyses.find((a) => a.command === command);
+  if (!analysis) {
+    // An analysis of the file itself, such as Inspect code or Who imports this: it runs now.
+    await vscode.commands.executeCommand(command);
+    return;
+  }
+  const symbols = fileSymbols(parse(editor.document)).filter((s) => fits(analysis, s));
+  if (!symbols.length) {
+    void showProblem(`Nothing in ${picked.uri.path.split('/').pop()} fits ${name}: it starts from ${chooseTitle(analysis).replace(/^Choose (a |an )?|…$/g, '').toLowerCase()}.`, [{ title: 'Pick another file…', run: () => openFileThenRun(command) }], 'info');
+    return;
+  }
+  const symbol = await pickSymbol(editor, symbols, `${name}: ${chooseTitle(analysis).replace(/…$/, '')}`);
+  if (symbol) await runOn(editor, symbol, command);
 }
 
 /** "Choose a Variable…", "Choose a Function…": what the analysis starts from, in words. */
@@ -203,7 +244,7 @@ export async function analyzeSymbol(editor: vscode.TextEditor): Promise<void> {
   }
   const fitting = analyses.filter((a) => isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async));
   const picked = await vscode.window.showQuickPick(
-    fitting.map((a) => ({ label: `$(${commandIcons[a.command] ?? 'symbol-misc'}) ${titles[a.command] ?? a.command}`, command: a.command })),
+    fitting.map((a) => ({ label: `$(${commandIcons[a.command] ?? 'symbol-misc'}) ${nameOf(a.command)}`, command: a.command })),
     { title: `Analyze ${symbol.name}`, placeHolder: 'Choose an analysis' },
   );
   if (picked) {
