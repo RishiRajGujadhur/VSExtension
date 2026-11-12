@@ -118,9 +118,9 @@ The **path list** lists every path through the function with the branches it tak
 
 **Why this value** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
 
-The answer also shows as a **Value path** card at the bottom of the Actions view: each value on a timeline with how many ways lead to it and what has to be true, how long the analysis took, and buttons to copy it or open it in the Results view. Click a value to open its code; **Next** runs another analysis at the cursor.
+The answer shows in the **Value path** panel at the bottom of the sidebar, in the Results view's place: each value on a timeline with how many ways lead to it and what has to be true, and how long the analysis took. Click a value to open its code; **Next** runs another analysis at the cursor. When files change it offers **Run it again**. The list button shows the same result as a list in the Results view, with its filters and history; any other result shows there too.
 
-<img src="docs/images/actions-value-path.png" width="340" alt="The Value path card in the Actions view: permission can be 'write', 'limited', 'read' or 'none' at line 25, each with the conditions that lead to it, and a Next step">
+<img src="docs/images/actions-value-path.png" width="340" alt="The Value path panel: permission can be 'write', 'limited', 'read' or 'none' at line 25, each with the conditions that lead to it, and a Next step">
 
 - **Expand calls in place**: a box that calls a function of your project has an **ƒ+** button. It splices the called function into the chart, in a labeled frame, with its returns leading on to what followed the call; paths then run through it.
 - **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.

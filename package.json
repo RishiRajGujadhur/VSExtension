@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.51.0",
+  "version": "0.52.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -2782,7 +2782,14 @@
         {
           "id": "tsStructure.report",
           "name": "Results",
-          "visibility": "collapsed"
+          "visibility": "collapsed",
+          "when": "!tsStructure.valuePathShown"
+        },
+        {
+          "type": "webview",
+          "id": "tsStructure.valuePath",
+          "name": "Value path",
+          "when": "tsStructure.valuePathShown"
         }
       ],
       "test": [

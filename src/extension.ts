@@ -28,6 +28,7 @@ import { Inspection } from './inspect/inspection';
 import { configureFeatures, registerCommand } from './ui/features';
 import { activeFeature } from './ui/activeFeature';
 import { registerLastSubjects } from './ui/lastSubjects';
+import { ValuePathView } from './ui/valuePathView';
 import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -104,8 +105,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
   registerLastSubjects(context);
   actionsView.register(context);
-  // A Value Path also shows as a card at the bottom of the Actions view.
-  context.subscriptions.push(structureView.onDidShowNewReport((report) => actionsView.showResult(report)));
+  // A Value path result shows as a card in the Value path panel, in the Results view's place.
+  new ValuePathView(context.extensionUri, structureView).register(context);
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {

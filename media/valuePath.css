@@ -1,0 +1,54 @@
+html, body { margin: 0; padding: 0; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); background: transparent; }
+body { padding: 8px 12px 14px; --active-accent: #22d3ee; }
+body.accent-pink { --active-accent: #ec4899; }
+body.accent-theme { --active-accent: var(--vscode-focusBorder); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.empty { color: var(--vscode-descriptionForeground); }
+.card-stale { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 0 2px 8px; color: var(--vscode-editorWarning-foreground, #cca700); font-size: 12px; }
+.link { padding: 0; border: 0; background: none; color: var(--vscode-textLink-foreground); }
+.link:hover { text-decoration: underline; }
+/* The Value path panel: the card fills the panel. */
+
+.card-head { display: flex; align-items: center; gap: 6px; }
+.card-fold, .card-tool { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--vscode-foreground); }
+.card-tool { border-color: var(--vscode-widget-border, rgba(128, 128, 128, .35)); }
+.card-fold:hover, .card-tool:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.card-title { display: inline-flex; align-items: center; gap: 7px; flex: 1; min-width: 0; font-size: 14px; }
+.card-title .codicon { color: var(--active-accent); font-size: 18px; }
+.card-title strong { font-weight: 500; }
+.card-time { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--active-accent) 45%, transparent); border-radius: 999px;
+  background: color-mix(in srgb, var(--active-accent) 12%, transparent); color: var(--active-accent); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card-time .codicon { font-size: 13px; }
+.card-summary { margin: 10px 2px 8px; line-height: 1.5; }
+.card-summary code { color: var(--active-accent); font-family: var(--vscode-editor-font-family, monospace); }
+.card-needs, .card-warning { margin: 0 2px 8px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.card-warning { color: var(--vscode-editorWarning-foreground, #cca700); }
+/* The timeline: a ring for each value on a line that ends in an arrow and a dot at Next. */
+.timeline { position: relative; margin: 0; padding: 0 0 0 26px; list-style: none; }
+.timeline .step { position: relative; margin: 8px 0 0; }
+.timeline .step::before { content: ''; position: absolute; left: -20px; top: 16px; width: 10px; height: 10px; border: 2px solid var(--active-accent); border-radius: 50%; background: var(--vscode-sideBar-background, #181818);
+  box-shadow: 0 0 8px var(--active-accent); }
+.timeline .step.next::before { border-color: var(--vscode-descriptionForeground); box-shadow: none; width: 8px; height: 8px; left: -19px; top: 20px; }
+.timeline .step.value::after { content: ''; position: absolute; left: -14px; top: 30px; bottom: -14px; width: 2px; background: linear-gradient(var(--active-accent), color-mix(in srgb, var(--active-accent) 40%, transparent)); }
+.step-card { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); border-radius: 10px; background: rgba(255, 255, 255, .02); text-align: left; color: inherit; }
+.step.value .step-card { border-color: color-mix(in srgb, var(--active-accent) 55%, transparent); background: color-mix(in srgb, var(--active-accent) 10%, transparent); }
+.step-card:hover:not(:disabled) { border-color: var(--active-accent); }
+.step-card:disabled { cursor: default; }
+.step-tile { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .35)); border-radius: 8px; }
+.step.value .step-tile { border-color: color-mix(in srgb, var(--active-accent) 60%, transparent); color: var(--active-accent); }
+.step-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.step-top { display: flex; align-items: center; gap: 8px; }
+.step-top strong { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.step-badge { flex: none; padding: 0 7px; border-radius: 999px; background: var(--vscode-badge-background, rgba(128, 128, 128, .3)); color: var(--vscode-badge-foreground, inherit); font-size: 11px; }
+.step-when { display: inline-flex; align-items: center; gap: 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.step-when .infinity { font-size: 15px; line-height: 1; }
+@media (forced-colors: active) {
+  .step-card { border-color: CanvasText; }
+  .timeline .step::before { border-color: CanvasText; box-shadow: none; }
+}
+
+#card:not(:has(.empty)) { padding: 10px 10px 12px; border: 1px solid color-mix(in srgb, var(--active-accent) 60%, transparent); border-radius: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--active-accent) 16%, var(--vscode-sideBar-background, #181818)) 0%, var(--vscode-sideBar-background, #181818) 45%);
+  box-shadow: 0 12px 24px -12px rgba(0, 0, 0, .6), 0 0 18px -8px var(--active-accent); }
+.card-title strong { font-family: var(--vscode-editor-font-family, monospace); color: var(--active-accent); }
