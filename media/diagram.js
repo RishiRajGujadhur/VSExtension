@@ -88,6 +88,15 @@
     if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
     return parts.join('. ');
   }
+  // Where a box sits and what can be done with it, read after its label.
+  function spokenPlace(node) {
+    const parts = [];
+    if (diagram && node !== diagram.center) parts.push(`level ${node.depth + 1}`);
+    if (node.children.length && node !== (diagram && diagram.center)) parts.push(`${node.children.length} below it, ${node.collapsed ? 'folded' : 'shown'}; Space ${node.collapsed ? 'shows' : 'folds'} them`);
+    if (node.location) parts.push('Enter opens the code');
+    parts.push('Shift+F10 for more');
+    return parts.join('. ');
+  }
   const visible = (node) => {
     if (node.collapsed) return [];
     return isolated && chain.has(node) && node !== isolated ? node.children.filter((c) => chain.has(c)) : node.children;
@@ -245,14 +254,15 @@
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
       // A box with no code of its own only gathers the boxes behind it: drawn as a dashed outline.
       const group = !node.location && node.children.length && !node.kind && node !== center ? ' group' : '';
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: node === center ? 0 : -1 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: 0 }, layer);
       node.el = g;
       g.diagramNode = node;
-      g.setAttribute('role', 'treeitem');
-      g.setAttribute('aria-level', String(node.depth + 1));
+      // A button screen readers announce with its words, where it sits and what the keys do.
+      g.setAttribute('role', 'button');
       g.setAttribute('aria-label', spokenLabel(node));
+      g.setAttribute('aria-description', spokenPlace(node));
       if (node.children.length && node !== center) g.setAttribute('aria-expanded', String(!node.collapsed));
-      if (node === selected) g.setAttribute('aria-selected', 'true');
+      if (node === selected) g.setAttribute('aria-current', 'true');
       if (node === center) {
         // The subject: a circle, with a port where values come in and one where they go out.
         const r = node.w / 2;
@@ -352,14 +362,14 @@
   function showInfo(node) {
     info.textContent = '';
     if (!node) {
-      info.textContent = 'Hover or focus a box for its full text. Click opens the code, the round button folds, right-click runs another analysis.';
+      info.textContent = 'Hover or Tab to a box for its full text. Enter opens the code, the round button or Space folds, right-click or Shift+F10 runs another analysis.';
       return;
     }
     const strong = document.createElement('strong');
     strong.textContent = node.label;
     info.appendChild(strong);
     const parts = [node.description, node.location ? `${node.location.file.split(/[\\/]/).pop()}:${node.location.line + 1}` : ''];
-    const actions = [node.location ? 'Enter or click: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : '', node !== diagram.center && node !== isolated ? 'double-click or B: only this branch' : ''];
+    const actions = [node.location ? 'Enter: open' : '', node.children.length && node !== diagram.center ? `Space: ${node.collapsed ? `show ${node.children.length} more` : 'fold'}` : '', node.location ? 'right-click: more analyses' : '', node !== diagram.center && node !== isolated ? 'double-click or B: only this branch' : ''];
     const rest = document.createElement('span');
     rest.textContent = [...parts, actions.filter(Boolean).join(', ')].filter(Boolean).map((t) => ` · ${t}`).join('');
     info.appendChild(rest);
@@ -459,6 +469,17 @@
   }
 
   function onNodeKey(e, node) {
+    if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const order = shownNodes;
+      const at = order.indexOf(node);
+      const next = order[at + (e.shiftKey ? -1 : 1)];
+      // Past the first or the last box, Tab leaves the chart as usual.
+      if (at < 0 || !next) return;
+      e.preventDefault();
+      ensureVisible(next);
+      if (next.el) next.el.focus({ preventScroll: true });
+      return;
+    }
     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
       e.preventDefault();
       const box = node.el.getBoundingClientRect();
@@ -635,9 +656,9 @@
       flowing = node;
       drawFlows();
     }
-    // A single click opens the code; a double-click focuses on the branch instead, so the click waits a moment.
+    // A click selects the box (Enter, the menu, or a double-click on the code of its card opens the code).
     clearTimeout(pendingOpen);
-    if (node.location) pendingOpen = setTimeout(() => vscode.postMessage({ type: 'open', location: node.location }), 220);
+    if (node.el) node.el.focus({ preventScroll: true });
   });
   svg.addEventListener('dblclick', (e) => {
     const node = boxOf(e.target);

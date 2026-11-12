@@ -163,9 +163,11 @@
     }
     drawDependences();
     const nodes = el('g', { class: 'nodes' }, scene);
-    for (const n of chart.nodes) {
-      const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: n.kind === 'start' ? 0 : -1, role: 'button', 'aria-haspopup': 'menu' }, nodes);
+    // Drawn top to bottom, left to right, so Tab reads the chart in order.
+    for (const n of [...chart.nodes].sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: 0, role: 'button', 'aria-haspopup': 'menu' }, nodes);
       g.setAttribute('aria-label', spoken(n));
+      g.setAttribute('aria-description', spokenPlace(n));
       nodeShape(g, n);
       if (n.kind === 'start') {
         el('text', { x: n.width + 16, y: n.height / 2 + 5, class: 'title' }, g).textContent = `${chart.name}()`;
@@ -296,6 +298,13 @@
       const most = topVariables(3).map(([name, count]) => `${name} (${count})`).join(', ');
       info.textContent = `Dependences: ${data.length} data (purple, left), ${control.length} control (orange, right)${truncated ? ', some left out' : ''}${most ? `; most read: ${most}` : ''}. ${data.length + control.length > 40 ? 'Many arcs: hover or focus a box to light up its own.' : 'Hover a box to see only its own.'}`;
     }
+  }
+
+  // What a screen reader says after a box's label: how many paths pass it, and the keys.
+  function spokenPlace(n) {
+    if (n.kind === 'start' || n.kind === 'end') return 'Tab moves to the next box; the arrow keys follow the flow.';
+    const through = chart.paths ? chart.paths.filter((p) => p.feasible && p.nodes.includes(n.id)).length : 0;
+    return [n.unreachable ? '' : `${through} path${through === 1 ? '' : 's'} through it`, n.location ? 'Enter opens the code' : '', 'F animates its paths', 'Shift+F10 for more'].filter(Boolean).join('. ');
   }
 
   // What a screen reader says for a box.
@@ -675,7 +684,7 @@
     info.textContent = '';
     if (!chart) return;
     if (!n) {
-      info.textContent = 'Hover a box for its code. Click opens it, right-click for more, double-click zooms to it.';
+      info.textContent = 'Hover or Tab to a box for its code. Enter opens it, right-click or Shift+F10 for more, double-click zooms to it.';
       return;
     }
     const head = document.createElement('strong');
@@ -798,11 +807,11 @@
       if (chart.edges[i].label) togglePin(i);
       return;
     }
+    // A click selects the box and animates its paths; Enter, the menu, or a double-click on its card's code opens it.
     const n = nodeOf(e.target);
     if (n) {
       animateFrom(n);
       focus(n);
-      open(n);
     }
   });
   scene.addEventListener('dblclick', (e) => {
@@ -842,13 +851,11 @@
   });
   const open = (n) => n.location && vscode.postMessage({ type: 'open', location: n.location });
 
-  // Keyboard: one tab stop for the chart; arrows follow the flow (down to what comes next, up to what came before,
+  // Keyboard: Tab moves from box to box in reading order; arrows follow the flow (down to what comes next, up to what came before,
   // left and right along the row), Enter opens, F animates, Shift+F10 opens the menu.
   function focus(n) {
     const g = nodeEl(n);
     if (!g) return;
-    scene.querySelectorAll('.node[tabindex="0"]').forEach((x) => x.setAttribute('tabindex', '-1'));
-    g.setAttribute('tabindex', '0');
     g.focus({ preventScroll: true });
     focusedNode = n;
     showInfo(n);
