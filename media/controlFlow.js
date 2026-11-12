@@ -293,7 +293,8 @@
     render();
     if (showDeps && chart && chart.dependences) {
       const { data, control, truncated } = chart.dependences;
-      info.textContent = `Dependences: ${data.length} data (purple, left), ${control.length} control (orange, right)${truncated ? ', some left out' : ''}. ${data.length + control.length > 40 ? 'Many arcs: hover or focus a box to light up its own.' : 'Hover a box to see only its own.'}`;
+      const most = topVariables(3).map(([name, count]) => `${name} (${count})`).join(', ');
+      info.textContent = `Dependences: ${data.length} data (purple, left), ${control.length} control (orange, right)${truncated ? ', some left out' : ''}${most ? `; most read: ${most}` : ''}. ${data.length + control.length > 40 ? 'Many arcs: hover or focus a box to light up its own.' : 'Hover a box to see only its own.'}`;
     }
   }
 
@@ -358,13 +359,37 @@
     return [head, ...sliceBoxes().map((n) => `${String(lineOf(n)).padStart(4)}  ${n.text.split('\n').join('\n      ')}`)].join('\n');
   }
 
+  // Cyclomatic complexity: one plus each decision (a switch counts each of its branches but one).
+  function complexity() {
+    let c = 1;
+    for (const n of chart.nodes) {
+      if (n.unreachable || !isDecision(n)) continue;
+      c += Math.max(1, chart.edges.filter((e) => e.from === n.id && !e.back).length - 1);
+    }
+    return c;
+  }
+  const feasibleIndexes = () => chart.paths.map((p, i) => (p.feasible ? i : -1)).filter((i) => i >= 0);
+  const longestPath = () => feasibleIndexes().sort((a, b) => chart.paths[b].nodes.length - chart.paths[a].nodes.length)[0];
+  const shortestThrough = (n) => feasibleIndexes().filter((i) => chart.paths[i].nodes.includes(n.id)).sort((a, b) => chart.paths[a].nodes.length - chart.paths[b].nodes.length)[0];
+  // The variables with the most data arcs, most first.
+  function topVariables(count) {
+    const tally = new Map();
+    for (const d of (chart.dependences && chart.dependences.data) || []) tally.set(d.name, (tally.get(d.name) || 0) + 1);
+    return [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, count);
+  }
+  function dependenceText() {
+    const { data, control } = chart.dependences;
+    return [`Dependences in ${chart.name}()`, ...data.map((d) => `data  ${d.name}: ${d.parameter ? 'parameter' : lineText(chart.nodes[d.from])} → ${lineText(chart.nodes[d.to])}`),
+      ...control.map((c) => `control  ${lineText(chart.nodes[c.from])} decides whether ${lineText(chart.nodes[c.to])} runs`)].join('\n');
+  }
+
   function renderList() {
     list.textContent = '';
     if (!chart) return;
     const found = matching();
     const possible = chart.paths.filter((p) => p.feasible).length;
     const unreachable = chart.nodes.filter((n) => n.unreachable).length;
-    summary.textContent = `${possible} possible path${possible === 1 ? '' : 's'}${chart.paths.length > possible ? `, ${chart.paths.length - possible} impossible` : ''}${chart.truncated ? ' (first ' + chart.paths.length + ' shown)' : ''}${unreachable ? `, ${unreachable} unreachable box${unreachable === 1 ? '' : 'es'}` : ''}`;
+    summary.textContent = `Complexity ${complexity()} · ${possible} possible path${possible === 1 ? '' : 's'}${chart.paths.length > possible ? `, ${chart.paths.length - possible} impossible` : ''}${chart.truncated ? ' (first ' + chart.paths.length + ' shown)' : ''}${unreachable ? `, ${unreachable} unreachable box${unreachable === 1 ? '' : 'es'}` : ''}`;
     pinsBar.textContent = '';
     if (slice) {
       const others = slice.nodes.filter((id) => id !== slice.at);
@@ -396,6 +421,8 @@
       title.className = 'path-title';
       title.textContent = `${n + 1}. ${p.ending}`;
       item.appendChild(title);
+      const lines = [...new Set(p.nodes.map((id) => lineOf(chart.nodes[id])).filter(Boolean))];
+      item.title = `${lines.length} line${lines.length === 1 ? '' : 's'}: ${lines.join(', ')}${p.feasible ? '' : `\nImpossible: ${p.reason}`}`;
       const steps = document.createElement('div');
       steps.className = 'path-steps';
       steps.textContent = p.steps.length ? p.steps.map((s) => s.text).join(' → ') : 'no branches';
@@ -705,6 +732,9 @@
       const reads = deps.data.filter((d) => d.to === n.id);
       const sets = deps.data.filter((d) => d.from === n.id);
       content.facts.push(['Reads', names(reads)], ['Sets', names(sets)]);
+      if (sets.length) content.facts.push(['Used at', [...new Set(sets.map((d) => lineText(chart.nodes[d.to])))].join(', ')]);
+      const arcs = reads.length + sets.length + deps.control.filter((c) => c.from === n.id || c.to === n.id).length;
+      if (arcs) content.facts.push(['Arcs', String(arcs)]);
       const decides = deps.control.filter((c) => c.from === n.id);
       if (decides.length) content.facts.push(['Controls', `${decides.length} box${decides.length === 1 ? '' : 'es'}: ${decides.slice(0, 4).map((c) => lineText(chart.nodes[c.to])).join(', ')}${decides.length > 4 ? '…' : ''}`]);
       const when = deps.control.filter((c) => c.to === n.id).map((c) => chart.nodes[c.from]);
@@ -909,6 +939,7 @@
       { icon: 'play-circle', label: 'Animate paths through here', keys: 'F', run: () => animateFrom(n) },
       { icon: 'filter', label: nodePins.includes(n.id) ? 'Stop filtering by this box' : 'Only paths through here', keys: 'T', run: () => toggleThrough(n) },
       { icon: 'zoom-in', label: 'Zoom to this box', run: () => zoomTo(n) },
+      ...(pathsThrough(n) > 1 ? [{ icon: 'arrow-small-right', label: 'Pick the shortest path through here', run: () => select(shortestThrough(n)) }] : []),
       ...(n.hiddenLines > 0 || n.unfolded ? [{ icon: n.hiddenLines > 0 ? 'unfold' : 'fold', label: n.hiddenLines > 0 ? `Show ${n.hiddenLines} more lines` : 'Fold this box', keys: 'U', run: () => vscode.postMessage({ type: 'unfold', id: n.foldKey, expand: n.hiddenLines > 0 }) }] : []),
       { icon: 'references', label: 'What it depends on', keys: 'D', run: () => showDependencesOf(n) },
     );
@@ -969,6 +1000,13 @@
       '-',
       ...(folded.length ? [{ icon: 'unfold', label: `Expand all calls (${folded.length})`, run: () => vscode.postMessage({ type: 'expand', keys: folded, expand: true }) }] : []),
       ...(unfolded.length ? [{ icon: 'fold', label: 'Fold all calls', run: () => vscode.postMessage({ type: 'expand', keys: unfolded, expand: false }) }] : []),
+      ...(chart.paths.some((p) => p.feasible) ? [{ icon: 'arrow-both', label: 'Pick the longest path', run: () => select(longestPath()) }] : []),
+      { icon: 'copy', label: `Copy all paths (${chart.paths.filter((p) => p.feasible).length})`, run: () => vscode.postMessage({ type: 'copy', text: chart.paths.map((p, i) => (p.feasible ? pathText(i) : '')).filter(Boolean).join('\n\n') }) },
+      ...(showDeps && chart.dependences && chart.dependences.data.length ? [
+        { heading: 'Arcs of one variable' },
+        ...topVariables(5).map(([name, count]) => ({ icon: 'symbol-variable', label: `${name} (${count} arc${count === 1 ? '' : 's'})`, run: () => { searchBox.value = name; search(name); } })),
+        { icon: 'copy', label: 'Copy dependences', run: () => vscode.postMessage({ type: 'copy', text: dependenceText() }) },
+      ] : []),
       ...(slice ? [{ icon: 'copy', label: `Copy the slice (${slice.nodes.length} boxes)`, run: () => vscode.postMessage({ type: 'copy', text: sliceText() }) }] : []),
       { icon: 'list-tree', label: panel.hidden ? 'Show path list' : 'Hide path list', keys: 'P', run: () => togglePanel(panel.hidden) },
       { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
