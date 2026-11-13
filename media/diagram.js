@@ -84,6 +84,7 @@
     else if (node.side > 0 && diagram.rightCaption) parts.push(diagram.rightCaption);
     if (node.kind === 'pattern') parts.push('design pattern');
     if (node.test) parts.push('in a test');
+    if (node.arrow) parts.push('an arrow function');
     if (node.duplicates) parts.push(`${node.duplicates} the same`);
     if (node.children.length && node.collapsed && node !== diagram.center) parts.push(`${node.children.length} folded`);
     if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
@@ -98,11 +99,67 @@
     parts.push('Shift+F10 for more');
     return parts.join('. ');
   }
+  /*
+   * Kinds of boxes, for the legend bar at the top: tests and arrow functions always get one when the chart has any,
+   * other kinds when at least three boxes share them. Pressing one hides or shows those boxes; tests start hidden.
+   */
+  const kindNames = {
+    test: ['Tests', 'beaker'], arrow: ['Arrow functions', 'symbol-method-arrow'], pattern: ['Design patterns', 'library'], group: ['Groups', 'folder'],
+    'icon:eye': ['Reads', 'eye'], 'icon:edit': ['Writes', 'edit'], 'icon:symbol-method': ['Calls', 'symbol-method'], 'icon:symbol-function': ['Functions', 'symbol-function'],
+    'icon:symbol-variable': ['Variables', 'symbol-variable'], 'icon:file-code': ['Files', 'file-code'], 'icon:arrow-left': ['Values coming in', 'arrow-left'], 'icon:arrow-right': ['Values going out', 'arrow-right'],
+    'icon:symbol-class': ['Classes', 'symbol-class'], 'icon:symbol-interface': ['Interfaces', 'symbol-interface'], 'icon:symbol-field': ['Properties', 'symbol-field'],
+    'icon:symbol-constant': ['Values', 'symbol-constant'], 'icon:call-incoming': ['Call sites', 'call-incoming'], 'icon:symbol-parameter': ['Parameters', 'symbol-parameter'],
+  };
+  const kindOf = (node) => {
+    if (node.test) return 'test';
+    if (node.arrow) return 'arrow';
+    if (node.kind === 'pattern') return 'pattern';
+    if (!node.location && node.children.length) return 'group';
+    return node.icon ? `icon:${node.icon}` : undefined;
+  };
+  let hiddenKinds = new Set(['test']);
+  const shownChild = (node) => !hiddenKinds.has(kindOf(node));
   const visible = (node) => {
     if (node.collapsed) return [];
-    return isolated && chain.has(node) && node !== isolated ? node.children.filter((c) => chain.has(c)) : node.children;
+    const kids = node.children.filter(shownChild);
+    return isolated && chain.has(node) && node !== isolated ? kids.filter((c) => chain.has(c)) : kids;
   };
-  const roots = (nodes) => (isolated ? nodes.filter((n) => chain.has(n)) : nodes);
+  const roots = (nodes) => (isolated ? nodes.filter((n) => chain.has(n)) : nodes).filter(shownChild);
+  const typeBar = document.getElementById('typeBar');
+  function renderTypeBar() {
+    typeBar.textContent = '';
+    if (!diagram) { typeBar.hidden = true; return; }
+    const counts = new Map();
+    forEach([...diagram.left, ...diagram.right], (n) => { const k = kindOf(n); if (k) counts.set(k, (counts.get(k) || 0) + 1); });
+    const keys = [...counts].filter(([k, n]) => k === 'test' || k === 'arrow' || n >= 3).sort((a, b) => Number(b[0] === 'test') - Number(a[0] === 'test') || Number(b[0] === 'arrow') - Number(a[0] === 'arrow') || b[1] - a[1]);
+    typeBar.hidden = !keys.length;
+    for (const [key, count] of keys) {
+      const [name, iconName] = kindNames[key] || [key.replace(/^icon:/, '').replace(/-/g, ' '), key.replace(/^icon:/, '')];
+      const shown = !hiddenKinds.has(key);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = `type-chip kind-${key.replace(/[^\w-]/g, '-')}${shown ? '' : ' off'}`;
+      chip.setAttribute('aria-pressed', String(shown));
+      chip.title = `${shown ? 'Hide' : 'Show'} the ${count} ${name.toLowerCase()}`;
+      const i = document.createElement('i');
+      i.className = `codicon codicon-${shown ? iconName : 'eye-closed'}`;
+      i.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = name;
+      const n = document.createElement('span');
+      n.className = 'type-count';
+      n.textContent = shown ? String(count) : `${count} hidden`;
+      chip.append(i, label, n);
+      chip.addEventListener('click', () => {
+        if (hiddenKinds.has(key)) hiddenKinds.delete(key);
+        else hiddenKinds.add(key);
+        render();
+        renderTypeBar();
+        typeBar.querySelector(`.kind-${key.replace(/[^\w-]/g, '-')}`)?.focus();
+      });
+      typeBar.append(chip);
+    }
+  }
   const forEach = (nodes, visit) => nodes.forEach((n) => { visit(n); forEach(n.children, visit); });
   // Each box gets its parent and a key made of the labels on its way to the subject, which survives a re-run.
   const linkParents = (nodes, parent, side) => nodes.forEach((n) => { n.parent = parent; n.key = `${parent ? parent.key : side}/${n.label}`; linkParents(n.children, n, side); });
@@ -255,7 +312,7 @@
       const found = (query ? (isMatch(node) ? ' match' : ' dim') : '') + (node === selected ? ' selected' : '');
       // A box with no code of its own only gathers the boxes behind it: drawn as a dashed outline.
       const group = !node.location && node.children.length && !node.kind && node !== center ? ' group' : '';
-      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${node.test ? ' test' : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: 0 }, layer);
+      const g = el('g', { class: `node${node === center ? ' center' : ''}${node.kind ? ' ' + node.kind : ''}${node.test ? ' test' : ''}${node.arrow ? ' arrow' : ''}${group}${node.tone ? ' ' + node.tone : ''}${node.location ? ' located' : ''}${found}`, transform: `translate(${node.px},${node.py})`, tabindex: 0 }, layer);
       node.el = g;
       g.diagramNode = node;
       // A button screen readers announce with its words, where it sits and what the keys do.
@@ -419,7 +476,7 @@
   let cardNode;
   function showCard(node, delay) {
     cardNode = node;
-    card.show(node.el, cardContent(node), delay, cardKey(node));
+    card.show(node.el, () => cardContent(node), delay, cardKey(node));
     if (node.location && !codeBlocks.has(cardKey(node)) && !codeLines.has(cardKey(node))) vscode.postMessage({ type: 'peek', location: node.location });
   }
   function showCode(code) {
@@ -964,6 +1021,9 @@
       linkParents(diagram.right, undefined, 'out');
     }
     const memory = diagram && saved[diagram.title];
+    hiddenKinds = new Set(['test']);
+    // Charts open unfolded; the same analysis run again keeps the folding chosen by hand.
+    if (diagram && !memory) forEach([...diagram.left, ...diagram.right], (n) => { n.collapsed = false; });
     if (memory) forEach([...diagram.left, ...diagram.right], (n) => { if (n.key in memory.collapsed) n.collapsed = memory.collapsed[n.key]; });
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
@@ -979,6 +1039,7 @@
       caption.title = [diagram.title, diagram.center.description].filter(Boolean).join(': ');
     }
     render();
+    renderTypeBar();
     if (memory) {
       view = { ...memory.view };
       apply();

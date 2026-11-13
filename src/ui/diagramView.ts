@@ -155,6 +155,7 @@ export class DiagramPanel {
   ${button('legendButton', 'question', 'Legend: what the colors, symbols, arrows and keys mean', 'aria-expanded="false" aria-controls="legend"')}
   </span>
 </header>
+<div id="typeBar" role="group" aria-label="Kinds of boxes in this chart: press one to show or hide those boxes" hidden></div>
 <div id="branch" role="status" hidden><span id="branchLabel"></span><button id="wholeChart" title="Show every branch again (Escape)">Show Whole Chart</button></div>
 <p id="empty">Run an analysis, such as Data Flow, and it is drawn here. Tab or click to a box and press Enter to open its code, right-click it for more analyses, and drag or scroll to move around. With the keyboard: Tab to the subject, arrow keys to move, Enter to open, Space to fold, + and − to zoom, 0 to fit, Home to return.</p>
 <main id="stage" aria-label="Chart">
@@ -175,7 +176,8 @@ export class DiagramPanel {
     <li><span class="swatch info">i</span>Worth knowing, such as a write</li>
     <li><span class="swatch group"></span>A group (dashed): gathers the boxes behind it and has no code of its own</li>
     <li><span class="swatch pattern"></span>A design pattern (purple hexagon, dotted line): how the code around the value is organized, not a place the value goes</li>
-    <li><span class="swatch test">⚗</span>In a test file (cyan outline and a test tube), such as cart.spec.tsx</li>
+    <li><span class="swatch test">⚗</span>In a test file (cyan outline and a test tube), such as cart.spec.tsx; hidden until you press Tests in the bar at the top</li>
+    <li><span class="swatch arrow">⇒</span>An arrow function, such as a callback (amber outline and an arrow)</li>
     <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
     <li><span class="glyph">3</span>A folded box and how many boxes it hides; click it, or press Space, to unfold</li>
   </ul>

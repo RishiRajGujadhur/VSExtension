@@ -749,7 +749,10 @@
       } else if (c.loading) {
         const pre = document.createElement('pre');
         pre.className = 'card-code loading';
-        pre.textContent = 'Reading the code…';
+        pre.setAttribute('aria-label', 'Loading the code');
+        const spin = iconEl('loading');
+        spin.classList.add('codicon-modifier-spin');
+        pre.append(spin);
         target.append(pre);
       }
       if (c.note) {
@@ -811,8 +814,9 @@
         }
         anchor = target;
         shownFor = key;
-        content = c;
-        render(card, c, false);
+        // Built now, not when the pointer arrived: code read in between shows straight away.
+        content = typeof c === 'function' ? c() : c;
+        render(card, content, false);
         card.hidden = false;
         place();
       }, delay);

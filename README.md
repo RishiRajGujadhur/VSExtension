@@ -100,7 +100,9 @@ The functions that write the value sit under **Flows in** and those that read it
 - Right-click the subject circle to animate every flow, fold or unfold everything, or fit; right-click the background for fitting, folding, the minimap and export. While lines flow, the ring around the subject runs with them: in at the left port, round both sides and out at the right.
 - Double-click a box (or press `B`) to see only its branch; `Escape` shows the whole chart again. A minimap appears when the chart is bigger than the window.
 - **Find** (`Ctrl+F`) highlights matching boxes and unfolds the ones hiding a match; `Enter` goes to the next.
-- Boxes in test files (such as `cart.spec.tsx` or anything in `__tests__`) have a test tube and a cyan outline, so you can tell at a glance where the value reaches tests.
+- Boxes in test files (such as `cart.spec.tsx` or anything in `__tests__`) have a test tube and a cyan outline, and boxes about arrow functions (callbacks, handlers) an arrow and an amber outline.
+- A bar at the top lists the kinds of boxes in the chart: tests and arrow functions whenever there are any, and any other kind with at least three boxes (reads, writes, design patterns, files…), each with its count. Press one to hide or show those boxes. Test boxes start hidden, so the chart shows your code first; charts open with everything unfolded.
+- The hover card shows a spinner while it reads a box's code, then the code.
 - Resting the pointer on a box (or moving to it with the keyboard) opens its **hover card**: what it is, its file and line, its code with syntax colors (up to 12 lines, scrollable), the report's details, the way from the subject to it, and the keys that act on it. The card stays open while the pointer is on it, its pin keeps it open to compare boxes, and `Escape` closes it.
 - Hovering a box highlights its way to the subject. Selecting a row in the results view marks its box, and clicking a box selects its row.
 - Keys: `Tab` to the subject, arrow keys between boxes, `Enter` to open, `Space` to fold, `+` `−` to zoom, `0` to fit, `Home` to return.

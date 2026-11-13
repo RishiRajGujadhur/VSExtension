@@ -194,3 +194,7 @@ body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !impor
 /* Code on a hover card that opens with a double-click. */
 .card-code.openable { cursor: pointer; }
 .card-code.openable:hover { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+
+/* The hover card while its code is read. */
+.card-code.loading { display: flex; align-items: center; justify-content: center; min-height: 42px; }
+.card-code.loading .codicon { font-size: 18px; color: var(--vscode-descriptionForeground); }

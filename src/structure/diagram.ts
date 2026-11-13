@@ -13,6 +13,8 @@ export interface DiagramNode {
   icon?: string;
   /** It is in a test file (cart.spec.tsx, __tests__/…): drawn with a test tube and a cyan outline. */
   test?: boolean;
+  /** It is about an arrow function (a callback, a handler): drawn with an arrow icon and an amber outline. */
+  arrow?: boolean;
   /** A stack of boxes that read the same: how many, with each one as a child, told apart by its line. */
   duplicates?: number;
   /** Folded: the children are hidden until the node's button is clicked. */
@@ -47,8 +49,14 @@ function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramN
   const kind = inherited ?? (isPattern(row) ? 'pattern' : undefined);
   const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind));
   const test = isTestRow(row);
-  const icon = test ? 'beaker' : boxIcon(row, kind);
-  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), ...(test ? { test } : {}), collapsed: children.length > 0 && collapsed, children };
+  const arrow = !test && isArrowRow(row);
+  const icon = test ? 'beaker' : arrow ? 'symbol-method-arrow' : boxIcon(row, kind);
+  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), ...(test ? { test } : {}), ...(arrow ? { arrow } : {}), collapsed: children.length > 0 && collapsed, children };
+}
+
+/** A row about an arrow function: named "arrow function", or in one ("arrow function · cart.ts"). */
+export function isArrowRow(row: ReportNode): boolean {
+  return /^arrow function\b/.test(row.label) || /(^| · )arrow function( · |$)/.test(row.description ?? '');
 }
 
 /** A test file's name, as a label or a description names it: cart.spec.tsx, price.test.ts. */

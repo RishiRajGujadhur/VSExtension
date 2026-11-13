@@ -151,3 +151,30 @@ body.vscode-light .node.test .box-icon { fill: #0891b2; }
   .node.test .box { stroke: Highlight; stroke-dasharray: 4 2; }
 }
 #legend .swatch.test { border-color: #22d3ee; color: #22d3ee; }
+
+/* An arrow function's box: an amber outline and an arrow icon. */
+.node.arrow .box { stroke: #f59e0b; stroke-width: 1.4; }
+.node.arrow.located:hover .box { stroke: #fbbf24; }
+.node.arrow .box-icon { fill: #f59e0b; opacity: 1; }
+body.vscode-light .node.arrow .box { stroke: #b45309; }
+body.vscode-light .node.arrow .box-icon { fill: #b45309; }
+@media (forced-colors: active) { .node.arrow .box { stroke: Highlight; stroke-dasharray: 1 2; } }
+
+/* The legend bar: the kinds of boxes in this chart; each one hides or shows its boxes. */
+#typeBar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25));
+  background: var(--vscode-editor-background); }
+#typeBar[hidden] { display: none; }
+.type-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 10px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .35)); border-radius: 999px;
+  background: transparent; color: var(--vscode-foreground); font: inherit; font-size: 12px; cursor: pointer; }
+.type-chip:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.type-chip:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+.type-chip .codicon { font-size: 14px; }
+.type-count { padding: 0 6px; border-radius: 999px; background: var(--vscode-badge-background, rgba(128, 128, 128, .3)); color: var(--vscode-badge-foreground, inherit); font-size: 11px; }
+.type-chip.off { opacity: .6; border-style: dashed; }
+.type-chip.kind-test { border-color: #22d3ee; }
+.type-chip.kind-test .codicon { color: #22d3ee; }
+.type-chip.kind-arrow { border-color: #f59e0b; }
+.type-chip.kind-arrow .codicon { color: #f59e0b; }
+.type-chip.kind-pattern .codicon { color: var(--vscode-charts-purple, #b180d7); }
+@media (forced-colors: active) { .type-chip { border-color: ButtonText; } .type-chip[aria-pressed="true"] { border-width: 2px; } }
+#legend .swatch.arrow { border-color: #f59e0b; color: #f59e0b; }

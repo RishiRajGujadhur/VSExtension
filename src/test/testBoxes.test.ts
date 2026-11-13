@@ -34,3 +34,23 @@ test('a data flow chart gives test boxes a test tube', () => {
   assert.equal(spec.icon, 'beaker');
   assert.equal(boxes.find((b) => b.label === 'used in checkout()')!.test, undefined);
 });
+
+test('rows about arrow functions are arrow boxes, with their own icon; a test wins over an arrow', async () => {
+  const { isArrowRow } = await import('../structure/diagram');
+  assert.equal(isArrowRow({ label: 'arrow function', description: 'cart.ts · 1 write' }), true);
+  assert.equal(isArrowRow({ label: 'items', description: 'arrow function · cart.ts' }), true);
+  assert.equal(isArrowRow({ label: 'checkout', description: 'cart.ts' }), false);
+  const report: Report = {
+    kind: 'dataFlow', title: 'Data flow of x', description: 'x', warnings: [], fileHashes: {},
+    roots: [{ label: 'Flows in', children: [
+      { label: 'items', description: 'arrow function · cart.ts', location: at('/p/src/cart.ts') },
+      { label: 'items', description: 'arrow function · cart.test.ts', location: at('/p/src/cart.test.ts') },
+    ] }, { label: 'Flows out', children: [] }],
+  };
+  const diagram = reportDiagram(report)!;
+  const boxes: { test?: boolean; arrow?: boolean; icon?: string }[] = [];
+  const walk = (nodes: typeof diagram.left) => nodes.forEach((n) => { boxes.push(n); walk(n.children); });
+  walk([...diagram.left, ...diagram.right]);
+  assert.ok(boxes.some((b) => b.arrow && b.icon === 'symbol-method-arrow'));
+  assert.ok(boxes.some((b) => b.test && !b.arrow));
+});
