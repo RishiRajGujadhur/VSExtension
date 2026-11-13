@@ -168,6 +168,7 @@
       const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: 0, role: 'button', 'aria-haspopup': 'menu' }, nodes);
       g.setAttribute('aria-label', spoken(n));
       g.setAttribute('aria-description', spokenPlace(n));
+      if (spot && spotKind(n) === spot) g.classList.add('lit');
       nodeShape(g, n);
       if (n.kind === 'start') {
         el('text', { x: n.width + 16, y: n.height / 2 + 5, class: 'title' }, g).textContent = `${chart.name}()`;
@@ -392,6 +393,53 @@
       ...control.map((c) => `control  ${lineText(chart.nodes[c.from])} decides whether ${lineText(chart.nodes[c.to])} runs`)].join('\n');
   }
 
+  /*
+   * The bar of box kinds above the flowchart: decisions, loops, returns, throws… (three or more of a kind) and
+   * unreachable code (whenever there is some). Pressing one lights those boxes up and dims the rest; the flow
+   * stays whole, since hiding boxes would break the paths. Escape clears it.
+   */
+  const typeBar = document.getElementById('typeBar');
+  var spot; // var: render() can run before this line on the first draw
+  const spotKind = (n) => (n.unreachable ? 'unreachable' : n.kind);
+  const kindLabels = { decision: 'Decisions', switch: 'Switches', loop: 'Loops', return: 'Returns', throw: 'Throws', catch: 'Catches', finally: 'Finally blocks', statement: 'Code boxes', break: 'Breaks', continue: 'Continues', unreachable: 'Unreachable' };
+  function renderTypeBar() {
+    typeBar.textContent = '';
+    if (!chart) { typeBar.hidden = true; return; }
+    const counts = new Map();
+    for (const n of chart.nodes) if (!isTerminal(n)) counts.set(spotKind(n), (counts.get(spotKind(n)) || 0) + 1);
+    const keys = [...counts].filter(([k, c]) => k === 'unreachable' || c >= 3).sort((a, b) => Number(b[0] === 'unreachable') - Number(a[0] === 'unreachable') || b[1] - a[1]);
+    typeBar.hidden = !keys.length;
+    for (const [key, count] of keys) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = `type-chip kind-${key}`;
+      chip.setAttribute('aria-pressed', String(spot === key));
+      chip.title = spot === key ? 'Stop lighting these up (Escape)' : `Light up the ${count} ${(kindLabels[key] || key).toLowerCase()}`;
+      const i = document.createElement('i');
+      i.className = `codicon codicon-${key === 'unreachable' ? 'warning' : kindIcons[key] || 'code'}`;
+      i.setAttribute('aria-hidden', 'true');
+      const n = document.createElement('span');
+      n.className = 'type-count';
+      n.textContent = String(count);
+      chip.append(i, kindLabels[key] || key, n);
+      chip.addEventListener('click', () => setSpot(spot === key ? undefined : key));
+      typeBar.append(chip);
+    }
+  }
+  function setSpot(key) {
+    spot = key;
+    svg.classList.toggle('spotlight', !!key);
+    scene.querySelectorAll('.node').forEach((g) => {
+      const n = chart.nodes[Number(g.dataset.node)];
+      g.classList.toggle('lit', !!key && !!n && spotKind(n) === key);
+    });
+    renderTypeBar();
+    const count = key ? chart.nodes.filter((n) => !isTerminal(n) && spotKind(n) === key).length : 0;
+    info.textContent = key ? `${count} ${(kindLabels[key] || key).toLowerCase()} lit up; press it again or Escape to stop.` : '';
+    if (!key) showInfo(focusedNode);
+    typeBar.querySelector(`.kind-${key || ''}`)?.focus();
+  }
+
   function renderList() {
     list.textContent = '';
     if (!chart) return;
@@ -434,7 +482,8 @@
       item.title = `${lines.length} line${lines.length === 1 ? '' : 's'}: ${lines.join(', ')}${p.feasible ? '' : `\nImpossible: ${p.reason}`}`;
       const steps = document.createElement('div');
       steps.className = 'path-steps';
-      steps.textContent = p.steps.length ? p.steps.map((s) => s.text).join(' → ') : 'no branches';
+      const boxes = p.nodes.filter((id) => !isTerminal(chart.nodes[id])).length;
+      steps.textContent = `${p.steps.length ? p.steps.map((s) => s.text).join(' → ') : 'no branches'} · ${boxes} box${boxes === 1 ? '' : 'es'}`;
       item.appendChild(steps);
       if (!p.feasible) {
         const why = document.createElement('div');
@@ -684,7 +733,7 @@
     info.textContent = '';
     if (!chart) return;
     if (!n) {
-      info.textContent = 'Hover or Tab to a box for its code. Enter opens it, right-click or Shift+F10 for more, double-click zooms to it.';
+      info.textContent = 'Hover or Tab to a box for its code. Enter opens it, R goes to the next return, Ctrl+C copies its code, right-click or Shift+F10 for more.';
       return;
     }
     const head = document.createElement('strong');
@@ -729,6 +778,7 @@
       meta: line ? `${fileName()}:${line}` : fileName(),
       code: isTerminal(n) ? '' : n.text,
       open: n.location ? () => open(n) : undefined,
+      copy: (text) => vscode.postMessage({ type: 'copy', text }),
       note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
       facts: [],
       keys: [],
@@ -929,6 +979,15 @@
     } else if (e.key === 't' || e.key === 'T') {
       e.preventDefault();
       toggleThrough(n);
+    } else if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const exits = [...chart.nodes].filter((m) => m.kind === 'return' || m.kind === 'throw').sort((a, b) => a.y - b.y || a.x - b.x);
+      const next = exits.find((m) => m.y > n.y || (m.y === n.y && m.x > n.x)) || exits[0];
+      if (next) focus(next);
+    } else if ((e.key === 'c' || e.key === 'C') && (e.ctrlKey || e.metaKey) && !isTerminal(n)) {
+      e.preventDefault();
+      e.stopPropagation();
+      vscode.postMessage({ type: 'copy', text: n.text });
     } else if (e.key === 'Home') {
       e.preventDefault();
       focus(chart.nodes.find((m) => m.kind === 'start'));
@@ -1272,7 +1331,9 @@
     else if (e.key === 'm' || e.key === 'M') toggleMinimap();
     else if (e.key === 'd' || e.key === 'D') toggleDependences();
     else if (e.key === 'g' || e.key === 'G') vscode.postMessage({ type: 'otherGraphs' });
-    else if (e.key === 'Escape') {
+    else if (e.key === 'Escape' && spot) {
+      setSpot(undefined);
+    } else if (e.key === 'Escape') {
       if (!legend.hidden) {
         legend.hidden = true;
         legendButton.setAttribute('aria-expanded', 'false');
@@ -1290,6 +1351,8 @@
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message.type === 'chart') {
+      spot = undefined;
+      svg.classList.remove('spotlight');
       slice = undefined;
       flowing = undefined;
       preview = -1;
@@ -1297,6 +1360,7 @@
       kit.renderControls(document.getElementById('graphControls'), message.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
+      setTimeout(renderTypeBar, 0);
       empty.hidden = !!chart;
       svg.classList.toggle('off', !chart);
       if (!same) {

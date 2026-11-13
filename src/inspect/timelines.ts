@@ -173,9 +173,20 @@ export function valueTimelineReport(project: VirtualProject, fileName: string, o
     return { label, description: plural(phase.events.filter((e) => e.kind !== 'read').length, 'change'), icon: inLoop ? 'sync' : i === 0 ? 'debug-start' : 'arrow-down', expanded: true, children: rows };
   });
   const changes = events.filter((e) => e.kind === 'set' || e.kind === 'change').length;
+  // The last change, outside callbacks, with no read after it: nothing ever sees that value.
+  const plain = events.filter((e) => !e.callback);
+  const lastChange = [...plain].reverse().find((e) => e.kind === 'set' || e.kind === 'change');
+  if (lastChange && lastChange.kind === 'set' && !lastChange.loops.length && !plain.some((e) => e.kind === 'read' && e.node.getStart(sf) > lastChange.node.getStart(sf))) {
+    const row = roots.flatMap((p) => p.children ?? []).find((r) => r.location && r.location.line === lineOf(lastChange.node, sf) - 1 && r.label === lastChange.label);
+    if (row) {
+      row.description = `${row.description} · nothing reads it after this`;
+      row.tone = 'warning';
+    }
+  }
+  const inCallbacks = events.filter((e) => e.callback && e.kind !== 'read').length;
   if (!changes) roots.push({ label: `${name} never changes after it starts`, description: ts.isVariableDeclaration(declaration) && declaration.parent.flags & ts.NodeFlags.Let ? 'it could be const' : 'every read sees the same value', icon: 'pass', tone: 'ok' });
   const loopsCount = new Set(events.flatMap((e) => e.loops.map((l) => l.pos))).size;
-  return builder.finish(roots, `${plural(changes, 'change')}${loopsCount ? ` in and around ${plural(loopsCount, 'loop')}` : ''}, ${plural(events.filter((e) => e.kind === 'read').length, 'read')}`);
+  return builder.finish(roots, `${plural(changes, 'change')}${loopsCount ? ` in and around ${plural(loopsCount, 'loop')}` : ''}${inCallbacks ? ` (${inCallbacks} in callbacks)` : ''}, ${plural(events.filter((e) => e.kind === 'read').length, 'read')}`);
 }
 
 // ---------- Async timeline ----------
@@ -234,7 +245,10 @@ export function asyncTimelineReport(project: VirtualProject, fileName: string, o
         // The calls inside are part of this step.
         return;
       }
-      events.push({ kind: inLoop(node) ? 'loopWait' : 'wait', label: `waits for ${short(operand.getText(sf), 60)}`, node, callback, name: keptIn(node) });
+      // Awaiting something that isn't a promise waits for nothing.
+      const type = checker.getTypeAtLocation(operand);
+      const plainValue = !(type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.TypeParameter)) && !type.isUnion() && !thenable(operand);
+      events.push({ kind: inLoop(node) ? 'loopWait' : 'wait', label: `waits for ${short(operand.getText(sf), 60)}`, note: plainValue ? "it isn't a promise: this await waits for nothing" : undefined, node, callback, name: keptIn(node) });
     } else if (ts.isCallExpression(node) && !isPromiseCombinator(node) && thenable(node)) {
       let parent: ts.Node = node.parent;
       while (ts.isParenthesizedExpression(parent)) parent = parent.parent;
@@ -288,8 +302,10 @@ export function asyncTimelineReport(project: VirtualProject, fileName: string, o
     if (waits.some((w) => w.note)) tips.push({ label: 'Waits that don\'t depend on each other can start together: const [a, b] = await Promise.all([first(), second()]).', icon: 'lightbulb' });
     if (tips.length) roots.push({ label: 'How to make it faster and safer', icon: 'lightbulb', expanded: true, children: tips });
   }
+  const callbackSteps = events.filter((e) => e.callback).length;
   const parts = [
     plural(count('wait') + count('loopWait') + count('together'), 'wait'),
+    callbackSteps ? `${callbackSteps} inside callbacks` : '',
     count('together') ? `${count('together')} started together` : '',
     count('loopWait') ? `${plural(count('loopWait'), 'wait')} in loops` : '',
     count('notAwaited') ? `${count('notAwaited')} not awaited` : '',

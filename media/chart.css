@@ -198,3 +198,9 @@ body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !impor
 /* The hover card while its code is read. */
 .card-code.loading { display: flex; align-items: center; justify-content: center; min-height: 42px; }
 .card-code.loading .codicon { font-size: 18px; color: var(--vscode-descriptionForeground); }
+
+/* The card's code in the editor's font size; file:line as a link; a folded pinned card shows its title only. */
+.card-code { font-size: var(--vscode-editor-font-size, 12px); }
+button.card-meta { padding: 0; border: 0; background: none; font: inherit; color: var(--vscode-textLink-foreground); cursor: pointer; }
+button.card-meta:hover { text-decoration: underline; }
+.hover-card.pinned.folded > :not(.card-head) { display: none; }

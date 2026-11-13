@@ -220,7 +220,7 @@ export class ControlFlowPanel {
 
   private post(): void {
     if (!this.panel || !this.ready) return;
-    this.panel.title = this.chart ? `Control Flow: ${this.chart.name}` : 'Control Flow';
+    this.panel.title = this.chart ? `Flowchart: ${this.chart.name}()` : 'Flowchart';
     void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl(), codeControl()] });
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
     if (this.pendingDeps && this.chart) {
@@ -290,6 +290,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   ${button('togglePaths', 'list-tree', 'Paths: every way through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
   ${button('legendButton', 'question', 'Legend: what the shapes, colors and keys mean', 'aria-expanded="false" aria-controls="legend"')}
 </header>
+<div id="typeBar" role="group" aria-label="Kinds of boxes: press one to light those boxes up" hidden></div>
 <p id="empty">Put the cursor in a function and run <strong>Control Flow Graph</strong> (Ctrl+Alt+S 1) to draw it here.</p>
 <main>
 <div id="stage">

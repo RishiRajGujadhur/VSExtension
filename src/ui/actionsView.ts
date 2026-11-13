@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ActionLayout, actionCatalog, actionId, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
-import { graphCategories } from '../structure/actionCatalog';
+import { graphCategories, newActions } from '../structure/actionCatalog';
 import { fittingAt } from './analysisActions';
 import { languageSelector } from './refactorCommands';
 import { pickGraph, runEntry } from './graphSwitch';
@@ -200,7 +200,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
         const feature = featureOf(a.command);
         return !feature || isFeatureEnabled(feature.id);
       })
-      .map((a) => ({ ...a, id: actionId(a), icon: a.icon ?? commandIcons[a.command] ?? 'symbol-misc', key: keys.get(a.command) }));
+      .map((a) => ({ ...a, id: actionId(a), icon: a.icon ?? commandIcons[a.command] ?? 'symbol-misc', key: keys.get(a.command), isNew: newActions.has(a.command) }));
     const usage = this.memento.get<Record<string, number>>(usageKey) ?? {};
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);

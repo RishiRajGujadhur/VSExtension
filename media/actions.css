@@ -159,3 +159,7 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
 .none .link { padding: 0; border: 0; background: none; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; }
 .none .link:hover { text-decoration: underline; }
 
+
+/* The newest actions. */
+.new-badge { padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: 400; vertical-align: 1px; background: color-mix(in srgb, var(--active-accent) 22%, transparent); color: var(--active-accent); }
+.detail .in-group { color: var(--vscode-descriptionForeground); }

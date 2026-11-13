@@ -112,8 +112,15 @@
     const text = make('span', 'text');
     const label = make('span', 'label');
     label.append(marked(action.label, words));
+    if (action.isNew) {
+      const badge = make('span', 'new-badge', 'new');
+      badge.title = 'Added in a recent version';
+      label.append(' ', badge);
+    }
     const detail = make('span', 'detail');
     detail.append(marked(action.detail, words));
+    // In search results, which group the hit is in.
+    if (inSearch) detail.append(make('span', 'in-group', ` · ${action.category}`));
     // Found by its old name: say which, so the new one makes sense.
     if (inSearch && action.formerly && words.length && words.some((w) => action.formerly.toLowerCase().includes(w)) && !words.every((w) => action.label.toLowerCase().includes(w))) {
       detail.append(make('span', 'formerly', ` · was ${action.formerly}`));
@@ -126,7 +133,17 @@
     }
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
-    run.addEventListener('click', (e) => vscode.postMessage({ type: e.altKey && data.lastSubjects && data.lastSubjects[action.command] ? 'runAgain' : 'run', id: action.id }));
+    run.addEventListener('click', (e) => {
+      vscode.postMessage({ type: e.altKey && data.lastSubjects && data.lastSubjects[action.command] ? 'runAgain' : 'run', id: action.id });
+    });
+    // Ctrl+Enter runs it again where it last ran.
+    run.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && data.lastSubjects && data.lastSubjects[action.command]) {
+        e.preventDefault();
+        e.stopPropagation();
+        vscode.postMessage({ type: 'runAgain', id: action.id });
+      }
+    });
     li.append(run);
 
     // A hidden action found by search is dimmed, with a crossed-out eye on its tile.
@@ -617,6 +634,12 @@
       e.stopPropagation();
       search.value = '';
       render();
+    } else if (e.key === 'Escape') {
+      const first = list.querySelector('.run');
+      if (first) { e.preventDefault(); first.focus(); }
+    } else if (e.key === 'Enter' && search.value.trim() && !list.querySelector('.run')) {
+      e.preventDefault();
+      vscode.postMessage({ type: 'run', command: 'tsStructure.howDoI' });
     } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
       const first = list.querySelector('.run');
       if (first) {

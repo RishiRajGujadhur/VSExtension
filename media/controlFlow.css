@@ -205,3 +205,16 @@ li.selected .path-steps { color: inherit; }
 .deps .dep.picked, .deps.quiet .dep.picked { opacity: 1; }
 .deps .dep.picked text { display: inline; }
 .node.dep-end .shape { stroke: var(--vscode-charts-purple, #b180d7); stroke-width: 2.6; }
+
+/* The bar of box kinds, and the boxes it lights up. */
+#typeBar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); background: var(--vscode-editor-background); }
+#typeBar[hidden] { display: none; }
+.type-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 10px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .35)); border-radius: 999px; background: transparent; color: var(--vscode-foreground); font: inherit; font-size: 12px; cursor: pointer; }
+.type-chip:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+.type-chip[aria-pressed="true"] { border-color: var(--vscode-focusBorder); background: color-mix(in srgb, var(--vscode-focusBorder) 18%, transparent); }
+.type-chip .codicon { font-size: 14px; }
+.type-chip.kind-unreachable .codicon { color: var(--vscode-editorWarning-foreground, #cca700); }
+.type-count { padding: 0 6px; border-radius: 999px; background: var(--vscode-badge-background, rgba(128, 128, 128, .3)); color: var(--vscode-badge-foreground, inherit); font-size: 11px; }
+svg.spotlight .node:not(.lit):not(.start):not(.end) { opacity: .3; }
+svg.spotlight .node.lit { filter: drop-shadow(0 0 6px var(--vscode-focusBorder)); }
+@media (forced-colors: active) { .type-chip { border-color: ButtonText; } }

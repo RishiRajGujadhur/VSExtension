@@ -342,12 +342,12 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.equal(drawn?.kind, 'dataFlow');
   // The tab appears, and its title names the analysis once the chart has drawn it.
   const active = () => vscode.window.tabGroups.activeTabGroup.activeTab;
-  for (let i = 0; i < 50 && !/^Diagram: /.test(active()?.label ?? ''); i++) {
+  for (let i = 0; i < 50 && !/^Data flow: /.test(active()?.label ?? ''); i++) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const diagramTab = active();
   assert.ok(diagramTab?.input instanceof vscode.TabInputWebview && diagramTab.input.viewType.endsWith('tsStructure.diagram'), `tabs: ${vscode.window.tabGroups.all.map((g) => g.tabs.map((t) => t.label).join(', ')).join(' | ')}`);
-  assert.match(diagramTab.label, /^Diagram: Data flow of subtotal/);
+  assert.match(diagramTab.label, /^Data flow: subtotal/);
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
   await vscode.window.showTextDocument(document);
   console.log('data flow diagram ok');
@@ -356,10 +356,10 @@ async function analysisCommandsFlow(): Promise<void> {
   at('subtotal = ');
   const chart = await vscode.commands.executeCommand<{ name: string; nodes: unknown[]; paths: unknown[] }>('tsStructure.controlFlow');
   assert.ok(chart && chart.nodes.length > 2 && chart.paths.length > 0, 'control flow chart');
-  for (let i = 0; i < 50 && !/^Control Flow: /.test(vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join('|')); i++) {
+  for (let i = 0; i < 50 && !/Flowchart: /.test(vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join('|')); i++) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  const flowTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Control Flow: '));
+  const flowTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Flowchart: '));
   assert.ok(flowTab, 'the Control Flow tab opens');
   console.log(`control flow ok: ${chart.name}, ${chart.nodes.length} boxes, ${chart.paths.length} paths`);
   await vscode.window.tabGroups.close(flowTab);

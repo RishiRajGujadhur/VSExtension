@@ -516,6 +516,9 @@ Object.assign(polishers, {
         }
       }
     }
+    // Files that import it but don't use it: the import could go.
+    const users = new Set(report.roots.filter((g) => !declaring(g)).flatMap((g) => (g.children ?? []).map((f) => f.label)));
+    for (const file of root(report, /^Imports/)?.children ?? []) if (!users.has(file.label)) append(file, 'imports it but never uses it');
     const outside = new Set<string>();
     for (const group of report.roots) if (!declaring(group)) for (const file of group.children ?? []) if (!isTestPath(file.children?.[0]?.location?.file) && !/(^| · )test( · |$)/.test(file.description ?? '')) outside.add(file.label);
     if (outside.size && report.description && !report.description.includes('outside tests')) report.description += `; used in ${plural(outside.size, 'file')} outside tests`;
@@ -533,6 +536,8 @@ Object.assign(polishers, {
     let async = 0;
     forEachReportNode(calls?.children ?? [], (n) => { if (/(^| · )async( · |$)/.test(n.description ?? '') && !/shown above/.test(n.description ?? '')) async++; });
     if (calls && async) append(calls, `${async} async`);
+    const self = titleParts(report).subject;
+    if (self) forEachReportNode(calls?.children ?? [], (n) => { if (n.label === self || n.label.endsWith(`.${self}`)) append(n, 'calls itself (recursion)'); });
     const implementations = (calls?.children ?? []).filter((c) => /(^| · )implementation( · |$)/.test(c.description ?? ''));
     if (implementations.length > 1) for (const c of implementations) append(c, `one of ${implementations.length}: which runs depends on the object`);
   },

@@ -717,10 +717,31 @@
       title.textContent = c.title;
       head.append(title);
       if (c.meta) {
-        const meta = document.createElement('span');
+        const meta = document.createElement(c.open ? 'button' : 'span');
         meta.className = 'card-meta';
         meta.textContent = c.meta;
+        if (c.open) {
+          meta.type = 'button';
+          meta.title = 'Open the code';
+          meta.addEventListener('click', () => c.open());
+        }
         head.append(meta);
+      }
+      if (c.code) {
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'card-pin card-copy';
+        copy.title = 'Copy the code';
+        copy.setAttribute('aria-label', 'Copy the code');
+        copy.append(iconEl('copy'));
+        copy.addEventListener('click', () => {
+          const text = c.code;
+          if (c.copy) c.copy(text);
+          else if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => undefined);
+          copy.replaceChildren(iconEl('check'));
+          setTimeout(() => copy.replaceChildren(iconEl('copy')), 1200);
+        });
+        head.append(copy);
       }
       const pin = document.createElement('button');
       pin.type = 'button';
@@ -814,6 +835,7 @@
         }
         anchor = target;
         shownFor = key;
+        card.scrollTop = 0;
         // Built now, not when the pointer arrived: code read in between shows straight away.
         content = typeof c === 'function' ? c() : c;
         render(card, content, false);
@@ -862,6 +884,15 @@
       timer = setTimeout(() => { if (!card.matches(':hover')) hide(); }, 200);
     }
     card.addEventListener('mouseleave', hideSoon);
+    const watchAnchor = setInterval(() => {
+      if (!card.hidden && anchor && !document.contains(anchor)) hide();
+    }, 500);
+    void watchAnchor;
+    // (Double-click the pinned card's header to fold it to its title, and again to unfold.)
+    pinnedCard.addEventListener('dblclick', (e) => {
+      if (!e.target.closest('.card-head') || e.target.closest('button')) return;
+      pinnedCard.classList.toggle('folded');
+    });
     // The pinned card moves with its header.
     let drag;
     pinnedCard.addEventListener('pointerdown', (e) => {

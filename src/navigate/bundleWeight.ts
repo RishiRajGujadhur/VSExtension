@@ -179,7 +179,7 @@ export function bundleWeightReport(program: ts.Program, fileName: string, root?:
       expanded: weight.modules.length <= 12,
       children: weight.modules.slice(0, 200).map((m) => ({
         label: path.basename(m.file),
-        description: `${formatSize(m.size)}${m.via.length > 2 ? ` · via ${short(m.via)}` : ' · imported here'}`,
+        description: `${formatSize(m.size)}${m.via.length > 2 ? ` · via ${short(m.via)}` : ' · imported here'}${/(\.|_)(test|spec)\.[cm]?[jt]sx?$|[\\/](__tests__|tests?)[\\/]/.test(m.file) ? ' · test code pulled into the bundle' : ''}${/(^|[\\/])index\.[cm]?[jt]sx?$/.test(m.file) ? ' · barrel' : ''}`,
         tooltip: `${rel(m.file)}\n${m.via.map((f) => path.basename(f)).join(' → ')}`,
         icon: 'file-code',
         location: at(m.file, 0),

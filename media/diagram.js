@@ -118,6 +118,9 @@
     return node.icon ? `icon:${node.icon}` : undefined;
   };
   let hiddenKinds = new Set(['test']);
+  /** Kinds hidden by hand, by analysis ("Data flow"), for the next chart of it in this session. */
+  const hiddenByAnalysis = {};
+  const analysisOf = () => (diagram ? diagram.title.replace(/ (of|in|since) .*$/, '') : '');
   const shownChild = (node) => !hiddenKinds.has(kindOf(node));
   const visible = (node) => {
     if (node.collapsed) return [];
@@ -150,15 +153,53 @@
       n.className = 'type-count';
       n.textContent = shown ? String(count) : `${count} hidden`;
       chip.append(i, label, n);
-      chip.addEventListener('click', () => {
-        if (hiddenKinds.has(key)) hiddenKinds.delete(key);
+      chip.addEventListener('click', (e) => {
+        if (e.altKey) {
+          // Only this kind: every other kind shown in the bar is hidden (Alt+click again shows them all).
+          const others = keys.map(([k]) => k).filter((k) => k !== key);
+          const solo = others.every((k) => hiddenKinds.has(k)) && !hiddenKinds.has(key);
+          hiddenKinds = solo ? new Set() : new Set(others);
+        } else if (hiddenKinds.has(key)) hiddenKinds.delete(key);
         else hiddenKinds.add(key);
-        render();
-        renderTypeBar();
-        typeBar.querySelector(`.kind-${key.replace(/[^\w-]/g, '-')}`)?.focus();
+        applyKinds(key);
       });
+      // Pointing at a chip lights up its boxes.
+      chip.addEventListener('mouseenter', () => spotlightKind(shown ? key : undefined));
+      chip.addEventListener('mouseleave', () => spotlightKind(undefined));
+      chip.addEventListener('focus', () => spotlightKind(shown ? key : undefined));
+      chip.addEventListener('blur', () => spotlightKind(undefined));
       typeBar.append(chip);
     }
+    if ([...hiddenKinds].some((k) => counts.has(k))) {
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.className = 'type-chip show-all';
+      all.title = 'Show every box again';
+      all.append(Object.assign(document.createElement('i'), { className: 'codicon codicon-eye' }), 'Show all');
+      all.addEventListener('click', () => { hiddenKinds = new Set(); applyKinds('show-all'); });
+      typeBar.append(all);
+    }
+  }
+  /** After a chip changed what shows: lay out again, refit if the chart was fitted, say what changed. */
+  function applyKinds(focusKey) {
+    const wasFitted = fitted;
+    hiddenByAnalysis[analysisOf()] = new Set([...hiddenKinds].filter((k) => k !== 'test'));
+    render();
+    renderTypeBar();
+    if (wasFitted) fit(true);
+    const hiddenCount = allNodes().filter((n) => n !== diagram.center && hiddenKinds.has(kindOf(n))).length;
+    info.textContent = hiddenCount ? `${hiddenCount} box${hiddenCount === 1 ? '' : 'es'} hidden (${[...hiddenKinds].map((k) => (kindNames[k] || [k])[0].toLowerCase()).join(', ')}). Show all brings them back.` : 'Every kind of box is shown.';
+    const again = typeBar.querySelector(`.kind-${String(focusKey).replace(/[^\w-]/g, '-')}`) || typeBar.querySelector('.show-all') || typeBar.querySelector('.type-chip');
+    if (again) again.focus();
+  }
+  function spotlightKind(key) {
+    svg.classList.toggle('spotlight', !!key);
+    allNodes().forEach((n) => n.el && n.el.classList.toggle('lit', !!key && kindOf(n) === key));
+  }
+  function toggleKind(key) {
+    if (hiddenKinds.has(key)) hiddenKinds.delete(key);
+    else hiddenKinds.add(key);
+    applyKinds(key);
   }
   const forEach = (nodes, visit) => nodes.forEach((n) => { visit(n); forEach(n.children, visit); });
   // Each box gets its parent and a key made of the labels on its way to the subject, which survives a re-run.
@@ -456,6 +497,7 @@
       meta: where,
       code: node.location ? codeBlocks.get(key) : '',
       open: node.location ? () => vscode.postMessage({ type: 'open', location: node.location }) : undefined,
+      copy: (text) => vscode.postMessage({ type: 'copy', text }),
       loading: node.location && !codeBlocks.has(key),
       facts: [
         ['Detail', node.description],
@@ -570,6 +612,7 @@
     else if (e.key === '-') zoom(1 / 1.2);
     else if (e.key === '0') fit(true);
     else if (e.key === 'Home') { e.preventDefault(); centerOn(diagram.center); diagram.center.el.focus({ preventScroll: true }); }
+    else if ((e.key === 'h' || e.key === 'H') && allNodes().some((n) => n.test)) toggleKind('test');
   });
 
   // Every line carries moving pulses in the direction the value travels; after a click on a box only its way to the
@@ -778,6 +821,15 @@
     items.push('-', { icon: 'copy', label: 'Copy text', run: () => vscode.postMessage({ type: 'copy', text: [node.label, node.description].filter(Boolean).join(' · ') }) });
     if (node.location) items.push({ icon: 'location', label: 'Copy location', run: () => vscode.postMessage({ type: 'copy', text: `${node.location.file}:${node.location.line + 1}:${node.location.character + 1}` }) });
     if (node !== diagram.center) items.push({ icon: 'arrow-right', label: 'Copy the way here', run: () => vscode.postMessage({ type: 'copy', text: wayHere(node) }) });
+    const kind = node !== diagram.center && kindOf(node);
+    if (kind) {
+      const name = (kindNames[kind] || [kind.replace(/^icon:/, '')])[0].toLowerCase();
+      items.push('-', { icon: 'eye-closed', label: `Hide ${name}`, run: () => toggleKind(kind) }, { icon: 'filter', label: `Show only ${name}`, run: () => {
+        const present = new Set(allNodes().filter((n) => n !== diagram.center).map(kindOf).filter(Boolean));
+        hiddenKinds = new Set([...present].filter((k) => k !== kind));
+        applyKinds(kind);
+      } });
+    }
     return items;
   }
   function backgroundMenu() {
@@ -801,7 +853,7 @@
     ];
   }
   // The boxes that need a look, in reading order, and stepping through them.
-  const warnings = () => allNodes().filter((n) => n.tone === 'warning' || n.tone === 'error');
+  const warnings = () => allNodes().filter((n) => (n.tone === 'warning' || n.tone === 'error') && shownNodes.includes(n));
   let warningAt = -1;
   function nextWarning() {
     const list = warnings();
@@ -814,7 +866,7 @@
   // The chart as an indented outline: the subject, then each side with its boxes.
   function outlineText() {
     const lines = [diagram.center.label + (diagram.center.description ? ` (${diagram.center.description})` : '')];
-    const walk = (nodes, depth) => nodes.forEach((n) => {
+    const walk = (nodes, depth) => nodes.filter(shownChild).forEach((n) => {
       lines.push(`${'  '.repeat(depth)}- ${n.label}${n.description ? ` · ${n.description}` : ''}${n.location ? ` (${n.location.file.split(/[\\/]/).pop()}:${n.location.line + 1})` : ''}`);
       walk(n.children || [], depth + 1);
     });
@@ -1021,7 +1073,7 @@
       linkParents(diagram.right, undefined, 'out');
     }
     const memory = diagram && saved[diagram.title];
-    hiddenKinds = new Set(['test']);
+    hiddenKinds = new Set(['test', ...(hiddenByAnalysis[analysisOf()] || [])]);
     // Charts open unfolded; the same analysis run again keeps the folding chosen by hand.
     if (diagram && !memory) forEach([...diagram.left, ...diagram.right], (n) => { n.collapsed = false; });
     if (memory) forEach([...diagram.left, ...diagram.right], (n) => { if (n.key in memory.collapsed) n.collapsed = memory.collapsed[n.key]; });
@@ -1040,6 +1092,10 @@
     }
     render();
     renderTypeBar();
+    {
+      const tests = allNodes().filter((n) => n.test).length;
+      if (tests && hiddenKinds.has('test')) info.textContent = `${tests} box${tests === 1 ? '' : 'es'} in tests hidden: press Tests at the top, or H, to show them.`;
+    }
     if (memory) {
       view = { ...memory.view };
       apply();

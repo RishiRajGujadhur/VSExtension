@@ -24,7 +24,12 @@ export interface CatalogAction {
   icon?: string;
   /** What it was called before the plain names, so people who knew it can find it. */
   formerly?: string;
+  /** Added in a recent version: the Actions view marks it "new". */
+  isNew?: boolean;
 }
+
+/** The newest actions, marked "new" in the Actions view until the next round of features. */
+export const newActions = new Set(['tsStructure.bundleWeight', 'tsStructure.valueTimeline', 'tsStructure.asyncTimeline']);
 
 export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string }[] = [
   { id: 'analyze', label: 'Analyze', icon: 'search-fuzzy' },

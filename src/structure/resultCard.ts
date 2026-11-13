@@ -26,6 +26,8 @@ export interface ResultCard {
   icon: string;
   summary: string;
   timing?: string;
+  /** When it ran, as "14:03". */
+  ranAt?: string;
   warnings: string[];
   /** A Value path: the timeline of values. */
   value?: ValuePathCard;
@@ -45,7 +47,8 @@ function toRow(node: ReportNode, depth: number): CardRow {
 export function resultCard(report: Report): ResultCard {
   const { heading, subject } = titleParts(report);
   const timing = report.durationMs === undefined ? undefined : report.durationMs < 1000 ? `${report.durationMs} ms` : `${(report.durationMs / 1000).toFixed(1)} s`;
-  const base = { kind: report.kind, heading, subject, icon: reportIcons[report.kind] ?? 'symbol-misc', summary: report.description ?? '', timing, warnings: report.warnings };
+  const ranAt = report.ranAt ? new Date(report.ranAt).toTimeString().slice(0, 5) : undefined;
+  const base = { kind: report.kind, heading, subject, icon: reportIcons[report.kind] ?? 'symbol-misc', summary: report.description ?? '', timing, ranAt, warnings: report.warnings };
   const value = valuePathCard(report);
   if (value) return { ...base, heading: 'Value path', value };
   return { ...base, rows: report.roots.map((r) => toRow(r, 0)) };

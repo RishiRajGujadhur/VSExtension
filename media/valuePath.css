@@ -78,3 +78,12 @@ button.row-label:hover .row-text { text-decoration: underline; color: var(--vsco
 .row.tone-info .row-tone { color: var(--vscode-editorInfo-foreground, #3794ff); }
 .more-row { padding: 2px 0 2px 22px; color: var(--vscode-descriptionForeground); font-size: 12px; }
 .timeline .step.value:has(.rows)::after { bottom: -14px; }
+
+/* The filter box, the expand and fold buttons, test rows and the count of rows shown. */
+.row-tools { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+.row-filter { flex: 1; min-width: 0; height: 26px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 6px;
+  background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; }
+.row-filter:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.row.test .row-test { color: #22d3ee; }
+.shown-count { padding-left: 22px; color: var(--vscode-descriptionForeground); font-size: 11px; }
+.no-match { list-style: none; margin: 0 0 6px; }

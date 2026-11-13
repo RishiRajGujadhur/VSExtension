@@ -178,3 +178,8 @@ body.vscode-light .node.arrow .box-icon { fill: #b45309; }
 .type-chip.kind-pattern .codicon { color: var(--vscode-charts-purple, #b180d7); }
 @media (forced-colors: active) { .type-chip { border-color: ButtonText; } .type-chip[aria-pressed="true"] { border-width: 2px; } }
 #legend .swatch.arrow { border-color: #f59e0b; color: #f59e0b; }
+
+/* A legend chip pointed at: its boxes stand out, the rest step back. */
+svg.spotlight .node:not(.lit):not(.center) { opacity: .35; }
+svg.spotlight .node.lit .box { stroke: var(--vscode-focusBorder); stroke-width: 2; }
+.type-chip.show-all { border-style: solid; color: var(--vscode-textLink-foreground); }

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { peekLines } from '../structure/peekLines';
 import { nameOf } from '../structure/names';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
-import { Report, ReportLocation, forEachReportNode } from '../structure/report';
+import { Report, ReportLocation, forEachReportNode, titleParts } from '../structure/report';
 import { pickGraph } from './graphSwitch';
 import { StructureView } from './structureView';
 import { iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
@@ -114,7 +114,9 @@ export class DiagramPanel {
     if (!this.panel || !this.ready) {
       return;
     }
-    this.panel.title = report ? `Diagram: ${report.title}` : 'Analysis Diagram';
+    // The tab names the analysis and its subject: "Data flow: payment".
+    const parts = report ? titleParts(report) : undefined;
+    this.panel.title = parts ? (parts.subject ? `${parts.heading}: ${parts.subject}` : parts.heading) : 'Chart';
     // Only the analyses whose features are turned on appear in the right-click menu.
     const analyses = menuAnalyses();
     void this.panel.webview.postMessage({ type: 'diagram', diagram: report ? reportDiagram(report) : undefined, analyses, controls: report?.controls ?? [] });

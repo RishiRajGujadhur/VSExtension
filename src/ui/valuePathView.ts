@@ -59,7 +59,12 @@ export class ValuePathView implements vscode.WebviewViewProvider {
   private follow(fresh: boolean): void {
     const report: Report | undefined = this.results.report;
     this.card = report ? resultCard(report) : undefined;
-    if (this.view) this.view.title = this.card?.heading ?? 'Result';
+    if (this.view) {
+      this.view.title = this.card?.heading ?? 'Result';
+      // A count on the panel: values of a Value path, rows of any other result.
+      const count = this.card ? (this.card.value ? this.card.value.values.length : (this.card.rows ?? []).reduce((n, r) => n + Math.max(1, r.children.length + r.more), 0)) : 0;
+      this.view.badge = count ? { value: count, tooltip: `${count} ${this.card?.value ? (count === 1 ? 'value' : 'values') : count === 1 ? 'row' : 'rows'}` } : undefined;
+    }
     const shown = !!this.card && !this.asList;
     void vscode.commands.executeCommand('setContext', shownContext, shown);
     this.post();
@@ -88,6 +93,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
         await this.setList(true);
         await vscode.commands.executeCommand('setContext', shownContext, false);
         await vscode.commands.executeCommand('tsStructure.report.focus');
+      } else if (message.type === 'chart') {
+        await vscode.commands.executeCommand('tsStructure.report.showDiagram');
       } else if (message.type === 'rerun') {
         await vscode.commands.executeCommand('tsStructure.rerunAnalysis');
       } else if (message.type === 'next') {
