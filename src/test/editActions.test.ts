@@ -100,3 +100,25 @@ test('result card: counts warnings and problems at every level, and finds where 
   assert.equal(card.issues, 2);
   assert.deepEqual(card.subjectAt, at);
 });
+
+test('card edits: Edit and File rows, Delete apart, one Move button with the other ways under it', async () => {
+  const { grouped } = await import('../structure/editActions');
+  const at = { line: 0, character: 0 };
+  const e = (command: string, label: string) => ({ command, label, icon: 'x', ...at });
+  const out = grouped([
+    e('editor.action.rename', 'Rename'),
+    e('tsStructure.safeDelete', 'Delete safely'),
+    e('tsStructure.changeSignature', 'Change signature'),
+    e('tsStructure.moveMembers', 'Move to a file'),
+    e('codeXRay.applyCodeAction', 'Convert named export to default export'),
+    e('codeXRay.applyCodeAction', 'Move to file'),
+    e('codeXRay.applyCodeAction', 'Move to a new file'),
+    e('codeXRay.applyCodeAction', 'Infer function return type'),
+  ]);
+  const by = (g: string) => out.filter((x) => x.group === g && !x.underMove).map((x) => x.label);
+  assert.deepEqual(by('edit'), ['Rename', 'Change signature', 'Infer function return type']);
+  assert.deepEqual(by('file'), ['Move to a file', 'Convert named export to default export']);
+  assert.deepEqual(by('danger'), ['Delete safely']);
+  // The editor's "Move to file" repeats ours and goes; "Move to a new file" waits under Move's ▾.
+  assert.deepEqual(out.filter((x) => x.underMove).map((x) => x.label), ['Move to a new file']);
+});

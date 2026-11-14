@@ -809,7 +809,7 @@
       open: n.location ? () => open(n) : undefined,
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
       // Edits that fit the box's code (Extract…, Rename…), asked for when the card opens.
-      actions: n.location && !isTerminal(n) ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
+      actions: n.location && !isTerminal(n) ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, group: edit.group, underMove: edit.underMove, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
       note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
       facts: [],
       keys: [],

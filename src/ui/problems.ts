@@ -36,7 +36,15 @@ export async function showProblem(message: string, remedies: readonly Remedy[], 
   // Old fixes are forgotten once enough newer ones were offered.
   for (const key of [...pending.keys()].slice(0, Math.max(0, pending.size - 30))) pending.delete(key);
   const show = severity === 'error' ? vscode.window.showErrorMessage : severity === 'warning' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
-  await show(links.length ? `${links.join(' · ')} — ${message}` : message);
+  // A short message keeps its fixes as links in front, on one line. A long one gets them as buttons instead:
+  // VS Code never folds a notification with buttons, so the whole text shows at once, buttons under it.
+  if (message.length + shown.reduce((n, r) => n + r.title.length + 3, 0) <= 90 || !shown.length) {
+    await show(links.length ? `${links.join(' · ')} — ${message}` : message, ...(message.length > 90 ? ['OK'] : []));
+    return;
+  }
+  const picked = await show(message, ...shown.map((r) => r.title));
+  const remedy = shown.find((r) => r.title === picked);
+  if (remedy) await remedy.run();
 }
 
 const command = (title: string, id: string, ...args: unknown[]): Remedy => ({ title, run: () => vscode.commands.executeCommand(id, ...args) });

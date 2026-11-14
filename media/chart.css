@@ -222,3 +222,27 @@ button.card-meta:hover { text-decoration: underline; }
 /* The minimap shrinks with the panel and steps aside when the panel is too small for it. */
 #minimap { width: min(200px, 32vw); height: min(120px, 24vh); }
 @media (max-width: 420px), (max-height: 320px) { #minimap { display: none; } }
+
+/* Card edits in two rows: Edit, then File with Delete apart at the far end. */
+.hover-card .card-actions { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 5px; }
+.hover-card .card-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.hover-card .card-action { padding: 3px 8px; white-space: nowrap; }
+.hover-card .card-action-divider { flex: 1 0 8px; min-width: 8px; align-self: stretch; margin-left: 2px; }
+.hover-card .card-action-divider::after { content: ""; display: block; width: 1px; height: 100%; margin-left: auto; margin-right: 4px; background: var(--vscode-widget-border, rgba(128, 128, 128, .4)); }
+.hover-card .card-action.danger { color: var(--vscode-errorForeground, #f14c4c); }
+.hover-card .card-action.danger .codicon { color: inherit; }
+.hover-card .card-action.danger:hover { background: color-mix(in srgb, var(--vscode-errorForeground, #f14c4c) 18%, var(--vscode-button-secondaryBackground, #3a3d41)); }
+/* A button with a ▾ beside it, and the small list the ▾ or "…" opens. */
+.hover-card .card-split { position: relative; display: inline-flex; }
+.hover-card .split-main { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.hover-card .split-caret { padding: 3px 4px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .4)); }
+.hover-card .card-more { padding: 3px 6px; }
+.hover-card .card-drop { position: absolute; top: calc(100% + 3px); left: 0; z-index: 5; display: flex; flex-direction: column; gap: 2px; min-width: 180px; padding: 4px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, #454545)); border-radius: 6px; background: var(--vscode-menu-background, var(--vscode-editorWidget-background, #252526));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .35); }
+.hover-card .card-drop[hidden] { display: none; }
+.hover-card .card-drop-item { justify-content: flex-start; background: transparent; color: var(--vscode-menu-foreground, var(--vscode-foreground)); }
+.hover-card .card-drop-item:hover, .hover-card .card-drop-item:focus-visible { background: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground)); color: var(--vscode-menu-selectionForeground, inherit); }
+@media (forced-colors: active) { .hover-card .card-drop { border-color: CanvasText; } }
+/* Delete sits at the far right of the File row behind a thin divider, and stays right-aligned if it wraps. */
+.hover-card .card-danger-zone { display: inline-flex; gap: 5px; margin-left: auto; padding-left: 8px; border-left: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .4)); }

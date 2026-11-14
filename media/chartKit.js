@@ -779,19 +779,106 @@
         target.append(pre);
       }
       if (c.actions && c.actions.length) {
-        // Edits that fit the code: one click opens it with the cursor on the right name and runs the edit.
+        // Edits that fit the code, in two rows: Edit (rename, signature, rewrites) and File (move, export), with
+        // Delete set apart at the end of the File row. At most three buttons a row; the rest wait under "…".
         const bar = document.createElement('div');
         bar.className = 'card-actions';
         bar.setAttribute('role', 'group');
         bar.setAttribute('aria-label', 'Edits');
-        for (const action of c.actions) {
+        const actionButton = (action, extra = '') => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = 'card-action';
+          b.className = `card-action ${extra}`.trim();
           b.title = action.title || `${action.label} in the editor`;
           b.append(iconEl(action.icon || 'edit'), action.label);
           b.addEventListener('click', (e) => { e.stopPropagation(); action.run(); });
-          bar.append(b);
+          return b;
+        };
+        // A small list that opens under a button: the other ways to move, or the edits that did not fit.
+        const dropdown = (anchorButton, items, label) => {
+          const list = document.createElement('div');
+          list.className = 'card-drop';
+          list.setAttribute('role', 'menu');
+          list.setAttribute('aria-label', label);
+          list.hidden = true;
+          for (const item of items) {
+            const entry = actionButton(item, 'card-drop-item');
+            entry.setAttribute('role', 'menuitem');
+            list.append(entry);
+          }
+          anchorButton.setAttribute('aria-haspopup', 'menu');
+          anchorButton.setAttribute('aria-expanded', 'false');
+          return list;
+        };
+        const toggle = (anchorButton, list) => (e) => {
+          e.stopPropagation();
+          const open = list.hidden;
+          bar.querySelectorAll('.card-drop').forEach((d) => (d.hidden = true));
+          bar.querySelectorAll('[aria-expanded]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+          list.hidden = !open;
+          anchorButton.setAttribute('aria-expanded', String(open));
+          // Opened from the keyboard: into the list. A mouse click leaves focus where it is, so the card stays open.
+          if (open && e.detail === 0) list.querySelector('button')?.focus({ preventScroll: true });
+        };
+        const more = (items, label) => {
+          const wrap = document.createElement('span');
+          wrap.className = 'card-split';
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'card-action card-more';
+          b.title = label;
+          b.setAttribute('aria-label', label);
+          b.append(iconEl('ellipsis'));
+          const list = dropdown(b, items, label);
+          b.addEventListener('click', toggle(b, list));
+          wrap.append(b, list);
+          return wrap;
+        };
+        const PER_ROW = 3;
+        const editRow = c.actions.filter((a) => (a.group || 'edit') === 'edit');
+        const fileRow = c.actions.filter((a) => a.group === 'file' && !a.underMove);
+        const underMove = c.actions.filter((a) => a.group === 'file' && a.underMove);
+        const danger = c.actions.filter((a) => a.group === 'danger');
+        const row = (cls) => {
+          const r = document.createElement('div');
+          r.className = `card-action-row ${cls}`;
+          bar.append(r);
+          return r;
+        };
+        if (editRow.length) {
+          const r = row('edit-row');
+          editRow.slice(0, PER_ROW).forEach((a) => r.append(actionButton(a)));
+          if (editRow.length > PER_ROW) r.append(more(editRow.slice(PER_ROW), `${editRow.length - PER_ROW} more edits`));
+        }
+        if (fileRow.length || danger.length) {
+          const r = row('file-row');
+          fileRow.forEach((a, i) => {
+            if (i >= PER_ROW - 1) return;
+            // The first way to move carries a ▾ with the other ways (to a new file, to another file…).
+            if (i === 0 && underMove.length && /move/i.test(a.label)) {
+              const split = document.createElement('span');
+              split.className = 'card-split';
+              const main = actionButton(a, 'split-main');
+              const caret = document.createElement('button');
+              caret.type = 'button';
+              caret.className = 'card-action split-caret';
+              caret.title = 'Other ways to move it';
+              caret.setAttribute('aria-label', 'Other ways to move it');
+              caret.append(iconEl('chevron-down'));
+              const list = dropdown(caret, underMove, 'Other ways to move it');
+              caret.addEventListener('click', toggle(caret, list));
+              split.append(main, caret, list);
+              r.append(split);
+            } else r.append(actionButton(a));
+          });
+          if (fileRow.length > PER_ROW - 1) r.append(more(fileRow.slice(PER_ROW - 1), `${fileRow.length - PER_ROW + 1} more file edits`));
+          if (danger.length) {
+            // Kept apart, at the far end, so it is not hit by accident.
+            const zone = document.createElement('span');
+            zone.className = 'card-danger-zone';
+            zone.append(...danger.map((a) => actionButton(a, 'danger')));
+            r.append(zone);
+          }
         }
         target.append(bar);
       }

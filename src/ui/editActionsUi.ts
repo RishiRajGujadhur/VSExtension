@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EditAction, editActionsAt } from '../structure/editActions';
+import { EditAction, editActionsAt, grouped } from '../structure/editActions';
 import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
 
@@ -62,7 +62,7 @@ export async function editsFor(document: vscode.TextDocument, line: number, char
     if (ownCommandKind.contains(kind) && !ownRewriteKind.contains(kind)) return false;
     return !ownTitles.has(a.title.toLowerCase());
   });
-  if (!useful.length) return ours;
+  if (!useful.length) return grouped(ours);
   // The editor's actions replace the general Extract… and More edits… buttons.
   const kept = ours.filter((a) => a.command !== 'editor.action.refactor' && a.command !== 'editor.action.codeAction');
   if (offered.size > 200) offered.clear();
@@ -71,12 +71,18 @@ export async function editsFor(document: vscode.TextDocument, line: number, char
     offered.set(id, { file: document.uri.fsPath, version: document.version, action });
     return { command: codeActionCommand(), args: [id], label: shortTitle(action.title), icon: iconFor(action), line: range.start.line, character: range.start.character, endLine: range.end.line, endCharacter: range.end.character };
   });
-  return [...kept, ...fromEditor];
+  return grouped([...kept, ...fromEditor]);
 }
 
 /** "Extract to function in module scope" reads well enough; very long titles are cut. */
 function shortTitle(title: string): string {
-  return title.length > 42 ? `${title.slice(0, 41)}…` : title;
+  // The editor's wording, trimmed of words the button doesn't need: "Convert to default export", "Infer return type".
+  const short = title
+    .replace(/^Convert named export to default export$/i, 'Convert to default export')
+    .replace(/^Convert default export to named export$/i, 'Convert to named export')
+    .replace(/^Infer function return type$/i, 'Infer return type')
+    .replace(/^Add return type ('|").*\1$/i, 'Add return type');
+  return short.length > 42 ? `${short.slice(0, 41)}…` : short;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {

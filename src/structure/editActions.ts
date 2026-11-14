@@ -15,6 +15,10 @@ export interface EditAction {
   /** Where the cursor goes first (0-based), usually the declaration's name. */
   line: number;
   character: number;
+  /** Where it goes on the card: the Edit row, the File row, or apart as a destructive edit. */
+  group?: 'edit' | 'file' | 'danger';
+  /** Shown in the ▾ menu of the File row's Move button rather than as a button of its own. */
+  underMove?: boolean;
   /** The end of the code to select first, for Extract. */
   endLine?: number;
   endCharacter?: number;
@@ -148,4 +152,25 @@ export function editActionsAt(fileName: string, text: string, line: number, char
   }
   actions.push({ command: 'editor.action.refactor', label: 'More edits…', icon: 'lightbulb', line: at.line, character: at.character });
   return actions;
+}
+
+/**
+ * Sorts edits onto the card's rows: Edit (rename, signature, inline, extract, rewrites), File (move, export changes)
+ * and, apart, Delete safely. Several ways to move become one Move button with the others in its ▾ menu.
+ */
+export function grouped(edits: EditAction[]): EditAction[] {
+  const isMove = (e: EditAction) => e.command === 'tsStructure.moveMembers' || /^move to\b/i.test(e.label);
+  const out = edits.map((e): EditAction => ({
+    ...e,
+    group: e.command === 'tsStructure.safeDelete' ? 'danger' : isMove(e) || /\bexport\b/i.test(e.label) ? 'file' : 'edit',
+  }));
+  // The first way to move is the button; the rest open from its ▾.
+  const moves = out.filter((e) => e.group === 'file' && isMove(e));
+  moves.slice(1).forEach((e) => (e.underMove = true));
+  // "Move to a file" (ours) and the editor's "Move to file" do the same thing: keep ours.
+  const ownMove = moves.find((e) => e.command === 'tsStructure.moveMembers');
+  const duplicates = new Set(moves.filter((e) => e !== ownMove && ownMove && /^move to file$/i.test(e.label)));
+  // The Edit row: renames and signature first, then the rest; "More edits…" always last.
+  const order = (e: EditAction) => (e.command === 'editor.action.rename' ? 0 : e.command === 'tsStructure.changeSignature' ? 1 : e.command === 'editor.action.refactor' ? 9 : 5);
+  return out.filter((e) => !duplicates.has(e)).sort((a, b) => (a.group === b.group ? order(a) - order(b) : 0));
 }

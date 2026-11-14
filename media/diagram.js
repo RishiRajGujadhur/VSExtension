@@ -528,7 +528,7 @@
       open: node.location ? () => vscode.postMessage({ type: 'open', location: node.location }) : undefined,
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
       // Edits that fit the code (Rename, Delete safely, Change signature…), once the code has been read.
-      actions: node.location ? (codeEdits.get(key) || []).map((edit) => ({ icon: edit.icon, label: edit.label, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: node.location, edit }); } })) : [],
+      actions: node.location ? (codeEdits.get(key) || []).map((edit) => ({ icon: edit.icon, label: edit.label, group: edit.group, underMove: edit.underMove, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: node.location, edit }); } })) : [],
       loading: node.location && !codeBlocks.has(key),
       facts: [
         ['Detail', node.description],
