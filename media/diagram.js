@@ -85,6 +85,7 @@
     if (node.kind === 'pattern') parts.push('design pattern');
     if (node.test) parts.push('in a test');
     if (node.arrow) parts.push('an arrow function');
+    if (node.badge && node.badge.pill) parts.push(node.badge.pill);
     if (node.duplicates) parts.push(`${node.duplicates} the same`);
     if (node.children.length && node.collapsed && node !== diagram.center) parts.push(`${node.children.length} folded`);
     if (node.location) parts.push(`${node.location.file.split(/[\\/]/).pop()}, line ${node.location.line + 1}`);
@@ -114,10 +115,15 @@
     if (node.test) return 'test';
     if (node.arrow) return 'arrow';
     if (node.kind === 'pattern') return 'pattern';
+    if (node.badge) return `badge:${node.badge.key}`;
     if (!node.location && node.children.length) return 'group';
     return node.icon ? `icon:${node.icon}` : undefined;
   };
-  let hiddenKinds = new Set(['test']);
+  let hiddenKinds = new Set(['test', 'badge:repeat']);
+  /** Badge kinds on most boxes of this chart: no pill for them. */
+  let commonBadges = new Set();
+  /** A badge's details from any box that has it. */
+  const badgeFor = (key) => { const n = allNodes().find((m) => m.badge && `badge:${m.badge.key}` === key); return n && n.badge; };
   /** Kinds hidden by hand, by analysis ("Data flow"), for the next chart of it in this session. */
   const hiddenByAnalysis = {};
   const analysisOf = () => (diagram ? diagram.title.replace(/ (of|in|since) .*$/, '') : '');
@@ -134,14 +140,15 @@
     if (!diagram) { typeBar.hidden = true; return; }
     const counts = new Map();
     forEach([...diagram.left, ...diagram.right], (n) => { const k = kindOf(n); if (k) counts.set(k, (counts.get(k) || 0) + 1); });
-    const keys = [...counts].filter(([k, n]) => k === 'test' || k === 'arrow' || n >= 3).sort((a, b) => Number(b[0] === 'test') - Number(a[0] === 'test') || Number(b[0] === 'arrow') - Number(a[0] === 'arrow') || b[1] - a[1]);
+    const keys = [...counts].filter(([k, n]) => k === 'test' || k === 'arrow' || (k.startsWith('badge:') && badgeFor(k) && badgeFor(k).pill) || n >= 3).sort((a, b) => Number(b[0] === 'test') - Number(a[0] === 'test') || Number(b[0] === 'arrow') - Number(a[0] === 'arrow') || b[1] - a[1]);
     typeBar.hidden = !keys.length;
     for (const [key, count] of keys) {
-      const [name, iconName] = kindNames[key] || [key.replace(/^icon:/, '').replace(/-/g, ' '), key.replace(/^icon:/, '')];
+      const badge = key.startsWith('badge:') ? badgeFor(key) : undefined;
+      const [name, iconName] = badge ? [badge.label, 'circle-filled'] : kindNames[key] || [key.replace(/^icon:/, '').replace(/-/g, ' '), key.replace(/^icon:/, '')];
       const shown = !hiddenKinds.has(key);
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = `type-chip kind-${key.replace(/[^\w-]/g, '-')}${shown ? '' : ' off'}`;
+      chip.className = `type-chip kind-${key.replace(/[^\w-]/g, '-')}${badge ? ` color-${badge.color}` : ''}${shown ? '' : ' off'}`;
       chip.setAttribute('aria-pressed', String(shown));
       chip.title = `${shown ? 'Hide' : 'Show'} the ${count} ${name.toLowerCase()}`;
       const i = document.createElement('i');
@@ -259,6 +266,8 @@
     scene.textContent = '';
     painted = undefined;
     if (!diagram) return;
+    // A pill that would sit on most boxes says nothing: those kinds keep their chip only.
+    { const all = allNodes().filter((n) => n !== diagram.center); const tally = new Map(); all.forEach((n) => n.badge && tally.set(n.badge.key, (tally.get(n.badge.key) || 0) + 1)); commonBadges = new Set([...tally].filter(([, c]) => all.length >= 6 && c > all.length / 2).map(([k]) => k)); }
     const leftRows = place(roots(diagram.left), 1, -1, { next: 0 });
     const rightRows = place(roots(diagram.right), 1, 1, { next: 0 });
     const rows = Math.max(leftRows, rightRows, 1);
@@ -382,6 +391,14 @@
         }
       }
       if (node.tone) el('rect', { width: 4, height: H - 20, x: 5, y: 10, rx: 2, class: 'tone' }, g);
+      if (node.badge && node.badge.pill && node !== center && !commonBadges.has(node.badge.key)) {
+        // A pill on the top edge for the kinds worth seeing at a glance: async, swallowed, missing dep…
+        const text = node.badge.pill;
+        const width = text.length * 5.6 + 12;
+        const pill = el('g', { class: `badge-pill color-${node.badge.color}`, transform: `translate(${node.w - width - (node.duplicates ? 34 : 10)},${-7})`, 'aria-hidden': 'true' }, g);
+        el('rect', { width, height: 14, rx: 7 }, pill);
+        el('text', { x: width / 2, y: 10, 'text-anchor': 'middle' }, pill).textContent = text;
+      }
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
         g.setAttribute('aria-haspopup', 'menu');
@@ -1073,7 +1090,7 @@
       linkParents(diagram.right, undefined, 'out');
     }
     const memory = diagram && saved[diagram.title];
-    hiddenKinds = new Set(['test', ...(hiddenByAnalysis[analysisOf()] || [])]);
+    hiddenKinds = new Set(['test', 'badge:repeat', ...(hiddenByAnalysis[analysisOf()] || [])]);
     // Charts open unfolded; the same analysis run again keeps the folding chosen by hand.
     if (diagram && !memory) forEach([...diagram.left, ...diagram.right], (n) => { n.collapsed = false; });
     if (memory) forEach([...diagram.left, ...diagram.right], (n) => { if (n.key in memory.collapsed) n.collapsed = memory.collapsed[n.key]; });

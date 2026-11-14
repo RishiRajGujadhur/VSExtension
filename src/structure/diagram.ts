@@ -15,6 +15,8 @@ export interface DiagramNode {
   test?: boolean;
   /** It is about an arrow function (a callback, a handler): drawn with an arrow icon and an amber outline. */
   arrow?: boolean;
+  /** What kind of box it is in this chart, for the legend bar and a pill on the box: async, entry point, swallowed… */
+  badge?: Badge;
   /** A stack of boxes that read the same: how many, with each one as a child, told apart by its line. */
   duplicates?: number;
   /** Folded: the children are hidden until the node's button is clicked. */
@@ -45,13 +47,80 @@ function isPattern(row: ReportNode): boolean {
   return row.label === 'Design patterns' || row.action?.kind === 'explainPattern';
 }
 
-function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramNode['kind']): DiagramNode {
+function toNode(row: ReportNode, collapsed = !row.expanded, inherited?: DiagramNode['kind'], parent?: string): DiagramNode {
   const kind = inherited ?? (isPattern(row) ? 'pattern' : undefined);
-  const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind));
+  const children = (row.children ?? []).filter((c) => !skipped.has(c.label)).map((c) => toNode(c, !c.expanded, kind, row.label));
+  const badge = badgeOf(row, parent);
   const test = isTestRow(row);
   const arrow = !test && isArrowRow(row);
   const icon = test ? 'beaker' : arrow ? 'symbol-method-arrow' : boxIcon(row, kind);
-  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), ...(test ? { test } : {}), ...(arrow ? { arrow } : {}), collapsed: children.length > 0 && collapsed, children };
+  return { label: row.label, description: row.description, tone: row.tone, location: row.location, ...(kind ? { kind } : {}), ...(icon ? { icon } : {}), ...(test ? { test } : {}), ...(arrow ? { arrow } : {}), ...(badge && !test && !arrow ? { badge } : {}), collapsed: children.length > 0 && collapsed, children };
+}
+
+/**
+ * A kind of box: its key (what the legend bar groups and hides by), the words for its chip, a short pill drawn on
+ * the box for the kinds worth seeing at a glance, and a colour role that the page maps to a colour of the theme.
+ */
+export interface Badge {
+  key: string;
+  label: string;
+  pill?: string;
+  color: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'yellow' | 'muted';
+}
+
+/** Kinds of boxes, found from a row's words; the first that fits wins. */
+const badgeRules: { test: (text: string, row: ReportNode, parent: string) => boolean; badge: Badge }[] = [
+  { test: (t) => /shown above/.test(t), badge: { key: 'repeat', label: 'Shown above', color: 'muted' } },
+  { test: (t, r, p) => /^How to fix/.test(r.label) || /^How to fix/.test(p), badge: { key: 'tip', label: 'Tips', color: 'muted' } },
+  { test: (t) => /(^| · )implementation( · |$)|implements it/.test(t), badge: { key: 'impl', label: 'Implementations', pill: 'impl', color: 'blue' } },
+  { test: (t) => /any implementation may run/.test(t), badge: { key: 'throughBase', label: 'Through the base type', pill: 'any impl', color: 'yellow' } },
+  // Asynchronous code and where code starts.
+  { test: (t) => /(^| · )async( · |$)/.test(t), badge: { key: 'async', label: 'Async', pill: 'async', color: 'blue' } },
+  { test: (t) => /entry point|top-level code/.test(t), badge: { key: 'entry', label: 'Entry points', pill: 'entry', color: 'green' } },
+  { test: (t) => /calls itself|recursive call|(^| · )recursive( · |$)|\(recursive\)/.test(t), badge: { key: 'recursion', label: 'Recursion', pill: 'recursive', color: 'purple' } },
+  { test: (t) => /calls super/.test(t), badge: { key: 'super', label: 'Calls super', pill: 'super', color: 'orange' } },
+  // Errors and promises.
+  { test: (t) => /not awaited|unhandled|uncaught|escapes to the caller/.test(t), badge: { key: 'unhandled', label: 'Not handled', pill: 'unhandled', color: 'red' } },
+  { test: (t) => /swallow(s|ed)|logs the error and continues|ignores the error/.test(t), badge: { key: 'swallowed', label: 'Swallowed', pill: 'swallowed', color: 'yellow' } },
+  { test: (t) => /^caught in|handled by|collected by Promise|catch block/.test(t), badge: { key: 'handled', label: 'Handled', pill: 'handled', color: 'green' } },
+  { test: (t, r) => /^throw\b|throw new /.test(r.label) || /^throws /.test(r.label), badge: { key: 'throw', label: 'Throws', pill: 'throws', color: 'red' } },
+  // Values and changes.
+  { test: (t) => /after an await/.test(t), badge: { key: 'afterAwait', label: 'After an await', pill: 'after await', color: 'yellow' } },
+  { test: (t) => /missing from the dependencies/.test(t), badge: { key: 'missingDep', label: 'Missing dependencies', pill: 'missing dep', color: 'red' } },
+  { test: (t) => /literal value|(^| · )literal( · |$)/.test(t), badge: { key: 'literal', label: 'Literal values', pill: 'literal', color: 'muted' } },
+  { test: (t) => /module scope|when the module loads/.test(t), badge: { key: 'moduleLoad', label: 'Module load', pill: 'on load', color: 'muted' } },
+  { test: (t) => /computed at the call/.test(t), badge: { key: 'computed', label: 'Computed values', color: 'muted' } },
+  { test: (t) => /(^| · )increment( · |$)/.test(t), badge: { key: 'increment', label: 'Increments', pill: '++', color: 'blue' } },
+  { test: (t) => /changed in place/.test(t), badge: { key: 'inPlace', label: 'Changed in place', pill: 'in place', color: 'orange' } },
+  { test: (t) => /mutates parameter|^Mutates arguments/.test(t), badge: { key: 'param', label: 'Changes an argument', pill: 'argument', color: 'orange' } },
+  { test: (t) => /changes module state|reassigns module variable|(^| · )module state( · |$)|^Mutates module state/.test(t), badge: { key: 'shared', label: 'Shared state', pill: 'shared', color: 'red' } },
+  { test: (t) => /changes this\.|the instance/.test(t), badge: { key: 'instance', label: 'Own object', color: 'muted' } },
+  { test: (t) => /may be undefined here|(^| · )may be undefined( · |$)/.test(t), badge: { key: 'maybe', label: 'May be undefined', pill: 'maybe undefined', color: 'red' } },
+  { test: (t) => /^[^·]+ · line \d+ · safe$/.test(t), badge: { key: 'safe', label: 'Safe uses', color: 'green' } },
+  { test: (t) => /^[^·]+ · line \d+ · check$/.test(t), badge: { key: 'checked', label: 'Checks', color: 'blue' } },
+  { test: (t) => /no importers · nobody imports it/.test(t), badge: { key: 'unused', label: 'Unused re-exports', pill: 'unused', color: 'yellow' } },
+  // React.
+  { test: (t) => /(^| · )useState( · |$)|^useState/.test(t), badge: { key: 'state', label: 'State', pill: 'state', color: 'blue' } },
+  { test: (t) => /(^| · )useRef( · |$)|^useRef/.test(t), badge: { key: 'ref', label: 'Refs', pill: 'ref', color: 'muted' } },
+  { test: (t) => /useMemo|useCallback/.test(t), badge: { key: 'memo', label: 'Memoized', pill: 'memo', color: 'purple' } },
+  { test: (t, r) => /^useEffect|^useLayoutEffect/.test(r.label), badge: { key: 'effect', label: 'Effects', pill: 'effect', color: 'orange' } },
+  { test: (t) => /(^| · )prop( · |$)/.test(t), badge: { key: 'prop', label: 'Props', pill: 'prop', color: 'green' } },
+  // Types and modules.
+  { test: (t, r) => /^abstract class\b/.test(r.label), badge: { key: 'abstract', label: 'Abstract classes', pill: 'abstract', color: 'purple' } },
+  { test: (t, r) => /^interface\b/.test(r.label), badge: { key: 'interface', label: 'Interfaces', pill: 'interface', color: 'green' } },
+  { test: (t, r) => /^class\b/.test(r.label), badge: { key: 'class', label: 'Classes', color: 'blue' } },
+  { test: (t) => /type.only|import type|export type|no run-time/.test(t), badge: { key: 'typeOnly', label: 'Type-only', pill: 'type only', color: 'muted' } },
+  { test: (t) => /(^| · )barrel( · |:|$)/.test(t), badge: { key: 'barrel', label: 'Barrel files', pill: 'barrel', color: 'orange' } },
+  { test: (t, r, p) => /^Import it directly/.test(p), badge: { key: 'direct', label: 'Direct importers', color: 'blue' } },
+  { test: (t, r, p) => /^Through \d+ other module/.test(p), badge: { key: 'indirect', label: 'Indirect importers', color: 'muted' } },
+  { test: (t) => /(^| · )runtime( · |$)/.test(t), badge: { key: 'runtime', label: 'Run-time paths', pill: 'runtime', color: 'yellow' } },
+  { test: (t) => /lazy import/.test(t), badge: { key: 'lazy', label: 'Lazy imports', pill: 'lazy', color: 'purple' } },
+];
+
+/** The kind of a row's box, or none. */
+export function badgeOf(row: ReportNode, parent = ''): Badge | undefined {
+  const text = `${row.label} · ${row.description ?? ''}`;
+  return badgeRules.find((r) => r.test(text, row, parent))?.badge;
 }
 
 /** A row about an arrow function: named "arrow function", or in one ("arrow function · cart.ts"). */

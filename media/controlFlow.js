@@ -294,6 +294,7 @@
     const button = document.getElementById('deps');
     button.setAttribute('aria-pressed', String(showDeps));
     render();
+    renderTypeBar();
     if (showDeps && chart && chart.dependences) {
       const { data, control, truncated } = chart.dependences;
       const most = topVariables(3).map(([name, count]) => `${name} (${count})`).join(', ');
@@ -401,41 +402,68 @@
   const typeBar = document.getElementById('typeBar');
   var spot; // var: render() can run before this line on the first draw
   const spotKind = (n) => (n.unreachable ? 'unreachable' : n.kind);
-  const kindLabels = { decision: 'Decisions', switch: 'Switches', loop: 'Loops', return: 'Returns', throw: 'Throws', catch: 'Catches', finally: 'Finally blocks', statement: 'Code boxes', break: 'Breaks', continue: 'Continues', unreachable: 'Unreachable' };
+  /** Whether a box is one of the lit-up kind: a kind of box, or "calls" for boxes with a call to open in place. */
+  const inSpot = (n, key) => (key === 'calls' ? !!(n.calls && n.calls.length) : spotKind(n) === key);
+  /** Each kind's chip takes a colour of the theme. */
+  const kindColors = { decision: 'blue', switch: 'blue', loop: 'purple', return: 'green', throw: 'red', catch: 'orange', finally: 'yellow', break: 'muted', continue: 'muted', statement: 'muted', unreachable: 'yellow', calls: 'blue' };
+  function chipButton(className, pressed, icon, text, count, title, run) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `type-chip ${className}`;
+    chip.setAttribute('aria-pressed', String(pressed));
+    chip.title = title;
+    const i = document.createElement('i');
+    i.className = `codicon codicon-${icon}`;
+    i.setAttribute('aria-hidden', 'true');
+    chip.append(i, text);
+    if (count !== undefined) {
+      const n = document.createElement('span');
+      n.className = 'type-count';
+      n.textContent = String(count);
+      chip.append(n);
+    }
+    chip.addEventListener('click', run);
+    typeBar.append(chip);
+    return chip;
+  }
+  const kindLabels = { calls: 'Calls to open', decision: 'Decisions', switch: 'Switches', loop: 'Loops', return: 'Returns', throw: 'Throws', catch: 'Catches', finally: 'Finally blocks', statement: 'Code boxes', break: 'Breaks', continue: 'Continues', unreachable: 'Unreachable' };
   function renderTypeBar() {
     typeBar.textContent = '';
     if (!chart) { typeBar.hidden = true; return; }
     const counts = new Map();
     for (const n of chart.nodes) if (!isTerminal(n)) counts.set(spotKind(n), (counts.get(spotKind(n)) || 0) + 1);
     const keys = [...counts].filter(([k, c]) => k === 'unreachable' || c >= 3).sort((a, b) => Number(b[0] === 'unreachable') - Number(a[0] === 'unreachable') || b[1] - a[1]);
-    typeBar.hidden = !keys.length;
+    // Boxes with a call that opens in place (ƒ+), from one on.
+    const calls = chart.nodes.filter((n) => n.calls && n.calls.length).length;
+    if (calls) keys.push(['calls', calls]);
     for (const [key, count] of keys) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = `type-chip kind-${key}`;
-      chip.setAttribute('aria-pressed', String(spot === key));
-      chip.title = spot === key ? 'Stop lighting these up (Escape)' : `Light up the ${count} ${(kindLabels[key] || key).toLowerCase()}`;
-      const i = document.createElement('i');
-      i.className = `codicon codicon-${key === 'unreachable' ? 'warning' : kindIcons[key] || 'code'}`;
-      i.setAttribute('aria-hidden', 'true');
-      const n = document.createElement('span');
-      n.className = 'type-count';
-      n.textContent = String(count);
-      chip.append(i, kindLabels[key] || key, n);
-      chip.addEventListener('click', () => setSpot(spot === key ? undefined : key));
-      typeBar.append(chip);
+      const label = kindLabels[key] || key;
+      chipButton(`kind-${key} color-${kindColors[key] || 'muted'}`, spot === key, key === 'unreachable' ? 'warning' : key === 'calls' ? 'symbol-function' : kindIcons[key] || 'code', label, count,
+        spot === key ? 'Stop lighting these up (Escape)' : key === 'calls' ? `Light up the ${count} boxes with a call you can open in place (ƒ+)` : `Light up the ${count} ${label.toLowerCase()}`,
+        () => setSpot(spot === key ? undefined : key));
     }
+    // Dependences: one chip turns them on; once on, a chip for each kind of arc turns it on or off.
+    const deps = chart.dependences;
+    if (deps && (deps.data.length || deps.control.length)) {
+      if (!showDeps) {
+        chipButton('deps-chip color-purple', false, 'references', 'Dependences', deps.data.length + deps.control.length, 'Draw where values come from and what decides whether code runs (D)', () => toggleDependences(true));
+      } else {
+        chipButton('deps-chip color-purple', showData, 'arrow-left', 'Data arcs', deps.data.length, `${showData ? 'Hide' : 'Show'} where each value comes from`, () => { showData = !showData; state.depsData = showData; saveState(); render(); renderTypeBar(); typeBar.querySelector('.deps-chip')?.focus(); });
+        chipButton('deps-chip color-orange', showControl, 'git-compare', 'Control arcs', deps.control.length, `${showControl ? 'Hide' : 'Show'} what decides whether each box runs`, () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); renderTypeBar(); typeBar.querySelectorAll('.deps-chip')[1]?.focus(); });
+      }
+    }
+    typeBar.hidden = !typeBar.childElementCount;
   }
   function setSpot(key) {
     spot = key;
     svg.classList.toggle('spotlight', !!key);
     scene.querySelectorAll('.node').forEach((g) => {
       const n = chart.nodes[Number(g.dataset.node)];
-      g.classList.toggle('lit', !!key && !!n && spotKind(n) === key);
+      g.classList.toggle('lit', !!key && !!n && inSpot(n, key));
     });
     renderTypeBar();
-    const count = key ? chart.nodes.filter((n) => !isTerminal(n) && spotKind(n) === key).length : 0;
-    info.textContent = key ? `${count} ${(kindLabels[key] || key).toLowerCase()} lit up; press it again or Escape to stop.` : '';
+    const count = key ? chart.nodes.filter((n) => !isTerminal(n) && inSpot(n, key)).length : 0;
+    info.textContent = key ? `${key === 'calls' ? `${count} box${count === 1 ? '' : 'es'} with a call to open` : `${count} ${(kindLabels[key] || key).toLowerCase()}`} lit up; press it again or Escape to stop.` : '';
     if (!key) showInfo(focusedNode);
     typeBar.querySelector(`.kind-${key || ''}`)?.focus();
   }
@@ -1080,8 +1108,8 @@
       { icon: 'references', label: showDeps ? 'Hide what depends on what' : 'Show what depends on what', keys: 'D', run: () => toggleDependences() },
       ...(showDeps
         ? [
-            { icon: showData ? 'check' : 'blank', label: 'Data arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); } },
-            { icon: showControl ? 'check' : 'blank', label: 'Control arcs (what decides whether code runs)', run: () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); } },
+            { icon: showData ? 'check' : 'blank', label: 'Data arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); renderTypeBar(); } },
+            { icon: showControl ? 'check' : 'blank', label: 'Control arcs (what decides whether code runs)', run: () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); renderTypeBar(); } },
           ]
         : []),
       { icon: 'play-circle', label: 'Animate every path', run: () => animateFrom(chart.nodes.find((m) => m.kind === 'start')) },

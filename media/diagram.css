@@ -183,3 +183,35 @@ body.vscode-light .node.arrow .box-icon { fill: #b45309; }
 svg.spotlight .node:not(.lit):not(.center) { opacity: .35; }
 svg.spotlight .node.lit .box { stroke: var(--vscode-focusBorder); stroke-width: 2; }
 .type-chip.show-all { border-style: solid; color: var(--vscode-textLink-foreground); }
+
+/* Badge colours come from the theme: the chart colours VS Code themes define, and the test colour for tests. */
+:root {
+  --badge-blue: var(--vscode-charts-blue, #3794ff);
+  --badge-green: var(--vscode-charts-green, #89d185);
+  --badge-orange: var(--vscode-charts-orange, #d18616);
+  --badge-purple: var(--vscode-charts-purple, #b180d7);
+  --badge-red: var(--vscode-charts-red, var(--vscode-errorForeground, #f14c4c));
+  --badge-yellow: var(--vscode-charts-yellow, #cca700);
+  --badge-muted: var(--vscode-descriptionForeground, #9d9d9d);
+  --badge-test: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #73c991));
+  --badge-arrow: var(--vscode-charts-orange, #d18616);
+}
+.badge-pill rect { fill: color-mix(in srgb, var(--pill) 22%, var(--box-fill, #2a2a2a)); stroke: var(--pill); stroke-width: 1; }
+.badge-pill text { fill: var(--pill); font-size: 9.5px; font-weight: 600; font-family: var(--vscode-font-family, sans-serif); }
+.color-blue { --pill: var(--badge-blue); } .color-green { --pill: var(--badge-green); } .color-orange { --pill: var(--badge-orange); }
+.color-purple { --pill: var(--badge-purple); } .color-red { --pill: var(--badge-red); } .color-yellow { --pill: var(--badge-yellow); }
+.color-muted { --pill: var(--badge-muted); }
+.type-chip[class*="color-"] { border-color: var(--pill); }
+.type-chip[class*="color-"] .codicon { color: var(--pill); }
+/* Tests and arrow functions take the theme's colours too. */
+.node.test .box { stroke: var(--badge-test); }
+.node.test .box-icon { fill: var(--badge-test); }
+.node.arrow .box { stroke: var(--badge-arrow); }
+.node.arrow .box-icon { fill: var(--badge-arrow); }
+.type-chip.kind-test { border-color: var(--badge-test); }
+.type-chip.kind-test .codicon { color: var(--badge-test); }
+.type-chip.kind-arrow { border-color: var(--badge-arrow); }
+.type-chip.kind-arrow .codicon { color: var(--badge-arrow); }
+#legend .swatch.test { border-color: var(--badge-test); color: var(--badge-test); }
+#legend .swatch.arrow { border-color: var(--badge-arrow); color: var(--badge-arrow); }
+@media (forced-colors: active) { .badge-pill rect { fill: Canvas; stroke: CanvasText; } .badge-pill text { fill: CanvasText; } }
