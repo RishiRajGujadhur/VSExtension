@@ -87,3 +87,16 @@ test('symbol order: by line either way, by complexity (decisions), by size and b
   assert.deepEqual(names('size'), ['branchy', 'alpha', 'simple']);
   assert.deepEqual(names('name'), ['alpha', 'branchy', 'simple']);
 });
+
+test('result card: counts warnings and problems at every level, and finds where the subject is', async () => {
+  const { resultCard } = await import('../structure/resultCard');
+  const at = { file: '/p/a.ts', line: 3, character: 4, endLine: 3, endCharacter: 8 };
+  const card = resultCard({
+    kind: 'nullability', title: 'Nullability of user', description: '1 source', roots: [
+      { label: 'user: User | undefined', tone: 'warning' },
+      { label: 'Uses', children: [{ label: 'user.name', tone: 'ok', location: at }, { label: 'user.age', tone: 'error' }] },
+    ], warnings: [], fileHashes: {}, durationMs: 5, ranAt: Date.now(),
+  } as unknown as Parameters<typeof resultCard>[0]);
+  assert.equal(card.issues, 2);
+  assert.deepEqual(card.subjectAt, at);
+});

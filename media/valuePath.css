@@ -118,3 +118,92 @@ button.row-label:hover .row-text { text-decoration: underline; color: var(--vsco
 /* A row's name stays beside its fold arrow and wraps inside its own line. */
 .row-fold { flex: none; }
 .row-label { flex: 0 1 auto; max-width: calc(100% - 24px); overflow-wrap: break-word; }
+
+/* ---- The card, redesigned: numbered steps on a line, plain read-only steps, a status line and a footer. ---- */
+.card-head { padding-bottom: 8px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); }
+.card-heading { font-weight: 600; }
+.card-issues { flex: none; margin-left: auto; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.card-issues::before { content: '('; } .card-issues::after { content: ')'; }
+.card-issues.has-issues { color: var(--vscode-editorWarning-foreground, #cca700); }
+.card-status { font-weight: 600; }
+.card-summary { margin: 8px 2px; }
+
+/* The filter field with its search icon inside. */
+.filter-field { position: relative; flex: 1 1 80px; min-width: 0; display: flex; align-items: center; }
+.filter-field .codicon { position: absolute; left: 8px; font-size: 13px; color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground)); pointer-events: none; }
+.filter-field .row-filter { width: 100%; padding-left: 26px; }
+
+/* Numbered rings on the line instead of plain dots. */
+.timeline { padding-left: 32px; }
+.timeline .step::before { content: none; }
+.timeline .step.value::after { left: -21px; top: 30px; background: color-mix(in srgb, var(--active-accent) 55%, transparent); }
+.step-number { position: absolute; left: -32px; top: 10px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--active-accent) 70%, transparent); border-radius: 50%; background: var(--vscode-sideBar-background, #181818);
+  color: var(--vscode-foreground); font-size: 11px; font-variant-numeric: tabular-nums; }
+.step:first-child .step-number { box-shadow: 0 0 8px color-mix(in srgb, var(--active-accent) 70%, transparent); }
+.step.next .step-number { border-color: var(--vscode-descriptionForeground); }
+.step-card { position: relative; }
+
+/* Read-only steps (nothing to open): plain colours, no accent, no hover. */
+.step.value .step-card.read-only, .step-card.read-only { border-color: var(--vscode-widget-border, rgba(128, 128, 128, .3)); background: rgba(128, 128, 128, .06); cursor: default; }
+.step.value .step-card.read-only .step-tile { border-color: var(--vscode-widget-border, rgba(128, 128, 128, .35)); color: var(--vscode-icon-foreground, var(--vscode-foreground)); }
+.step-card.read-only:hover { border-color: var(--vscode-widget-border, rgba(128, 128, 128, .3)); }
+/* Steps that open code keep the accent. */
+.step-card.openable { cursor: pointer; }
+/* A step's tone shows on its tile, whether or not it opens anything. */
+.step.tone-ok .step-tile, .step.value.tone-ok .step-card .step-tile { color: var(--vscode-testing-iconPassed, #73c991); border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #73c991) 55%, transparent); background: color-mix(in srgb, var(--vscode-testing-iconPassed, #73c991) 12%, transparent); }
+.step.value.tone-warning .step-card .step-tile { color: var(--vscode-editorWarning-foreground, #cca700); border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 60%, transparent); }
+.step.value.tone-error .step-card .step-tile { color: var(--vscode-editorError-foreground, #f14c4c); border-color: color-mix(in srgb, var(--vscode-editorError-foreground, #f14c4c) 60%, transparent); }
+
+/* Code in a description, as a chip with light colouring from the theme. */
+.step-when .where { color: var(--vscode-descriptionForeground); }
+.code-chip { display: inline-block; max-width: 100%; margin-top: 2px; padding: 1px 6px; border-radius: 4px; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, .15)); color: var(--vscode-editor-foreground, var(--vscode-foreground)); font-family: var(--vscode-editor-font-family, monospace); font-size: 12px; }
+.tok-string { color: var(--vscode-debugTokenExpression-string, #ce9178); }
+.tok-number { color: var(--vscode-debugTokenExpression-number, #b5cea8); }
+.tok-keyword { color: var(--vscode-debugTokenExpression-boolean, #569cd6); }
+.tok-call { color: var(--vscode-symbolIcon-functionForeground, #dcdcaa); }
+
+/* Rows hang off their step on a thin tree line. */
+.timeline .rows { position: relative; margin-left: 12px; padding-left: 14px; }
+.timeline .rows::before { content: ''; position: absolute; left: 0; top: 0; bottom: 10px; width: 1px; background: var(--vscode-tree-indentGuidesStroke, rgba(128, 128, 128, .4)); }
+.timeline .rows > .row { position: relative; }
+.timeline .rows > .row::before { content: ''; position: absolute; left: -14px; top: 12px; width: 10px; height: 1px; background: var(--vscode-tree-indentGuidesStroke, rgba(128, 128, 128, .4)); }
+.timeline .rows > .row.more-row::before, .timeline .rows > .row.shown-count::before { content: none; }
+button.row-label .row-text { font-weight: 500; }
+.verdict.tone-ok { color: var(--vscode-testing-iconPassed, #73c991); }
+.verdict.tone-warning { color: var(--vscode-editorWarning-foreground, #cca700); }
+.verdict.tone-error { color: var(--vscode-editorError-foreground, #f14c4c); }
+.verdict.tone-info { color: var(--vscode-editorInfo-foreground, #3794ff); }
+
+/* Next steps and Options under the timeline. */
+.card-foot { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 14px 2px 4px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); }
+.foot-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.foot-group.next-steps { flex: 1 1 160px; }
+.foot-title { font-weight: 600; font-size: 12px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.foot-link { display: inline-flex; align-items: center; gap: 5px; padding: 2px 0; border: 0; background: none; color: var(--vscode-textLink-foreground); white-space: nowrap; }
+.foot-link:hover { text-decoration: underline; }
+.foot-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+@media (forced-colors: active) {
+  .step-number, .code-chip { border: 1px solid CanvasText; }
+  .timeline .rows::before, .timeline .rows > .row::before { background: CanvasText; }
+}
+@media (max-width: 300px) {
+  .timeline { padding-left: 26px; }
+  .step-number { left: -26px; width: 20px; height: 20px; font-size: 10px; }
+  .timeline .step.value::after { left: -17px; }
+  .timeline .rows { margin-left: 4px; }
+}
+/* Read-only steps are blocks, not buttons: count their padding and border inside their width, like buttons do. */
+.step-card { box-sizing: border-box; max-width: 100%; }
+/* A description with code is a wrapping line, so the chip can shrink and end in "…". */
+.step-when.has-code { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; min-width: 0; }
+.step-when.has-code .code-chip { min-width: 0; flex: 0 1 auto; }
+@media (max-width: 230px) {
+  /* Very narrow: long names may break anywhere rather than push the panel sideways. */
+  .row-label, .row-text, .row-desc { overflow-wrap: anywhere; }
+  .row-label { min-width: 0; }
+  .timeline .rows { margin-left: 2px; padding-left: 10px; }
+  .timeline .rows > .row::before { left: -10px; width: 7px; }
+}

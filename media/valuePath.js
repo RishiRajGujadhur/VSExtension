@@ -35,17 +35,80 @@
     title.append(icon(card.icon), make('span', 'card-heading', card.heading));
     if (card.subject) title.append(make('strong', 'card-subject', card.subject));
     top.append(title);
-    // The timing chip and the buttons wrap together, as one group, when the title needs the line.
-    const tools = make('span', 'card-tools');
-    top.append(tools);
+    // How many rows need a look, in words, at the right.
+    const issues = card.issues || 0;
+    const count = make('span', `card-issues${issues ? ' has-issues' : ''}`, issues ? `${issues} issue${issues === 1 ? '' : 's'}` : 'no issues');
+    count.title = issues ? 'Rows marked as a warning or a problem' : 'Nothing marked as a warning or a problem';
+    top.append(count);
+    return top;
+  }
+
+  /** The status line: the result's summary, after a bold "Status:". */
+  function statusLine(card) {
+    const p = make('p', 'card-summary');
+    p.append(make('strong', 'card-status', 'Status: '), `${card.summary.replace(/^[^:]{1,40}:\s*/, (m) => (card.subject && m.startsWith(card.subject) ? '' : m))}.`);
+    return p;
+  }
+
+  /** Options at the bottom: how long it took, copy, chart, list, run again. */
+  function footer(card) {
+    const foot = make('div', 'card-foot');
+    const steps = card.nextSteps || [];
+    if (steps.length) {
+      const group = make('div', 'foot-group next-steps');
+      group.append(make('span', 'foot-title', 'Next steps'));
+      const links = make('div', 'foot-links');
+      for (const step of steps) {
+        const b = make('button', 'foot-link');
+        b.type = 'button';
+        b.title = `${step.label}, for ${card.subject || 'the same subject'}`;
+        b.append(icon(step.icon || 'arrow-right'), make('span', '', step.label));
+        b.addEventListener('click', () => vscode.postMessage({ type: 'analyze', command: step.command }));
+        links.append(b);
+      }
+      group.append(links);
+      foot.append(group);
+    }
+    const options = make('div', 'foot-group options');
+    options.append(make('span', 'foot-title', 'Options'));
+    const tools = make('div', 'foot-tools');
+    tools.append(tool('copy', 'Copy as Markdown', 'copy'), tool('graph', 'Draw as chart', 'chart'), tool('list-tree', 'Show as a list (the Results view)', 'list'), tool('refresh', 'Run it again', 'rerun'));
     if (card.timing) {
       const time = make('span', 'card-time');
       time.title = `How long the analysis took${card.ranAt ? `; it ran at ${card.ranAt}` : ''}`;
       time.append(icon('clock'), card.timing);
       tools.append(time);
     }
-    tools.append(tool('copy', 'Copy as Markdown', 'copy'), tool('graph', 'Draw as chart', 'chart'), tool('list-tree', 'Show as a list (the Results view)', 'list'));
-    return top;
+    options.append(tools);
+    foot.append(options);
+    return foot;
+  }
+
+  /** Light colouring of a code snippet: strings, numbers, keywords and calls, in the theme's colours. */
+  function codeChip(code) {
+    const chip = make('code', 'code-chip');
+    const pattern = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)|(\b\d[\d_.]*\b)|\b(const|let|var|function|return|new|await|async|if|else|typeof|null|undefined|true|false|this|class|import|export|from)\b|([A-Za-z_$][\w$]*)(?=\s*\()/g;
+    let at = 0;
+    for (const m of code.matchAll(pattern)) {
+      if (m.index > at) chip.append(code.slice(at, m.index));
+      const kind = m[1] ? 'tok-string' : m[2] ? 'tok-number' : m[3] ? 'tok-keyword' : 'tok-call';
+      chip.append(make('span', kind, m[0]));
+      at = m.index + m[0].length;
+    }
+    if (at < code.length) chip.append(code.slice(at));
+    return chip;
+  }
+
+  /** A description such as "watcher.ts:26 · file = String(name ?? '')": the place, then the code as a chip. */
+  function describe(text) {
+    const span = make('span', 'step-when');
+    const m = /^([\w.-]+\.[cm]?[jt]sx?:\d+) · (.+)$/.exec(text);
+    if (m && /[=();.]/.test(m[2])) {
+      span.classList.add('has-code');
+      span.append(make('span', 'where', `${m[1]} ·`), codeChip(m[2]));
+    }
+    else span.append(text);
+    return span;
   }
 
   function staleNote() {
@@ -59,12 +122,22 @@
   }
 
   function stepCard(content, onClick, className = '') {
-    const button = make('button', `step-card ${className}`.trim());
-    button.type = 'button';
-    button.append(...content);
-    if (onClick) button.addEventListener('click', onClick);
-    else button.disabled = true;
-    return button;
+    // Something to open is a button in the accent colour; anything else is read-only, in plain colours.
+    const card = make(onClick ? 'button' : 'div', `step-card ${onClick ? 'openable' : 'read-only'} ${className}`.trim());
+    if (onClick) {
+      card.type = 'button';
+      card.addEventListener('click', onClick);
+    }
+    card.append(...content);
+    return card;
+  }
+  /** The step's number on the timeline. */
+  let stepNumber = 0;
+  function numbered(li) {
+    const n = make('span', 'step-number', String(++stepNumber));
+    n.setAttribute('aria-hidden', 'true');
+    li.prepend(n);
+    return li;
   }
 
   function nextStep() {
@@ -74,7 +147,7 @@
     const text = make('span', 'step-text');
     text.append(make('strong', '', 'Next'), make('span', 'step-when', 'Run another analysis here'));
     next.append(stepCard([tile, text, icon('chevron-right')], () => vscode.postMessage({ type: 'next' })));
-    return next;
+    return numbered(next);
   }
 
   const open = (location) => vscode.postMessage({ type: 'open', location });
@@ -95,7 +168,7 @@
       const button = stepCard([tile, text], v.location ? () => open(v.location) : undefined);
       if (v.location) button.title = 'Open where this value comes from';
       li.append(button);
-      line.append(li);
+      line.append(numbered(li));
     }
   }
 
@@ -144,7 +217,14 @@
       }
       label.append(make('span', 'row-text', row.label));
       line.append(label);
-      if (row.description) line.append(make('span', 'row-desc', row.description));
+      if (row.description) {
+        const desc = make('span', 'row-desc');
+        const parts = row.description.split(' · ');
+        const verdict = row.tone && parts.length > 1 && /^(safe|check|checked|may be (null|undefined)|unsafe|handled|unhandled|swallowed)/.test(parts[parts.length - 1]) ? parts.pop() : undefined;
+        desc.append(parts.join(' · '));
+        if (verdict) desc.append(' → ', make('span', `verdict tone-${row.tone}`, verdict));
+        line.append(desc);
+      }
       li.append(line);
       if (hasChildren && (opened.has(key) || (filter && row.children.some(matches))) && depth < 6) li.append(rowList(row.children, row.more, key, depth + 1));
       list.append(li);
@@ -175,10 +255,10 @@
       const count = group.children.length + group.more;
       if (count) top.append(make('span', 'step-badge', String(count)));
       text.append(top);
-      if (group.description) text.append(make('span', 'step-when', group.description));
+      if (group.description) text.append(describe(group.description));
       li.append(stepCard([tile, text], group.location ? () => open(group.location) : undefined, group.children.length ? 'has-rows' : ''));
       if (group.children.length) li.append(rowList(group.children, group.more, `g${i}`, 1));
-      line.append(li);
+      line.append(numbered(li));
     });
   }
 
@@ -188,7 +268,7 @@
     const bar = make('div', 'row-tools');
     const search = make('input', 'row-filter');
     search.type = 'search';
-    search.placeholder = 'Filter rows (/)';
+    search.placeholder = 'Filter rows… (/)';
     search.setAttribute('aria-label', 'Filter the rows of the result');
     search.value = filter;
     search.addEventListener('input', () => {
@@ -206,7 +286,9 @@
     });
     const foldAll = tool('collapse-all', 'Fold all', 'none');
     foldAll.addEventListener('click', () => { opened.clear(); redraw(); });
-    bar.append(search, expandAll, foldAll);
+    const field = make('span', 'filter-field');
+    field.append(icon('search'), search);
+    bar.append(field, expandAll, foldAll);
     return bar;
   }
   // / goes to the filter box.
@@ -230,8 +312,9 @@
       box.append(make('p', 'empty', 'Run an analysis, such as Data flow or Why this value, and its result shows here as a card.'));
       return;
     }
+    stepNumber = 0;
     box.append(head(card));
-    if (card.summary) box.append(make('p', 'card-summary', `${card.summary}.`));
+    if (card.summary) box.append(statusLine(card));
     if (stale) box.append(staleNote());
     for (const w of card.warnings) box.append(make('p', 'card-warning', w));
     if (card.value && card.value.needs) box.append(make('p', 'card-needs', card.value.needs));
@@ -246,6 +329,7 @@
     }
     line.append(nextStep());
     if (card.value && card.value.impossible) box.append(make('p', 'card-needs', `Left out: ${card.value.impossible}.`));
+    box.append(footer(card));
     window.scrollTo(0, scroll);
   }
 

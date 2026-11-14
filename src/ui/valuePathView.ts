@@ -4,6 +4,8 @@ import { ResultCard, resultCard } from '../structure/resultCard';
 import { registerCommand } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
 import { StructureView } from './structureView';
+import { menuAnalyses } from './diagramView';
+import { activeFeature } from './activeFeature';
 
 const shownContext = 'tsStructure.cardShown';
 const listKey = 'tsStructure.results.asList';
@@ -61,6 +63,14 @@ export class ValuePathView implements vscode.WebviewViewProvider {
   private follow(fresh: boolean): void {
     const report: Report | undefined = this.results.report;
     this.card = report ? resultCard(report) : undefined;
+    // Next steps: other analyses of the same subject (not the one that made this result), the main ones first.
+    if (this.card && report && this.card.subjectAt) {
+      const origin = activeFeature.originOf(report);
+      const runs: Record<string, string> = { 'tsStructure.report.usagesHere': 'tsStructure.semanticUsages', 'tsStructure.report.dataFlowHere': 'tsStructure.dataFlow', 'tsStructure.report.nullabilityHere': 'tsStructure.nullability', 'tsStructure.report.mutationsHere': 'tsStructure.mutationTrackingVariable', 'tsStructure.report.racesHere': 'tsStructure.raceConditions', 'tsStructure.report.sideEffectsHere': 'tsStructure.sideEffects', 'tsStructure.report.exceptionsHere': 'tsStructure.exceptionFlow', 'tsStructure.report.argumentsHere': 'tsStructure.argumentFlow' };
+      const sameKind: Record<string, string> = { dataFlow: 'tsStructure.dataFlow', nullability: 'tsStructure.nullability', usages: 'tsStructure.semanticUsages', variableMutations: 'tsStructure.mutationTrackingVariable', races: 'tsStructure.raceConditions', sideEffects: 'tsStructure.sideEffects', exceptions: 'tsStructure.exceptionFlow', argumentFlow: 'tsStructure.argumentFlow' };
+      const current = origin ?? sameKind[report.kind];
+      this.card.nextSteps = menuAnalyses().filter((a) => runs[a.command] !== current).sort((a, b) => Number(a.more) - Number(b.more)).slice(0, 3).map((a) => ({ command: a.command, label: a.label, icon: a.icon }));
+    }
     if (this.view) {
       this.view.title = this.card?.heading ?? 'Result';
       // A count on the panel: values of a Value path, rows of any other result.
@@ -92,7 +102,7 @@ export class ValuePathView implements vscode.WebviewViewProvider {
     view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
     if (this.card) view.title = this.card.heading;
     view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['valuePath.js'], body: '<main id="card"></main>' });
-    view.webview.onDidReceiveMessage(async (message: { type: string; location?: unknown }) => {
+    view.webview.onDidReceiveMessage(async (message: { type: string; location?: unknown; command?: unknown }) => {
       if (message.type === 'ready') {
         this.post();
       } else if (message.type === 'open' && isLocation(message.location)) {
@@ -105,6 +115,12 @@ export class ValuePathView implements vscode.WebviewViewProvider {
         await this.setList(true);
         await vscode.commands.executeCommand('setContext', shownContext, false);
         await vscode.commands.executeCommand('tsStructure.report.focus');
+      } else if (message.type === 'analyze' && typeof message.command === 'string' && this.card?.subjectAt) {
+        // A Next step: the same command the Results view runs on a row, at the subject.
+        const command = message.command as string;
+        if (!menuAnalyses().some((a) => a.command === command)) return;
+        const at = this.card.subjectAt;
+        await vscode.commands.executeCommand(command, { file: at.file, line: at.line, character: at.character });
       } else if (message.type === 'chart') {
         await vscode.commands.executeCommand('tsStructure.report.showDiagram');
       } else if (message.type === 'rerun') {
