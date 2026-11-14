@@ -27,6 +27,10 @@
   const PULSE_WIDTH = 60; // screen pixels each pulse fades over
   const LEVELS = 8;
   let flowLines;
+  /** Above this many lines in view, the flow is drawn without moving pulses (and without a frame loop). */
+  const MAX_PULSING = 300;
+  /** Above this many line pieces on screen, the pulses stop for that frame: the wire alone is drawn. */
+  const MAX_SEGMENTS = 12000;
   function attachFlowLines(canvas, getView) {
     const ctx = canvas.getContext('2d');
     // A hidden path measures each line's shape once; the samples are kept by path data.
@@ -82,22 +86,42 @@
       ctx.setTransform(scale * k, 0, 0, scale * k, scale * v.x, scale * v.y);
       const margin = 20 / k;
       const vx0 = -v.x / k - margin, vy0 = -v.y / k - margin, vx1 = (width - v.x) / k + margin, vy1 = (height - v.y) / k + margin;
-      const still = motion.matches;
+      // Lines in view first: with very many of them the pulses would cost more than they show, so they are drawn still.
+      const inView = lines.filter((line) => { const b = line.s.box; return !(b.x1 < vx0 || b.x0 > vx1 || b.y1 < vy0 || b.y0 > vy1); });
+      const still = motion.matches || inView.length > MAX_PULSING;
+      // Points closer than about 3 screen pixels are skipped: zoomed out, a line needs only a few of its samples.
+      const stride = Math.max(1, Math.floor(3 / (6 * k)));
       const spacing = PULSE_SPACING / k;
       const reach = PULSE_WIDTH / k;
       const at = still ? 0 : ((now * PULSE_SPEED) / k) % spacing;
       const solid = new Path2D();
       const dashed = new Path2D();
       const lit = Array.from({ length: LEVELS }, () => new Path2D());
-      for (const line of lines) {
+      // Only the parts of each line inside the view are drawn and lit: a long curve off screen costs nothing.
+      const inside = (s, i) => s.xs[i] >= vx0 && s.xs[i] <= vx1 && s.ys[i] >= vy0 && s.ys[i] <= vy1;
+      let budget = MAX_SEGMENTS;
+      let pulsing = !still;
+      for (const line of inView) {
         const s = line.s;
-        if (s.box.x1 < vx0 || s.box.x0 > vx1 || s.box.y1 < vy0 || s.box.y0 > vy1) continue;
         const wire = line.dashed ? dashed : solid;
-        wire.moveTo(s.xs[0], s.ys[0]);
-        for (let i = 1; i <= s.n; i++) wire.lineTo(s.xs[i], s.ys[i]);
-        if (still) continue;
+        let drawing = false;
+        // Every stride-th point and the last one; a point counts when it or the next one is inside the view.
+        for (let j = 0; ; j += stride) {
+          const i = Math.min(j, s.n);
+          const next = Math.min(i + stride, s.n);
+          if (inside(s, i) || inside(s, next)) {
+            if (drawing) wire.lineTo(s.xs[i], s.ys[i]);
+            else wire.moveTo(s.xs[i], s.ys[i]);
+            drawing = true;
+            budget--;
+          } else drawing = false;
+          if (i === s.n) break;
+        }
+        if (budget < 0) pulsing = false;
+        if (!pulsing) continue;
         // Brightness of each piece: its distance to the nearest pulse, with a cosine falloff.
         for (let i = 0; i < s.n; i++) {
+          if (!inside(s, i) && !inside(s, i + 1)) continue;
           const mid = (i + 0.5) * s.step;
           const offset = (((mid - at) % spacing) + spacing) % spacing;
           const dist = Math.min(offset, spacing - offset);
@@ -125,7 +149,7 @@
         ctx.stroke(path);
       });
       ctx.globalAlpha = 1;
-      if (!still && !document.hidden) frame = requestAnimationFrame(draw);
+      if (pulsing && !document.hidden) frame = requestAnimationFrame(draw);
     }
     function redraw() {
       if (!frame) frame = requestAnimationFrame(draw);

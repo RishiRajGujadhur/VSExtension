@@ -31,6 +31,9 @@
   let query = '';
   let matchIndex = -1;
   let shownNodes = [];
+  /** A big chart (more boxes than BIG): the animated grid and the flow pulses are off for it, until turned back on. */
+  const BIG = 250;
+  let lite = false;
   let focused;
   let selected;
 
@@ -649,7 +652,7 @@
   // Every line carries moving pulses in the direction the value travels; after a click on a box only its way to the
   // subject and what is behind it do. Clicking the background or pressing Escape goes back to every line.
   function drawFlows() {
-    if (!prefs.flow || !diagram) return window.chartKit.drawFlows(scene, null, []);
+    if (!prefs.flow || lite || !diagram) return window.chartKit.drawFlows(scene, null, []);
     const edges = [];
     if (!flowing || !shownNodes.includes(flowing) || flowing === diagram.center) {
       shownNodes.forEach((n) => n.edgeEl && edges.push(n.edgeEl));
@@ -663,6 +666,37 @@
     const c = diagram.center;
     const rings = lines.length ? window.chartKit.ringPaths(c.px + c.w / 2, c.py + H / 2, c.w / 2 + 5, 180, 0) : [];
     window.chartKit.drawFlows(scene, null, [...lines, ...rings]);
+  }
+
+  /** Boxes that would show, without drawing anything. */
+  function countShown() {
+    let n = 1;
+    const walk = (nodes) => nodes.forEach((c) => { n++; if (!c.collapsed) walk(visible(c)); });
+    walk(roots(diagram.left));
+    walk(roots(diagram.right));
+    return n;
+  }
+  /** Folds the deepest open groups, a level at a time, until about BIG boxes show; returns how many it folded. */
+  function foldToFit() {
+    let folded = 0;
+    for (let guard = 0; guard < 12 && countShown() > BIG; guard++) {
+      // The open groups that have no open group below them: the deepest level still open.
+      const open = [];
+      forEach([...diagram.left, ...diagram.right], (n) => { if (!n.collapsed && visible(n).length) open.push(n); });
+      const deepest = open.filter((n) => !visible(n).some((c) => !c.collapsed && visible(c).length));
+      // Keep the first level open: folding the subject's own groups would leave nothing to look at.
+      const foldable = deepest.filter((n) => n.parent && n.parent !== diagram.center);
+      if (!foldable.length) break;
+      foldable.forEach((n) => { n.collapsed = true; });
+      folded += foldable.length;
+    }
+    return folded;
+  }
+  /** The sparkle and play buttons show what is really on: off on a big chart until pressed. */
+  function applyLite() {
+    if (grid) grid.setEnabled(prefs.effects && !lite);
+    document.getElementById('effects').setAttribute('aria-pressed', String(prefs.effects && !lite));
+    document.getElementById('flowToggle').setAttribute('aria-pressed', String(prefs.flow && !lite));
   }
 
   function stopFlow() {
@@ -1117,6 +1151,9 @@
     hiddenKinds = new Set(['test', 'badge:repeat', ...(hiddenByAnalysis[analysisOf()] || [])]);
     // Charts open unfolded; the same analysis run again keeps the folding chosen by hand.
     if (diagram && !memory) forEach([...diagram.left, ...diagram.right], (n) => { n.collapsed = false; });
+    // A big chart opens lighter: the deepest groups fold, level by level, until about BIG boxes show.
+    let foldedForSize = 0;
+    if (diagram && !memory && !query) foldedForSize = foldToFit();
     if (memory) forEach([...diagram.left, ...diagram.right], (n) => { if (n.key in memory.collapsed) n.collapsed = memory.collapsed[n.key]; });
     if (query) for (const n of allNodes().filter(isMatch)) for (let p = n.parent; p; p = p.parent) p.collapsed = false;
     empty.hidden = !!diagram;
@@ -1131,11 +1168,16 @@
       caption.append(subject, kind);
       caption.title = [diagram.title, diagram.center.description].filter(Boolean).join(': ');
     }
+    // Animations stay off while the chart is big; they come back for smaller charts on their own.
+    const total = diagram ? allNodes().length : 0;
+    lite = total > BIG;
+    applyLite();
     render();
     renderTypeBar();
     {
       const tests = allNodes().filter((n) => n.test).length;
-      if (tests && hiddenKinds.has('test')) info.textContent = `${tests} box${tests === 1 ? '' : 'es'} in tests hidden: press Tests at the top, or H, to show them.`;
+      if (lite) info.textContent = `Big chart: ${total} boxes.${foldedForSize ? ` ${foldedForSize} group${foldedForSize === 1 ? '' : 's'} start folded (press the round buttons to open them, or Unfold all in the menu);` : ''} animations are off for it (the sparkle and play buttons turn them on).`;
+      else if (tests && hiddenKinds.has('test')) info.textContent = `${tests} box${tests === 1 ? '' : 'es'} in tests hidden: press Tests at the top, or H, to show them.`;
     }
     if (memory) {
       view = { ...memory.view };
@@ -1157,6 +1199,19 @@
     hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
   }));
   window.chartKit.attachFlowLines(document.getElementById('flowLines'), () => view);
+  for (const id of ['effects', 'flowToggle']) {
+    document.getElementById(id).addEventListener('click', (e) => {
+      if (!lite) return;
+      e.stopImmediatePropagation();
+      lite = false;
+      if (id === 'effects') prefs.effects = true;
+      else prefs.flow = true;
+      applyLite();
+      drawFlows();
+      info.textContent = 'Animations are on for this chart; a big chart may feel slower.';
+    }, true);
+  }
   window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
+  applyLite();
   vscode.postMessage({ type: 'ready' });
 })();
