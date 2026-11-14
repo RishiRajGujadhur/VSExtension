@@ -37,6 +37,7 @@ export async function run(): Promise<void> {
     await unexportAllFlow();
     await reportActionsFlow();
     await customInspectionFlow();
+    await cardEditsFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -203,6 +204,34 @@ async function customInspectionFlow(): Promise<void> {
   await settings.update('customInspections', undefined, vscode.ConfigurationTarget.Workspace);
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   console.log('custom inspection actions ok');
+}
+
+/** A chart card's edits include the editor's own refactorings at the box's code, and run when chosen; Show as card never fails. */
+async function cardEditsFlow(): Promise<void> {
+  const { editsFor, runEdit } = await import('../../ui/editActionsUi');
+  const file = path.join(sample, 'src/cardEdits.ts');
+  fs.writeFileSync(file, ['export function area(width: number, height: number): number {', '  const doubled = width * height * 2;', '  return doubled / 2;', '}', ''].join('\n'));
+  const document = await vscode.workspace.openTextDocument(file);
+  await vscode.window.showTextDocument(document);
+  // TypeScript needs a moment to load the project before it lists refactorings.
+  let edits: Awaited<ReturnType<typeof editsFor>> = [];
+  for (let i = 0; i < 40 && !edits.some((e) => /^Extract to/.test(e.label)); i++) {
+    edits = await editsFor(document, 1, 18);
+    if (!edits.some((e) => /^Extract to/.test(e.label))) await new Promise((r) => setTimeout(r, 500));
+  }
+  assert.ok(edits.some((e) => /^Extract to/.test(e.label)), `no Extract refactoring among ${edits.map((e) => e.label).join(', ')}`);
+  assert.ok(!edits.some((e) => e.label === 'More edits…'), 'More edits… shown although the editor offers edits');
+  const constant = edits.find((e) => /^Extract to constant/.test(e.label)) ?? edits.find((e) => /^Extract to/.test(e.label))!;
+  await runEdit(file, constant);
+  for (let i = 0; i < 20 && document.getText().includes('const doubled = width * height * 2;'); i++) await new Promise((r) => setTimeout(r, 200));
+  assert.ok(!document.getText().includes('const doubled = width * height * 2;'), 'the extract edit did not apply');
+  await vscode.commands.executeCommand('undo');
+  // Show as card twice in a row, with or without its page open: no "Webview is disposed".
+  await vscode.commands.executeCommand('tsStructure.report.showAsCard');
+  await vscode.commands.executeCommand('workbench.action.closeSidebar');
+  await vscode.commands.executeCommand('tsStructure.report.showAsCard');
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+  console.log('card edits and show as card ok');
 }
 
 /** The Dead Export report's file button removes every unneeded export keyword in the file at once. */

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FileSymbol, SymbolKind, fileSymbols, symbolAt } from '../structure/symbols';
+import { FileSymbol, SymbolKind, SymbolOrder, fileSymbols, measureSymbols, sortSymbols, symbolAt } from '../structure/symbols';
 import { parse, refactorKind } from './codeActions';
 import { isFeatureEnabled } from './features';
 import { commandIcons } from '../structure/icons';
@@ -220,22 +220,55 @@ function chooseTitle(analysis: CursorAnalysis): string {
   return 'Choose a Symbol…';
 }
 
-/** A list of declarations with the one nearest the cursor selected, so Enter takes the obvious one. */
+/** The order chosen for lists of symbols, kept for the rest of the session. */
+let symbolOrder: SymbolOrder = 'kind';
+const orders: { order: SymbolOrder; icon: string; tooltip: string; words: string }[] = [
+  { order: 'kind', icon: 'list-tree', tooltip: 'Group by kind', words: '' },
+  { order: 'lineUp', icon: 'arrow-down', tooltip: 'Sort by line, top first', words: 'by line' },
+  { order: 'lineDown', icon: 'arrow-up', tooltip: 'Sort by line, bottom first', words: 'by line, from the bottom' },
+  { order: 'complexity', icon: 'pulse', tooltip: 'Sort by complexity, most complex first', words: 'most complex first' },
+  { order: 'size', icon: 'fold', tooltip: 'Sort by size, longest first', words: 'longest first' },
+  { order: 'name', icon: 'case-sensitive', tooltip: 'Sort by name', words: 'by name' },
+];
+
+/**
+ * A list of declarations with the one nearest the cursor selected, so Enter takes the obvious one. Buttons in its
+ * title bar sort it: by kind (grouped), by line either way, by complexity, by size or by name.
+ */
 async function pickSymbol(editor: vscode.TextEditor, symbols: readonly FileSymbol[], title = 'Start from…'): Promise<FileSymbol | undefined> {
   type Item = vscode.QuickPickItem & { symbol: FileSymbol };
   const line = editor.selection.active.line;
-  const items: Item[] = symbols.map((s) => ({ label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`].filter(Boolean).join(' · '), symbol: s }));
-  // Functions, variables, classes and so on under their own headings when the file has several kinds.
+  const measures = measureSymbols(parse(editor.document), symbols);
   const kindTitles: Record<SymbolKind, string> = { function: 'Functions', variable: 'Variables', class: 'Classes', interface: 'Interfaces', member: 'Members', parameter: 'Parameters', import: 'Imports' };
-  const kinds = [...new Set(items.map((i) => i.symbol.kind))];
-  const sections: (Item | (vscode.QuickPickItem & { symbol?: undefined }))[] = kinds.length > 1 ? kinds.flatMap((k) => [{ label: kindTitles[k], kind: vscode.QuickPickItemKind.Separator }, ...items.filter((i) => i.symbol.kind === k)]) : items;
-  const nearest = [...items].sort((a, b) => Math.abs(a.symbol.line - line) - Math.abs(b.symbol.line - line))[0];
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = title;
   picker.placeholder = `Declarations in ${vscode.workspace.asRelativePath(editor.document.uri)}`;
   picker.matchOnDescription = true;
-  picker.items = sections as Item[];
-  picker.activeItems = nearest ? [nearest] : [];
+  const render = () => {
+    const sorted = sortSymbols(symbols, symbolOrder, measures);
+    const measured = symbolOrder === 'complexity' || symbolOrder === 'size';
+    const items: Item[] = sorted.map((s) => {
+      const m = measures.get(s);
+      const extra = measured && m ? (symbolOrder === 'complexity' ? `complexity ${m.complexity}` : `${m.lines} line${m.lines === 1 ? '' : 's'}`) : m && m.complexity >= 10 ? `complexity ${m.complexity}` : '';
+      return { label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`, extra].filter(Boolean).join(' · '), symbol: s };
+    });
+    // Grouped by kind, under headings, when the file has several kinds; any other order is one list.
+    const kinds = [...new Set(items.map((i) => i.symbol.kind))];
+    const sections = symbolOrder === 'kind' && kinds.length > 1 ? kinds.flatMap((k) => [{ label: kindTitles[k], kind: vscode.QuickPickItemKind.Separator }, ...items.filter((i) => i.symbol.kind === k)]) : items;
+    const active = picker.activeItems[0]?.symbol;
+    picker.items = sections as Item[];
+    const keep = active ? items.find((i) => i.symbol === active) : undefined;
+    const nearest = keep ?? (symbolOrder === 'complexity' || symbolOrder === 'size' ? items[0] : [...items].sort((a, b) => Math.abs(a.symbol.line - line) - Math.abs(b.symbol.line - line))[0]);
+    picker.activeItems = nearest ? [nearest] : [];
+    const words = orders.find((o) => o.order === symbolOrder)?.words;
+    picker.title = words ? `${title} · ${words}` : title;
+    // The order in use is shown with a check instead of its own icon.
+    picker.buttons = orders.map((o) => ({ iconPath: new vscode.ThemeIcon(o.order === symbolOrder ? 'check' : o.icon), tooltip: o.order === symbolOrder ? `${o.tooltip} (in use)` : o.tooltip, order: o.order }) as vscode.QuickInputButton & { order: SymbolOrder });
+  };
+  render();
+  picker.onDidTriggerButton((button) => {
+    symbolOrder = (button as vscode.QuickInputButton & { order: SymbolOrder }).order;
+    render();
+  });
   const picked = await new Promise<Item | undefined>((resolve) => {
     picker.onDidAccept(() => resolve(picker.selectedItems[0] ?? picker.activeItems[0]));
     picker.onDidHide(() => resolve(undefined));

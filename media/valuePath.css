@@ -1,5 +1,5 @@
 html, body { margin: 0; padding: 0; color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); background: transparent; }
-body { padding: 8px 12px 14px; --active-accent: #22d3ee; }
+body { padding: 6px 8px 12px; --active-accent: #22d3ee; }
 body.accent-pink { --active-accent: #ec4899; }
 body.accent-theme { --active-accent: var(--vscode-focusBorder); }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -48,9 +48,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .timeline .step::before { border-color: CanvasText; box-shadow: none; }
 }
 
-#card:not(:has(.empty)) { padding: 10px 10px 12px; border: 1px solid color-mix(in srgb, var(--active-accent) 60%, transparent); border-radius: 12px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--active-accent) 16%, var(--vscode-sideBar-background, #181818)) 0%, var(--vscode-sideBar-background, #181818) 45%);
-  box-shadow: 0 12px 24px -12px rgba(0, 0, 0, .6), 0 0 18px -8px var(--active-accent); }
+/* No frame around the whole card: the sidebar is narrow, and the steps inside have their own. */
+#card:not(:has(.empty)) { padding: 0; }
 .card-title strong { font-family: var(--vscode-editor-font-family, monospace); color: var(--active-accent); }
 
 /* The general card: a heading and subject, groups as steps, rows under each. */

@@ -81,11 +81,11 @@ export class DiagramPanel {
         const where = message.location;
         // The line a box points at for the bar, and up to 12 lines of it for the hover card.
         // And the edits that fit it (Rename, Delete safely, Change signature…), for buttons on the card.
-        const { code, block, edits } = await vscode.workspace.openTextDocument(where.file).then(
-          (document) => ({ ...peekLines((i) => document.lineAt(i).text, document.lineCount, where.line, where.endLine), edits: editsFor(document, where.line, where.character) }),
-          () => ({ code: '', block: '', edits: [] }),
-        );
-        void this.panel?.webview.postMessage({ type: 'peek', location: where, code, block, edits });
+        const document = await vscode.workspace.openTextDocument(where.file).then((d) => d, () => undefined);
+        const { code, block } = document ? peekLines((i) => document.lineAt(i).text, document.lineCount, where.line, where.endLine) : { code: '', block: '' };
+        // The code first, so the card fills at once; the edits follow when the editor has listed its code actions.
+        void this.panel?.webview.postMessage({ type: 'peek', location: where, code, block });
+        if (document) void editsFor(document, where.line, where.character).then((edits) => this.panel?.webview.postMessage({ type: 'edits', location: where, edits }));
       } else if (message.type === 'edit' && message.location) {
         await runEdit(message.location.file, message.edit);
       } else if (message.type === 'open' && message.location) {

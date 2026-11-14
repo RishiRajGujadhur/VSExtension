@@ -57,6 +57,33 @@ test('active feature: closing a chart clears the button of the analysis it came 
 
 test('edit actions: a box on a reference renames what it refers to, not the declaration on its line', () => {
   const got = labels(1, code.indexOf('items.length') - code.split('\n').slice(0, 1).join('\n').length - 1);
-  assert.ok(got.includes('Rename items'));
+  assert.ok(got.includes('Rename ‘items’'));
   assert.ok(!got.includes('Delete safely'));
+});
+
+test('symbol order: by line either way, by complexity (decisions), by size and by name', async () => {
+  const ts = await import('typescript');
+  const { fileSymbols, measureSymbols, sortSymbols } = await import('../structure/symbols');
+  const text = [
+    'function simple() { return 1; }',
+    'const branchy = (a: number, b?: string) => {',
+    '  if (a > 1 && b) return b ?? "x";',
+    '  for (const c of [a]) { if (c) continue; }',
+    '  return a ? "y" : "z";',
+    '};',
+    'function alpha(x: number) {',
+    '  return x;',
+    '}',
+  ].join('\n');
+  const file = ts.createSourceFile('/p/a.ts', text, ts.ScriptTarget.Latest, true);
+  const symbols = fileSymbols(file).filter((s) => s.kind !== 'parameter' && !s.container);
+  const measures = measureSymbols(file, symbols);
+  const names = (order: Parameters<typeof sortSymbols>[1]) => sortSymbols(symbols, order, measures).map((s) => s.name);
+  assert.deepEqual(names('lineUp'), ['simple', 'branchy', 'alpha']);
+  assert.deepEqual(names('lineDown'), ['alpha', 'branchy', 'simple']);
+  assert.equal(names('complexity')[0], 'branchy');
+  // if, &&, ??, for, if, ?: — six decisions.
+  assert.equal(measures.get(symbols.find((s) => s.name === 'branchy')!)?.complexity, 7);
+  assert.deepEqual(names('size'), ['branchy', 'alpha', 'simple']);
+  assert.deepEqual(names('name'), ['alpha', 'branchy', 'simple']);
 });

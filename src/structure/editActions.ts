@@ -131,14 +131,14 @@ export function editActionsAt(fileName: string, text: string, line: number, char
   const at = file.getLineAndCharacterOfPosition(Math.max(offset, statement.getStart(file)));
   if (ts.isIdentifier(node)) {
     const name = file.getLineAndCharacterOfPosition(node.getStart(file));
-    actions.push({ command: 'editor.action.rename', label: `Rename ${shortName(node.text)}`, icon: 'edit', line: name.line, character: name.character });
+    actions.push({ command: 'editor.action.rename', label: `Rename ‘${shortName(node.text)}’`, icon: 'edit', line: name.line, character: name.character });
   }
   // Extract works on a selection: the statement's expression (the call, the returned value, the condition).
   const expression = ts.isExpressionStatement(statement) || ts.isReturnStatement(statement) || ts.isThrowStatement(statement) ? statement.expression : ts.isIfStatement(statement) ? statement.expression : ts.isVariableStatement(statement) ? statement.declarationList.declarations[0]?.initializer : undefined;
   const bare = expression && ts.isIdentifier(expression) && expression.text !== 'undefined' ? expression : undefined;
   if (bare && !actions.length) {
     const name = file.getLineAndCharacterOfPosition(bare.getStart(file));
-    actions.push({ command: 'editor.action.rename', label: `Rename ${shortName(bare.text)}`, icon: 'edit', line: name.line, character: name.character });
+    actions.push({ command: 'editor.action.rename', label: `Rename ‘${shortName(bare.text)}’`, icon: 'edit', line: name.line, character: name.character });
   }
   // A single name or a literal is not worth extracting.
   if (expression && !ts.isIdentifier(expression) && !ts.isLiteralExpression(expression) && expression.kind !== ts.SyntaxKind.TrueKeyword && expression.kind !== ts.SyntaxKind.FalseKeyword && expression.kind !== ts.SyntaxKind.NullKeyword) {

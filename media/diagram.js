@@ -1076,11 +1076,16 @@
 
   window.addEventListener('message', (event) => {
     if (event.data.type === 'select') return select(event.data.location);
+    if (event.data.type === 'edits') {
+      const key = `${event.data.location.file}:${event.data.location.line}`;
+      codeEdits.set(key, event.data.edits || []);
+      if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);
+      return;
+    }
     if (event.data.type === 'peek') {
       const key = `${event.data.location.file}:${event.data.location.line}`;
       codeLines.set(key, event.data.code);
       codeBlocks.set(key, event.data.block || event.data.code || '');
-      codeEdits.set(key, event.data.edits || []);
       if (key === infoKey) showCode(event.data.code);
       // Several boxes can point at the same line: the card is updated for the box it was opened on.
       if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);

@@ -20,6 +20,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
   private card: ResultCard | undefined;
   private asList: boolean;
   private stale = false;
+  /** The panel's when-condition being set: the panel can only be focused once it is. */
+  private contextSet: Promise<void> = Promise.resolve();
 
   constructor(private readonly extensionUri: vscode.Uri, private readonly results: StructureView, private readonly memento: vscode.Memento) {
     this.asList = memento.get<boolean>(listKey, false);
@@ -66,12 +68,22 @@ export class ValuePathView implements vscode.WebviewViewProvider {
       this.view.badge = count ? { value: count, tooltip: `${count} ${this.card?.value ? (count === 1 ? 'value' : 'values') : count === 1 ? 'row' : 'rows'}` } : undefined;
     }
     const shown = !!this.card && !this.asList;
-    void vscode.commands.executeCommand('setContext', shownContext, shown);
+    this.contextSet = Promise.resolve(vscode.commands.executeCommand('setContext', shownContext, shown)).then(() => undefined, () => undefined);
     this.post();
     // A new result comes into view, as the Results list would.
-    if (shown && fresh) {
-      if (this.view) this.view.show(true);
-      else void vscode.commands.executeCommand(`${ValuePathView.viewType}.focus`).then(() => vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup'));
+    if (shown && fresh) this.reveal();
+  }
+
+  /** Brings the card panel into view, opening it when VS Code has closed its page. */
+  private reveal(): void {
+    const focusPanel = () => void this.contextSet.then(() => vscode.commands.executeCommand(`${ValuePathView.viewType}.focus`)).then(() => vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup'));
+    if (!this.view) return focusPanel();
+    try {
+      this.view.show(true);
+    } catch {
+      // Disposed between the check and the call.
+      this.view = undefined;
+      focusPanel();
     }
   }
 
@@ -102,10 +114,19 @@ export class ValuePathView implements vscode.WebviewViewProvider {
       }
     });
     view.onDidChangeVisibility(() => view.visible && this.post());
+    // Hidden away, VS Code disposes the page: forget it, so showing a card later opens the panel afresh.
+    view.onDidDispose(() => {
+      if (this.view === view) this.view = undefined;
+    });
   }
 
   private post(): void {
-    void this.view?.webview.postMessage({ type: 'card', card: this.card, stale: this.stale, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan') });
+    if (!this.view) return;
+    try {
+      void this.view.webview.postMessage({ type: 'card', card: this.card, stale: this.stale, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan') }).then(undefined, () => undefined);
+    } catch {
+      this.view = undefined;
+    }
   }
 }
 
