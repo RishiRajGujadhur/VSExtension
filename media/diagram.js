@@ -123,7 +123,17 @@
   /** Badge kinds on most boxes of this chart: no pill for them. */
   let commonBadges = new Set();
   /** A badge's details from any box that has it. */
-  const badgeFor = (key) => { const n = allNodes().find((m) => m.badge && `badge:${m.badge.key}` === key); return n && n.badge; };
+  // Indexed once per chart: the legend bar asks for every kind on each redraw.
+  let badgeIndex = new Map();
+  let badgeIndexFor;
+  const badgeFor = (key) => {
+    if (badgeIndexFor !== diagram) {
+      badgeIndexFor = diagram;
+      badgeIndex = new Map();
+      allNodes().forEach((m) => m.badge && !badgeIndex.has(`badge:${m.badge.key}`) && badgeIndex.set(`badge:${m.badge.key}`, m.badge));
+    }
+    return badgeIndex.get(key);
+  };
   /** Kinds hidden by hand, by analysis ("Data flow"), for the next chart of it in this session. */
   const hiddenByAnalysis = {};
   const analysisOf = () => (diagram ? diagram.title.replace(/ (of|in|since) .*$/, '') : '');
@@ -497,6 +507,8 @@
 
   const codeLines = new Map();
   const codeBlocks = new Map();
+  /** Edits that fit each box's code, by file and line. */
+  const codeEdits = new Map();
   let infoKey;
 
   // The hover card of a box: what it is, where, its code (read from the file), the facts the report gives, the
@@ -515,6 +527,8 @@
       code: node.location ? codeBlocks.get(key) : '',
       open: node.location ? () => vscode.postMessage({ type: 'open', location: node.location }) : undefined,
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
+      // Edits that fit the code (Rename, Delete safely, Change signature…), once the code has been read.
+      actions: node.location ? (codeEdits.get(key) || []).map((edit) => ({ icon: edit.icon, label: edit.label, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: node.location, edit }); } })) : [],
       loading: node.location && !codeBlocks.has(key),
       facts: [
         ['Detail', node.description],
@@ -1066,6 +1080,7 @@
       const key = `${event.data.location.file}:${event.data.location.line}`;
       codeLines.set(key, event.data.code);
       codeBlocks.set(key, event.data.block || event.data.code || '');
+      codeEdits.set(key, event.data.edits || []);
       if (key === infoKey) showCode(event.data.code);
       // Several boxes can point at the same line: the card is updated for the box it was opened on.
       if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);
@@ -1073,6 +1088,10 @@
     }
     if (event.data.type !== 'diagram') return;
     diagram = event.data.diagram;
+    // The code may have changed since it was read (an edit, then a new run): read it again.
+    codeLines.clear();
+    codeBlocks.clear();
+    codeEdits.clear();
     analyses = event.data.analyses || [];
     window.chartKit.renderControls(document.getElementById('graphControls'), event.data.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
     closeMenu(false);

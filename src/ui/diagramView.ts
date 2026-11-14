@@ -9,6 +9,8 @@ import { iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage'
 import { commandIcons } from '../structure/icons';
 import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
+import { activeFeature } from './activeFeature';
+import { editsFor, runEdit } from './editActionsUi';
 
 /** The analyses a box's right-click menu offers, with the icon each has everywhere else. */
 export const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
@@ -40,6 +42,8 @@ export class DiagramPanel {
   static readonly viewType = 'tsStructure.diagram';
   private panel: vscode.WebviewPanel | undefined;
   private ready = false;
+  /** The report the chart shows. */
+  private shown: Report | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -55,6 +59,9 @@ export class DiagramPanel {
   }
 
   show(): void {
+    // A result's chart opened again: its analysis is the active one again.
+    const origin = activeFeature.originOf(this.view.report);
+    if (origin) activeFeature.set(origin);
     if (this.panel) {
       this.panel.reveal(undefined, false);
       this.post(this.view.report);
@@ -65,7 +72,7 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string; id?: string; value?: unknown }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; edit?: unknown; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string; id?: string; value?: unknown }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post(this.view.report);
@@ -73,11 +80,14 @@ export class DiagramPanel {
         // The line a box points at, for the bar under the chart.
         const where = message.location;
         // The line a box points at for the bar, and up to 12 lines of it for the hover card.
-        const { code, block } = await vscode.workspace.openTextDocument(where.file).then(
-          (document) => peekLines((i) => document.lineAt(i).text, document.lineCount, where.line, where.endLine),
-          () => ({ code: '', block: '' }),
+        // And the edits that fit it (Rename, Delete safely, Change signature…), for buttons on the card.
+        const { code, block, edits } = await vscode.workspace.openTextDocument(where.file).then(
+          (document) => ({ ...peekLines((i) => document.lineAt(i).text, document.lineCount, where.line, where.endLine), edits: editsFor(document, where.line, where.character) }),
+          () => ({ code: '', block: '', edits: [] }),
         );
-        void this.panel?.webview.postMessage({ type: 'peek', location: where, code, block });
+        void this.panel?.webview.postMessage({ type: 'peek', location: where, code, block, edits });
+      } else if (message.type === 'edit' && message.location) {
+        await runEdit(message.location.file, message.edit);
       } else if (message.type === 'open' && message.location) {
         await this.view.open(message.location);
         await this.view.revealLocation(message.location);
@@ -107,10 +117,17 @@ export class DiagramPanel {
         await saveImage(Buffer.from(message.png, 'base64'), 'png', message.title);
       }
     });
-    this.panel.onDidDispose(() => (this.panel = undefined));
+    this.panel.onDidDispose(() => {
+      this.panel = undefined;
+      // Its chart is closed: the Actions view stops showing that analysis as active.
+      const command = activeFeature.originOf(this.shown) ?? activeFeature.originOf(this.view.report);
+      if (command) activeFeature.closed(command);
+      this.shown = undefined;
+    });
   }
 
   private post(report: Report | undefined): void {
+    if (this.panel) this.shown = report;
     if (!this.panel || !this.ready) {
       return;
     }

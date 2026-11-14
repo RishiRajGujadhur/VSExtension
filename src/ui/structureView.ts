@@ -3,6 +3,7 @@ import { polishReport } from '../structure/reportPolish';
 import { termFor } from '../structure/glossary';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { activeFeature } from './activeFeature';
 import { hashText, pathKey } from '../analysis/paths';
 import { filterReport, reportMarkdown } from '../structure/markdown';
 import { Report, ReportLocation, ReportNode, Tone, forEachReportNode, titleParts } from '../structure/report';
@@ -161,6 +162,8 @@ export class StructureView implements vscode.TreeDataProvider<ReportNode> {
     this.limit = undefined;
     this.render();
     this.persist();
+    // No result is on screen: no analysis stays highlighted in the Actions view (an open Flowchart keeps its own).
+    activeFeature.clearedAll('tsStructure.controlFlow');
   }
 
   go(delta: number): void {

@@ -88,7 +88,17 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     structureView.onDidShowNewReport((report) => (graphKinds.has(report.kind) || alwaysDiagram()) && diagram.show()),
     // The Actions view highlights the action whose result is on screen.
-    structureView.onDidShowNewReport(() => activeFeature.reportShown()),
+    structureView.onDidShowNewReport((report) => activeFeature.reportShown(report)),
+    // Back and forward through results: the button of the analysis on screen lights up.
+    (() => {
+      let onScreen: object | undefined;
+      return structureView.onDidChangeReport((report) => {
+        if (!report || report === onScreen) return;
+        onScreen = report;
+        const origin = activeFeature.originOf(report);
+        if (origin && origin !== activeFeature.active) activeFeature.set(origin);
+      });
+    })(),
     registerCommand('tsStructure.report.diagramsOn', async () => {
       await vscode.workspace.getConfiguration('tsStructure.results').update('alwaysShowDiagram', true, vscode.ConfigurationTarget.Global);
       if (structureView.report) diagram.show();

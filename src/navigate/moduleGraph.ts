@@ -76,7 +76,7 @@ export function extractImports(sourceFile: ts.SourceFile): RawImport[] {
  * Builds the import graph of a set of files. `readFile` supplies their text (from disk, open
  * editors or a Git revision); module resolution only sees files in the set plus `node_modules`.
  */
-export function buildModuleGraph(fileNames: Iterable<string>, readFile: (fileName: string) => string | undefined, options: ts.CompilerOptions): ModuleGraph {
+export function buildModuleGraph(fileNames: Iterable<string>, readFile: (fileName: string) => string | undefined, options: ts.CompilerOptions, parsed?: (fileName: string) => ts.SourceFile | undefined): ModuleGraph {
   const files = new Set<string>();
   const byKey = new Map<string, string>();
   for (const fileName of fileNames) {
@@ -84,10 +84,17 @@ export function buildModuleGraph(fileNames: Iterable<string>, readFile: (fileNam
     files.add(normalized);
     byKey.set(pathKey(normalized), normalized);
   }
+  // What resolution asks of the disk is asked once per build: the same folders are probed for every import.
+  const remember = <T>(cache: Map<string, T>, key: string, get: () => T): T => {
+    if (!cache.has(key)) cache.set(key, get());
+    return cache.get(key)!;
+  };
+  const existing = new Map<string, boolean>();
+  const folders = new Map<string, boolean>();
   const host: ts.ModuleResolutionHost = {
-    fileExists: (f) => byKey.has(pathKey(f)) || (/[\\/]node_modules[\\/]/.test(f) && ts.sys.fileExists(f)),
+    fileExists: (f) => byKey.has(pathKey(f)) || (/[\\/]node_modules[\\/]/.test(f) && remember(existing, f, () => ts.sys.fileExists(f))),
     readFile: (f) => (byKey.has(pathKey(f)) ? readFile(byKey.get(pathKey(f))!) : ts.sys.readFile(f)),
-    directoryExists: (d) => ts.sys.directoryExists?.(d) ?? true,
+    directoryExists: (d) => remember(folders, d, () => ts.sys.directoryExists?.(d) ?? true),
     realpath: ts.sys.realpath,
     getCurrentDirectory: () => process.cwd(),
     getDirectories: ts.sys.getDirectories,
@@ -100,7 +107,9 @@ export function buildModuleGraph(fileNames: Iterable<string>, readFile: (fileNam
     if (text === undefined) {
       continue;
     }
-    const sourceFile = ts.createSourceFile(from, text, ts.ScriptTarget.Latest, true, scriptKind(from));
+    // A file the compiler already parsed (with the same text) is not parsed again.
+    const known = parsed?.(from);
+    const sourceFile = known && known.text === text ? known : ts.createSourceFile(from, text, ts.ScriptTarget.Latest, true, scriptKind(from));
     const list: ImportEdge[] = [];
     for (const raw of extractImports(sourceFile)) {
       const resolved = ts.resolveModuleName(raw.specifier, from, options, host, cache).resolvedModule;
@@ -128,8 +137,8 @@ export function buildModuleGraph(fileNames: Iterable<string>, readFile: (fileNam
 /** The import graph of a compiler project's own source files. */
 export function programGraph(program: ts.Program): ModuleGraph {
   const sourceFiles = projectSourceFiles(program);
-  const texts = new Map(sourceFiles.map((sf) => [normalizePath(sf.fileName), sf.text]));
-  return buildModuleGraph(texts.keys(), (f) => texts.get(f), program.getCompilerOptions());
+  const byName = new Map(sourceFiles.map((sf) => [normalizePath(sf.fileName), sf]));
+  return buildModuleGraph(byName.keys(), (f) => byName.get(f)?.text, program.getCompilerOptions(), (f) => byName.get(f));
 }
 
 export function scriptKind(fileName: string): ts.ScriptKind {

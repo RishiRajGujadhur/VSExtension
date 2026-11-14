@@ -204,3 +204,12 @@ body.xray-vision .node text, body.xray-vision .node tspan { fill: #9ff5ee !impor
 button.card-meta { padding: 0; border: 0; background: none; font: inherit; color: var(--vscode-textLink-foreground); cursor: pointer; }
 button.card-meta:hover { text-decoration: underline; }
 .hover-card.pinned.folded > :not(.card-head) { display: none; }
+
+/* Edits on a hover card: small buttons in the theme's button colours. */
+.hover-card .card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.hover-card .card-action { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px; background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); font: inherit; font-size: 12px; cursor: pointer; }
+.hover-card .card-action:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
+.hover-card .card-action:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+.hover-card .card-action .codicon { font-size: 13px; }
+.hover-card .card-action:has(.codicon-trash) .codicon { color: var(--vscode-errorForeground, #f14c4c); }
+@media (forced-colors: active) { .hover-card .card-action { border-color: ButtonText; } }

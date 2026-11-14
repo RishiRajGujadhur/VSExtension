@@ -776,6 +776,23 @@
         pre.append(spin);
         target.append(pre);
       }
+      if (c.actions && c.actions.length) {
+        // Edits that fit the code: one click opens it with the cursor on the right name and runs the edit.
+        const bar = document.createElement('div');
+        bar.className = 'card-actions';
+        bar.setAttribute('role', 'group');
+        bar.setAttribute('aria-label', 'Edits');
+        for (const action of c.actions) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'card-action';
+          b.title = action.title || `${action.label} in the editor`;
+          b.append(iconEl(action.icon || 'edit'), action.label);
+          b.addEventListener('click', (e) => { e.stopPropagation(); action.run(); });
+          bar.append(b);
+        }
+        target.append(bar);
+      }
       if (c.note) {
         const note = document.createElement('p');
         note.className = 'card-note';

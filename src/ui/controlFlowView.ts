@@ -11,6 +11,7 @@ import { pickGraph } from './graphSwitch';
 import { graphOption, ReportControl, setGraphOption } from '../structure/graphOptions';
 import { ReportLocation } from '../structure/report';
 import { activeFeature } from './activeFeature';
+import { editsFor, runEdit } from './editActionsUi';
 
 /**
  * The Control Flow view: a function's flowchart in an editor tab, with its paths listed beside it. It redraws as
@@ -128,6 +129,12 @@ export class ControlFlowPanel {
         this.post();
       } else if (message.type === 'open' && message.location) {
         await openBeside(message.location);
+      } else if (message.type === 'edits' && message.location) {
+        const where = message.location;
+        const edits = await vscode.workspace.openTextDocument(where.file).then((d) => editsFor(d, where.line, where.character), () => []);
+        void this.panel?.webview.postMessage({ type: 'edits', id: (message as { id?: unknown }).id, edits });
+      } else if (message.type === 'edit' && message.location) {
+        await runEdit(message.location.file, (message as { edit?: unknown }).edit);
       } else if (message.type === 'expand' && message.keys) {
         // Expand or collapse the calls of a box, then redraw with the called functions spliced in.
         for (const key of message.keys) {

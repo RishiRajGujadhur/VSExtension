@@ -106,10 +106,13 @@ function statementLists(sourceFile: ts.SourceFile): (readonly ts.Statement[])[] 
 
 const maxWindow = 40;
 
-/** A statement's fingerprint tokens: fixed text, or a local name that is numbered per window. */
-type Token = { fixed: number } | { name: string };
+/** A statement's fingerprint tokens: a number for fixed text, or a local name (numbered per window). */
+type Token = number | string;
 
 const fixedIds = new Map<string, number>();
+/** Ids of syntax kinds and literal kinds, looked up by kind without building a string each time. */
+const kindIds: number[] = [];
+const literalIds: number[] = [];
 const fixedId = (text: string) => {
   let id = fixedIds.get(text);
   if (id === undefined) {
@@ -118,6 +121,7 @@ const fixedId = (text: string) => {
   }
   return id;
 };
+const closeId = fixedId(')');
 
 /** The same token sequence `serialize` produces for one statement, computed once per statement. */
 function tokenize(node: ts.Node, matchRenamedProperties = false): Token[] {
@@ -125,19 +129,19 @@ function tokenize(node: ts.Node, matchRenamedProperties = false): Token[] {
   const visit = (current: ts.Node) => {
     if (ts.isIdentifier(current) || ts.isPrivateIdentifier(current)) {
       const member = isMemberName(current);
-      tokens.push(member && !matchRenamedProperties ? { fixed: fixedId(`.${current.text}`) } : { name: member ? `.${current.text}` : current.text });
+      tokens.push(member && !matchRenamedProperties ? fixedId(`.${current.text}`) : member ? `.${current.text}` : current.text);
       return;
     }
     if (ts.isStringLiteralLike(current) || ts.isNumericLiteral(current) || ts.isBigIntLiteral(current) || ts.isRegularExpressionLiteral(current)) {
-      tokens.push({ fixed: fixedId(`#${current.kind}`) });
+      tokens.push(literalIds[current.kind] ??= fixedId(`#${current.kind}`));
       return;
     }
     if (ts.isJSDoc(current)) {
       return;
     }
-    tokens.push({ fixed: fixedId(String(current.kind)) });
+    tokens.push(kindIds[current.kind] ??= fixedId(String(current.kind)));
     ts.forEachChild(current, visit);
-    tokens.push({ fixed: fixedId(')') });
+    tokens.push(closeId);
   };
   visit(node);
   return tokens;
@@ -147,11 +151,18 @@ function tokenize(node: ts.Node, matchRenamedProperties = false): Token[] {
 export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: DuplicateOptions): DuplicateGroup[] {
   // Windows are fingerprinted incrementally: each statement is tokenized once, and extending a window by one
   // statement updates two running hashes instead of serializing the whole window again.
-  const buckets = new Map<string, { tokens: number; fragments: Fragment[] }>();
+  // Two passes: the first only counts each window's fingerprint; the second keeps the windows whose fingerprint
+  // was seen more than once. Almost every window is unique, so this skips building a record for each of them.
+  const lists: { sourceFile: ts.SourceFile; list: readonly ts.Statement[]; tokenized: Token[][] }[] = [];
   for (const sourceFile of sourceFiles) {
     for (const list of statementLists(sourceFile)) {
+      if (list.length) lists.push({ sourceFile, list, tokenized: list.map((statement) => tokenize(statement, options.matchRenamedProperties)) });
+    }
+  }
+  const windows = (found: (h1: number, h2: number, count: number, entry: (typeof lists)[number], i: number, length: number) => void) => {
+    for (const entry of lists) {
+      const { list, tokenized } = entry;
       const n = list.length;
-      const tokenized = list.map((statement) => tokenize(statement, options.matchRenamedProperties));
       for (let i = 0; i < n; i++) {
         const names = new Map<string, number>();
         let h1 = 0x811c9dc5;
@@ -160,13 +171,13 @@ export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: D
         for (let length = 1; length <= Math.min(n - i, maxWindow); length++) {
           for (const token of tokenized[i + length - 1]) {
             let value: number;
-            if ('fixed' in token) {
-              value = token.fixed;
+            if (typeof token === 'number') {
+              value = token;
             } else {
-              let index = names.get(token.name);
+              let index = names.get(token);
               if (index === undefined) {
                 index = names.size;
-                names.set(token.name, index);
+                names.set(token, index);
               }
               value = -1 - index;
             }
@@ -178,15 +189,26 @@ export function findDuplicates(sourceFiles: readonly ts.SourceFile[], options: D
           if ((length < options.minStatements && !(i === 0 && length === n)) || count < options.minTokens) {
             continue;
           }
-          const key = `${h1}:${h2}:${count}`;
-          const nodes = list.slice(i, i + length);
-          const bucket = buckets.get(key) ?? { tokens: count, fragments: [] };
-          bucket.fragments.push({ sourceFile, nodes, start: nodes[0].getStart(sourceFile), end: nodes[nodes.length - 1].end, values: [] });
-          buckets.set(key, bucket);
+          found(h1, h2, count, entry, i, length);
         }
       }
     }
-  }
+  };
+  // The first pass counts by a number made of both hashes (a number key is much quicker than a string); a rare
+  // clash only means the second pass looks closer at a window, which then has the full key.
+  const quick = (h1: number, h2: number) => h1 * 0x200000 + (h2 & 0x1fffff);
+  const seen = new Map<number, number>();
+  windows((h1, h2) => { const k = quick(h1, h2); seen.set(k, (seen.get(k) ?? 0) + 1); });
+  const buckets = new Map<string, { tokens: number; fragments: Fragment[] }>();
+  windows((h1, h2, count, { sourceFile, list }, i, length) => {
+    if ((seen.get(quick(h1, h2)) ?? 0) < 2) return;
+    const key = `${h1}:${h2}:${count}`;
+    const nodes = list.slice(i, i + length);
+    const bucket = buckets.get(key) ?? { tokens: count, fragments: [] };
+    bucket.fragments.push({ sourceFile, nodes, start: nodes[0].getStart(sourceFile), end: nodes[nodes.length - 1].end, values: [] });
+    buckets.set(key, bucket);
+  });
+  seen.clear();
 
   const candidates = [...buckets.values()]
     .filter((b) => b.fragments.length > 1)

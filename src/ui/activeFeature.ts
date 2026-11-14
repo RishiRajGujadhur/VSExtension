@@ -8,6 +8,8 @@ export class ActiveFeature {
   private previous: string | undefined;
   private invoked: { command: string; at: number } | undefined;
   private readonly listeners = new Set<() => void>();
+  /** The command each shown result came from, so closing its chart can clear the right button. */
+  private readonly origins = new WeakMap<object, string>();
 
   constructor(private readonly now: () => number = Date.now) {}
 
@@ -35,8 +37,22 @@ export class ActiveFeature {
   }
 
   /** A report was shown: the command that ran just before it becomes the active feature. */
-  reportShown(): void {
-    if (this.invoked && this.now() - this.invoked.at < 120_000) this.set(this.invoked.command);
+  reportShown(report?: object): void {
+    if (this.invoked && this.now() - this.invoked.at < 120_000) {
+      if (report) this.origins.set(report, this.invoked.command);
+      this.set(this.invoked.command);
+    }
+  }
+
+  /** The command a shown result came from, if known. */
+  originOf(report: object | undefined): string | undefined {
+    return report ? this.origins.get(report) : undefined;
+  }
+
+  /** Nothing of any result is on screen any more (the results were cleared): no button stays active. */
+  clearedAll(except?: string): void {
+    if (!this.current || this.current === except) return;
+    this.closed(this.current);
   }
 
   set(command: string): void {

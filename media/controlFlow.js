@@ -807,6 +807,8 @@
       code: isTerminal(n) ? '' : n.text,
       open: n.location ? () => open(n) : undefined,
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
+      // Edits that fit the box's code (Extract…, Rename…), asked for when the card opens.
+      actions: n.location && !isTerminal(n) ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
       note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
       facts: [],
       keys: [],
@@ -911,7 +913,7 @@
     const n = nodeOf(e.target);
     if (n !== hovered) {
       hovered = n;
-      if (n) card.show(nodeEl(n), cardContent(n), 350, n.id);
+      if (n) { card.show(nodeEl(n), () => cardContent(n), 350, n.id); askEdits(n); }
       else card.hideSoon();
       touchEdges(n);
       focusDependences(n || focusedNode);
@@ -923,11 +925,14 @@
     const n = nodeOf(e.target);
     if (n) {
       focusedNode = n;
-      if (card.key !== n.id) card.show(nodeEl(n), cardContent(n), e.target.matches(':focus-visible') ? 0 : 350, n.id);
+      if (card.key !== n.id) { card.show(nodeEl(n), () => cardContent(n), e.target.matches(':focus-visible') ? 0 : 350, n.id); askEdits(n); }
       showInfo(n);
     }
   });
   const open = (n) => n.location && vscode.postMessage({ type: 'open', location: n.location });
+  /** Edits for each box, by id, for this chart; asked for once per box. */
+  const boxEdits = new Map();
+  const askEdits = (n) => { if (n.location && !isTerminal(n) && !boxEdits.has(n.id)) { boxEdits.set(n.id, []); vscode.postMessage({ type: 'edits', id: n.id, location: n.location }); } };
 
   // Keyboard: Tab moves from box to box in reading order; arrows follow the flow (down to what comes next, up to what came before,
   // left and right along the row), Enter opens, F animates, Shift+F10 opens the menu.
@@ -1378,7 +1383,13 @@
 
   window.addEventListener('message', (event) => {
     const message = event.data;
+    if (message.type === 'edits') {
+      boxEdits.set(message.id, message.edits || []);
+      if (card.key === message.id) card.update(cardContent(chart.nodes[message.id]), message.id);
+      return;
+    }
     if (message.type === 'chart') {
+      boxEdits.clear();
       spot = undefined;
       svg.classList.remove('spotlight');
       slice = undefined;
