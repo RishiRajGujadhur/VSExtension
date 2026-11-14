@@ -39,7 +39,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .step.value .step-tile { border-color: color-mix(in srgb, var(--active-accent) 60%, transparent); color: var(--active-accent); }
 .step-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
 .step-top { display: flex; align-items: center; gap: 8px; }
-.step-top strong { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.step-top strong { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: break-word; }
 .step-badge { flex: none; padding: 0 7px; border-radius: 999px; background: var(--vscode-badge-background, rgba(128, 128, 128, .3)); color: var(--vscode-badge-foreground, inherit); font-size: 11px; }
 .step-when { display: inline-flex; align-items: center; gap: 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
 .step-when .infinity { font-size: 15px; line-height: 1; }
@@ -86,3 +86,35 @@ button.row-label:hover .row-text { text-decoration: underline; color: var(--vsco
 .row.test .row-test { color: #22d3ee; }
 .shown-count { padding-left: 22px; color: var(--vscode-descriptionForeground); font-size: 11px; }
 .no-match { list-style: none; margin: 0 0 6px; }
+
+/* Narrow sidebars: the title truncates instead of running under the timing chip; the tools wrap below it. */
+.card-head { flex-wrap: wrap; row-gap: 6px; }
+/* The title takes the width it needs (up to a whole line); the buttons move to the next line rather than squeeze it. */
+.card-title { flex: 1 1 auto; min-width: min(100%, max-content); overflow: hidden; }
+.card-title .codicon { flex: none; }
+.card-heading, .card-subject { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-heading { flex: 0 1 auto; }
+.card-subject { flex: 0 10 auto; }
+.card-time, .card-tool { flex: none; }
+/* Words only break when one alone is too long for its line, never "Flo / ws". */
+.step-text, .step-when, .row-desc, .card-summary { overflow-wrap: break-word; }
+.row-filter { flex: 1 1 80px; }
+@media (max-width: 300px) {
+  body { padding: 4px 4px 10px; }
+  .timeline { padding-left: 20px; }
+  .timeline .step::before { left: -17px; }
+  .timeline .step.next::before { left: -16px; }
+  .timeline .step.value::after { left: -11px; }
+  .step-card { gap: 8px; padding: 7px 8px; }
+  .step-tile { width: 24px; height: 24px; }
+  .card-time .codicon { display: none; }
+  .rows { padding-left: 4px; }
+}
+@media (max-width: 230px) {
+  /* Very narrow: the step's icon goes; its name and count keep the room. */
+  .step-tile { display: none; }
+}
+.card-tools { flex: none; display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+/* A row's name stays beside its fold arrow and wraps inside its own line. */
+.row-fold { flex: none; }
+.row-label { flex: 0 1 auto; max-width: calc(100% - 24px); overflow-wrap: break-word; }

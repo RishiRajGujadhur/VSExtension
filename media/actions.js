@@ -111,11 +111,14 @@
     tile.append(icon(action.icon));
     const text = make('span', 'text');
     const label = make('span', 'label');
-    label.append(marked(action.label, words));
+    // The name truncates on its own; badges after it keep their room.
+    const name = make('span', 'name');
+    name.append(marked(action.label, words));
+    label.append(name);
     if (action.isNew) {
       const badge = make('span', 'new-badge', 'new');
       badge.title = 'Added in a recent version';
-      label.append(' ', badge);
+      label.append(badge);
     }
     const detail = make('span', 'detail');
     detail.append(marked(action.detail, words));
@@ -129,7 +132,7 @@
     if (data.last === action.command && data.active !== action.command) {
       const badge = make('span', 'last-run');
       badge.textContent = 'last run';
-      label.append(' ', badge);
+      label.append(badge);
     }
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
@@ -309,7 +312,7 @@
       button.setAttribute('aria-selected', String(t.id === tab));
       button.setAttribute('aria-controls', 'list');
       button.tabIndex = t.id === tab ? 0 : -1;
-      button.append(icon(t.icon), document.createTextNode(t.label));
+      button.append(icon(t.icon), make('span', 'tab-label', t.label));
       const count = data.actions.filter((a) => a.tab === t.id && !(data.layout.hidden || []).includes(a.id)).length;
       button.title = `${t.label}: ${count} action${count === 1 ? '' : 's'}`;
       // A dot on the tab that has the action whose result is on screen.

@@ -35,13 +35,16 @@
     title.append(icon(card.icon), make('span', 'card-heading', card.heading));
     if (card.subject) title.append(make('strong', 'card-subject', card.subject));
     top.append(title);
+    // The timing chip and the buttons wrap together, as one group, when the title needs the line.
+    const tools = make('span', 'card-tools');
+    top.append(tools);
     if (card.timing) {
       const time = make('span', 'card-time');
       time.title = `How long the analysis took${card.ranAt ? `; it ran at ${card.ranAt}` : ''}`;
       time.append(icon('clock'), card.timing);
-      top.append(time);
+      tools.append(time);
     }
-    top.append(tool('copy', 'Copy as Markdown', 'copy'), tool('graph', 'Draw as chart', 'chart'), tool('list-tree', 'Show as a list (the Results view)', 'list'));
+    tools.append(tool('copy', 'Copy as Markdown', 'copy'), tool('graph', 'Draw as chart', 'chart'), tool('list-tree', 'Show as a list (the Results view)', 'list'));
     return top;
   }
 
