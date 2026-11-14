@@ -113,7 +113,10 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   input[type=text]:focus { outline: 1px solid var(--vscode-focusBorder); }
   input:disabled { opacity: .5; }
   .top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; table-layout: fixed; }
+  /* Narrow panels: cells wrap and inputs shrink instead of pushing the table sideways. */
+  td, th { overflow-wrap: anywhere; }
+  td input, td select { width: 100%; min-width: 0; box-sizing: border-box; }
   th { text-align: left; font-weight: normal; color: var(--vscode-descriptionForeground); padding: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
   td { padding: 3px 4px; vertical-align: middle; }
   tr.new td:first-child { border-left: 2px solid var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }

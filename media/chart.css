@@ -16,7 +16,8 @@ header button.icon[aria-pressed="true"] { background: var(--vscode-inputOption-a
 header button.icon .codicon { font-size: 16px; }
 header .zoom-level { min-width: 46px; padding: 2px 4px; background: transparent; color: var(--vscode-foreground); border-color: transparent; font-variant-numeric: tabular-nums; }
 header .zoom-level:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
-#caption { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; flex: 0 1 auto; }
+/* The title keeps room for its badge: the bar wraps its tools onto another line rather than squeezing it under them. */
+#caption { display: inline-flex; align-items: baseline; gap: 6px; min-width: min(100%, 9em); max-width: 100%; flex: 0 1 auto; overflow: hidden; }
 #caption strong { color: var(--vscode-foreground); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; min-width: 0; }
 #caption .kind { flex: none; padding: 0 6px; border-radius: 9px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
 
@@ -213,3 +214,11 @@ button.card-meta:hover { text-decoration: underline; }
 .hover-card .card-action .codicon { font-size: 13px; }
 .hover-card .card-action:has(.codicon-trash) .codicon { color: var(--vscode-errorForeground, #f14c4c); }
 @media (forced-colors: active) { .hover-card .card-action { border-color: ButtonText; } }
+/* Labels in a chart's tools never break in the middle or run under their neighbours. */
+.control-label, header button, #typeBar .type-chip { white-space: nowrap; }
+#graphControls { flex-wrap: wrap; row-gap: 4px; max-width: 100%; }
+.search-box { min-width: 0; flex: 1 1 140px; max-width: 280px; }
+.search-box input { min-width: 0; width: 100%; }
+/* The minimap shrinks with the panel and steps aside when the panel is too small for it. */
+#minimap { width: min(200px, 32vw); height: min(120px, 24vh); }
+@media (max-width: 420px), (max-height: 320px) { #minimap { display: none; } }

@@ -453,7 +453,7 @@
       const top = Math.min(...boxes.map((b) => b.y)) - pad;
       const right = Math.max(...boxes.map((b) => b.x + b.w)) + pad;
       const bottom = Math.max(...boxes.map((b) => b.y + b.h)) + pad;
-      bounds = { x: left, y: top, w: right - left, h: bottom - top };
+      bounds = { x: left, y: top, w: right - left, h: bottom - top, pad };
       map.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
       const shapes = {};
       for (const b of boxes) {
@@ -480,7 +480,9 @@
       frame.setAttribute('y', vy);
       frame.setAttribute('width', vw);
       frame.setAttribute('height', vh);
-      const fits = vx <= bounds.x && vy <= bounds.y && vx + vw >= bounds.x + bounds.w && vy + vh >= bounds.y + bounds.h;
+      // Every box in view (the padding around them doesn't count): no minimap needed.
+      const p = bounds.pad || 0;
+      const fits = vx <= bounds.x + p + 1 && vy <= bounds.y + p + 1 && vx + vw >= bounds.x + bounds.w - p - 1 && vy + vh >= bounds.y + bounds.h - p - 1;
       map.classList.toggle('off', fits || off);
     }
     let dragging = false;

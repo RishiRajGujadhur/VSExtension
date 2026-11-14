@@ -215,3 +215,6 @@ svg.spotlight .node.lit .box { stroke: var(--vscode-focusBorder); stroke-width: 
 #legend .swatch.test { border-color: var(--badge-test); color: var(--badge-test); }
 #legend .swatch.arrow { border-color: var(--badge-arrow); color: var(--badge-arrow); }
 @media (forced-colors: active) { .badge-pill rect { fill: Canvas; stroke: CanvasText; } .badge-pill text { fill: CanvasText; } }
+/* Narrow panels: the hint wraps (two lines at most) instead of being cut; a code line keeps one line. */
+#info { white-space: normal; max-height: 5.4em; overflow: hidden; }
+#info code { white-space: nowrap; }

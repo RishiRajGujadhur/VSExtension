@@ -470,6 +470,8 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   textarea, input, select { font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); padding: 4px 6px; box-sizing: border-box; }
   textarea { width: 100%; min-height: 70px; resize: vertical; }
   table { border-collapse: collapse; width: 100%; }
+  /* Narrow panels: dropdowns shrink instead of pushing the page sideways. */
+  select { max-width: 100%; min-width: 0; }
   td, th { text-align: left; padding: 3px 6px 3px 0; font-weight: normal; }
   th { color: var(--vscode-descriptionForeground); }
   td input[type=text] { width: 100%; }

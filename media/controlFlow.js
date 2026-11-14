@@ -448,8 +448,9 @@
       if (!showDeps) {
         chipButton('deps-chip color-purple', false, 'references', 'Dependences', deps.data.length + deps.control.length, 'Draw where values come from and what decides whether code runs (D)', () => toggleDependences(true));
       } else {
-        chipButton('deps-chip color-purple', showData, 'arrow-left', 'Data arcs', deps.data.length, `${showData ? 'Hide' : 'Show'} where each value comes from`, () => { showData = !showData; state.depsData = showData; saveState(); render(); renderTypeBar(); typeBar.querySelector('.deps-chip')?.focus(); });
-        chipButton('deps-chip color-orange', showControl, 'git-compare', 'Control arcs', deps.control.length, `${showControl ? 'Hide' : 'Show'} what decides whether each box runs`, () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); renderTypeBar(); typeBar.querySelectorAll('.deps-chip')[1]?.focus(); });
+        // A kind of arc with none to draw gets no chip.
+        if (deps.data.length) chipButton('deps-chip color-purple', showData, 'arrow-left', 'Data arcs', deps.data.length, `${showData ? 'Hide' : 'Show'} where each value comes from`, () => { showData = !showData; state.depsData = showData; saveState(); render(); renderTypeBar(); typeBar.querySelector('.deps-chip')?.focus(); });
+        if (deps.control.length) chipButton('deps-chip color-orange', showControl, 'git-compare', 'Control arcs', deps.control.length, `${showControl ? 'Hide' : 'Show'} what decides whether each box runs`, () => { showControl = !showControl; state.depsControl = showControl; saveState(); render(); renderTypeBar(); [...typeBar.querySelectorAll('.deps-chip')].pop()?.focus(); });
       }
     }
     typeBar.hidden = !typeBar.childElementCount;

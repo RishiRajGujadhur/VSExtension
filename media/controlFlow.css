@@ -1,4 +1,4 @@
-#caption { flex: 1; }
+#caption { flex: 1 1 auto; }
 button { font-family: inherit; font-size: inherit; cursor: pointer; }
 header button:focus-visible, li:focus-visible, .node:focus-visible .shape { outline: 1px solid var(--vscode-focusBorder); }
 main { flex: 1; min-height: 0; display: flex; }
@@ -233,3 +233,6 @@ svg.spotlight .node.lit { filter: drop-shadow(0 0 6px var(--vscode-focusBorder))
 .type-chip[class*="color-"]:not(.color-muted) { border-color: color-mix(in srgb, var(--pill) 60%, transparent); }
 .type-chip.deps-chip[aria-pressed="false"] { opacity: .7; }
 .type-chip.deps-chip[aria-pressed="true"] { border-color: var(--pill); background: color-mix(in srgb, var(--pill) 16%, transparent); }
+/* Narrow panels: the hint line wraps instead of running off the edge; a code snippet keeps one line. */
+#info { flex-wrap: wrap; white-space: normal; row-gap: 2px; }
+#info code { white-space: nowrap; min-width: 0; max-width: 100%; }
