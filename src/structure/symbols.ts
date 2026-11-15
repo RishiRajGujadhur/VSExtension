@@ -14,15 +14,17 @@ export interface FileSymbol {
   async?: boolean;
   /** A method or accessor, as opposed to a property. */
   callable?: boolean;
+  /** A function stored in a variable or field, `const f = () => …`. */
+  arrow?: boolean;
 }
 
 /** Every declaration name in the file an analysis could start from, in source order. */
 export function fileSymbols(sourceFile: ts.SourceFile): FileSymbol[] {
   const symbols: FileSymbol[] = [];
-  const add = (name: ts.Node, kind: SymbolKind, container: string | undefined, isAsync = false, callable = false) => {
+  const add = (name: ts.Node, kind: SymbolKind, container: string | undefined, isAsync = false, callable = false, arrow = false) => {
     if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name)) {
       const offset = name.getStart(sourceFile);
-      symbols.push({ name: name.text, kind, offset, line: sourceFile.getLineAndCharacterOfPosition(offset).line, container, async: isAsync || undefined, callable: callable || undefined });
+      symbols.push({ name: name.text, kind, offset, line: sourceFile.getLineAndCharacterOfPosition(offset).line, container, async: isAsync || undefined, callable: callable || undefined, arrow: arrow || undefined });
     }
   };
   const visit = (node: ts.Node, container: string | undefined): void => {
@@ -31,7 +33,9 @@ export function fileSymbols(sourceFile: ts.SourceFile): FileSymbol[] {
       add(node.name, 'function', container, isAsync(node));
       inner = `${node.name.text}()`;
     } else if ((ts.isMethodDeclaration(node) || ts.isMethodSignature(node) || ts.isPropertyDeclaration(node) || ts.isPropertySignature(node) || ts.isGetAccessor(node) || ts.isSetAccessor(node)) && isTypeMember(node)) {
-      add(node.name, 'member', container, ts.isMethodDeclaration(node) && isAsync(node), ts.isMethodDeclaration(node) || ts.isMethodSignature(node) || ts.isGetAccessor(node) || ts.isSetAccessor(node));
+      // A field holding a function, `onClick = () => …`, is called like a method.
+      const fieldFn = ts.isPropertyDeclaration(node) && node.initializer && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) ? node.initializer : undefined;
+      add(node.name, 'member', container, (ts.isMethodDeclaration(node) && isAsync(node)) || (!!fieldFn && isAsync(fieldFn)), ts.isMethodDeclaration(node) || ts.isMethodSignature(node) || ts.isGetAccessor(node) || ts.isSetAccessor(node) || !!fieldFn, !!fieldFn);
       if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
         inner = `${container ? `${container}.` : ''}${node.name.text}()`;
       }
@@ -43,7 +47,7 @@ export function fileSymbols(sourceFile: ts.SourceFile): FileSymbol[] {
       inner = node.name.text;
     } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
       const fn = node.initializer && (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) ? node.initializer : undefined;
-      add(node.name, fn ? 'function' : 'variable', container, !!fn && isAsync(fn));
+      add(node.name, fn ? 'function' : 'variable', container, !!fn && isAsync(fn), false, !!fn);
       if (fn) {
         inner = `${node.name.text}()`;
       }

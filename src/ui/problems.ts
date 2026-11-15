@@ -12,6 +12,9 @@ export interface Remedy {
   run: () => unknown;
 }
 
+/** About how many characters fit on one line of a notification before VS Code cuts the text off. */
+const ONE_LINE = 55;
+
 /** The fixes offered by recent messages, by id, for the links in those messages. */
 const pending = new Map<string, Remedy>();
 let nextId = 0;
@@ -23,8 +26,8 @@ export async function runRemedy(id: unknown): Promise<void> {
 }
 
 /**
- * Shows a message with its fixes as links before the text: a notification cuts long text off at its end, under its
- * own icons, so links at the start always stay visible and clickable. At most three, the most useful first.
+ * Shows a message with its fixes, at most three, the most useful first. A short message has them as links after the
+ * text; a long one shows in full, with its fixes as buttons.
  */
 export async function showProblem(message: string, remedies: readonly Remedy[], severity: 'error' | 'warning' | 'info' = 'error'): Promise<void> {
   const shown = remedies.slice(0, 3);
@@ -36,10 +39,15 @@ export async function showProblem(message: string, remedies: readonly Remedy[], 
   // Old fixes are forgotten once enough newer ones were offered.
   for (const key of [...pending.keys()].slice(0, Math.max(0, pending.size - 30))) pending.delete(key);
   const show = severity === 'error' ? vscode.window.showErrorMessage : severity === 'warning' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
-  // A short message keeps its fixes as links in front, on one line. A long one gets them as buttons instead:
-  // VS Code never folds a notification with buttons, so the whole text shows at once, buttons under it.
-  if (message.length + shown.reduce((n, r) => n + r.title.length + 3, 0) <= 90 || !shown.length) {
-    await show(links.length ? `${links.join(' · ')} — ${message}` : message, ...(message.length > 90 ? ['OK'] : []));
+  // A message that fits on one line of the notification keeps its fixes as links after the text. Anything longer
+  // gets them as buttons instead: VS Code never folds a notification with buttons, so the whole text shows at once,
+  // buttons under it. A long message with no fixes gets an OK button for the same reason.
+  if (message.length + shown.reduce((n, r) => n + r.title.length + 3, 0) <= ONE_LINE) {
+    await show(links.length ? `${message} ${links.join(' · ')}` : message);
+    return;
+  }
+  if (!shown.length) {
+    await show(message, 'OK');
     return;
   }
   const picked = await show(message, ...shown.map((r) => r.title));

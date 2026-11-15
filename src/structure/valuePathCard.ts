@@ -28,7 +28,7 @@ export function valuePathCard(report: Report): ValuePathCard | undefined {
       const ways = r.children ?? [];
       const first = ways[0];
       const always = !first || first.label === 'always' || !first.children?.length && /no branch|no condition/.test(`${first.description ?? ''} ${r.description ?? ''}`);
-      const when = always ? 'Always — no branch decides it' : `When ${first.label}${ways.length > 1 ? `, or ${plural(ways.length - 1, 'other way')}` : ''}`;
+      const when = always ? 'Always: no branch decides it' : `When ${first.label}${ways.length > 1 ? `, or ${plural(ways.length - 1, 'other way')}` : ''}`;
       const title = /^= /.test(r.label) ? r.label.slice(2) : capital(r.label);
       return { title, ways: plural(ways.length || 1, 'way'), when, always, icon: /^= /.test(r.label) ? 'symbol-constant' : 'symbol-variable', location: r.location ?? first?.location };
     });

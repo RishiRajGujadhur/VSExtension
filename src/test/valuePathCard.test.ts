@@ -24,7 +24,7 @@ test('value path card: a value from outside the function, always; other reports 
   const card = valuePathCard({ kind: 'explainValue', title: 'Value path of useConfirm', description: '1 possible value at line 59', warnings: [], fileHashes: {},
     roots: [{ label: 'its value from outside the function', icon: 'symbol-variable', description: '1 way', children: [{ label: 'always', description: 'no branch decides it' }] }] })!;
   assert.equal(card.values[0].title, 'Its value from outside the function');
-  assert.equal(card.values[0].when, 'Always — no branch decides it');
+  assert.equal(card.values[0].when, 'Always: no branch decides it');
   assert.equal(card.values[0].always, true);
   assert.equal(valuePathCard({ kind: 'usages', title: 'x', roots: [], warnings: [], fileHashes: {} }), undefined);
 });

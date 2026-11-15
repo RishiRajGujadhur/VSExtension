@@ -121,3 +121,14 @@ test('introduce parameter lists the names the new parameter must not reuse', () 
 function byLabel(report: { roots: { label: string; children?: any[] }[] }, label: string): any[] {
   return report.roots.find((r) => r.label === label)!.children!;
 }
+
+test('functions stored in a const or a class field are offered as functions, not as variables', () => {
+  const source = ts.createSourceFile('f.ts', 'const isOn = (x: string) => !!x;\nconst limit = 3;\nclass A { onClick = () => 1; size = 2; }', ts.ScriptTarget.Latest, true);
+  const byName = new Map(fileSymbols(source).map((s) => [s.name, s]));
+  assert.equal(byName.get('isOn')?.kind, 'function');
+  assert.equal(byName.get('isOn')?.arrow, true);
+  assert.equal(byName.get('limit')?.kind, 'variable');
+  assert.equal(byName.get('onClick')?.callable, true);
+  assert.equal(byName.get('onClick')?.arrow, true);
+  assert.equal(byName.get('size')?.callable, undefined);
+});

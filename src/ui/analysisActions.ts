@@ -249,7 +249,9 @@ async function pickSymbol(editor: vscode.TextEditor, symbols: readonly FileSymbo
     const items: Item[] = sorted.map((s) => {
       const m = measures.get(s);
       const extra = measured && m ? (symbolOrder === 'complexity' ? `complexity ${m.complexity}` : `${m.lines} line${m.lines === 1 ? '' : 's'}`) : m && m.complexity >= 10 ? `complexity ${m.complexity}` : '';
-      return { label: `$(${icons[s.kind]}) ${s.kind === 'member' && s.callable ? `${s.name}()` : s.name}`, description: [s.container, `line ${s.line + 1}`, extra].filter(Boolean).join(' · '), symbol: s };
+      const called = s.kind === 'function' || (s.kind === 'member' && s.callable);
+      const sort = s.arrow ? (s.kind === 'member' ? 'function field' : 'arrow function') : '';
+      return { label: `$(${s.kind === 'member' && s.callable ? 'symbol-method' : icons[s.kind]}) ${called ? `${s.name}()` : s.name}`, description: [sort, s.container, `line ${s.line + 1}`, extra].filter(Boolean).join(' · '), symbol: s };
     });
     // Grouped by kind, under headings, when the file has several kinds; any other order is one list.
     const kinds = [...new Set(items.map((i) => i.symbol.kind))];

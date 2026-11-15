@@ -225,9 +225,9 @@ function testLabel(test: TestCase): string {
 
 function testTooltip(impacted: ImpactedTest): vscode.MarkdownString {
   const md = new vscode.MarkdownString();
-  md.appendMarkdown(`**${impacted.confidence === 'confirmed' ? 'Confirmed' : 'Possible'} impact** — ${impacted.reason}\n\n`);
+  md.appendMarkdown(`**${impacted.confidence === 'confirmed' ? 'Confirmed' : 'Possible'} impact**: ${impacted.reason}\n\n`);
   impacted.path.forEach((step, i) => {
-    md.appendMarkdown(`${i + 1}. \`${step.name}\` (${step.kind})${step.note ? ` — ${step.note}` : ''}\n`);
+    md.appendMarkdown(`${i + 1}. \`${step.name}\` (${step.kind})${step.note ? `: ${step.note}` : ''}\n`);
   });
   return md;
 }
