@@ -31,9 +31,11 @@
   let query = '';
   let matchIndex = -1;
   let shownNodes = [];
-  /** A big chart (more boxes than BIG): the animated grid and the flow pulses are off for it, until turned back on. */
+  /** A big chart (more boxes than BIG) opens with its deepest groups folded. */
   const BIG = 250;
+  const ANIMATION_LIMIT = window.chartKit.ANIMATION_LIMIT;
   let lite = false;
+  let diagramBoxes = 0;
   let focused;
   let selected;
 
@@ -694,9 +696,8 @@
   }
   /** The sparkle and play buttons show what is really on: off on a big chart until pressed. */
   function applyLite() {
-    if (grid) grid.setEnabled(prefs.effects && !lite);
-    document.getElementById('effects').setAttribute('aria-pressed', String(prefs.effects && !lite));
-    document.getElementById('flowToggle').setAttribute('aria-pressed', String(prefs.flow && !lite));
+    // Off for a chart this big, with the buttons disabled and saying why.
+    window.chartKit.limitAnimations(lite ? diagramBoxes : 0, prefs, grid);
   }
 
   function stopFlow() {
@@ -1170,13 +1171,14 @@
     }
     // Animations stay off while the chart is big; they come back for smaller charts on their own.
     const total = diagram ? allNodes().length : 0;
-    lite = total > BIG;
+    diagramBoxes = total;
+    lite = total > ANIMATION_LIMIT;
     applyLite();
     render();
     renderTypeBar();
     {
       const tests = allNodes().filter((n) => n.test).length;
-      if (lite) info.textContent = `Big chart: ${total} boxes.${foldedForSize ? ` ${foldedForSize} group${foldedForSize === 1 ? '' : 's'} start folded (press the round buttons to open them, or Unfold all in the menu);` : ''} animations are off for it (the sparkle and play buttons turn them on).`;
+      if (lite) info.textContent = `Big chart: ${total} boxes.${foldedForSize ? ` ${foldedForSize} group${foldedForSize === 1 ? '' : 's'} start folded (press the round buttons to open them, or Unfold all in the menu);` : ''} animations are off for a chart with more than ${ANIMATION_LIMIT} boxes.`;
       else if (tests && hiddenKinds.has('test')) info.textContent = `${tests} box${tests === 1 ? '' : 'es'} in tests hidden: press Tests at the top, or H, to show them.`;
     }
     if (memory) {
@@ -1199,18 +1201,6 @@
     hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
   }));
   window.chartKit.attachFlowLines(document.getElementById('flowLines'), () => view);
-  for (const id of ['effects', 'flowToggle']) {
-    document.getElementById(id).addEventListener('click', (e) => {
-      if (!lite) return;
-      e.stopImmediatePropagation();
-      lite = false;
-      if (id === 'effects') prefs.effects = true;
-      else prefs.flow = true;
-      applyLite();
-      drawFlows();
-      info.textContent = 'Animations are on for this chart; a big chart may feel slower.';
-    }, true);
-  }
   window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   applyLite();
   vscode.postMessage({ type: 'ready' });

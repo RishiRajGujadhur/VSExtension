@@ -170,7 +170,9 @@ export async function openFileThenRun(command?: string, note?: string): Promise<
   const item = (uri: vscode.Uri): Item => ({ label: `$(file-code) ${uri.path.split('/').pop()}`, description: vscode.workspace.asRelativePath(uri.with({ path: uri.path.replace(/\/[^/]*$/, '') })), uri });
   // Files the feature is likely to fit first: components for React state, then the rest by path.
   const likely = (u: vscode.Uri) => (command === 'tsStructure.reactState' ? /\.[jt]sx$/.test(u.path) : true) && !/(\.|_)(test|spec)\.[cm]?[jt]sx?$/.test(u.path);
-  const sorted = [...files].sort((a, b) => Number(likely(b)) - Number(likely(a)) || vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
+  // TypeScript before JavaScript, and generated or tool folders (dot folders, release, build output) last.
+  const tsFirst = (u: vscode.Uri) => (/\.(ts|tsx|mts|cts)$/.test(u.path) ? 0 : 1) + (/\/(\.[^/]+|release|build|coverage|vendor)\//.test('/' + vscode.workspace.asRelativePath(u, false)) ? 2 : 0);
+  const sorted = [...files].sort((a, b) => tsFirst(a) - tsFirst(b) || Number(likely(b)) - Number(likely(a)) || vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
   // Where this feature last ran comes first of all.
   const lastFile = command ? lastSubjects()[command]?.file : undefined;
   const last = lastFile ? sorted.find((u) => u.fsPath.toLowerCase() === lastFile.toLowerCase()) : undefined;

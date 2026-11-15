@@ -214,6 +214,27 @@
     return { text: new XMLSerializer().serializeToString(copy), width: box.width + 2 * pad, height: box.height + 2 * pad };
   }
 
+  /** From this many boxes a chart is too big to animate: the grid and flow pulses are off and their buttons disabled. */
+  const ANIMATION_LIMIT = 100;
+
+  /**
+   * Turns the animated grid and the flow pulses off for a chart with more than ANIMATION_LIMIT boxes, with their
+   * buttons disabled and saying why; for a smaller chart they follow the saved choice again. Returns whether it is too big.
+   */
+  function limitAnimations(boxes, prefs, grid) {
+    const tooBig = boxes > ANIMATION_LIMIT;
+    if (grid) grid.setEnabled(prefs.effects && !tooBig);
+    for (const id of ['effects', 'flowToggle']) {
+      const button = document.getElementById(id);
+      if (!button) continue;
+      button.setAttribute('aria-pressed', String((id === 'effects' ? prefs.effects : prefs.flow) && !tooBig));
+      if (button.dataset.title === undefined) button.dataset.title = button.title;
+      button.disabled = tooBig;
+      button.title = tooBig ? `Off: this chart has ${boxes} boxes, and animating more than ${ANIMATION_LIMIT} would slow it down` : button.dataset.title;
+    }
+    return tooBig;
+  }
+
   /**
    * The Grid and Flow buttons: pressed state, the grid shown or hidden, and the choice saved with the page's state.
    * `onFlowOff` stops a running animation when Flow is turned off.
@@ -1110,5 +1131,7 @@
     });
   })();
 
-  window.chartKit = { el, toast, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+  window.chartKit = { el, toast, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles,
+    limitAnimations,
+    ANIMATION_LIMIT, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
 })();

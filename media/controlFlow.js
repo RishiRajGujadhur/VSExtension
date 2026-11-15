@@ -51,6 +51,8 @@
     vscode.setState(state);
   };
   let grid;
+  /** More boxes than the kit animates: the grid and flow pulses stay off. */
+  let tooBig = false;
   let hovered;
   let focusedNode;
   let flowing;
@@ -719,7 +721,7 @@
   function drawFlows() {
     const lines = new Set();
     const elements = scene.querySelectorAll('.edge');
-    if (prefs.flow && chart && !showDeps) {
+    if (prefs.flow && !tooBig && chart && !showDeps) {
       const shownPath = preview >= 0 ? preview : selected;
       if (shownPath >= 0) {
         chart.paths[shownPath].edges.forEach((e) => lines.add(e));
@@ -747,6 +749,8 @@
   }
 
   function animateFrom(n) {
+    // A chart this big is not animated; the play button says so.
+    if (tooBig) return;
     if (grid) grid.pulse(view.x + (n.x + n.width / 2) * view.k, view.y + (n.y + n.height / 2) * view.k);
     flowing = n.id;
     if (!prefs.flow) {
@@ -1400,6 +1404,7 @@
       kit.renderControls(document.getElementById('graphControls'), message.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
+      tooBig = kit.limitAnimations(chart ? chart.nodes.length : 0, prefs, grid);
       setTimeout(renderTypeBar, 0);
       empty.hidden = !!chart;
       svg.classList.toggle('off', !chart);
@@ -1468,5 +1473,6 @@
   document.getElementById('otherGraphs').addEventListener('click', () => vscode.postMessage({ type: 'otherGraphs' }));
   document.getElementById('deps').setAttribute('aria-pressed', String(showDeps));
   kit.bindToggles(prefs, grid, saveState, stopFlow);
+  tooBig = kit.limitAnimations(chart ? chart.nodes.length : 0, prefs, grid);
   vscode.postMessage({ type: 'ready' });
 })();
