@@ -42,7 +42,7 @@ export async function showHelp(command: string): Promise<void> {
   const choice = await vscode.window.showInformationMessage(`${name}: ${entry?.info ?? ''}`, { modal: false }, 'Open the guide', 'Keyboard shortcuts');
   if (choice === 'Open the guide') {
     const readme = vscode.extensions.all.find((e) => e.packageJSON?.name === 'ts-test-impact')?.extensionUri;
-    if (readme) await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(readme, 'README.md'));
+    if (readme) await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(readme, 'docs', 'GUIDE.md'));
   } else if (choice === 'Keyboard shortcuts') {
     await vscode.commands.executeCommand('workbench.action.openGlobalKeybindings', command);
   }

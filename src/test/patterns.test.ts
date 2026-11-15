@@ -91,11 +91,11 @@ test('Detect Design Patterns groups every pattern in the files, most frequent fi
   assert.equal(report.roots[0].children?.[0].description, 'src/services/a.ts:1');
 });
 
-test('the info button links to headings that exist in the README', async () => {
+test('the info button links to headings that exist in the guide', async () => {
   const { explanations } = await import('../structure/explanations');
   const fs = await import('fs');
   const path = await import('path');
-  const readme = fs.readFileSync(path.resolve(__dirname, '../../README.md'), 'utf8');
+  const readme = fs.readFileSync(path.resolve(__dirname, '../../docs/GUIDE.md'), 'utf8');
   const anchors = new Set([...readme.matchAll(/^#+ (.+)$/gm)].map((m) => m[1].toLowerCase().replace(/[^\w\- ]/g, '').trim().replace(/ /g, '-')));
   for (const [kind, e] of Object.entries(explanations)) {
     assert.ok(anchors.has(e.anchor), `${kind}: #${e.anchor}`);

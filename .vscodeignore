@@ -2,6 +2,7 @@
 src/**
 sample/**
 docs/**
+!docs/GUIDE.md
 test-fixtures/**
 scripts/**
 # The extension runs from the bundle in dist/; the compiled files in out/ are for the tests.

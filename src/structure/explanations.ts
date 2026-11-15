@@ -3,7 +3,7 @@ export interface Explanation {
   title: string;
   /** A few sentences in plain words. */
   text: string;
-  /** The README section with the full guide. */
+  /** The section of docs/GUIDE.md with the full guide. */
   anchor: string;
 }
 
@@ -166,4 +166,4 @@ export const explanations: Record<string, Explanation> = {
   },
 };
 
-export const guideUrl = 'https://github.com/RishiRajGujadhur/VSExtension#';
+export const guideUrl = 'https://github.com/RishiRajGujadhur/VSExtension/blob/main/docs/GUIDE.md#';
