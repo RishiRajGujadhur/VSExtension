@@ -4,6 +4,12 @@ import { ProjectService } from '../analysis/project';
 import { FunctionInfo, SignatureSpec, changeSignature, describeFunction } from '../refactor/changeSignature';
 import { applyRefactor, reportError } from './applyRefactor';
 import { buttonCss, helpTip, icon } from './webviewStyle';
+import { attachEditPanel, editPanelCss, editPanelHead, editPanelKeys, editPanelScript } from './editPanelKit';
+import { featureName, finished } from './editFlow';
+
+const command = 'tsStructure.changeSignature';
+/** The open panel for each function, so running it again on the same function brings that panel back. */
+const openPanels = new Map<string, vscode.WebviewPanel>();
 
 interface Row {
   originalIndex: number | null;
@@ -17,7 +23,10 @@ interface Row {
 type Message =
   | { type: 'submit'; preview: boolean; name: string; returnType: string; rows: Row[] }
   | { type: 'cancel'; dirty?: boolean }
-  | { type: 'copy'; text: string };
+  | { type: 'copy'; text: string }
+  | { type: 'title'; name: string }
+  | { type: 'help' }
+  | { type: 'reload' };
 
 /** Opens the Change Signature dialog for the function at the cursor. */
 export async function openChangeSignature(context: vscode.ExtensionContext, projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
@@ -32,14 +41,34 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
     return;
   }
   const version = document.version;
+  const key = `${document.uri.toString()}#${info.name}#${info.location.line}`;
+  const already = openPanels.get(key);
+  if (already) {
+    already.reveal();
+    return;
+  }
 
-  const panel = vscode.window.createWebviewPanel('tsStructure.changeSignature', `Change Signature: ${info.name}`, vscode.ViewColumn.Beside, {
+  const panel = vscode.window.createWebviewPanel('tsStructure.changeSignature', `${featureName(command)}: ${info.name}`, vscode.ViewColumn.Beside, {
     enableScripts: true,
     retainContextWhenHidden: true,
   });
+  openPanels.set(key, panel);
+  panel.onDidDispose(() => openPanels.delete(key));
   panel.webview.html = html(panel.webview, info);
+  // Help, and a banner when the file changes; Reload opens the dialog again on the code as it is now.
+  attachEditPanel(panel, command, document, async () => {
+    panel.dispose();
+    const fresh = await vscode.window.showTextDocument(document, { viewColumn: editor.viewColumn, selection: new vscode.Range(document.positionAt(offset), document.positionAt(offset)) });
+    await openChangeSignature(context, projects, fresh);
+  });
   panel.webview.onDidReceiveMessage(
     async (message: Message) => {
+      if (message.type === 'help' || message.type === 'reload') return;
+      if (message.type === 'title') {
+        // The tab follows the name being typed.
+        panel.title = `${featureName(command)}: ${message.name.trim() || info.name}`;
+        return;
+      }
       if (message.type === 'copy') {
         await vscode.env.clipboard.writeText(message.text);
         void vscode.window.setStatusBarMessage('Copied the new signature', 3000);
@@ -75,6 +104,8 @@ export async function openChangeSignature(context: vscode.ExtensionContext, proj
         const result = changeSignature(projects.createVirtualProject(document.uri.fsPath, fallbackRoot), document.uri.fsPath, offset, spec);
         if (await applyRefactor(result, message.preview)) {
           panel.dispose();
+          const files = new Set(result.changes.map((c) => c.file)).size;
+          void finished(command, `updated ${spec.name}${files > 1 ? ` and its calls in ${files - 1} other file${files === 2 ? '' : 's'}` : ''}.`, { file: document.uri.fsPath, changed: files });
         }
       } catch (error) {
         reportError(error, 'Change Signature');
@@ -121,7 +152,12 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
   td { padding: 3px 4px; vertical-align: middle; }
   tr.new td:first-child { border-left: 2px solid var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
 ${buttonCss}
+${editPanelCss}
   .actions { margin-top: 16px; }
+  .problems button.link { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--vscode-errorForeground); text-decoration: underline; cursor: pointer; font: inherit; }
+  .undo-line { color: var(--vscode-descriptionForeground); margin: 4px 0 0; }
+  .undo-line[hidden] { display: none; }
+  .undo-line button.link { min-height: 0; padding: 0 2px; border: 0; background: none; color: var(--vscode-textLink-foreground); font: inherit; }
   pre { background: var(--vscode-textCodeBlock-background); padding: 8px; white-space: pre-wrap; word-break: break-word; font-family: var(--vscode-editor-font-family); }
   .hint { color: var(--vscode-descriptionForeground); font-size: .92em; }
   input[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
@@ -130,7 +166,8 @@ ${buttonCss}
 </style>
 </head>
 <body>
-<h1 id="title"></h1>
+${editPanelHead(command, `${info.kind} ${info.name}`, 'replace')}
+<datalist id="types">${[...new Set(['string', 'number', 'boolean', 'unknown', 'void', 'undefined', 'null', 'string[]', 'number[]', 'Record<string, unknown>', 'Promise<void>', ...info.parameters.map((p) => p.type).filter(Boolean), info.returnType].filter(Boolean))].map((t) => `<option value="${t.replace(/"/g, '&quot;')}">`).join('')}</datalist>
 <div class="top">
   <label><span>Name</span><input type="text" id="name"></label>
   <label id="returnLabel"><span>Return type (empty for none)</span><input type="text" id="returnType"></label>
@@ -145,7 +182,9 @@ ${buttonCss}
 <pre id="preview"></pre>
 <p id="summary" class="summary" aria-live="polite"></p>
 <p id="problems" class="problems" role="status" aria-live="polite"></p>
-<div class="actions">
+<p id="undoLine" class="undo-line" hidden></p>
+${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['Enter', 'next row'], ['Alt+↑/↓', 'move'], ['Ctrl+D', 'duplicate'], ['Ctrl+Delete', 'remove'], ['F1', 'help'], ['Esc', 'cancel']])}
+<div class="actions ep-sticky">
   <button class="primary" id="previewBtn" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview changes</span></button>
   <button id="apply" aria-describedby="problems" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
   <span class="spacer"></span>
@@ -155,10 +194,10 @@ ${buttonCss}
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
+  window.__epApi = vscode;
   const { info, rows } = ${state};
   const initialRows = JSON.stringify(rows);
   const $ = (id) => document.getElementById(id);
-  $('title').textContent = 'Change parameters of ' + info.kind + ' ' + info.name;
   $('name').value = info.name;
   $('returnType').value = info.returnType;
   if (!info.typed) {
@@ -177,11 +216,26 @@ ${buttonCss}
     el.placeholder = placeholder || '';
     el.disabled = !!disabled;
     el.addEventListener('input', () => { row[key] = el.value; update(); });
+    if (key === 'type') el.setAttribute('list', 'types');
+    // A name typed with spaces or dashes becomes camelCase when you leave the field.
+    if (key === 'name') el.addEventListener('blur', () => {
+      const words = el.value.trim().split(/[\\s-]+/).filter(Boolean);
+      if (words.length > 1) { el.value = words.map((w, i) => (i ? w[0].toUpperCase() + w.slice(1) : w[0].toLowerCase() + w.slice(1))).join(''); row[key] = el.value; update(); }
+    });
+    // Enter goes to the same field of the next row (Shift+Enter: the row above).
+    el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      const tr = el.closest('tr');
+      const next = e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling;
+      const field = next && next.querySelector('input[data-key="' + key + '"]:not(:disabled)');
+      if (field) { field.focus(); field.select(); } else if (!e.shiftKey) $('add').focus();
+    });
     const td = document.createElement('td');
     td.appendChild(el);
     return td;
   }
-  const icons = ${JSON.stringify({ up: icon('up'), down: icon('down'), remove: icon('remove') })};
+  const icons = ${JSON.stringify({ up: icon('up'), down: icon('down'), remove: icon('remove'), copy: icon('copy') })};
   function button(text, title, disabled, onClick) {
     const b = document.createElement('button');
     b.className = 'icon-only';
@@ -221,11 +275,45 @@ ${buttonCss}
       const label = ' parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : '');
       tools.appendChild(button('up', 'Move up' + label + ' (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); refocus(i - 1, 'up'); }));
       tools.appendChild(button('down', 'Move down' + label + ' (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); refocus(i + 1, 'down'); }));
-      tools.appendChild(button('remove', 'Remove' + label + ' (Ctrl+Delete)', false, () => { rows.splice(i, 1); render(); refocus(Math.min(i, rows.length - 1), 'name'); }));
+      tools.appendChild(button('copy', 'Duplicate' + label + ' (Ctrl+D)', false, () => duplicate(i)));
+      tools.appendChild(button('remove', 'Remove' + label + ' (Ctrl+Delete)', false, () => remove(i)));
       tr.appendChild(tools);
       body.appendChild(tr);
     });
     update();
+  }
+  /** A copy of the row below it, as a new parameter with a free name. */
+  function duplicate(i) {
+    const source = rows[i];
+    let name = source.name + 'Copy';
+    for (let n = 2; rows.some((r) => r.name === name); n++) name = source.name + 'Copy' + n;
+    rows.splice(i + 1, 0, { originalIndex: null, name, type: source.type, initializer: source.initializer, optional: source.optional, callValue: 'undefined' });
+    render();
+    const field = $('rows').children[i + 1].querySelector('input');
+    field.focus();
+    field.select();
+  }
+  /** Removing a row says so, with Undo, until the next change. */
+  let removed;
+  function remove(i) {
+    removed = { row: rows[i], index: i };
+    rows.splice(i, 1);
+    render();
+    refocus(Math.min(i, rows.length - 1), 'name');
+    const line = $('undoLine');
+    line.textContent = 'Removed ' + (removed.row.name || 'a parameter') + '. ';
+    const undo = document.createElement('button');
+    undo.className = 'link';
+    undo.textContent = 'Undo';
+    undo.addEventListener('click', () => {
+      rows.splice(removed.index, 0, removed.row);
+      line.hidden = true;
+      render();
+      refocus(removed.index, 'name');
+      removed = undefined;
+    });
+    line.append(undo);
+    line.hidden = false;
   }
   /** After a row moves or goes away, focus the same kind of control on the row it went to, or Add Parameter. */
   function refocus(index, kind) {
@@ -241,24 +329,43 @@ ${buttonCss}
   /** What stops the refactoring, checked as you type so the buttons say why they are off. */
   function problems() {
     const found = [];
-    if (!identifier.test($('name').value.trim())) found.push('The function name is not a valid identifier.');
+    found.at = [];
+    const add = (text, at) => { found.push(text); found.at.push(at); };
+    if (!identifier.test($('name').value.trim())) add('The function name is not a valid identifier.', 'name');
     const seen = new Set();
     rows.forEach((r) => {
       const original = r.originalIndex === null ? null : info.parameters[r.originalIndex];
       const name = r.name.trim();
       // Destructured parameters keep their pattern and can't be renamed.
       if (original && !original.renamable) return;
-      if (reserved.has(name)) found.push('"' + name + '" is a reserved word and can\'t be a parameter name.');
-      else if (!identifier.test(name)) found.push('"' + name + '" is not a valid parameter name.');
-      else if (seen.has(name)) found.push('Two parameters are named "' + name + '".');
+      const at = rows.indexOf(r);
+      if (reserved.has(name)) add('"' + name + '" is a reserved word and can\\'t be a parameter name.', at);
+      else if (!identifier.test(name)) add('"' + name + '" is not a valid parameter name.', at);
+      else if (seen.has(name)) add('Two parameters are named "' + name + '".', at);
       seen.add(name);
-      if (!original && !r.optional && !r.initializer.trim() && !r.callValue.trim()) found.push('New parameter "' + name + '" needs a value for existing callers' + (info.typed ? ', a default value, or to be optional.' : ' or a default value.'));
+      if (!original && !r.optional && !r.initializer.trim() && !r.callValue.trim()) add('New parameter "' + name + '" needs a value for existing callers' + (info.typed ? ', a default value, or to be optional.' : ' or a default value.'), at + ':callValue');
     });
     return found;
   }
   function update() {
     const found = problems();
-    $('problems').textContent = found.join(' ');
+    const box = $('problems');
+    box.textContent = '';
+    found.forEach((text, n) => {
+      // Each problem is a link to the field it is about.
+      const link = document.createElement('button');
+      link.className = 'link';
+      link.textContent = text;
+      link.addEventListener('click', () => {
+        const at = found.at[n];
+        if (at === 'name') return $('name').focus();
+        const [row, key] = String(at).split(':');
+        const tr = $('rows').children[Number(row)];
+        const field = tr && tr.querySelector('input[data-key="' + (key || 'name') + '"]');
+        if (field) { field.focus(); field.select(); }
+      });
+      box.append(link, ' ');
+    });
     const markInvalid = (el, bad) => {
       el.setAttribute('aria-invalid', String(bad));
       if (bad) el.setAttribute('aria-describedby', 'problems');
@@ -317,7 +424,7 @@ ${buttonCss}
     name.focus();
     name.select();
   });
-  $('name').addEventListener('input', update);
+  $('name').addEventListener('input', () => { update(); vscode.postMessage({ type: 'title', name: $('name').value }); });
   $('returnType').addEventListener('input', update);
   $('previewBtn').addEventListener('click', () => submit(true));
   $('apply').addEventListener('click', () => submit(false));
@@ -338,14 +445,13 @@ ${buttonCss}
       submit(!e.shiftKey);
     } else if (e.key === 'Escape') {
       vscode.postMessage({ type: 'cancel', dirty: isDirty() });
-    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Delete') {
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'Delete' || e.key === 'd' || e.key === 'D')) {
       const tr = e.target.closest && e.target.closest('tr');
       const i = tr ? Array.prototype.indexOf.call($('rows').children, tr) : -1;
       if (i >= 0) {
         e.preventDefault();
-        rows.splice(i, 1);
-        render();
-        refocus(Math.min(i, rows.length - 1), 'name');
+        if (e.key === 'Delete') remove(i);
+        else duplicate(i);
       }
     } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
       e.preventDefault();
@@ -368,6 +474,7 @@ ${buttonCss}
   render();
   beforeText = $('preview').textContent;
   $('name').focus();
+${editPanelScript}
 </script>
 </body>
 </html>`;

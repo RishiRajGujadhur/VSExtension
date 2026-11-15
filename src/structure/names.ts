@@ -77,6 +77,7 @@ export const names: Record<string, string> = {
   'tsStructure.editCustomInspection': 'Edit check',
   'tsStructure.disableCustomInspection': 'Turn off check',
   'tsStructure.nextProblem': 'Next problem',
+  'tsStructure.previousProblem': 'Previous problem',
   'tsStructure.configureInspections': 'Inspection settings…',
   'tsStructure.turnOffInspection': 'Turn off this inspection',
   'tsStructure.inspectionsMenu': 'Inspections…',

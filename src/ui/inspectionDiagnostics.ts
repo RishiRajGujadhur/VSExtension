@@ -3,6 +3,7 @@ import { remedies, showProblem } from './problems';
 import * as path from 'path';
 import ts = require('typescript');
 import * as vscode from 'vscode';
+import { BACK, flowTitle, pickStep, showHelp } from './editFlow';
 import { ProjectService } from '../analysis/project';
 import { hashText, normalizePath, pathKey } from '../analysis/paths';
 import { projectSourceFiles } from '../analysis/referenceIndex';
@@ -112,21 +113,64 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
         const editor = vscode.window.activeTextEditor;
         const findings = editor && [...(this.findingsFor(editor.document) ?? [])].sort((a, b) => a.start - b.start);
         if (!editor || !findings?.length) {
-          // Nothing here: say where else there is something, among the open files.
+          // Nothing here: on to the first problem of the next open file that has some.
           const elsewhere = vscode.workspace.textDocuments.filter((d) => d !== editor?.document && (this.findingsFor(d)?.length ?? 0) > 0);
-          void vscode.window.setStatusBarMessage(elsewhere.length ? `No Code X-Ray problems in this file; ${elsewhere.length} other open file${elsewhere.length === 1 ? ' has' : 's have'} some (${elsewhere.slice(0, 3).map((d) => vscode.workspace.asRelativePath(d.uri)).join(', ')})` : 'No Code X-Ray problems in this file', 5000);
+          if (elsewhere.length) {
+            const next = elsewhere[0];
+            const first = [...(this.findingsFor(next) ?? [])].sort((a, b) => a.start - b.start)[0];
+            const range = new vscode.Range(next.positionAt(first.start), next.positionAt(first.end));
+            await vscode.window.showTextDocument(next, { selection: range });
+            this.flash(range);
+            void vscode.window.setStatusBarMessage(`Next problem: none left in that file; now in ${vscode.workspace.asRelativePath(next.uri)} (${this.findingsFor(next)?.length} problem${this.findingsFor(next)?.length === 1 ? '' : 's'}): ${first.message}`, 6000);
+            void vscode.commands.executeCommand('editor.action.showHover');
+          } else {
+            void vscode.window.setStatusBarMessage('Next problem: no Code X-Ray problems in the open files', 5000);
+          }
           return;
         }
         const offset = editor.document.offsetAt(editor.selection.active);
         const after = findings.find((f) => f.start > offset);
+        // Past the last one here: on to the next open file with problems, before wrapping to the first.
+        const others = vscode.workspace.textDocuments.filter((d) => d !== editor.document && (this.findingsFor(d)?.length ?? 0) > 0);
+        if (!after && others.length && findings.some((f) => f.start <= offset)) {
+          const nextDoc = others[0];
+          const first = [...(this.findingsFor(nextDoc) ?? [])].sort((a, b) => a.start - b.start)[0];
+          const range = new vscode.Range(nextDoc.positionAt(first.start), nextDoc.positionAt(first.end));
+          await vscode.window.showTextDocument(nextDoc, { selection: range });
+          this.flash(range);
+          void vscode.window.setStatusBarMessage(`Next problem: on to ${vscode.workspace.asRelativePath(nextDoc.uri)} (${this.findingsFor(nextDoc)?.length} there): ${first.message}`, 6000);
+          void vscode.commands.executeCommand('editor.action.showHover');
+          return;
+        }
         const next = after ?? findings[0];
         const range = new vscode.Range(editor.document.positionAt(next.start), editor.document.positionAt(next.end));
         editor.selection = new vscode.Selection(range.start, range.end);
         editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        this.flash(range);
         const title = this.inspections().find((i) => i.id === next.inspection)?.title;
-        const position = `${findings.indexOf(next) + 1} of ${findings.length}${after ? '' : ', back at the first'}`;
-        void vscode.window.setStatusBarMessage(`$(${next.severity === 'error' ? 'error' : next.severity === 'warning' ? 'warning' : 'info'}) ${position}: ${next.message}${title ? ` (${title})` : ''}${next.fixes?.length ? ` · ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+. for a fix` : ''}`, 6000);
+        // How many of each kind, so the count says how much is left to look at.
+        const kinds = (['error', 'warning'] as const).map((k) => [k, findings.filter((f) => f.severity === k).length] as const).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`);
+        const position = `Next problem ${findings.indexOf(next) + 1} of ${findings.length}${kinds.length ? ` (${kinds.join(', ')})` : ''}${after ? '' : ', back at the first'}`;
+        void vscode.window.setStatusBarMessage(`$(${next.severity === 'error' ? 'error' : next.severity === 'warning' ? 'warning' : 'info'}) ${position}: ${next.message}${title ? ` (${title})` : ''}${next.fixes?.length ? ` · ${next.fixes.length} fix${next.fixes.length === 1 ? '' : 'es'}: ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+.` : ''}`, 6000);
         // The message right where the cursor landed.
+        void vscode.commands.executeCommand('editor.action.showHover');
+      }),
+      // The problem before the cursor, wrapping to the last: Next problem's partner.
+      registerCommand('tsStructure.previousProblem', () => {
+        const editor = vscode.window.activeTextEditor;
+        const findings = editor && [...(this.findingsFor(editor.document) ?? [])].sort((a, b) => a.start - b.start);
+        if (!editor || !findings?.length) {
+          void vscode.window.setStatusBarMessage('Previous problem: no Code X-Ray problems in this file', 4000);
+          return;
+        }
+        const offset = editor.document.offsetAt(editor.selection.start);
+        const before = [...findings].reverse().find((f) => f.start < offset);
+        const target = before ?? findings[findings.length - 1];
+        const range = new vscode.Range(editor.document.positionAt(target.start), editor.document.positionAt(target.end));
+        editor.selection = new vscode.Selection(range.start, range.end);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        this.flash(range);
+        void vscode.window.setStatusBarMessage(`Previous problem ${findings.indexOf(target) + 1} of ${findings.length}${before ? '' : ', back at the last'}: ${target.message}`, 6000);
         void vscode.commands.executeCommand('editor.action.showHover');
       }),
       registerCommand('tsStructure.copyProblems', async () => {
@@ -299,69 +343,137 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
     await picked?.run?.();
   }
 
-  /** Lists every inspection with its severity; picking one asks for a new severity, until the list is closed. */
+  /**
+   * Every inspection with its severity, in the Edit features' shared look. Picking one asks for a new severity
+   * (with Back); its buttons turn it off or on, or go to where it reports in this file. The list keeps its place.
+   */
   private async configureInspections(): Promise<void> {
+    const command = 'tsStructure.configureInspections';
     const uri = vscode.window.activeTextEditor?.document.uri;
+    const editor = vscode.window.activeTextEditor;
     const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
-    const document = vscode.window.activeTextEditor?.document;
+    const document = editor?.document;
+    const findings = (document && this.findingsFor(document)) ?? [];
     const here = new Map<string, number>();
-    for (const f of (document && this.findingsFor(document)) ?? []) here.set(f.inspection, (here.get(f.inspection) ?? 0) + 1);
+    for (const f of findings) here.set(f.inspection, (here.get(f.inspection) ?? 0) + 1);
+    const severityIcons: Record<string, string> = { error: 'error', warning: 'warning', info: 'info', hint: 'lightbulb', off: 'circle-slash', default: 'discard' };
+    const read = () => ({ ...((target === vscode.ConfigurationTarget.Workspace ? vscode.workspace.getConfiguration('tsStructure', uri).inspect<Record<string, string>>('inspections.severity')?.workspaceValue : vscode.workspace.getConfiguration('tsStructure', uri).inspect<Record<string, string>>('inspections.severity')?.globalValue) ?? {}) });
+    const write = (values: Record<string, string>) => vscode.workspace.getConfiguration('tsStructure', uri).update('inspections.severity', Object.keys(values).length ? values : undefined, target);
+    // Every change can be undone, one at a time, while the list is open.
+    const history: Record<string, string>[] = [];
+    const change = async (id: string, value: string) => {
+      const before = read();
+      history.push({ ...before });
+      if (value === 'default') delete before[id];
+      else before[id] = value;
+      await write(before);
+    };
+    let onlyHere = false;
+    let keep: string | undefined;
+    const offButton = { iconPath: new vscode.ThemeIcon('circle-slash'), tooltip: 'Turn off' };
+    const onButton = { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Back to its default' };
+    const goButton = { iconPath: new vscode.ThemeIcon('go-to-file'), tooltip: 'Go to where it reports in this file' };
+    const hereButton = { iconPath: new vscode.ThemeIcon('filter'), tooltip: 'Only the ones reporting in this file' };
+    const undoButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Undo the last change' };
+    const helpButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
     for (;;) {
-      const config = vscode.workspace.getConfiguration('tsStructure', uri);
-      const overrides = config.get<Record<string, string>>('inspections.severity', {});
-      const items = this.inspections().map((inspection) => {
-        const setting = overrides[inspection.id] ?? 'default';
-        const count = here.get(inspection.id);
-        return {
-          label: inspection.title,
-          description: [setting === 'default' ? (inspection.optIn ? 'off until turned on' : inspection.defaultSeverity) : setting === 'off' ? 'off' : `${setting} (default ${inspection.optIn ? 'off' : inspection.defaultSeverity})`, count ? `${count} in this file` : ''].filter(Boolean).join(' · '),
-          detail: inspection.id,
-          inspection,
-        };
-      });
-      // Inspections that report on their own first, then those that wait to be turned on.
-      type Row = (typeof items)[number] | vscode.QuickPickItem;
-      const changed = items.filter((i) => overrides[i.inspection.id] !== undefined);
-      const reset: vscode.QuickPickItem & { reset: true } = { label: '$(discard) Back to defaults', description: `undo your ${changed.length} change${changed.length === 1 ? '' : 's'}`, reset: true };
+      const overrides = vscode.workspace.getConfiguration('tsStructure', uri).get<Record<string, string>>('inspections.severity', {});
+      const all = this.inspections();
+      type Row = vscode.QuickPickItem & { inspection?: (typeof all)[number]; reset?: true };
+      const items: Row[] = this.inspections()
+        .filter((inspection) => !onlyHere || here.has(inspection.id))
+        .map((inspection) => {
+          const setting = overrides[inspection.id] ?? 'default';
+          const effective = setting === 'default' ? (inspection.optIn ? 'off' : inspection.defaultSeverity) : setting;
+          const count = here.get(inspection.id);
+          return {
+            label: `$(${severityIcons[effective] ?? 'circle'}) ${inspection.title}`,
+            description: [setting === 'default' ? (inspection.optIn ? 'off until turned on' : inspection.defaultSeverity) : setting === 'off' ? 'off (changed)' : `${setting} (changed; default ${inspection.optIn ? 'off' : inspection.defaultSeverity})`, count ? `${count} in this file` : ''].filter(Boolean).join(' · '),
+            detail: inspection.id,
+            buttons: [...(count ? [goButton] : []), effective === 'off' ? onButton : offButton],
+            inspection,
+          };
+        });
+      const changed = items.filter((i) => i.inspection && overrides[i.inspection.id] !== undefined);
+      const reset: Row = { label: '$(discard) Back to defaults', description: `undo your ${changed.length} change${changed.length === 1 ? '' : 's'}`, reset: true };
       const grouped: Row[] = [
         ...(changed.length ? [{ label: 'Changed by you', kind: vscode.QuickPickItemKind.Separator }, ...changed, reset] : []),
         { label: 'On', kind: vscode.QuickPickItemKind.Separator },
-        ...items.filter((i) => !i.inspection.optIn && !changed.includes(i)),
+        ...items.filter((i) => !i.inspection!.optIn && !changed.includes(i)),
         { label: 'Off until turned on', kind: vscode.QuickPickItemKind.Separator },
-        ...items.filter((i) => i.inspection.optIn && !changed.includes(i)),
+        ...items.filter((i) => i.inspection!.optIn && !changed.includes(i)),
       ];
-      const choice = await vscode.window.showQuickPick(grouped, { title: 'Inspection settings', placeHolder: 'Pick an inspection to change how loudly it reports', matchOnDetail: true });
-      if (choice && 'reset' in choice) {
-        await config.update('inspections.severity', undefined, target);
+      const picker = vscode.window.createQuickPick<Row>();
+      picker.title = flowTitle({ command, subject: target === vscode.ConfigurationTarget.Workspace ? 'this workspace' : 'your settings', steps: 2 }, 1, onlyHere ? 'reporting in this file' : `${this.inspections().length} inspections`);
+      picker.placeholder = 'Pick an inspection to choose how loudly it reports; its buttons turn it off or go to it. Type to search by name or id.';
+      picker.items = grouped;
+      picker.matchOnDetail = true;
+      picker.matchOnDescription = true;
+      picker.ignoreFocusOut = true;
+      picker.buttons = [...(here.size ? [hereButton] : []), ...(history.length ? [undoButton] : []), helpButton];
+      const again = keep && grouped.find((g) => g.inspection?.id === keep);
+      if (again) picker.activeItems = [again];
+      const choice = await new Promise<Row | 'refresh' | undefined>((resolve) => {
+        picker.onDidAccept(() => resolve(picker.activeItems[0]));
+        picker.onDidHide(() => resolve(undefined));
+        picker.onDidTriggerButton(async (button) => {
+          if (button === helpButton) return void showHelp(command);
+          if (button === hereButton) onlyHere = !onlyHere;
+          if (button === undoButton) await write(history.pop() ?? {});
+          resolve('refresh');
+        });
+        picker.onDidTriggerItemButton(async ({ item, button }) => {
+          if (!item.inspection) return;
+          keep = item.inspection.id;
+          if (button === goButton && editor) {
+            const first = findings.filter((f) => f.inspection === item.inspection!.id).sort((a, b) => a.start - b.start)[0];
+            const range = new vscode.Range(editor.document.positionAt(first.start), editor.document.positionAt(first.end));
+            await vscode.window.showTextDocument(editor.document, { selection: range, preserveFocus: true });
+            return;
+          }
+          await change(item.inspection.id, button === offButton ? 'off' : 'default');
+          void vscode.window.setStatusBarMessage(`${item.inspection.title}: ${button === offButton ? 'turned off' : 'back to its default'}`, 4000);
+          resolve('refresh');
+        });
+        picker.show();
+      });
+      // Hiding first: refresh resolves while the picker is still open.
+      picker.dispose();
+      if (choice === 'refresh') continue;
+      if (!choice) return;
+      if (choice.reset) {
+        history.push(read());
+        await write({});
         void vscode.window.setStatusBarMessage('Every inspection is back to its default', 4000);
         continue;
       }
-      const picked = choice && 'inspection' in choice ? choice : undefined;
-      if (!picked) {
-        return;
-      }
-      const current = overrides[picked.inspection.id] ?? 'default';
-      const severity = await vscode.window.showQuickPick(
-        ['default', 'error', 'warning', 'info', 'hint', 'off'].map((value) => ({
-          label: `${value === current ? '$(check) ' : ''}${value}`,
-          description: value === 'default' ? `as reported (${picked.inspection.defaultSeverity})` : value === 'off' ? 'not reported' : undefined,
-          detail: severityHelp[value],
-          value,
-        })),
-        { title: picked.inspection.title, placeHolder: 'Severity' },
-      );
-      if (severity && severity.value !== current) {
-        const inspected = config.inspect<Record<string, string>>('inspections.severity');
-        const before = { ...((target === vscode.ConfigurationTarget.Workspace ? inspected?.workspaceValue : inspected?.globalValue) ?? {}) };
-        if (severity.value === 'default') {
-          delete before[picked.inspection.id];
-        } else {
-          before[picked.inspection.id] = severity.value;
-        }
-        await config.update('inspections.severity', Object.keys(before).length ? before : undefined, target);
-        void vscode.window.setStatusBarMessage(`${picked.inspection.title}: ${severity.value === 'default' ? `back to ${picked.inspection.optIn ? 'off' : picked.inspection.defaultSeverity}` : severity.value === 'off' ? 'turned off' : `now reported as ${severity.value}`}`, 4000);
+      const picked = choice.inspection;
+      if (!picked) return;
+      keep = picked.id;
+      const current = overrides[picked.id] ?? 'default';
+      const levels = ['default', 'error', 'warning', 'info', 'hint', 'off'].map((value) => ({
+        label: `$(${severityIcons[value]}) ${value}${value === current ? ' · now' : ''}`,
+        description: value === 'default' ? `as it reports by itself (${picked.optIn ? 'off' : picked.defaultSeverity})` : value === 'off' ? 'not reported' : undefined,
+        detail: severityHelp[value],
+        value,
+      }));
+      const severity = await pickStep({ command, subject: picked.title, steps: 2 }, 2, levels, { what: 'severity', placeholder: 'How loudly should it report? Back returns to the list.', active: levels.find((l) => l.value === current) });
+      if (severity === BACK || severity === undefined) continue;
+      const value = severity[0].value;
+      if (value !== current) {
+        await change(picked.id, value);
+        void vscode.window.setStatusBarMessage(`${picked.title}: ${value === 'default' ? `back to ${picked.optIn ? 'off' : picked.defaultSeverity}` : value === 'off' ? 'turned off' : `now reported as ${value}`}`, 4000);
       }
     }
+  }
+
+  private readonly flashDecoration = vscode.window.createTextEditorDecorationType({ backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'), borderRadius: '2px' });
+  /** Lights up a range for a moment, so the eye finds where the cursor jumped. */
+  private flash(range: vscode.Range): void {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+    editor.setDecorations(this.flashDecoration, [range]);
+    setTimeout(() => editor.setDecorations(this.flashDecoration, []), 900);
   }
 
   /** Counts for the active file in the status bar; clicking runs Inspect Code on it. */

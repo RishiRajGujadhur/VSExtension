@@ -95,7 +95,7 @@ async function changeSignatureFlow(): Promise<void> {
   const tabs = vscode.window.tabGroups.all.flatMap((g) => g.tabs);
   const tab = tabs.find((t) => t.input instanceof vscode.TabInputWebview);
   assert.ok(tab, `Change Signature dialog did not open; tabs: ${tabs.map((t) => `${t.label} (${t.input?.constructor.name})`).join(', ')}`);
-  assert.equal(tab.label, 'Change Signature: calculateDiscount');
+  assert.equal(tab.label, 'Change parameters: calculateDiscount');
   await vscode.window.tabGroups.close(tab);
   console.log('change signature dialog ok');
 

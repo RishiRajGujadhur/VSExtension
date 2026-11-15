@@ -3,6 +3,7 @@ import { intentionList, intentionsAt } from '../intentions/intentions';
 import { parse } from './codeActions';
 import { isFeatureEnabled } from './features';
 import { languageSelector } from './refactorCommands';
+import { flowTitle, showHelp } from './editFlow';
 
 export const intentionKind = vscode.CodeActionKind.RefactorRewrite.append('tsStructure');
 
@@ -86,47 +87,91 @@ export async function showRewritesHere(): Promise<void> {
   }
   // Most used first; the detail line shows the start of the new code, the description which lines it changes.
   const uses = rewriteUses?.get<Record<string, number>>(usesKey, {}) ?? {};
-  const ordered = [...rewrites].sort((a, b) => (uses[b.id] ?? 0) - (uses[a.id] ?? 0));
-  const preview = (r: (typeof rewrites)[number]) => r.edits.map((e) => e.text).join(' ').replace(/\s+/g, ' ').trim().slice(0, 90);
-  const lines = (r: (typeof rewrites)[number]) => {
+  const lastUsed = rewriteUses?.get<string>(lastKey);
+  const preview = (r: Rewrite) => r.edits.map((e) => e.text).join(' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+  const lines = (r: Rewrite) => {
     const first = editor.document.positionAt(Math.min(...r.edits.map((e) => e.start))).line + 1;
     const last = editor.document.positionAt(Math.max(...r.edits.map((e) => e.end))).line + 1;
     return first === last ? `line ${first}` : `lines ${first}–${last}`;
   };
   const turnOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('eye-closed'), tooltip: 'Turn this rewrite off (Choose rewrites… turns it back on)' };
-  type Item = vscode.QuickPickItem & { rewrite: (typeof rewrites)[number] };
+  const applyStay: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Apply it and keep the list open for another rewrite' };
+  const chooseButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('settings-gear'), tooltip: 'Choose rewrites… (which ones the lightbulb offers)' };
+  const helpButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
+  type Item = vscode.QuickPickItem & { rewrite?: Rewrite };
+  const itemsFor = (list: Rewrite[]): Item[] => {
+    const ordered = [...list].sort((a, b) => Number(b.id === lastUsed) - Number(a.id === lastUsed) || (uses[b.id] ?? 0) - (uses[a.id] ?? 0));
+    const item = (r: Rewrite): Item => ({ label: `$(wand) ${r.title}`, description: `${lines(r)}${r.id === lastUsed ? ' · last used' : uses[r.id] ? ` · used ${uses[r.id]}×` : ''}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, buttons: [applyStay, turnOff], rewrite: r });
+    // Conditions and the rest under their own headings, when both are there.
+    const conditions = ordered.filter((r) => conditionIntentions.has(r.id));
+    const others = ordered.filter((r) => !conditionIntentions.has(r.id));
+    if (!conditions.length || !others.length) return ordered.map(item);
+    return [{ label: 'Conditions', kind: vscode.QuickPickItemKind.Separator }, ...conditions.map(item), { label: 'Loops, functions and expressions', kind: vscode.QuickPickItemKind.Separator }, ...others.map(item)];
+  };
+  // The new code, shown faintly after the line it rewrites while the rewrite is highlighted in the list.
+  const ghost = vscode.window.createTextEditorDecorationType({ after: { color: new vscode.ThemeColor('editorCodeLens.foreground'), fontStyle: 'italic', margin: '0 0 0 2em' } });
+  const showGhost = (r: Rewrite | undefined) => {
+    if (!r) return editor.setDecorations(ghost, []);
+    const at = editor.document.positionAt(Math.min(...r.edits.map((e) => e.start)));
+    const end = editor.document.lineAt(at.line).range.end;
+    editor.setDecorations(ghost, [{ range: new vscode.Range(end, end), renderOptions: { after: { contentText: `→ ${preview(r).slice(0, 70)}` } } }]);
+  };
+  const apply = async (r: Rewrite): Promise<boolean> => {
+    const edit = new vscode.WorkspaceEdit();
+    for (const e of r.edits) edit.replace(editor.document.uri, new vscode.Range(editor.document.positionAt(e.start), editor.document.positionAt(e.end)), e.text);
+    const start = Math.min(...r.edits.map((e) => e.start));
+    if (!(await vscode.workspace.applyEdit(edit))) return false;
+    void rewriteUses?.update(usesKey, { ...uses, [r.id]: (uses[r.id] ?? 0) + 1 });
+    void rewriteUses?.update(lastKey, r.id);
+    // The cursor stays where the rewritten code starts.
+    const at = editor.document.positionAt(start);
+    editor.selection = new vscode.Selection(at, at);
+    void vscode.window.setStatusBarMessage(`$(wand) Show rewrites: ${r.title}. ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Z undoes it.`, 4000);
+    return true;
+  };
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = `Rewrites here (${ordered.length})`;
-  picker.placeholder = disabled.size ? `Pick a rewrite to apply · ${disabled.size} turned off: Choose rewrites… brings them back` : 'Pick a rewrite to apply; type to search what the code becomes';
+  const refresh = () => {
+    const now = intentionsAtCursor(editor, disabled);
+    picker.title = flowTitle({ command: 'tsStructure.showRewrites', subject: `line ${editor.selection.active.line + 1}`, steps: 1 }, 1, `${now.length} rewrite${now.length === 1 ? '' : 's'}`);
+    picker.items = itemsFor(now);
+    return now.length;
+  };
+  refresh();
+  picker.placeholder = disabled.size ? `Pick a rewrite to apply; the new code shows beside the line · ${disabled.size} turned off (the gear brings them back)` : 'Pick a rewrite to apply; the new code shows beside the line as you move through the list';
   picker.matchOnDetail = true;
-  picker.items = ordered.map((r) => ({ label: `$(wand) ${r.title}`, description: `${lines(r)}${uses[r.id] ? ` · used ${uses[r.id]}×` : ''} · ${r.id}`, detail: preview(r) ? `→ ${preview(r)}` : undefined, buttons: [turnOff], rewrite: r }));
+  picker.matchOnDescription = true;
+  picker.ignoreFocusOut = true;
+  picker.buttons = [chooseButton, helpButton];
+  picker.onDidChangeActive((active) => showGhost(active[0]?.rewrite));
+  picker.onDidTriggerButton((b) => {
+    if (b === helpButton) void showHelp('tsStructure.showRewrites');
+    else if (b === chooseButton) { picker.hide(); void vscode.commands.executeCommand('tsStructure.chooseIntentions'); }
+  });
   picker.onDidTriggerItemButton(async (e) => {
-    await config.update('intentions.disabled', [...disabled, e.item.rewrite.id], vscode.ConfigurationTarget.Global);
-    disabled.add(e.item.rewrite.id);
+    const r = e.item.rewrite;
+    if (!r) return;
+    if (e.button === applyStay) {
+      // Applied, then the list shows what applies to the code now.
+      if (await apply(r) && refresh() === 0) picker.hide();
+      return;
+    }
+    await config.update('intentions.disabled', [...disabled, r.id], vscode.ConfigurationTarget.Global);
+    disabled.add(r.id);
     picker.items = picker.items.filter((i) => i !== e.item);
-    void vscode.window.setStatusBarMessage(`Turned off "${e.item.rewrite.title}"`, 4000);
+    void vscode.window.setStatusBarMessage(`Turned off "${r.title}"`, 4000);
   });
   const picked = await new Promise<Item | undefined>((resolve) => {
-    picker.onDidAccept(() => resolve(picker.selectedItems[0]));
+    picker.onDidAccept(() => resolve(picker.activeItems[0]));
     picker.onDidHide(() => resolve(undefined));
     picker.show();
   });
   picker.dispose();
-  if (picked) {
-    const edit = new vscode.WorkspaceEdit();
-    for (const e of picked.rewrite.edits) {
-      edit.replace(editor.document.uri, new vscode.Range(editor.document.positionAt(e.start), editor.document.positionAt(e.end)), e.text);
-    }
-    const start = Math.min(...picked.rewrite.edits.map((e) => e.start));
-    if (await vscode.workspace.applyEdit(edit)) {
-      void rewriteUses?.update(usesKey, { ...uses, [picked.rewrite.id]: (uses[picked.rewrite.id] ?? 0) + 1 });
-      // The cursor stays where the rewritten code starts.
-      const at = editor.document.positionAt(start);
-      editor.selection = new vscode.Selection(at, at);
-      void vscode.window.setStatusBarMessage(`$(wand) ${picked.rewrite.title}. ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Z undoes it.`, 4000);
-    }
-  }
+  ghost.dispose();
+  if (picked?.rewrite) await apply(picked.rewrite);
 }
+
+type Rewrite = ReturnType<typeof intentionsAt>[number];
+const lastKey = 'tsStructure.rewriteLast';
 
 /** A checklist of the intention actions, in the README's two groups; unticked ones are left out of the lightbulb menu. */
 export async function chooseIntentions(): Promise<void> {
@@ -142,10 +187,11 @@ export async function chooseIntentions(): Promise<void> {
     id: intention.id,
   });
   const picker = vscode.window.createQuickPick<Item>();
-  picker.title = `Choose rewrites (${intentionList.length - disabled.size} of ${intentionList.length} on)`;
-  picker.placeholder = 'Tick the rewrites to offer in the lightbulb menu; the ones that apply at the cursor come first';
+  const titleNow = () => flowTitle({ command: 'tsStructure.chooseIntentions', steps: 1 }, 1, `${picker.selectedItems.filter((i) => i.id).length} of ${intentionList.length} on`);
+  picker.placeholder = 'Tick the rewrites the lightbulb offers; the ones that apply at the cursor come first. Type to search by name or id.';
   picker.canSelectMany = true;
   picker.matchOnDescription = true;
+  picker.ignoreFocusOut = true;
   const applies = intentionList.filter((i) => here.has(i.id));
   picker.items = [
     ...(applies.length ? [{ label: 'Here at the cursor', kind: vscode.QuickPickItemKind.Separator }, ...applies.map(item)] : []),
@@ -155,10 +201,23 @@ export async function chooseIntentions(): Promise<void> {
     ...intentionList.filter((i) => !conditionIntentions.has(i.id) && !here.has(i.id)).map(item),
   ];
   picker.selectedItems = picker.items.filter((i) => i.picked);
+  picker.title = titleNow();
   const allOn: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn all on' };
   const allOff: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('clear-all'), tooltip: 'Turn all off' };
-  picker.buttons = [allOn, allOff];
-  picker.onDidTriggerButton((b) => (picker.selectedItems = b === allOn ? picker.items.filter((i) => i.id) : []));
+  const conditionsOnly: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('symbol-boolean'), tooltip: 'Only the condition rewrites' };
+  const hereOnly: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('target'), tooltip: 'Only the ones that apply at the cursor' };
+  const reset: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('discard'), tooltip: 'Back to how it was when this opened' };
+  const helpButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
+  picker.buttons = [allOn, allOff, conditionsOnly, ...(here.size ? [hereOnly] : []), reset, helpButton];
+  const ticked = picker.selectedItems;
+  picker.onDidTriggerButton((b) => {
+    if (b === helpButton) return void showHelp('tsStructure.chooseIntentions');
+    const all = picker.items.filter((i) => i.id);
+    picker.selectedItems = b === allOn ? all : b === allOff ? [] : b === conditionsOnly ? all.filter((i) => conditionIntentions.has(i.id!)) : b === hereOnly ? all.filter((i) => here.has(i.id!)) : ticked;
+    picker.title = titleNow();
+  });
+  // The count in the title follows the ticks.
+  picker.onDidChangeSelection(() => (picker.title = titleNow()));
   const picked = await new Promise<readonly Item[] | undefined>((resolve) => {
     picker.onDidAccept(() => resolve(picker.selectedItems));
     picker.onDidHide(() => resolve(undefined));
@@ -180,7 +239,7 @@ export async function chooseIntentions(): Promise<void> {
   const target = inspected?.workspaceValue !== undefined ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
   await config.update('intentions.disabled', off.length ? off : undefined, target);
   const named = (ids: string[]) => (ids.length <= 2 ? ids.map((id) => intentionList.find((i) => i.id === id)?.title ?? id).join(', ') : `${ids.length} rewrites`);
-  void vscode.window.setStatusBarMessage(`${on.size} of ${intentionList.length} rewrites on${turnedOn.length ? `; turned on ${named(turnedOn)}` : ''}${turnedOff.length ? `; turned off ${named(turnedOff)}` : ''}`, 5000);
+  void vscode.window.setStatusBarMessage(`Choose rewrites: ${on.size} of ${intentionList.length} on${turnedOn.length ? `; turned on ${named(turnedOn)}` : ''}${turnedOff.length ? `; turned off ${named(turnedOff)}` : ''}`, 5000);
 }
 
 /** One level of indentation as the editor showing the document is configured. */

@@ -5,6 +5,7 @@ import { ProjectService } from '../analysis/project';
 import { SafeDeletePlan, planFileDelete, planSafeDelete } from '../refactor/safeDelete';
 import { applyRefactor, reportError } from './applyRefactor';
 import { previewEnabled } from './refactorCommands';
+import { Flow, finished, flowTitle, showHelp } from './editFlow';
 
 export async function safeDeleteSymbol(projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
   const document = editor.document;
@@ -40,83 +41,126 @@ export async function safeDeleteFile(projects: ProjectService, uri: vscode.Uri |
   }
 }
 
+const command = 'tsStructure.safeDelete';
+const isTest = (file: string) => /(\.|_)(test|spec)\.[cm]?[jt]sx?$|[\\/](__tests__|tests?)[\\/]/.test(file);
+
+/**
+ * One list, in the Edit features' shared look, whatever the case: the choices first (Delete, Show usages, Copy…),
+ * then what blocks the delete and what goes with it, grouped by file. Moving through a usage shows it in the editor
+ * without leaving the list; Enter on one opens it and keeps the list open.
+ */
 async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?: () => Promise<void>): Promise<void> {
   const blocking = plan.usages.filter((u) => !u.removable);
-  const removable = plan.usages.length - blocking.length;
+  const removableUsages = plan.usages.filter((u) => u.removable);
   const what = plan.kind === 'file' ? plan.name : `${plan.kind} '${plan.name}'`;
-  const testNote = tests > 0 ? `${tests} test${tests === 1 ? '' : 's'} depend on it (see Affected tests).` : '';
-  // The usages in order: this file first, then by file and line; tests marked.
-  const isTest = (file: string) => /(\.|_)(test|spec)\.[cm]?[jt]sx?$|[\\/](__tests__|tests?)[\\/]/.test(file);
   const here = plan.usages[0]?.location.file;
-  blocking.sort((a, b) => Number(a.location.file !== here) - Number(b.location.file !== here) || a.location.file.localeCompare(b.location.file) || a.location.line - b.location.line);
+  const order = (a: Usage, b: Usage) => Number(a.location.file !== here) - Number(b.location.file !== here) || a.location.file.localeCompare(b.location.file) || a.location.line - b.location.line;
+  blocking.sort(order);
+  removableUsages.sort(order);
   const files = new Set(blocking.map((u) => u.location.file)).size;
   const onlyTests = blocking.length > 0 && blocking.every((u) => isTest(u.location.file));
+  let preview = previewEnabled();
 
   // Nothing uses it, nothing else changes and nothing outside can see it: delete without asking, if the setting allows.
-  if (blocking.length === 0 && removable === 0 && !plan.exported && tests === 0 && !vscode.workspace.getConfiguration('tsStructure').get('safeDelete.confirmUnused', true)) {
-    if (await applyRefactor(plan.result, previewEnabled())) {
-      deleted(what);
-    }
-    return;
-  }
-  if (blocking.length === 0) {
-    const details = [
-      removable > 0 ? `${removable} import${removable === 1 ? '' : 's'} or re-export${removable === 1 ? '' : 's'} of it will also be removed.` : 'No usages were found.',
-      testNote,
-      plan.exported ? 'It is exported, so code outside this project could still use it.' : '',
-      'Ctrl+Z undoes the delete.',
-    ].filter(Boolean);
-    // Preview is offered even with tsStructure.previewRefactorings off, for a one-off look at the edits.
-    const preview = previewEnabled();
-    const choice = await vscode.window.showWarningMessage(`Delete ${what}?`, { modal: true, detail: details.join('\n') }, 'Delete', ...(preview ? [] : ['Preview…']));
-    if (choice) {
-      if (await applyRefactor(plan.result, preview || choice === 'Preview…')) {
-        deleted(what);
-      }
-    }
+  if (blocking.length === 0 && removableUsages.length === 0 && !plan.exported && tests === 0 && !vscode.workspace.getConfiguration('tsStructure').get('safeDelete.confirmUnused', true)) {
+    if (await applyRefactor(plan.result, preview)) done();
     return;
   }
 
-  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages' | 'copy'; usage?: SafeDeletePlan['usages'][number] };
-  const items: Item[] = [
-    { label: '$(trash) Delete anyway', description: onlyTests ? 'Only tests use it: delete or update those tests too' : 'The usages listed below will no longer compile', detail: 'Use this when you will fix the usages next; Ctrl+Z undoes the delete.', action: 'delete' },
-    ...(showUsages ? [{ label: '$(references) Show usages in the Results view', description: 'Keep the list open while you remove them', detail: 'Then run Delete safely again once nothing uses it.', action: 'usages' as const }] : []),
-    { label: '$(copy) Copy usage locations', description: 'file:line of each, for a ticket or a note', action: 'copy' },
-    { label: '$(close) Cancel', action: 'cancel' },
-    { label: `Usages that block deletion (${blocking.length})`, kind: vscode.QuickPickItemKind.Separator },
-    ...blocking.map((usage) => usageItem(usage)),
-  ];
-  if (removable > 0) {
-    items.push({ label: `Removed together with it (${removable})`, kind: vscode.QuickPickItemKind.Separator });
-    items.push(...plan.usages.filter((u) => u.removable).map((usage) => usageItem(usage)));
-  }
-  const picked = await vscode.window.showQuickPick(items, {
-    title: `${what} is used in ${blocking.length} place${blocking.length === 1 ? '' : 's'}${files > 1 ? ` in ${files} files` : ''}${testNote ? ` · ${testNote}` : ''}`,
-    placeHolder: 'Select a usage to open it, or choose Delete anyway',
-    matchOnDescription: true,
+  type Item = vscode.QuickPickItem & { action?: 'delete' | 'cancel' | 'usages' | 'copy' | 'tests'; usage?: Usage };
+  const openBeside: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('split-horizontal'), tooltip: 'Open to the side' };
+  const usageItem = (usage: Usage): Item => ({
+    label: `$(${usage.removable ? 'check' : 'warning'}) ${usage.lineText.trim()}`,
+    description: `line ${usage.location.line + 1}${isTest(usage.location.file) ? ' · test' : ''}`,
+    buttons: [openBeside],
+    usage,
   });
-  if (picked?.action === 'delete') {
-    if (await applyRefactor(plan.result, previewEnabled())) {
-      deleted(what);
+  // Usages under a heading per file, with how many are in it.
+  const byFile = (usages: Usage[], heading: string): Item[] => {
+    const out: Item[] = [{ label: heading, kind: vscode.QuickPickItemKind.Separator }];
+    const groups = new Map<string, Usage[]>();
+    for (const u of usages) groups.set(u.location.file, [...(groups.get(u.location.file) ?? []), u]);
+    for (const [file, list] of groups) {
+      if (groups.size > 1) out.push({ label: `${vscode.workspace.asRelativePath(file)} (${list.length})`, kind: vscode.QuickPickItemKind.Separator });
+      out.push(...list.map(usageItem));
     }
-  } else if (picked?.action === 'copy') {
-    await vscode.env.clipboard.writeText(blocking.map((u) => `${vscode.workspace.asRelativePath(u.location.file)}:${u.location.line + 1}  ${u.lineText}`).join('\n'));
+    return out;
+  };
+  const notes = [
+    removableUsages.length ? `${removableUsages.length} import${removableUsages.length === 1 ? '' : 's'} or re-export${removableUsages.length === 1 ? '' : 's'} go with it` : '',
+    tests ? `${tests} test${tests === 1 ? '' : 's'} depend on it` : '',
+    plan.exported ? 'exported: code outside this project could still use it' : '',
+  ].filter(Boolean);
+  const items: Item[] = [
+    blocking.length
+      ? { label: '$(trash) Delete anyway', description: onlyTests ? 'only tests use it: update or delete them too' : 'the usages below will no longer compile', detail: 'Use this when you will fix the usages next; Undo brings it back.', action: 'delete' }
+      : { label: '$(trash) Delete', description: notes.length ? notes.join(' · ') : 'nothing uses it', detail: 'Undo brings it back.', action: 'delete' },
+    ...(blocking.length && showUsages ? [{ label: '$(references) Show usages in the Results view', description: 'keep the list open while you remove them', detail: 'Then run Delete safely again once nothing uses it.', action: 'usages' as const }] : []),
+    ...(onlyTests ? [{ label: '$(beaker) Open the first test that uses it', action: 'tests' as const }] : []),
+    ...(blocking.length ? [{ label: '$(copy) Copy usage locations', description: 'file:line and the code of each, for a ticket or a note', action: 'copy' as const }] : []),
+    { label: '$(close) Cancel', action: 'cancel' },
+    ...(blocking.length ? byFile(blocking, `Usages that block the delete (${blocking.length})`) : []),
+    ...(removableUsages.length ? byFile(removableUsages, `Removed together with it (${removableUsages.length})`) : []),
+  ];
+
+  const picker = vscode.window.createQuickPick<Item>();
+  const flow: Flow = { command, subject: plan.name, steps: 1 };
+  picker.title = flowTitle(flow, 1, blocking.length ? `used in ${blocking.length} place${blocking.length === 1 ? '' : 's'}${files > 1 ? ` in ${files} files` : ''}` : 'not used');
+  picker.placeholder = blocking.length ? 'Move through the usages to see each in the editor; Enter opens one, or choose Delete anyway' : `Delete ${what}? ${notes.join(' · ') || 'Nothing uses it.'}`;
+  picker.items = items;
+  picker.matchOnDescription = true;
+  picker.ignoreFocusOut = true;
+  const helpButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
+  const previewLook = (): vscode.QuickInputButton => ({ iconPath: new vscode.ThemeIcon(preview ? 'eye' : 'eye-closed'), tooltip: preview ? 'The delete opens in the Refactor Preview first (click to apply straight away)' : 'The delete applies straight away (click to preview it first)' });
+  let previewButton = previewLook();
+  picker.buttons = [previewButton, helpButton];
+  const show = (usage: Usage, options: vscode.TextDocumentShowOptions) => {
+    const position = new vscode.Position(usage.location.line, usage.location.character);
+    return vscode.window.showTextDocument(vscode.Uri.file(usage.location.file), { selection: new vscode.Range(position, position), ...options });
+  };
+  const chosen = await new Promise<Item | undefined>((resolve) => {
+    picker.onDidChangeActive((active) => {
+      // A peek at each usage as you move through them, without leaving the list.
+      if (active[0]?.usage) void show(active[0].usage, { preview: true, preserveFocus: true });
+    });
+    picker.onDidTriggerItemButton((e) => e.item.usage && void show(e.item.usage, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }));
+    picker.onDidTriggerButton((button) => {
+      if (button === helpButton) void showHelp(command);
+      else if (button === previewButton) {
+        preview = !preview;
+        const old = previewButton;
+        previewButton = previewLook();
+        picker.buttons = picker.buttons.map((b) => (b === old ? previewButton : b));
+      }
+    });
+    picker.onDidAccept(() => {
+      const item = picker.activeItems[0];
+      // Opening a usage keeps the list, to look at the next one.
+      if (item?.usage) void show(item.usage, { preview: false, preserveFocus: true });
+      else resolve(item);
+    });
+    picker.onDidHide(() => resolve(undefined));
+    picker.show();
+  });
+  picker.dispose();
+  if (chosen?.action === 'delete') {
+    if (await applyRefactor(plan.result, preview)) done();
+  } else if (chosen?.action === 'copy') {
+    await vscode.env.clipboard.writeText(blocking.map((u) => `${vscode.workspace.asRelativePath(u.location.file)}:${u.location.line + 1}  ${u.lineText.trim()}`).join('\n'));
     void vscode.window.setStatusBarMessage(`Copied ${blocking.length} usage location${blocking.length === 1 ? '' : 's'}`, 3000);
-  } else if (picked?.action === 'usages') {
+  } else if (chosen?.action === 'usages') {
     await showUsages?.();
-  } else if (picked?.usage) {
-    const position = new vscode.Position(picked.usage.location.line, picked.usage.location.character);
-    await vscode.window.showTextDocument(vscode.Uri.file(picked.usage.location.file), { selection: new vscode.Range(position, position) });
+  } else if (chosen?.action === 'tests') {
+    await show(blocking[0], { preview: false });
   }
 
-  function usageItem(usage: SafeDeletePlan['usages'][number]): Item {
-    return {
-      label: `$(${usage.removable ? 'check' : 'warning'}) ${usage.lineText}`,
-      description: `${vscode.workspace.asRelativePath(usage.location.file)}:${usage.location.line + 1}${isTest(usage.location.file) ? ' · test' : ''}`,
-      usage,
-    };
+  function done(): void {
+    const changed = new Set(plan.result.changes.map((c) => c.file)).size;
+    void finished(command, `deleted ${what}${removableUsages.length ? ` and ${removableUsages.length} import${removableUsages.length === 1 ? '' : 's'} of it` : ''}.`, { file: here ?? plan.result.changes[0]?.file, changed, undo: plan.kind !== 'file' });
   }
 }
+
+type Usage = SafeDeletePlan['usages'][number];
 
 /** How many tests reach the target, as context for the decision; failures here never block deleting. */
 function impactedTestCount(projects: ProjectService, fileName: string, offset: number, scope: 'symbol' | 'module', root: string | undefined): number {
@@ -125,9 +169,4 @@ function impactedTestCount(projects: ProjectService, fileName: string, offset: n
   } catch {
     return 0;
   }
-}
-
-/** Says what went, and how to bring it back. */
-function deleted(what: string): void {
-  void vscode.window.setStatusBarMessage(`$(trash) Deleted ${what}. ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Z in each file undoes it.`, 6000);
 }

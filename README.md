@@ -266,6 +266,19 @@ The **ⓘ** button in the results view explains the analysis on screen. Rows tha
 
 Changes open in VS Code's Refactor Preview first (`tsStructure.previewRefactorings`); `Ctrl+Z` undoes them.
 
+**Every Edit feature works the same way.** Features that ask questions in the command box show one title, such as *Move to another file: cart.ts · step 2 of 3*, with a **?** button that explains the feature, **Back** from the second step on, and steps that stay open while you click into the code. Features that open a panel (Change parameters, Search by shape) share a header with the feature, its subject and **?** (also `F1`), a line of their keys, sections that fold and stay folded, a bar of main buttons that stays in view, and a banner with **Reload** when the file changes underneath. When an edit is done, one message says what changed, with **Undo** and **Show changes**.
+
+- **Change parameters**: running it again on the same function brings back its panel; the tab follows the name you type; **Duplicate** (`Ctrl+D`) copies a parameter; the type fields suggest types; names typed with spaces become camelCase; `Enter` moves down a column; removing a parameter offers **Undo**; each problem is a link to the field it is about.
+- **Make it a parameter**: with nothing selected, the expression at the cursor is used; the bulb button offers other names (from the type, from the expression); spaces become camelCase; a reserved or taken name gets a free alternative; your last choice is marked; the last step can switch the Refactor Preview on or off for this edit.
+- **Move to another file**: declarations are grouped as exported or only used in the file, with their line range and size; buttons tick every exported one or none; a new file gets the right extension and an existing one is said so; the last target and choice are marked; the preview can be switched for this move.
+- **Delete safely**: one list for every case, no dialog; moving through the usages shows each in the editor, `Enter` opens one and keeps the list, and a button opens it to the side; usages are grouped by file; what goes with it (imports, tests, being exported) is said on the Delete choice; when only tests use it, the first test is one click away.
+- **Rewrites here**: the new code shows faintly beside the line as you move through the list; a button applies one and keeps the list open for the next; rewrites are grouped, and the last one used comes first; the gear opens Choose rewrites.
+- **Choose rewrites**: the title counts what is on as you tick; buttons keep only the condition rewrites, only the ones that apply at the cursor, or go back to how it was.
+- **Search by shape**: results are grouped by file (a click folds a file), with a filter, **Copy results**, **Clear**, arrow keys to move and the time taken; `F5` searches again; the pattern and replacement boxes grow with their text; Constraints, Replace with and Save as inspection fold.
+- **Your own checks**: each shows how often it reports now and its severity; buttons run it on the whole project, duplicate it, turn it off or delete it (with **Undo**); all can be turned on or off, copied as JSON and added from JSON; with code selected, a new check starts from it.
+- **Inspection settings**: each inspection shows its severity as an icon, with buttons to turn it off (or back to its default) and to go to where it reports in this file; a filter keeps only the ones reporting here; **Undo** reverses changes one at a time; the list keeps its place, and the severity step has **Back**.
+- **Next problem** and the new **Previous problem** (`Ctrl+Alt+S Shift+5`): the problem lights up for a moment where the cursor lands; the message counts errors and warnings and how many fixes there are; past the last problem it moves on to the next open file that has some.
+
 ![The Change Signature dialog](docs/images/change-signature.gif)
 
 ## Find problems

@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { finished, flowTitle, showHelp } from './editFlow';
+import { attachEditPanel, editPanelCss, editPanelHead, editPanelKeys, editPanelScript } from './editPanelKit';
 import { ProjectService } from '../analysis/project';
 import { normalizePath } from '../analysis/paths';
 import { Match, PlaceholderConstraint, Replacement, SearchScope, SearchSpec, bindingSummary, searchReport, compilePattern, structuralReplace, structuralSearch } from '../search/structuralSearch';
@@ -25,6 +27,9 @@ type Message =
   | { type: 'open'; index: number }
   | { type: 'validate'; spec: SearchSpec }
   | { type: 'copyKeybinding'; spec: SearchSpec; scope: Scope; template: string }
+  | { type: 'copyText'; text: string }
+  | { type: 'help' }
+  | { type: 'reload' }
   | { type: 'replace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'previewReplace'; spec: SearchSpec; scope: Scope; template: string }
   | { type: 'replaceOne'; index: number }
@@ -71,6 +76,7 @@ export class StructuralSearchPanel {
     }
     const panel = vscode.window.createWebviewPanel('tsStructure.structuralSearch', 'Search by shape', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     StructuralSearchPanel.current = new StructuralSearchPanel(context, panel, projects, view, anchor);
+    attachEditPanel(panel, 'tsStructure.structuralSearch');
     StructuralSearchPanel.current.folderRoot = initial?.folder;
     // A preset is part of the page, since messages posted before its script runs are lost.
     panel.webview.html = html(panel.webview, initial?.pattern ?? '', initial?.preset);
@@ -187,6 +193,11 @@ export class StructuralSearchPanel {
       }
       return;
     }
+    if (message.type === 'copyText') {
+      await vscode.env.clipboard.writeText(message.text);
+      void this.panel.webview.postMessage({ type: 'status', text: 'Copied the results.' });
+      return;
+    }
     if (message.type === 'copyKeybinding') {
       const spec = clean(message.spec);
       const args: SearchPreset & { run: boolean } = { pattern: spec.pattern, constraints: spec.constraints?.length ? spec.constraints : undefined, replacement: message.template.trim() || undefined, scope: message.scope, run: true };
@@ -295,7 +306,9 @@ export class StructuralSearchPanel {
           type: 'status',
           text: `Replacing ${plural(result.matches, 'match', 'matches')} in ${plural(files, 'file')}${result.conflicts.length ? `; ${plural(result.conflicts.length, 'new type error')}` : ', type-checks cleanly'}.`,
         });
-        await applyRefactor(result, previewEnabled());
+        if (await applyRefactor(result, previewEnabled())) {
+          void finished('tsStructure.structuralSearch', `replaced ${plural(result.matches, 'match', 'matches')} in ${plural(files, 'file')}.`, { file: result.changes[0]?.file, changed: files });
+        }
       } catch (error) {
         void this.panel.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
       }
@@ -303,8 +316,10 @@ export class StructuralSearchPanel {
     }
     if (message.type === 'search') {
       try {
+        const started = Date.now();
         const program = this.projects.analysisProject(this.anchor, this.folder()).program();
         this.matches = structuralSearch(program, clean(message.spec), await this.scopeOf(message.scope));
+        const ms = Date.now() - started;
         // The count in the tab, so it shows while another editor is in front.
         const files = new Set(this.matches.map((m) => m.sourceFile.fileName)).size;
         this.panel.title = `Search by shape (${this.matches.length}${files > 1 ? ` in ${files} files` : ''})`;
@@ -312,10 +327,13 @@ export class StructuralSearchPanel {
         void this.panel.webview.postMessage({
           type: 'results',
           count: this.matches.length,
+          ms,
+          files,
           items: this.matches.slice(0, 200).map((m, index) => ({
             index,
             text: m.sourceFile.text.slice(m.start, m.end).replace(/\s+/g, ' ').slice(0, 120),
             where: `${vscode.workspace.asRelativePath(m.sourceFile.fileName)}:${m.sourceFile.getLineAndCharacterOfPosition(m.start).line + 1}`,
+            file: vscode.workspace.asRelativePath(m.sourceFile.fileName),
             bindings: bindingSummary(m),
           })),
         });
@@ -349,26 +367,98 @@ async function saveCustomInspections(configs: CustomInspectionConfig[]): Promise
 
 /** Custom inspections in one list, with buttons to edit, enable or disable and delete each, and a way to add one. */
 async function manageCustomInspections(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): Promise<void> {
-  type Item = vscode.QuickPickItem & { config?: CustomInspectionConfig };
+  type Item = vscode.QuickPickItem & { config?: CustomInspectionConfig; action?: 'new' | 'fromSelection' };
   const editButton = { iconPath: new vscode.ThemeIcon('edit'), tooltip: 'Edit in Search by shape' };
-  const deleteButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Delete' };
+  const runButton = { iconPath: new vscode.ThemeIcon('search'), tooltip: 'Search the whole project with it now' };
+  const duplicateButton = { iconPath: new vscode.ThemeIcon('copy'), tooltip: 'Duplicate (a copy to change)' };
+  const deleteButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Delete (Undo brings it back)' };
   const toggleButton = (config: CustomInspectionConfig) =>
     config.enabled === false ? { iconPath: new vscode.ThemeIcon('pass'), tooltip: 'Turn on' } : { iconPath: new vscode.ThemeIcon('circle-slash'), tooltip: 'Turn off' };
-  const items = (): Item[] => [
-    ...[...customInspectionConfigs()].sort((a, b) => Number(a.enabled === false) - Number(b.enabled === false) || a.id.localeCompare(b.id)).map((config) => ({
-      label: `${config.enabled === false ? '$(circle-slash)' : '$(pass)'} ${config.id}`,
-      description: config.pattern.replace(/\s+/g, ' '),
-      detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}${config.include ? ` · ${config.include}` : ''}`,
-      buttons: [editButton, toggleButton(config), deleteButton],
-      config,
-    })),
-    { label: '$(add) New check from a search by shape…', detail: 'Write a pattern, then Save as your own check: it warns as you type, with your message and fix' },
-  ];
+  const allOn = { iconPath: new vscode.ThemeIcon('check-all'), tooltip: 'Turn all on' };
+  const allOff = { iconPath: new vscode.ThemeIcon('clear-all'), tooltip: 'Turn all off' };
+  const exportButton = { iconPath: new vscode.ThemeIcon('export'), tooltip: 'Copy every check as JSON (to share or keep)' };
+  const importButton = { iconPath: new vscode.ThemeIcon('cloud-download'), tooltip: 'Add checks from JSON on the clipboard' };
+  const helpButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
+  const severityIcon: Record<string, string> = { error: 'error', warning: 'warning', info: 'info', hint: 'lightbulb' };
+  // How often each check reports right now, from the Problems panel.
+  const reports = (): Map<string, number> => {
+    const counts = new Map<string, number>();
+    for (const [, diagnostics] of vscode.languages.getDiagnostics()) {
+      for (const d of diagnostics) {
+        const code = typeof d.code === 'object' ? String(d.code.value) : String(d.code ?? '');
+        if (code) counts.set(code, (counts.get(code) ?? 0) + 1);
+      }
+    }
+    return counts;
+  };
+  const editor = vscode.window.activeTextEditor;
+  const selection = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : '';
+  const items = (): Item[] => {
+    const configs = [...customInspectionConfigs()].sort((a, b) => a.id.localeCompare(b.id));
+    const counts = reports();
+    const row = (config: CustomInspectionConfig): Item => {
+      const found = counts.get(config.id) ?? counts.get(`custom.${config.id}`) ?? 0;
+      return {
+        label: `$(${config.enabled === false ? 'circle-slash' : severityIcon[config.severity ?? 'warning'] ?? 'warning'}) ${config.id}`,
+        description: `${config.enabled === false ? 'off · ' : found ? `${found} reported · ` : ''}${config.pattern.replace(/\s+/g, ' ')}`,
+        detail: `${config.severity ?? 'warning'} · ${config.message}${config.replacement ? ' · has fix' : ''}${config.include ? ` · ${config.include}` : ''}`,
+        buttons: [editButton, runButton, duplicateButton, toggleButton(config), deleteButton],
+        config,
+      };
+    };
+    const on = configs.filter((c) => c.enabled !== false);
+    const off = configs.filter((c) => c.enabled === false);
+    return [
+      ...(selection ? [{ label: '$(selection) New check from the selected code…', detail: selection.replace(/\s+/g, ' ').slice(0, 80), action: 'fromSelection' as const }] : []),
+      { label: '$(add) New check from a search by shape…', detail: 'Write a pattern, then Save as your own check: it warns as you type, with your message and fix', action: 'new' },
+      ...(on.length ? [{ label: `On (${on.length})`, kind: vscode.QuickPickItemKind.Separator }, ...on.map(row)] : []),
+      ...(off.length ? [{ label: `Off (${off.length})`, kind: vscode.QuickPickItemKind.Separator }, ...off.map(row)] : []),
+    ];
+  };
   const pick = vscode.window.createQuickPick<Item>();
-  const count = customInspectionConfigs().length;
-  pick.title = `Your own checks${count ? ` (${count})` : ''}`;
-  pick.placeholder = count ? 'Enter edits the selected check; the buttons turn it on or off, or delete it' : 'No checks yet: start one from a search by shape';
-  pick.items = items();
+  const retitle = () => {
+    const configs = customInspectionConfigs();
+    const offCount = configs.filter((c) => c.enabled === false).length;
+    pick.title = flowTitle({ command: 'tsStructure.manageCustomInspections', steps: 1 }, 1, configs.length ? `${configs.length - offCount} of ${configs.length} on` : 'none yet');
+  };
+  const refresh = () => {
+    const active = pick.activeItems[0]?.config?.id;
+    pick.items = items();
+    retitle();
+    // The highlight stays on the check you were working on.
+    const again = pick.items.find((i) => i.config?.id === active);
+    if (again) pick.activeItems = [again];
+  };
+  pick.placeholder = customInspectionConfigs().length ? 'Enter edits the check; its buttons run, duplicate, turn off or delete it. Type to search by id, pattern or message.' : 'No checks yet: start one from a search by shape';
+  pick.matchOnDescription = true;
+  pick.matchOnDetail = true;
+  pick.ignoreFocusOut = true;
+  pick.buttons = [allOn, allOff, exportButton, importButton, helpButton];
+  refresh();
+  pick.onDidTriggerButton(async (button) => {
+    const configs = customInspectionConfigs();
+    if (button === helpButton) return void showHelp('tsStructure.manageCustomInspections');
+    if (button === exportButton) {
+      await vscode.env.clipboard.writeText(JSON.stringify(configs, null, 2));
+      return void vscode.window.setStatusBarMessage(`Copied ${configs.length} check${configs.length === 1 ? '' : 's'} as JSON`, 3000);
+    }
+    if (button === importButton) {
+      let added: CustomInspectionConfig[] = [];
+      try {
+        const parsed = JSON.parse(await vscode.env.clipboard.readText());
+        added = (Array.isArray(parsed) ? parsed : [parsed]).filter((c) => c && typeof c.id === 'string' && typeof c.pattern === 'string' && typeof c.message === 'string');
+      } catch {
+        added = [];
+      }
+      if (!added.length) return void vscode.window.showWarningMessage('The clipboard has no checks: copy JSON with id, pattern and message, such as from the export button.');
+      const ids = new Set(configs.map((c) => c.id));
+      await saveCustomInspections([...configs, ...added.map((c) => (ids.has(c.id) ? { ...c, id: `${c.id}-imported` } : c))]);
+      vscode.window.setStatusBarMessage(`Added ${added.length} check${added.length === 1 ? '' : 's'} from the clipboard`, 4000);
+      return refresh();
+    }
+    await saveCustomInspections(configs.map((c) => ({ ...c, enabled: button === allOn })));
+    refresh();
+  });
   pick.onDidTriggerItemButton(async ({ item, button }) => {
     const config = item.config!;
     if (button === editButton) {
@@ -376,26 +466,38 @@ async function manageCustomInspections(context: vscode.ExtensionContext, project
       StructuralSearchPanel.open(context, projects, view, { inspection: config });
       return;
     }
-    const configs = customInspectionConfigs();
-    if (button === deleteButton) {
-      // Deleting can't be undone from here: ask first.
-      const sure = await vscode.window.showWarningMessage(`Delete your check '${config.id}'?`, { modal: true, detail: `${config.message}\nPattern: ${config.pattern}` }, 'Delete');
-      if (sure !== 'Delete') return;
+    if (button === runButton) {
+      pick.hide();
+      void vscode.commands.executeCommand('tsStructure.structuralSearch', { pattern: config.pattern, constraints: config.constraints, replacement: config.replacement, scope: 'project', run: true });
+      return;
     }
-    await saveCustomInspections(
-      button === deleteButton ? configs.filter((c) => c.id !== config.id) : configs.map((c) => (c.id === config.id ? { ...c, enabled: c.enabled === false } : c)),
-    );
-    void vscode.window.setStatusBarMessage(button === deleteButton ? `Deleted your check '${config.id}'` : config.enabled === false ? `Turned on '${config.id}'` : `Turned off '${config.id}'`, 4000);
-    pick.items = items();
+    const configs = customInspectionConfigs();
+    if (button === duplicateButton) {
+      let id = `${config.id}-copy`;
+      for (let n = 2; configs.some((c) => c.id === id); n++) id = `${config.id}-copy${n}`;
+      await saveCustomInspections([...configs, { ...config, id, enabled: false }]);
+      vscode.window.setStatusBarMessage(`Duplicated as '${id}' (off until you turn it on)`, 4000);
+      return refresh();
+    }
+    if (button === deleteButton) {
+      // Deleted straight away, with Undo instead of a question first.
+      await saveCustomInspections(configs.filter((c) => c.id !== config.id));
+      refresh();
+      void vscode.window.showInformationMessage(`Your own checks: deleted '${config.id}'.`, 'Undo').then(async (choice) => {
+        if (choice === 'Undo') await saveCustomInspections([...customInspectionConfigs(), config]);
+      });
+      return;
+    }
+    await saveCustomInspections(configs.map((c) => (c.id === config.id ? { ...c, enabled: c.enabled === false } : c)));
+    vscode.window.setStatusBarMessage(config.enabled === false ? `Turned on '${config.id}'` : `Turned off '${config.id}'`, 4000);
+    refresh();
   });
   pick.onDidAccept(() => {
-    const config = pick.selectedItems[0]?.config;
+    const chosen = pick.activeItems[0];
     pick.hide();
-    if (config) {
-      StructuralSearchPanel.open(context, projects, view, { inspection: config });
-    } else {
-      void vscode.commands.executeCommand('tsStructure.structuralSearch');
-    }
+    if (chosen?.config) StructuralSearchPanel.open(context, projects, view, { inspection: chosen.config });
+    else if (chosen?.action === 'fromSelection') void vscode.commands.executeCommand('tsStructure.structuralSearch');
+    else void vscode.commands.executeCommand('tsStructure.structuralSearch');
   });
   pick.onDidHide(() => pick.dispose());
   pick.show();
@@ -476,6 +578,14 @@ function html(webview: vscode.Webview, pattern: string, preset?: SearchPreset & 
   th { color: var(--vscode-descriptionForeground); }
   td input[type=text] { width: 100%; }
 ${buttonCss}
+${editPanelCss}
+  .result-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+  .result-tools[hidden] { display: none; }
+  .result-tools input { flex: 1 1 160px; min-width: 0; }
+  li.file-head { cursor: pointer; padding: 6px 0 2px; border-bottom: 0; color: var(--vscode-descriptionForeground); font-weight: 600; }
+  li.file-head:hover { background: none; color: var(--vscode-foreground); }
+  li.file-head .count { font-weight: 400; margin-left: 6px; }
+  li.folded-file { display: none; }
   .cheats { margin: 6px 0 10px; }
   .cheats summary { cursor: pointer; color: var(--vscode-descriptionForeground); }
   .cheats ul { margin: 6px 0; padding-left: 18px; }
@@ -501,7 +611,7 @@ ${buttonCss}
 </style>
 </head>
 <body>
-  <h1 class="visually-hidden">Search by shape</h1>
+  ${editPanelHead('tsStructure.structuralSearch', undefined, 'search')}
   <div class="row">
     <select id="templates" aria-label="Start from an example"><option value="">Start from an example…</option></select>
     <select id="history" aria-label="Recent searches"><option value="">Recent searches…</option></select>
@@ -527,7 +637,7 @@ ${buttonCss}
     <button id="clear" title="Empty the pattern, constraints, replacement and results">${icon('close')}<span>Clear</span></button>
   </div>
   <div id="patternProblem" class="error" aria-live="polite"></div>
-  <h2>Placeholder constraints${helpTip('Optional regular expressions per placeholder. Type is tested against the TypeScript type of what it matched; Text against its source. Invert keeps matches that do not fit.')}</h2>
+  <h2 class="ep-collapsible" id="constraintsHeading">Placeholder constraints${helpTip('Optional regular expressions per placeholder. Type is tested against the TypeScript type of what it matched; Text against its source. Invert keeps matches that do not fit.')}</h2>
   <p class="hint">Regular expressions. <em>Type</em> is tested against the matched expression's type, such as <code>^Promise&lt;</code> or <code>string|number</code>.</p>
   <table id="constraints"><caption class="visually-hidden">Constraints for each placeholder</caption><thead><tr><th scope="col">Placeholder</th><th scope="col">Type</th><th scope="col">Text</th><th scope="col">Invert</th></tr></thead><tbody></tbody></table>
   <div class="row">
@@ -536,7 +646,7 @@ ${buttonCss}
     <span id="count" class="hint" role="status" aria-live="polite"></span>
     <button id="copyKeybinding" title="Copy this search as a keybindings.json entry that runs it">${icon('copy')}<span>Copy as keybinding</span></button>
   </div>
-  <h2 id="templateHeading">Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
+  <h2 id="templateHeading" class="ep-collapsible">Replace with${helpTip('Code that replaces each match, using the same placeholders. Leave it empty to only search.')}</h2>
   <p class="hint" id="templateHint">Optional. Use the same placeholders; <code>$name*$</code> inserts the whole matched list. The result is type-checked before anything is written, and changes open in the Refactor Preview.</p>
   <textarea id="template" spellcheck="false" placeholder="for (const item of $list$) $callback$(item)" aria-labelledby="templateHeading" aria-describedby="templateHint templateProblem"></textarea>
   <div id="templateProblem" class="error" aria-live="polite"></div>
@@ -545,7 +655,7 @@ ${buttonCss}
     <button id="previewReplace" title="Show each match with its replacement, without changing any file">${icon('preview')}<span>Preview replacements</span></button>
     <button id="replace" title="Ctrl+Enter in the replacement">${icon('replace')}<span>Replace all…</span></button>
   </div>
-  <h2>Save as inspection${helpTip('Keeps the pattern as your own inspection: matches are underlined in open files and listed in the Problems panel, with the replacement as a quick fix.')}</h2>
+  <h2 class="ep-collapsible" id="saveHeading">Save as inspection${helpTip('Keeps the pattern as your own inspection: matches are underlined in open files and listed in the Problems panel, with the replacement as a quick fix.')}</h2>
   <p class="hint">Runs the pattern on open files and reports each match in the Problems panel. The replacement above becomes its quick fix. <code>$name$</code> in the message is filled in from the match.</p>
   <div class="row">
     <input id="message" type="text" style="flex: 1; min-width: 200px" placeholder="Prefer for…of over $list$.forEach()" aria-label="Inspection message" aria-describedby="messageProblem">
@@ -557,9 +667,16 @@ ${buttonCss}
   <div id="messageProblem" class="error" aria-live="polite"></div>
   <div id="error" class="error" role="alert"></div>
   <h2 id="summary"></h2>
+  <div class="result-tools" id="resultTools" hidden>
+    <input id="resultFilter" type="search" placeholder="Filter results by code or file" aria-label="Filter the results">
+    <button id="copyResults" title="Copy every result as file:line and its code">${icon('copy')}<span>Copy results</span></button>
+    <button id="clearResults" title="Clear the results">${icon('close')}<span>Clear</span></button>
+  </div>
   <ul id="results" aria-labelledby="summary"></ul>
+  ${editPanelKeys([['Ctrl+Enter', 'search (in the pattern) or replace (in the replacement)'], ['F5', 'search again'], ['↑/↓', 'move through results'], ['Enter', 'open'], ['Alt+P', 'make placeholder'], ['F1', 'help']])}
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
+  window.__epApi = vscode;
   const $ = (id) => document.getElementById(id);
   const state = vscode.getState() || { pattern: ${JSON.stringify(pattern)}, constraints: {}, scope: 'project' };
   if (${JSON.stringify(pattern)}) state.pattern = ${JSON.stringify(pattern)};
@@ -844,14 +961,41 @@ ${buttonCss}
     }
     if (message.type === 'error') { $('summary').textContent = ''; $('count').textContent = ''; $('error').textContent = message.message; }
     if (message.type === 'results') {
-      $('summary').textContent = message.count + (message.count === 1 ? ' match' : ' matches') + (message.count > message.items.length ? ' (first ' + message.items.length + ' shown)' : '');
+      lastResults = message.items;
+      $('resultTools').hidden = message.count === 0;
+      $('resultFilter').value = '';
+      $('summary').textContent = message.count + (message.count === 1 ? ' match' : ' matches') + (message.files > 1 ? ' in ' + message.files + ' files' : '') + (message.count > message.items.length ? ' (first ' + message.items.length + ' shown)' : '') + (message.ms !== undefined ? ' · ' + message.ms + ' ms' : '');
       // The count by the button answers "did it match?" without scrolling; the list is brought into view.
       $('count').textContent = message.count === 0 ? 'No matches' : message.count === 1 ? '1 match' : message.count + ' matches';
       if (message.count > 0) $('summary').scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
       const list = $('results');
       list.innerHTML = '';
+      let lastFile;
       for (const item of message.items) {
+        if (item.file && item.file !== lastFile) {
+          lastFile = item.file;
+          const head = document.createElement('li');
+          head.className = 'file-head';
+          head.dataset.file = item.file;
+          head.textContent = item.file;
+          const n = document.createElement('span');
+          n.className = 'count';
+          n.textContent = String(message.items.filter((i) => i.file === item.file).length);
+          head.append(n);
+          head.tabIndex = 0;
+          head.setAttribute('role', 'button');
+          head.setAttribute('aria-expanded', 'true');
+          const fold = () => {
+            const open = head.getAttribute('aria-expanded') !== 'true';
+            head.setAttribute('aria-expanded', String(open));
+            list.querySelectorAll('li[data-of="' + CSS.escape(item.file) + '"]').forEach((r) => r.classList.toggle('folded-file', !open));
+          };
+          head.addEventListener('click', fold);
+          head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fold(); } });
+          list.appendChild(head);
+        }
         const li = document.createElement('li');
+        if (item.file) li.dataset.of = item.file;
         li.innerHTML = '<code></code><div class="where"></div><div class="bindings"></div>';
         li.querySelector('code').textContent = item.text;
         li.querySelector('.where').textContent = item.where;
@@ -865,6 +1009,31 @@ ${buttonCss}
   });
   renderConstraints();
   renderMessageTools();
+  // ---- Results: filter, copy, clear, arrow keys; F5 searches again; the pattern box grows with its text.
+  let lastResults = [];
+  $('resultFilter').addEventListener('input', () => {
+    const q = $('resultFilter').value.trim().toLowerCase();
+    $('results').querySelectorAll('li').forEach((li) => {
+      if (li.classList.contains('file-head')) return;
+      li.hidden = !!q && !li.textContent.toLowerCase().includes(q);
+    });
+    $('results').querySelectorAll('li.file-head').forEach((head) => {
+      head.hidden = !!q && ![...$('results').querySelectorAll('li[data-of="' + CSS.escape(head.dataset.file) + '"]')].some((li) => !li.hidden);
+    });
+  });
+  $('resultFilter').addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('resultFilter').value) { e.preventDefault(); e.stopPropagation(); $('resultFilter').value = ''; $('resultFilter').dispatchEvent(new Event('input')); } });
+  $('copyResults').addEventListener('click', () => vscode.postMessage({ type: 'copyText', text: lastResults.map((r) => r.where + '  ' + r.text).join('\\n') }));
+  $('clearResults').addEventListener('click', () => { $('results').innerHTML = ''; $('summary').textContent = ''; $('count').textContent = ''; $('resultTools').hidden = true; lastResults = []; });
+  $('results').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const rows = [...$('results').querySelectorAll('li[tabindex]')].filter((li) => !li.hidden && !li.classList.contains('folded-file'));
+    const at = rows.indexOf(document.activeElement);
+    const next = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))];
+    if (next) { e.preventDefault(); next.focus(); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'F5') { e.preventDefault(); $('search').click(); } });
+  const grow = (box) => { box.style.height = 'auto'; box.style.height = Math.min(320, Math.max(70, box.scrollHeight + 2)) + 'px'; };
+  ['pattern', 'template'].forEach((id) => { $(id).addEventListener('input', () => grow($(id))); grow($(id)); });
   function applyPreset(p) {
     if (p.folderLabel) {
       // A folder picked in the Explorer becomes a scope of its own.
@@ -883,6 +1052,7 @@ ${buttonCss}
   }
   const initialPreset = ${JSON.stringify(preset ?? null).replace(/</g, '\\u003c')};
   if (initialPreset) applyPreset(initialPreset);
+${editPanelScript}
 </script>
 </body>
 </html>`;
