@@ -12,6 +12,12 @@ const paths: Record<string, string> = {
   up: '<path d="M8 3 3 8l.7.7L7.5 5V13h1V5l3.8 3.7L13 8z"/>',
   down: '<path d="m8 13 5-5-.7-.7L8.5 11V3h-1v8L3.7 7.3 3 8z"/>',
   remove: '<path d="M6 2h4v1h3v1H3V3h3zM4 5h8l-.6 9H4.6zm1.1 1 .5 7h4.8l.5-7z"/>',
+  lock: '<path d="M11 7V5a3 3 0 0 0-6 0v2H4v7h8V7zM6 5a2 2 0 0 1 4 0v2H6zm5 8H5V8h6z"/>',
+  code: '<path d="M5.7 4.3 2 8l3.7 3.7.7-.7-3-3 3-3zm4.6 0-.7.7 3 3-3 3 .7.7L14 8zM9.1 2.6 6 13.1l1 .3 3.1-10.5z"/>',
+  keyboard: '<path d="M1 4v8h14V4zm13 7H2V5h12zM3 6h1v1H3zm2 0h1v1H5zm2 0h1v1H7zm2 0h1v1H9zm2 0h2v1h-2zM3 8h2v1H3zm3 0h1v1H6zm2 0h1v1H8zm2 0h3v1h-3zM5 10h6v1H5z"/>',
+  chevron: '<path d="M3.6 5.6 8 10l4.4-4.4.7.7L8 11.4 2.9 6.3z"/>',
+  duplicate: '<path d="M4 4V2h10v10h-2v2H2V4zm1 0h7v7h1V3H5zM3 5v8h8V5zm3.5 1.5h1v2h2v1h-2v2h-1v-2h-2v-1h2z"/>',
+  sliders: '<path d="M2 4h3V3h1v3H5V5H2zm5 0h7v1H7zM2 11h7v1H2zm8-1h1v1h3v1h-3v1h-1zM2 7.5h2v1H2zm3-1h1v1h8v1H6v1H5z"/>',
   help: '<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 13A6 6 0 1 1 8 2a6 6 0 0 1 0 12zm-.6-3.5h1.2V12H7.4zM8 4c-1.4 0-2.5.9-2.5 2.2h1.1c0-.6.6-1.1 1.4-1.1s1.4.5 1.4 1.1c0 .5-.3.8-.9 1.2-.7.5-1.1 1-1.1 1.9h1.1c0-.6.2-.9.8-1.3.7-.5 1.2-1 1.2-1.9C10.5 4.9 9.4 4 8 4z"/>',
 };
 

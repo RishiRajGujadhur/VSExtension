@@ -611,7 +611,7 @@ ${editPanelCss}
 </style>
 </head>
 <body>
-  ${editPanelHead('tsStructure.structuralSearch', undefined, 'search')}
+  ${editPanelHead('tsStructure.structuralSearch', undefined, 'search', 'Find code by its shape, with $name$ placeholders, and replace every match.')}
   <div class="row">
     <select id="templates" aria-label="Start from an example"><option value="">Start from an example…</option></select>
     <select id="history" aria-label="Recent searches"><option value="">Recent searches…</option></select>

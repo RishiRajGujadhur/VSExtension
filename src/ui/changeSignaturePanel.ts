@@ -134,63 +134,105 @@ function html(webview: vscode.Webview, info: FunctionInfo): string {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style nonce="${nonce}">
-  body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 12px 16px; }
-  h1 { font-size: 1.1em; margin: 0 0 12px; }
+  body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); background: var(--vscode-editor-background); }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  label { display: block; margin-bottom: 10px; }
-  label span { display: block; color: var(--vscode-descriptionForeground); margin-bottom: 3px; }
-  input[type=text] { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-    border: 1px solid var(--vscode-input-border, transparent); padding: 3px 6px; font-family: var(--vscode-editor-font-family); }
-  input[type=text]:focus { outline: 1px solid var(--vscode-focusBorder); }
-  input:disabled { opacity: .5; }
-  .top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  table { width: 100%; border-collapse: collapse; margin: 6px 0 8px; table-layout: fixed; }
-  /* Narrow panels: cells wrap and inputs shrink instead of pushing the table sideways. */
-  td, th { overflow-wrap: anywhere; }
-  td input, td select { width: 100%; min-width: 0; box-sizing: border-box; }
-  th { text-align: left; font-weight: normal; color: var(--vscode-descriptionForeground); padding: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
-  td { padding: 3px 4px; vertical-align: middle; }
-  tr.new td:first-child { border-left: 2px solid var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
+  input[type=text] { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-family: var(--vscode-editor-font-family); }
+  input:disabled { opacity: .55; }
 ${buttonCss}
 ${editPanelCss}
-  .actions { margin-top: 16px; }
+  .top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 20px; margin-bottom: 22px; }
+  .field-head { display: flex; align-items: baseline; gap: 8px; }
+  .field-head .ep-label { flex: 1; }
+  .field-note { color: var(--vscode-descriptionForeground); font-size: .9em; }
+  .top input[type=text] { padding: 9px 12px; font-size: var(--vscode-editor-font-size, 13px); }
+  .params-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .params-head .ep-section { flex: 1; }
+  /* The parameter table sits in a rounded card; a narrow panel scrolls it sideways instead of squeezing it. */
+  .table-card { overflow-x: auto; }
+  table { width: 100%; min-width: 740px; border-collapse: collapse; table-layout: fixed; }
+  th { text-align: left; font-weight: 500; color: var(--vscode-descriptionForeground); padding: 9px 6px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); white-space: nowrap; }
+  th:first-child, td:first-child { padding-left: 12px; }
+  th:last-child, td:last-child { padding-right: 12px; text-align: right; }
+  th.center, td.center { text-align: center; }
+  td { padding: 8px 6px; vertical-align: middle; background: var(--vscode-editor-background); }
+  tbody tr + tr td { border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .18)); }
+  tbody tr:hover td { background: var(--vscode-list-hoverBackground); }
+  td input[type=text] { min-width: 0; padding: 6px 9px; }
+  tr.new td:first-child { box-shadow: inset 3px 0 0 var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
+  input.type { color: var(--vscode-charts-green, #89d185); }
+  td.order { white-space: nowrap; }
+  td.order button.icon-only { padding: 3px; opacity: .6; }
+  td.order button.icon-only:hover:not(:disabled) { opacity: 1; }
+  td.order button:disabled { opacity: .2; }
+  .locked { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3));
+    color: var(--vscode-descriptionForeground); font-style: italic; white-space: nowrap; overflow: hidden; cursor: default; }
+  .locked span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .locked .icon { flex: none; opacity: .7; }
+  /* Optional is a switch. */
+  input.switch { appearance: none; -webkit-appearance: none; position: relative; width: 34px; height: 18px; margin: 0; border-radius: 9px; cursor: pointer; vertical-align: middle;
+    background: var(--vscode-input-background); border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .45)); transition: background .15s; }
+  input.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--vscode-foreground); transition: transform .15s; }
+  input.switch:checked { background: var(--vscode-button-background); border-color: var(--vscode-button-background); }
+  input.switch:checked::after { transform: translateX(16px); background: var(--vscode-button-foreground); }
+  input.switch:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+  td.tools { white-space: nowrap; }
   .problems button.link { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--vscode-errorForeground); text-decoration: underline; cursor: pointer; font: inherit; }
-  .undo-line { color: var(--vscode-descriptionForeground); margin: 4px 0 0; }
+  .undo-line { color: var(--vscode-descriptionForeground); margin: 8px 0 0; }
   .undo-line[hidden] { display: none; }
   .undo-line button.link { min-height: 0; padding: 0 2px; border: 0; background: none; color: var(--vscode-textLink-foreground); font: inherit; }
-  pre { background: var(--vscode-textCodeBlock-background); padding: 8px; white-space: pre-wrap; word-break: break-word; font-family: var(--vscode-editor-font-family); }
-  .hint { color: var(--vscode-descriptionForeground); font-size: .92em; }
   input[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
-  .problems { color: var(--vscode-errorForeground); min-height: 1em; margin: 4px 0 0; }
-  .summary { color: var(--vscode-descriptionForeground); margin: 4px 0 0; }
+  .problems { color: var(--vscode-errorForeground); margin: 8px 0 0; }
+  .problems:empty { display: none; }
+  /* The signature as it will read, colored like code. */
+  .sig-card { margin-top: 18px; overflow: hidden; }
+  .sig-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); font-weight: 600; }
+  .sig-head > .icon { color: var(--vscode-textLink-foreground); }
+  .sig-head .title { flex: 1; }
+  .sig-head button { min-height: 26px; padding: 3px 10px; font-weight: 400; color: var(--vscode-descriptionForeground); }
+  .sig-body { margin: 0; padding: 14px; background: var(--vscode-editor-background); font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size, 13px); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .sig-line { display: block; }
+  .sig-line.before { opacity: .55; text-decoration: line-through; text-decoration-color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39); }
+  .sig-tag { display: inline-block; width: 4.2em; color: var(--vscode-descriptionForeground); font-family: var(--vscode-font-family); font-size: .85em; text-decoration: none; }
+  .tk-kw { color: var(--vscode-charts-purple, #b180d7); }
+  .tk-fn { color: var(--vscode-charts-yellow, #cca700); }
+  .tk-param { color: var(--vscode-symbolIcon-variableForeground, #75beff); }
+  .tk-type { color: var(--vscode-charts-green, #89d185); }
+  .tk-punct { color: var(--vscode-descriptionForeground); }
+  .summary { margin: 10px 0 0; color: var(--vscode-descriptionForeground); }
 </style>
 </head>
 <body>
-${editPanelHead(command, `${info.kind} ${info.name}`, 'replace')}
+${editPanelHead(command, `${info.kind} ${info.name}`, 'sliders', 'Change the name, parameters and return type; every call is updated to match.')}
 <datalist id="types">${[...new Set(['string', 'number', 'boolean', 'unknown', 'void', 'undefined', 'null', 'string[]', 'number[]', 'Record<string, unknown>', 'Promise<void>', ...info.parameters.map((p) => p.type).filter(Boolean), info.returnType].filter(Boolean))].map((t) => `<option value="${t.replace(/"/g, '&quot;')}">`).join('')}</datalist>
 <div class="top">
-  <label><span>Name</span><input type="text" id="name"></label>
-  <label id="returnLabel"><span>Return type (empty for none)</span><input type="text" id="returnType"></label>
+  <div><div class="field-head"><label class="ep-label" for="name">${info.kind === 'method' ? 'Method' : 'Function'} name</label></div><input type="text" id="name" spellcheck="false"></div>
+  <div id="returnLabel"><div class="field-head"><label class="ep-label" for="returnType">Return type</label><span class="field-note">empty for inferred / void</span></div><input type="text" id="returnType" spellcheck="false" placeholder="e.g. void, Promise&lt;void&gt;, boolean" list="types"></div>
 </div>
-<table>
-  <caption class="visually-hidden">Parameters, in order</caption>
-  <thead><tr><th scope="col">Name</th><th scope="col" class="typed">Type</th><th scope="col">Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th scope="col">Value for existing callers${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Leave it empty for an optional parameter or one with a default value.')}</th><th scope="col" class="typed">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th scope="col"><span class="visually-hidden">Move or remove</span></th></tr></thead>
+<div class="params-head">
+  <h2 class="ep-section" id="paramsHeading">Parameters <span class="ep-count" id="paramCount">0</span></h2>
+  <button id="add" class="ep-outline" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add parameter</span></button>
+</div>
+<div class="table-card ep-card">
+<table aria-labelledby="paramsHeading">
+  <colgroup><col style="width: 70px"><col><col class="typed"><col><col style="width: 21%"><col class="typed" style="width: 78px"><col style="width: 84px"></colgroup>
+  <thead><tr><th scope="col">Order</th><th scope="col">Name</th><th scope="col" class="typed">Type</th><th scope="col">Default value${helpTip('Used when a caller leaves the argument out, as in (size = 20). Callers that pass a value are not affected.')}</th><th scope="col">Call-site value${helpTip('Only for new parameters: this text is inserted as the argument at every existing call, so they keep compiling. Existing parameters keep the argument each caller passes. Leave it empty for an optional parameter or one with a default value.')}</th><th scope="col" class="typed center">Optional${helpTip('Adds ? to the parameter, so callers may leave it out and it is undefined then.')}</th><th scope="col">Actions</th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
-<button id="add" title="Add a parameter (Ctrl+Shift+A)">${icon('add')}<span>Add parameter</span></button>
-<p class="hint">Existing parameters keep the argument each caller passes. For a new parameter, the value for existing callers is inserted at every call site; leave it empty when the parameter is optional or has a default value.</p>
-<pre id="preview"></pre>
-<p id="summary" class="summary" aria-live="polite"></p>
+</div>
 <p id="problems" class="problems" role="status" aria-live="polite"></p>
 <p id="undoLine" class="undo-line" hidden></p>
-${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['Enter', 'next row'], ['Alt+↑/↓', 'move'], ['Ctrl+D', 'duplicate'], ['Ctrl+Delete', 'remove'], ['F1', 'help'], ['Esc', 'cancel']])}
+<section class="sig-card ep-card" aria-labelledby="sigTitle">
+  <div class="sig-head">${icon('code')}<span class="title" id="sigTitle">Resulting signature</span><button id="copy" class="ep-ghost" title="Copy the new signature">${icon('copy')}<span>Copy signature</span></button></div>
+  <pre class="sig-body" id="preview" aria-live="polite"></pre>
+</section>
+<p id="summary" class="summary" aria-live="polite"></p>
+${editPanelKeys([['Ctrl+Enter', 'Preview changes'], ['Ctrl+Shift+Enter', 'Apply refactor'], ['Enter', 'Next row'], ['Alt+↑/↓', 'Reorder row'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Del', 'Remove'], ['Ctrl+Shift+A', 'Add parameter'], ['F1', 'Help'], ['Esc', 'Cancel']])}
 <div class="actions ep-sticky">
-  <button class="primary" id="previewBtn" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview changes</span></button>
-  <button id="apply" aria-describedby="problems" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
+  <button id="reset" class="ep-outline" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
+  <button id="cancel" class="ep-ghost" title="Close without changing anything (Escape)"><span>Cancel</span></button>
   <span class="spacer"></span>
-  <button id="copy" title="Copy the signature shown in the preview">${icon('copy')}<span>Copy signature</span></button>
-  <button id="reset" title="Back to the signature the function has now">${icon('reset')}<span>Reset</span></button>
-  <button id="cancel" title="Close without changing anything (Escape)">${icon('close')}<span>Cancel</span></button>
+  <button id="previewBtn" class="ep-outline" aria-describedby="problems" title="Review every change before it is applied (Ctrl+Enter)">${icon('preview')}<span>Preview changes</span></button>
+  <button class="primary" id="apply" aria-describedby="problems" title="Apply the changes now (Ctrl+Shift+Enter)">${icon('apply')}<span>Refactor</span></button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -202,7 +244,7 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
   $('returnType').value = info.returnType;
   if (!info.typed) {
     $('returnLabel').style.display = 'none';
-    document.querySelectorAll('.typed').forEach((el) => (el.style.display = 'none'));
+    document.querySelectorAll('.typed').forEach((el) => (el.tagName === 'COL' ? el.remove() : (el.style.display = 'none')));
   }
 
   const columns = { name: 'Name', type: 'Type', initializer: 'Default value', callValue: 'Value for existing callers' };
@@ -216,7 +258,8 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
     el.placeholder = placeholder || '';
     el.disabled = !!disabled;
     el.addEventListener('input', () => { row[key] = el.value; update(); });
-    if (key === 'type') el.setAttribute('list', 'types');
+    if (key === 'type') { el.setAttribute('list', 'types'); el.className = 'type'; }
+    el.spellcheck = false;
     // A name typed with spaces or dashes becomes camelCase when you leave the field.
     if (key === 'name') el.addEventListener('blur', () => {
       const words = el.value.trim().split(/[\\s-]+/).filter(Boolean);
@@ -235,7 +278,7 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
     td.appendChild(el);
     return td;
   }
-  const icons = ${JSON.stringify({ up: icon('up'), down: icon('down'), remove: icon('remove'), copy: icon('copy') })};
+  const icons = ${JSON.stringify({ up: icon('up'), down: icon('down'), remove: icon('remove'), copy: icon('duplicate'), lock: icon('lock') })};
   function button(text, title, disabled, onClick) {
     const b = document.createElement('button');
     b.className = 'icon-only';
@@ -253,28 +296,40 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
       const original = row.originalIndex === null ? null : info.parameters[row.originalIndex];
       const tr = document.createElement('tr');
       if (!original) tr.className = 'new';
+      const label = ' parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : '');
+      const order = document.createElement('td');
+      order.className = 'order';
+      order.appendChild(button('up', 'Move up' + label + ' (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); refocus(i - 1, 'up'); }));
+      order.appendChild(button('down', 'Move down' + label + ' (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); refocus(i + 1, 'down'); }));
+      tr.appendChild(order);
       tr.appendChild(input(row, 'name', 'name', original && !original.renamable));
       const typeCell = input(row, 'type', 'type');
       typeCell.className = 'typed';
       if (!info.typed) typeCell.style.display = 'none';
       tr.appendChild(typeCell);
       tr.appendChild(input(row, 'initializer', 'none'));
-      tr.appendChild(input(row, 'callValue', original ? '(keeps the passed argument)' : 'e.g. undefined, 0, "text"', !!original));
+      if (original) {
+        // An existing parameter keeps what each caller passes: nothing to type here.
+        const kept = document.createElement('td');
+        kept.innerHTML = '<div class="locked" title="Each existing call keeps the argument it passes"><span>(keep existing)</span>' + icons.lock + '</div>';
+        tr.appendChild(kept);
+      } else {
+        tr.appendChild(input(row, 'callValue', 'e.g. undefined, 0, "text"'));
+      }
       const optCell = document.createElement('td');
-      optCell.className = 'typed';
+      optCell.className = 'typed center';
       if (!info.typed) optCell.style.display = 'none';
       const opt = document.createElement('input');
       opt.type = 'checkbox';
+      opt.className = 'switch';
+      opt.setAttribute('role', 'switch');
       opt.setAttribute('aria-label', 'Optional: parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : ''));
       opt.checked = row.optional;
       opt.addEventListener('change', () => { row.optional = opt.checked; update(); });
       optCell.appendChild(opt);
       tr.appendChild(optCell);
       const tools = document.createElement('td');
-      tools.style.whiteSpace = 'nowrap';
-      const label = ' parameter ' + (i + 1) + (row.name ? ' (' + row.name + ')' : '');
-      tools.appendChild(button('up', 'Move up' + label + ' (Alt+Up)', i === 0, () => { rows.splice(i - 1, 0, rows.splice(i, 1)[0]); render(); refocus(i - 1, 'up'); }));
-      tools.appendChild(button('down', 'Move down' + label + ' (Alt+Down)', i === rows.length - 1, () => { rows.splice(i + 1, 0, rows.splice(i, 1)[0]); render(); refocus(i + 1, 'down'); }));
+      tools.className = 'tools';
       tools.appendChild(button('copy', 'Duplicate' + label + ' (Ctrl+D)', false, () => duplicate(i)));
       tools.appendChild(button('remove', 'Remove' + label + ' (Ctrl+Delete)', false, () => remove(i)));
       tr.appendChild(tools);
@@ -391,9 +446,51 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
     });
     const ret = info.typed && $('returnType').value.trim() ? ': ' + $('returnType').value.trim() : '';
     const after = $('name').value + '(' + params.join(', ') + ')' + ret;
-    $('preview').textContent = beforeText && beforeText !== after ? 'Before: ' + beforeText + '\\nAfter:  ' + after : after;
-    $('summary').textContent = changeSummary();
+    afterText = after;
+    const parts = rows.map((r) => {
+      const original = r.originalIndex === null ? null : info.parameters[r.originalIndex];
+      const rest = original && original.rest ? '...' : '';
+      const q = info.typed && r.optional && !r.initializer && !rest ? '?' : '';
+      return { name: rest + r.name + q, type: info.typed ? r.type : '', init: r.initializer };
+    });
+    const signature = colored($('name').value, parts, info.typed ? $('returnType').value.trim() : '');
+    const sigBox = $('preview');
+    sigBox.innerHTML = beforeHtml && beforeText !== after
+      ? '<span class="sig-line before"><span class="sig-tag">Before</span>' + beforeHtml + '</span><span class="sig-line"><span class="sig-tag">After</span>' + signature + '</span>'
+      : '<span class="sig-line">' + signature + '</span>';
+    const summary = changeSummary();
+    $('summary').textContent = summary === 'Nothing changed yet.' ? '' : summary;
     $('reset').disabled = !isDirty();
+    $('paramCount').textContent = String(rows.length);
+    const count = changeCount();
+    if (typeof window.epSetStatus === 'function') window.epSetStatus(count ? count + (count === 1 ? ' change' : ' changes') : 'Nothing changed yet', count > 0);
+  }
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const tk = (kind, t) => '<span class="tk-' + kind + '">' + esc(t) + '</span>';
+  /** The signature as HTML, colored like code: keyword, name, parameters, types. */
+  function colored(name, parts, ret) {
+    const head = (info.kind === 'method' ? '' : tk('kw', 'function') + ' ') + tk('fn', name) + tk('punct', '(');
+    const list = parts.map((p) => tk('param', p.name) + (p.type ? tk('punct', ': ') + tk('type', p.type) : '') + (p.init ? tk('punct', ' = ') + esc(p.init) : '')).join(tk('punct', ', '));
+    return head + list + tk('punct', ')') + (ret ? tk('punct', ': ') + tk('type', ret) : '');
+  }
+  /** How many things the edit changes, for the status pill. */
+  function changeCount() {
+    let n = 0;
+    if ($('name').value.trim() !== info.name) n++;
+    if (info.typed && $('returnType').value.trim() !== info.returnType) n++;
+    const kept = rows.filter((r) => r.originalIndex !== null);
+    kept.forEach((r) => {
+      const p = info.parameters[r.originalIndex];
+      if (r.name.trim() !== p.name) n++;
+      if (r.type.trim() !== p.type) n++;
+      if (r.initializer.trim() !== p.initializer) n++;
+      if (r.optional !== p.optional) n++;
+    });
+    n += rows.filter((r) => r.originalIndex === null).length;
+    n += info.parameters.filter((p, i) => !rows.some((r) => r.originalIndex === i)).length;
+    const order = kept.map((r) => r.originalIndex);
+    if (order.some((v, i) => i > 0 && v < order[i - 1])) n++;
+    return n;
   }
   /** What the edit does, in words: renamed, added, removed and moved parameters, and the function's new name. */
   function changeSummary() {
@@ -430,8 +527,7 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
   $('apply').addEventListener('click', () => submit(false));
   const isDirty = () => JSON.stringify(rows) !== initialRows || $('name').value !== info.name || $('returnType').value !== info.returnType;
   $('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel', dirty: isDirty() }));
-  // The last line of the preview is the new signature.
-  $('copy').addEventListener('click', () => vscode.postMessage({ type: 'copy', text: $('preview').textContent.split('\\n').pop().replace(/^After:\\s+/, '') }));
+  $('copy').addEventListener('click', () => vscode.postMessage({ type: 'copy', text: (info.kind === 'method' ? '' : 'function ') + afterText }));
   $('reset').addEventListener('click', () => {
     rows.splice(0, rows.length, ...JSON.parse(initialRows));
     $('name').value = info.name;
@@ -470,11 +566,14 @@ ${editPanelKeys([['Ctrl+Enter', 'preview'], ['Ctrl+Shift+Enter', 'refactor'], ['
       if (input) input.focus();
     }
   });
-  let beforeText;
+  let beforeText, beforeHtml, afterText = '';
   render();
-  beforeText = $('preview').textContent;
+  beforeText = afterText;
+  beforeHtml = $('preview').querySelector('.sig-line').innerHTML;
   $('name').focus();
 ${editPanelScript}
+  // The status pill exists once the kit has run.
+  update();
 </script>
 </body>
 </html>`;
