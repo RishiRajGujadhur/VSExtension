@@ -3,35 +3,48 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
 header button:focus-visible, li:focus-visible, .node:focus-visible .shape { outline: 1px solid var(--vscode-focusBorder); }
 main { flex: 1; min-height: 0; display: flex; }
 
-/* Path Explorer */
-#explorer { width: 300px; flex: none; display: flex; flex-direction: column; border-left: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
+/* Path Explorer: looks like the Actions sidebar, with rounded rows, a tip box, count pills and an accent bar on the picked path. */
+#explorer { --active-accent: #22d3ee; --active-tint: rgba(34, 211, 238, .12);
+  width: 300px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 10px 8px 0; box-sizing: border-box;
+  border-left: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); background: var(--vscode-sideBar-background, var(--vscode-editor-background)); }
 #explorer[hidden] { display: none; }
-#explorer h2 { margin: 0; padding: 8px 12px 2px; font-size: 11px; font-weight: 500; color: var(--vscode-sideBarTitle-foreground, var(--vscode-foreground)); }
-#pathSummary, .hint { padding: 0 12px 6px; color: var(--vscode-descriptionForeground); font-size: 12px; }
-.options { display: flex; align-items: center; gap: 8px; padding: 0 12px 6px; font-size: 12px; }
-.options label { display: inline-flex; align-items: center; gap: 4px; }
-.options button { padding: 1px 6px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 2px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-#pins { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 6px; }
+#explorer h2 { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--vscode-sideBarTitle-foreground, var(--vscode-foreground)); }
+#pathSummary { padding: 0 4px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+#explorer .hint { margin: 0; padding: 6px 8px; border-radius: 6px; font-size: 12px; line-height: 1.4;
+  background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, .1)); color: var(--vscode-descriptionForeground); }
+.options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 0 4px; font-size: 12px; }
+.options label { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.options button { padding: 2px 10px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+.options button:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-secondaryBackground)); }
+#pins { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 4px; }
+#pins:empty { display: none; }
 .chip { padding: 1px 8px; border: 1px solid var(--vscode-focusBorder); border-radius: 10px; background: var(--vscode-inputOption-activeBackground, rgba(0, 127, 212, .25)); color: var(--vscode-foreground); font-size: 11px; }
-#paths { flex: 1; overflow: auto; margin: 0; padding: 0 0 8px; list-style: none; }
-#paths li.path { margin: 2px 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; }
+#paths { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -8px 0 0; padding: 0 8px 8px 0; list-style: none; }
+#paths li.path { position: relative; padding: 6px 10px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
 #paths li.path:hover { background: var(--vscode-list-hoverBackground); }
-#paths li.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
+#paths li.path:focus-visible { outline: none; border-color: var(--vscode-focusBorder); }
+#paths li.selected { background: var(--active-tint); border-color: color-mix(in srgb, var(--active-accent) 35%, transparent); box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .5); }
+#paths li.selected::before { content: ''; position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--active-accent); }
 #paths li.impossible { opacity: .75; border-style: dashed; border-color: var(--vscode-editorWidget-border, rgba(128, 128, 128, .5)); }
-#paths li.path-group { display: flex; align-items: center; gap: 6px; margin: 2px 6px; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
-#paths li.path-group:hover { background: var(--vscode-list-hoverBackground); }
+#paths li.path-group { display: flex; align-items: center; gap: 4px; min-height: 24px; margin-top: 4px; padding: 0 4px; border-radius: 4px; cursor: pointer;
+  font-size: 11px; color: var(--vscode-descriptionForeground); }
+#paths li.path-group:hover { color: var(--vscode-foreground); }
 #paths li.path-group:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
-#paths li.path-group .path-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#paths li.path-group .count { flex: none; padding: 0 6px; border-radius: 8px; font-size: 11px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-#paths ul[role="group"] { margin: 0 0 0 14px; padding: 0; list-style: none; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, rgba(128, 128, 128, .35)); }
+#paths li.path-group .codicon { font-size: 14px; }
+#paths li.path-group .path-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: inherit; font-size: 12px; font-weight: 500; }
+#paths li.path-group .count { flex: none; padding: 0 6px; border-radius: 8px; font-size: 10px; font-weight: 600; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+#paths ul[role="group"] { display: flex; flex-direction: column; gap: 2px; margin: 0 0 0 10px; padding: 0 0 0 6px; list-style: none;
+  border-left: 1px solid var(--vscode-tree-indentGuidesStroke, rgba(128, 128, 128, .25)); }
 #canvas:focus { outline: none; }
 .edge.touch .line { stroke: var(--vscode-focusBorder, #007fd4); stroke-width: 2.2; }
-#paths li.none { padding: 8px 12px; color: var(--vscode-descriptionForeground); }
-.path-title { font-family: var(--vscode-editor-font-family, monospace); font-size: 12px; font-weight: 600; }
-.path-steps { margin-top: 2px; font-size: 12px; color: var(--vscode-descriptionForeground); }
+#paths li.none { padding: 8px 10px; border-radius: 6px; color: var(--vscode-descriptionForeground); background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, .1)); }
+.path-title { font-size: 13px; font-weight: 600; color: var(--vscode-foreground); }
+.path-steps { margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
 /* Long paths show two lines of their branches until picked. */
 #paths li:not(.selected) .path-steps { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-li.selected .path-steps { color: inherit; }
+li.selected .path-steps { color: var(--vscode-foreground); }
 .path-reason { margin-top: 2px; font-size: 11px; color: var(--vscode-editorWarning-foreground, #cca700); }
 
 /* The chart */
@@ -99,7 +112,7 @@ li.selected .path-steps { color: inherit; }
 @media (max-width: 720px) {
   main { flex-direction: column; }
   #stage { min-height: 0; flex: 1 1 60%; }
-  #explorer { width: auto; flex: 0 1 40%; min-height: 140px; border-left: 0; border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); }
+  #explorer { width: auto; flex: 0 1 40%; min-height: 140px; padding-top: 8px; border-left: 0; border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .35)); }
 }
 
 /* Expanding calls in place */
@@ -122,8 +135,8 @@ li.selected .path-steps { color: inherit; }
 .edge.only2 .line { stroke: var(--vscode-charts-orange, #d18616); stroke-width: 2.6; }
 .node.on2 .shape { stroke: var(--vscode-charts-orange, #d18616); }
 .node.on.on2 .shape { stroke: var(--vscode-charts-purple, #b180d7); }
-#paths li.compared { outline: 1px solid var(--vscode-charts-orange, #d18616); outline-offset: -1px; }
-#comparison { margin: 0 12px 8px; padding: 6px 8px; border-radius: 4px; background: var(--vscode-editorWidget-background, rgba(128, 128, 128, .12)); font-size: 12px; }
+#paths li.compared { border-color: var(--vscode-charts-orange, #d18616); }
+#comparison { margin: 0; padding: 6px 8px; border-radius: 6px; background: var(--vscode-editorWidget-background, rgba(128, 128, 128, .12)); font-size: 12px; }
 #comparison[hidden] { display: none; }
 .compare-row { margin: 2px 0; }
 .compare-row.a strong { color: var(--vscode-focusBorder, #3794ff); }
