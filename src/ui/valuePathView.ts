@@ -101,7 +101,7 @@ export class ValuePathView implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
     if (this.card) view.title = this.card.heading;
-    view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['valuePath.js'], body: '<main id="card"></main>' });
+    view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['loadingDots.js', 'valuePath.js'], body: '<main id="card"></main>' });
     view.webview.onDidReceiveMessage(async (message: { type: string; location?: unknown; command?: unknown }) => {
       if (message.type === 'ready') {
         this.post();

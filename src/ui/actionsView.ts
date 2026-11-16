@@ -218,7 +218,7 @@ const footer = [
 ];
 
 function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['actions.js'], body: `<div class="top">
+  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['loadingDots.js', 'actions.js'], body: `<div class="top">
 <div id="tabs" role="tablist" aria-label="Kinds of actions"></div>
 <div class="search">
   <i class="codicon codicon-search" aria-hidden="true"></i>
