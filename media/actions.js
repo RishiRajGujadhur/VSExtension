@@ -16,6 +16,9 @@
   let data;
   let tab = saved.tab || 'analyze';
   let focusAfterRender;
+  /** The action just clicked and when: its glitch carries on if the list is drawn again meanwhile. */
+  let glitch = { id: undefined, at: 0 };
+  const GLITCH_MS = 420;
   // The graphs that fit the symbol at the cursor, and whether a TypeScript or JavaScript editor is open.
   let cursorFits = [];
   let hasEditor = true;
@@ -99,6 +102,13 @@
     const li = make('li', 'item');
     li.dataset.command = action.id;
     li.dataset.cmd = action.command;
+    // Still glitching from a click before the list was drawn again: pick up where it was.
+    const glitchedFor = Date.now() - glitch.at;
+    if (glitch.id === action.id && glitchedFor < GLITCH_MS) {
+      li.classList.add('glitch');
+      li.style.setProperty('--glitch-delay', `-${glitchedFor}ms`);
+      setTimeout(() => li.classList.remove('glitch'), GLITCH_MS - glitchedFor);
+    }
     if (data.active === action.command) {
       li.classList.add('active-feature');
       li.setAttribute('aria-current', 'true');
@@ -137,6 +147,14 @@
     run.append(tile, text);
     run.setAttribute('aria-label', `${action.label}. ${action.detail}${action.startsFrom ? `. Starts from ${action.startsFrom}` : ''}${action.key ? `. Shortcut ${spoken(action.key)}` : ''}${isHidden(action) ? '. Hidden' : ''}`);
     run.addEventListener('click', (e) => {
+      // A short glitch on the action clicked.
+      glitch = { id: action.id, at: Date.now() };
+      li.classList.remove('glitch');
+      li.style.removeProperty('--glitch-delay');
+      void li.offsetWidth;
+      li.classList.add('glitch');
+      // Over, so hovering the action makes it blink again.
+      setTimeout(() => li.classList.remove('glitch'), GLITCH_MS);
       vscode.postMessage({ type: e.altKey && data.lastSubjects && data.lastSubjects[action.command] ? 'runAgain' : 'run', id: action.id });
     });
     // Ctrl+Enter runs it again where it last ran.

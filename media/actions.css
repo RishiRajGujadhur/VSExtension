@@ -186,3 +186,36 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
   .tab { gap: 2px; padding: 2px 1px; font-size: 11px; }
   .tab-dot { width: 4px; height: 4px; }
 }
+
+/* Hovering an action: its icon flickers on like a tube light. Clicking it: a short glitch, the icon torn into shifted slices. */
+.item:hover .tile, .run:focus-visible .tile { animation: xr-blink 520ms steps(1, end) 1; }
+@keyframes xr-blink {
+  0% { opacity: .25; }
+  14% { opacity: 1; }
+  28% { opacity: .35; }
+  40% { opacity: 1; }
+  52% { opacity: .5; }
+  60%, 100% { opacity: 1; }
+}
+.item.glitch .tile { animation: xr-glitch-tile var(--glitch-dur, 420ms) steps(1, end) var(--glitch-delay, 0ms) 1; }
+.item.glitch .text { animation: xr-glitch-text var(--glitch-dur, 420ms) steps(1, end) var(--glitch-delay, 0ms) 1; }
+@keyframes xr-glitch-tile {
+  0% { clip-path: inset(0 0 55% 0); transform: translateX(-5px); }
+  12% { clip-path: inset(45% 0 0 0); transform: translateX(4px); }
+  24% { clip-path: inset(38% 0 38% 0); transform: translateX(-2px) scale(1.6, .35); }
+  36% { clip-path: inset(0 0 0 0); transform: translateX(3px); opacity: .45; }
+  48% { clip-path: inset(15% 0 50% 0); transform: translateX(-6px); opacity: 1; }
+  60% { clip-path: inset(55% 0 10% 0); transform: translateX(5px); }
+  72% { clip-path: inset(0 0 0 0); transform: translateX(-1px); }
+  84%, 100% { clip-path: none; transform: none; }
+}
+@keyframes xr-glitch-text {
+  0% { transform: translateX(3px); text-shadow: -2px 0 var(--active-accent, #22d3ee), 2px 0 #f472b6; clip-path: inset(0 0 40% 0); }
+  16% { transform: translateX(-3px); clip-path: inset(50% 0 0 0); }
+  32% { transform: translateX(2px); text-shadow: 2px 0 var(--active-accent, #22d3ee), -2px 0 #f472b6; clip-path: inset(20% 0 30% 0); }
+  48% { transform: translateX(-1px); clip-path: none; text-shadow: -1px 0 var(--active-accent, #22d3ee), 1px 0 #f472b6; }
+  64%, 100% { transform: none; text-shadow: none; clip-path: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .item:hover .tile, .run:focus-visible .tile, .item.glitch .tile, .item.glitch .text { animation: none; }
+}
