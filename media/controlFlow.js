@@ -915,7 +915,9 @@
     touched.forEach((g) => g.classList.add('touch'));
   }
   scene.addEventListener('mouseover', (e) => {
-    const n = nodeOf(e.target);
+    // A box faded out (off the picked path, or not matching the search) is passed over like empty space: no card for it.
+    const g = e.target.closest && e.target.closest('.node');
+    const n = g && g.classList.contains('off') ? undefined : nodeOf(e.target);
     if (n !== hovered) {
       hovered = n;
       if (n) { card.show(nodeEl(n), () => cardContent(n), 350, n.id); askEdits(n); }
