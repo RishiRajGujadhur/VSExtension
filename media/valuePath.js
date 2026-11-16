@@ -334,6 +334,11 @@
   }
 
   window.addEventListener('message', (event) => {
+    // The extension finished loading after this page opened: say ready again.
+    if (event.data.type === 'hello') {
+      vscode.postMessage({ type: 'ready' });
+      return;
+    }
     if (event.data.type !== 'card') return;
     document.body.classList.toggle('accent-pink', event.data.accent === 'pink');
     document.body.classList.toggle('accent-theme', event.data.accent === 'theme');

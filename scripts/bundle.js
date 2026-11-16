@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..');
 async function bundle() {
   const started = Date.now();
   const result = await esbuild.build({
-    entryPoints: [path.join(root, 'src', 'extension.ts')],
+    entryPoints: [path.join(root, 'src', 'boot.ts')],
     outfile: path.join(root, 'dist', 'extension.js'),
     bundle: true,
     platform: 'node',

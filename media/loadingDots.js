@@ -1,12 +1,13 @@
 // While a sidebar view waits for its first content: a halftone field of dots where patches glow and fade at random.
-// It covers the view from the moment the page loads, and fades away on the first 'actions' or 'card' message.
+// It fades in only if the content takes more than a moment (so a quick load never flashes it over the content), and
+// fades away on the first 'actions' or 'card' message.
 (function () {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const cover = document.createElement('div');
   cover.id = 'xr-loading';
   Object.assign(cover.style, {
     position: 'fixed', inset: '0', zIndex: '50', pointerEvents: 'none',
-    background: 'var(--vscode-sideBar-background, var(--vscode-editor-background))', transition: 'opacity 350ms ease-out',
+    background: 'var(--vscode-sideBar-background, var(--vscode-editor-background))', opacity: '0', transition: 'opacity 300ms ease-in-out',
   });
   const canvas = document.createElement('canvas');
   Object.assign(canvas.style, { width: '100%', height: '100%', display: 'block' });
@@ -87,6 +88,7 @@
   }
 
   function start() {
+    if (done) return;
     size();
     const now = performance.now();
     patches = Array.from({ length: Math.max(4, Math.round((width * height) / 30000)) }, () => {
@@ -116,4 +118,8 @@
   });
   if (cover.clientWidth) start();
   else requestAnimationFrame(start);
+  // Still waiting after a moment: fade the dots in.
+  setTimeout(() => {
+    if (!done) cover.style.opacity = '1';
+  }, 120);
 })();

@@ -29,6 +29,7 @@ import { configureFeatures, registerCommand } from './ui/features';
 import { activeFeature } from './ui/activeFeature';
 import { registerLastSubjects } from './ui/lastSubjects';
 import { ValuePathView } from './ui/valuePathView';
+import { EarlyViews } from './ui/sidebarPages';
 import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -44,7 +45,7 @@ import { isFeatureEnabled } from './ui/features';
 
 const supportedLanguages = new Set(['typescript', 'typescriptreact', 'javascript', 'javascriptreact']);
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext, early: EarlyViews = new EarlyViews(context)): void {
   // Analyze unsaved editor text, not only what is on disk.
   const projects = new ProjectService((fileName) => {
     const key = pathKey(fileName);
@@ -114,9 +115,9 @@ export function activate(context: vscode.ExtensionContext): void {
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
   registerLastSubjects(context);
-  actionsView.register(context);
+  actionsView.register(context, early);
   // Every result shows as a card in the panel at the bottom, in the Results list's place.
-  new ValuePathView(context.extensionUri, structureView, context.globalState).register(context);
+  new ValuePathView(context.extensionUri, structureView, context.globalState).register(context, early);
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {

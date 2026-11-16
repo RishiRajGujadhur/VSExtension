@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Report, ReportLocation } from '../structure/report';
 import { ResultCard, resultCard } from '../structure/resultCard';
 import { registerCommand } from './features';
-import { webviewPage, webviewRoots } from './webviewPage';
+import { EarlyViews, greet, openPage, resultPage, resultViewType } from './sidebarPages';
 import { StructureView } from './structureView';
 import { menuAnalyses } from './diagramView';
 import { activeFeature } from './activeFeature';
@@ -17,7 +17,7 @@ const listKey = 'tsStructure.results.asList';
  * and keeps it until "Show as card" in the list's title bar.
  */
 export class ValuePathView implements vscode.WebviewViewProvider {
-  static readonly viewType = 'tsStructure.valuePath';
+  static readonly viewType = resultViewType;
   private view: vscode.WebviewView | undefined;
   private card: ResultCard | undefined;
   private asList: boolean;
@@ -29,9 +29,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
     this.asList = memento.get<boolean>(listKey, false);
   }
 
-  register(context: vscode.ExtensionContext): void {
+  register(context: vscode.ExtensionContext, early: EarlyViews): void {
     context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(ValuePathView.viewType, this),
       this.results.onDidShowNewReport(() => {
         this.stale = false;
         this.follow(true);
@@ -52,6 +51,8 @@ export class ValuePathView implements vscode.WebviewViewProvider {
       }),
     );
     this.follow(false);
+    // Takes over the page opened while the extension was loading.
+    early.hand(ValuePathView.viewType, this);
   }
 
   private async setList(asList: boolean): Promise<void> {
@@ -99,9 +100,10 @@ export class ValuePathView implements vscode.WebviewViewProvider {
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
     if (this.card) view.title = this.card.heading;
-    view.webview.html = webviewPage(view.webview, this.extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['loadingDots.js', 'valuePath.js'], body: '<main id="card"></main>' });
+    openPage(view, this.extensionUri, resultPage);
+    // The page may have said it was ready before this listened (the reply comes after the listener below is attached).
+    greet(view);
     view.webview.onDidReceiveMessage(async (message: { type: string; location?: unknown; command?: unknown }) => {
       if (message.type === 'ready') {
         this.post();

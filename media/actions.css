@@ -13,7 +13,9 @@ ul { list-style: none; margin: 0; padding: 0; }
 #tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; margin-bottom: 6px; padding: 2px; border-radius: 6px;
   background: var(--vscode-input-background, rgba(128, 128, 128, .1)); }
 .tab { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 24px; padding: 2px 6px; border: 1px solid transparent; border-radius: 4px;
-  background: transparent; color: var(--vscode-descriptionForeground); font-size: 12px; }
+  background: transparent; color: var(--vscode-descriptionForeground); font-size: 12px;;
+  /* Hover fades in and out smoothly. */
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease; }
 .tab .codicon { font-size: 14px; }
 .tab:hover { background: var(--vscode-list-hoverBackground); color: var(--vscode-foreground); }
 .tab[aria-selected="true"] { background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editorWidget-background, rgba(128, 128, 128, .15)));
@@ -187,18 +189,31 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
   .tab-dot { width: 4px; height: 4px; }
 }
 
-/* Hovering an action: its icon flickers on like a tube light. Clicking it: a short glitch, the icon torn into shifted slices. */
-.item:hover .tile, .run:focus-visible .tile { animation: xr-blink 520ms steps(1, end) 1; }
+/* Smooth hover for the actions too. */
+.item { transition: background-color 200ms ease, border-color 200ms ease; }
+.tile { transition: border-color 200ms ease, color 200ms ease; }
+.trail { transition: opacity 180ms ease; }
+
+/* The effects hovering or clicking an action plays, one picked at random (see EFFECTS in actions.js). */
+.item[data-fx] .tile, .item[data-fx="glitch"] .text, .item[data-fx="crash-blink"] .text {
+  animation-duration: 480ms; animation-delay: var(--fx-delay, 0ms); animation-iteration-count: 1; animation-timing-function: steps(1, end); }
+.item[data-fx="blinky"] .tile { animation-name: xr-blink; }
+.item[data-fx="glitch"] .tile { animation-name: xr-glitch-tile; }
+.item[data-fx="glitch"] .text { animation-name: xr-glitch-text; }
+.item[data-fx="trail"] .tile { animation-name: xr-trail; animation-timing-function: ease-out; }
+.item[data-fx="stroke-fill"] .tile { animation-name: xr-stroke-fill; }
+.item[data-fx="shuffle"] .tile { animation-name: xr-shuffle; }
+.item[data-fx="crash-blink"] .tile { animation-name: xr-crash-blink; }
+.item[data-fx="crash-blink"] .text { animation-name: xr-crash-text; }
+.item[data-fx="slide-blink"] .tile { animation-name: xr-slide-blink; animation-timing-function: linear; }
+.item[data-fx="color-flash"] .tile { animation-name: xr-color-flash; }
+.item[data-fx="build-on"] .tile { animation-name: xr-build-on; }
+
+/* Blinky: flickers on like a tube light. */
 @keyframes xr-blink {
-  0% { opacity: .25; }
-  14% { opacity: 1; }
-  28% { opacity: .35; }
-  40% { opacity: 1; }
-  52% { opacity: .5; }
-  60%, 100% { opacity: 1; }
+  0% { opacity: .25; } 14% { opacity: 1; } 28% { opacity: .35; } 40% { opacity: 1; } 52% { opacity: .5; } 60%, 100% { opacity: 1; }
 }
-.item.glitch .tile { animation: xr-glitch-tile var(--glitch-dur, 420ms) steps(1, end) var(--glitch-delay, 0ms) 1; }
-.item.glitch .text { animation: xr-glitch-text var(--glitch-dur, 420ms) steps(1, end) var(--glitch-delay, 0ms) 1; }
+/* Glitch: torn into shifted slices, squashed into a bar for a frame. */
 @keyframes xr-glitch-tile {
   0% { clip-path: inset(0 0 55% 0); transform: translateX(-5px); }
   12% { clip-path: inset(45% 0 0 0); transform: translateX(4px); }
@@ -216,6 +231,50 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
   48% { transform: translateX(-1px); clip-path: none; text-shadow: -1px 0 var(--active-accent, #22d3ee), 1px 0 #f472b6; }
   64%, 100% { transform: none; text-shadow: none; clip-path: none; }
 }
+/* Trail: slides in with fading copies behind it. */
+@keyframes xr-trail {
+  0% { transform: translateX(-16px); opacity: .2; box-shadow: none; }
+  45% { transform: translateX(-3px); opacity: 1;
+    box-shadow: -7px 0 0 -2px color-mix(in srgb, var(--active-accent, #22d3ee) 55%, transparent), -14px 0 0 -5px color-mix(in srgb, var(--active-accent, #22d3ee) 25%, transparent); }
+  100% { transform: none; box-shadow: none; }
+}
+/* Stroke-n-fill: an empty outline, filled, emptied, then filled for good. */
+@keyframes xr-stroke-fill {
+  0% { background: transparent; color: transparent; border-color: var(--vscode-foreground); }
+  22% { background: color-mix(in srgb, var(--vscode-foreground) 45%, transparent); color: transparent; }
+  40% { background: transparent; color: transparent; border-color: var(--vscode-foreground); }
+  58% { background: color-mix(in srgb, var(--vscode-foreground) 45%, transparent); color: transparent; }
+}
+/* Shuffle: scrambles through patterns before settling on the icon. */
+@keyframes xr-shuffle {
+  0% { color: transparent; background: repeating-linear-gradient(45deg, var(--vscode-foreground) 0 1px, transparent 1px 4px); }
+  20% { color: transparent; background: repeating-linear-gradient(-45deg, var(--vscode-foreground) 0 1px, transparent 1px 4px); }
+  40% { color: transparent; background: repeating-conic-gradient(var(--vscode-foreground) 0 25%, transparent 0 50%) 0 0 / 6px 6px; }
+  60% { color: transparent; background: repeating-linear-gradient(0deg, var(--vscode-foreground) 0 1px, transparent 1px 3px); }
+}
+/* Crash-n-blink: knocked about, then blinks back on. */
+@keyframes xr-crash-blink {
+  0% { transform: translate(-3px, 2px) scale(1.25); } 10% { transform: translate(3px, -2px) scale(.9); } 20% { transform: translate(-2px, 1px); }
+  30% { transform: none; opacity: .3; } 45% { opacity: 1; } 60% { opacity: .35; } 75%, 100% { opacity: 1; }
+}
+@keyframes xr-crash-text { 0% { transform: translateX(-2px); } 10% { transform: translateX(2px); } 20%, 100% { transform: none; } }
+/* Slide-n-blink: slides in, then blinks. */
+@keyframes xr-slide-blink {
+  0% { transform: translateX(-10px); opacity: 0; } 30% { transform: none; opacity: 1; } 31% { opacity: .3; } 45% { opacity: 1; } 46% { opacity: .35; }
+  60% { opacity: 1; } 61% { opacity: .5; } 72%, 100% { opacity: 1; }
+}
+/* Color flash: red, blue, green, then its own colors. */
+@keyframes xr-color-flash {
+  0% { background: #ef4444; border-color: #ef4444; color: #fff; }
+  25% { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  50% { background: #22c55e; border-color: #22c55e; color: #fff; }
+}
+/* Build on: assembled from a few pieces. */
+@keyframes xr-build-on {
+  0% { clip-path: inset(42% 42% 42% 42%); } 15% { clip-path: inset(30% 55% 30% 15%); } 30% { clip-path: inset(15% 15% 50% 15%); }
+  45% { clip-path: inset(10% 10% 25% 35%); } 60% { clip-path: inset(5% 5% 10% 5%); } 75%, 100% { clip-path: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .item:hover .tile, .run:focus-visible .tile, .item.glitch .tile, .item.glitch .text { animation: none; }
+  .item[data-fx] .tile, .item[data-fx] .text { animation: none; }
+  .tab, .item, .tile, .trail { transition: none; }
 }

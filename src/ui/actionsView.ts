@@ -8,7 +8,7 @@ import { featureOf } from '../structure/features';
 import { commandIcons } from '../structure/icons';
 import { effectiveKeybindings, Keybinding, parseKeybindingsJson, shortcuts } from '../structure/keys';
 import { isFeatureEnabled } from './features';
-import { webviewPage, webviewRoots } from './webviewPage';
+import { actionsPage, actionsViewType, EarlyViews, greet, openPage } from './sidebarPages';
 import { activeFeature } from './activeFeature';
 import { all as lastSubjects, goToSubject, onDidChangeSubjects } from './lastSubjects';
 
@@ -31,7 +31,7 @@ const isAction = (id: unknown): id is string => !!entryOf(id);
  * the arrangement is kept in global state and synced with Settings Sync. Running one acts on the editor's cursor.
  */
 export class ActionsView implements vscode.WebviewViewProvider {
-  static readonly viewType = 'tsStructure.actions';
+  static readonly viewType = actionsViewType;
   private view: vscode.WebviewView | undefined;
   private userKeybindings: vscode.Uri | undefined;
   /** keybindings.json as last read; read again only when the file changes. */
@@ -43,7 +43,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
     private readonly keybindings: readonly Keybinding[],
   ) {}
 
-  register(context: vscode.ExtensionContext): void {
+  register(context: vscode.ExtensionContext, early: EarlyViews): void {
     // keybindings.json sits in the User folder, two above this extension's global storage.
     this.userKeybindings = vscode.Uri.joinPath(context.globalStorageUri, '..', '..', 'keybindings.json');
     context.globalState.setKeysForSync([usageKey, layoutKey]);
@@ -53,7 +53,6 @@ export class ActionsView implements vscode.WebviewViewProvider {
       void this.post();
     };
     context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(ActionsView.viewType, this),
       // Turning a feature on or off shows or hides its actions.
       vscode.workspace.onDidChangeConfiguration((e) => (e.affectsConfiguration('tsStructure.features') || e.affectsConfiguration('tsStructure.actions.accentColor')) && this.post()),
       // The action whose result is on screen is highlighted, and the one before it marked "last run".
@@ -79,6 +78,8 @@ export class ActionsView implements vscode.WebviewViewProvider {
       vscode.window.onDidChangeTextEditorSelection(() => this.cursorSoon()),
       vscode.window.onDidChangeActiveTextEditor(() => this.cursorSoon()),
     );
+    // Takes over the page opened while the extension was loading.
+    early.hand(ActionsView.viewType, this);
   }
 
   private pendingTab: string | undefined;
@@ -112,8 +113,9 @@ export class ActionsView implements vscode.WebviewViewProvider {
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    view.webview.options = { enableScripts: true, localResourceRoots: webviewRoots(this.extensionUri) };
-    view.webview.html = html(view.webview, this.extensionUri);
+    openPage(view, this.extensionUri, actionsPage);
+    // The page may have said it was ready before this listened (the reply comes after the listener below is attached).
+    greet(view);
     view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
       if (message.type === 'ready') {
         void this.post().then(() => {
@@ -217,20 +219,4 @@ const footer = [
   { command: 'tsStructure.configureFeatures', label: 'Toolshed…', icon: 'tools' },
 ];
 
-function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['loadingDots.js', 'actions.js'], body: `<div class="top">
-<div id="tabs" role="tablist" aria-label="Kinds of actions"></div>
-<div class="search">
-  <i class="codicon codicon-search" aria-hidden="true"></i>
-  <input id="search" type="search" placeholder="Search actions or shortcuts (/)" aria-label="Search actions" aria-controls="list" aria-describedby="found">
-  <button id="clear" class="clear" title="Clear Search (Escape)" aria-label="Clear search" hidden><i class="codicon codicon-close" aria-hidden="true"></i></button>
-</div>
-<div id="found" class="visually-hidden" role="status" aria-live="polite"></div>
-</div>
-<div id="tip-hint" class="hint" hidden></div>
-<div id="list" aria-label="Actions"></div>
-<nav id="footer" aria-label="Help and settings"></nav>
-<div id="tip" role="tooltip" hidden></div>
-<div id="menu" role="menu" hidden></div>` });
-}
 
