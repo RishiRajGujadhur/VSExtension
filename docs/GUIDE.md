@@ -33,7 +33,7 @@ See inside your TypeScript, JavaScript and React code. Put the cursor on somethi
 - Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
 - The action whose result is on screen stands out: its row is raised with a colored bar on its left, its tab has a dot, and the action you ran before it says **last run**. It is cyan; pick pink or your theme's focus color with `tsStructure.actions.accentColor`.
 - Hovering or clicking an action plays a short effect on its icon, picked at random from nine: blinky, glitch, trail, stroke-n-fill, shuffle, crash-n-blink, slide-n-blink, color flash and build on. The tabs fade smoothly on hover.
-- In the charts, a box's card slides out of the box with a trail of fading copies when it opens, and slides back in when it closes; unpinning a card trails it away too. Both stay still when your system asks for reduced motion.
+- In the charts, a box's card fades in when it opens and fades out when it closes; unpinning a card fades it out too. Both stay still when your system asks for reduced motion.
 - While the Actions and Result views load, a field of dots glows in drifting patches until the buttons appear (a still picture under reduced motion).
 
 <img src="images/actions-active.png" width="320" alt="The Actions view with Control Flow Graph highlighted as the feature on screen, Nullability marked last run, and dots on the Analyze and Charts tabs">
