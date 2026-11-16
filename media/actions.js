@@ -18,7 +18,8 @@
   let focusAfterRender;
   /**
    * Hovering or clicking an action plays one of nine short effects on it, picked at random (never the same twice running):
-   * after the FUI field guide's Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on.
+   * recreated in CSS from Jerry Liu's motion language (x.com/SloppyJ44/status/1846584501847142705): Blinky, Glitch, Trail,
+   * Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on.
    */
   const EFFECTS = ['blinky', 'glitch', 'trail', 'stroke-fill', 'shuffle', 'crash-blink', 'slide-blink', 'color-flash', 'build-on'];
   const FX_MS = 480;

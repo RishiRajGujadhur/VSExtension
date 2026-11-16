@@ -379,6 +379,8 @@ The analysis engine (`src/analysis`, `src/refactor`, `src/intentions`, `src/insp
 
 ## Credits
 
+The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
+
 The Welcome page's ASCII field and pixel-font title are original code and glyphs written for Code X-Ray in the style of Framer University's ASCII Shader component (no code or font taken from it).
 
 The animated graphs (the dot grid behind the charts, the flowing lines and the box style) are adapted from the node grid demo of [robot-components](https://github.com/dashrobotco/robot-components) by Robot FZCO, used under the MIT License. Its copyright and license notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which ships with the extension.

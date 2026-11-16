@@ -64,3 +64,9 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 Settings are under **Code X-Ray** in VS Code's settings (`tsStructure.*`).
 
 The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
+
+## Credits
+
+The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
+
+Other credits (the animated chart grid, the Welcome page) are in the [guide](docs/GUIDE.md#credits), with licence notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
