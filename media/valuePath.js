@@ -343,8 +343,15 @@
     document.body.classList.toggle('accent-pink', event.data.accent === 'pink');
     document.body.classList.toggle('accent-theme', event.data.accent === 'theme');
     // Another analysis, or another subject, starts folded again; the same one run again keeps what was open.
-    if (!last || !event.data.card || last.card?.heading !== event.data.card.heading || last.card?.subject !== event.data.card.subject) { opened.clear(); filter = ''; }
+    const fresh = !last || !event.data.card || last.card?.heading !== event.data.card.heading || last.card?.subject !== event.data.card.subject;
+    if (fresh) { opened.clear(); filter = ''; }
     render(event.data.card, event.data.stale);
+    // A new result fades in; the same one updated (after an edit, say) does not flicker.
+    if (fresh) {
+      box.classList.remove('xr-fade');
+      void box.offsetWidth;
+      box.classList.add('xr-fade');
+    }
   });
   vscode.postMessage({ type: 'ready' });
 })();

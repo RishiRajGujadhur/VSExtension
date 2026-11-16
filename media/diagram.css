@@ -218,3 +218,9 @@ svg.spotlight .node.lit .box { stroke: var(--vscode-focusBorder); stroke-width: 
 /* Narrow panels: the hint wraps (two lines at most) instead of being cut; a code line keeps one line. */
 #info { white-space: normal; max-height: 5.4em; overflow: hidden; }
 #info code { white-space: nowrap; }
+
+/* Fades in when shown and out when hidden (the hidden attribute only switches it off once the fade is over). */
+#legend { transition: opacity 140ms ease-out, display 140ms allow-discrete; }
+#legend[hidden] { opacity: 0; pointer-events: none; }
+@starting-style { #legend { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #legend { transition: none; } }

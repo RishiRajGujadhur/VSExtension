@@ -1258,9 +1258,13 @@
     svg.classList.add('dragging');
     svg.focus({ preventScroll: true });
   });
+  // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
+  let svgRect;
+  svg.addEventListener('pointerenter', () => (svgRect = svg.getBoundingClientRect()));
+  window.addEventListener('resize', () => (svgRect = undefined));
   svg.addEventListener('pointermove', (e) => {
     if (grid) {
-      const r = svg.getBoundingClientRect();
+      const r = svgRect || (svgRect = svg.getBoundingClientRect());
       grid.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
     }
     if (drag) { fitted = false; view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; applySoon(); }
@@ -1411,6 +1415,12 @@
       empty.hidden = !!chart;
       svg.classList.toggle('off', !chart);
       if (!same) {
+        // Another function's chart fades in; the same one redrawn after an edit does not flicker.
+        if (chart) {
+          svg.classList.remove('xr-fade');
+          void svg.getBoundingClientRect();
+          svg.classList.add('xr-fade');
+        }
         pins = [];
         nodePins = [];
         selected = -1;

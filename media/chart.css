@@ -246,3 +246,14 @@ button.card-meta:hover { text-decoration: underline; }
 @media (forced-colors: active) { .hover-card .card-drop { border-color: CanvasText; } }
 /* Delete sits at the far right of the File row behind a thin divider, and stays right-aligned if it wraps. */
 .hover-card .card-danger-zone { display: inline-flex; gap: 5px; margin-left: auto; padding-left: 8px; border-left: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .4)); }
+
+/* Fades in when shown and out when hidden (the hidden attribute only switches it off once the fade is over). */
+#boxMenu, .hover-card .card-drop { transition: opacity 140ms ease-out, display 140ms allow-discrete; }
+#boxMenu[hidden], .hover-card .card-drop[hidden] { opacity: 0; pointer-events: none; }
+@starting-style { #boxMenu, .hover-card .card-drop { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #boxMenu, .hover-card .card-drop { transition: none; } }
+
+/* New content fades in: another tab, an unfolded section, a new result or chart. */
+.xr-fade { animation: xr-fade-in 200ms ease-out; }
+@keyframes xr-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .xr-fade { animation: none; } }

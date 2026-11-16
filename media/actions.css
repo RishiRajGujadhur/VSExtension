@@ -278,3 +278,14 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
   .item[data-fx] .tile, .item[data-fx] .text { animation: none; }
   .tab, .item, .tile, .trail { transition: none; }
 }
+
+/* Fades in when shown and out when hidden (the hidden attribute only switches it off once the fade is over). */
+#tip, #menu, #tip-hint { transition: opacity 140ms ease-out, display 140ms allow-discrete; }
+#tip[hidden], #menu[hidden], #tip-hint[hidden] { opacity: 0; pointer-events: none; }
+@starting-style { #tip, #menu, #tip-hint { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #tip, #menu, #tip-hint { transition: none; } }
+
+/* New content fades in: another tab, an unfolded section, a new result or chart. */
+.xr-fade { animation: xr-fade-in 200ms ease-out; }
+@keyframes xr-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .xr-fade { animation: none; } }

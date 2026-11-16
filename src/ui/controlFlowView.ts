@@ -25,6 +25,8 @@ export class ControlFlowPanel {
   /** The file and the function's offset in it, moved along with edits above it. */
   private target: { uri: vscode.Uri; anchor: number; folder?: string } | undefined;
   private refresh: NodeJS.Timeout | undefined;
+  /** The code changed while the panel was hidden: it is drawn again when shown, not on every edit meanwhile. */
+  private outdated = false;
   /** The parsed file the chart was drawn from, for finding the cursor's box without touching the project. */
   private source: import('typescript').SourceFile | undefined;
   private cursorTimer: NodeJS.Timeout | undefined;
@@ -52,6 +54,10 @@ export class ControlFlowPanel {
         clearTimeout(this.refresh);
         // Box numbers change with the code, so an edit ends the slice.
         this.slice = undefined;
+        if (!this.panel.visible) {
+          this.outdated = true;
+          return;
+        }
         this.refresh = setTimeout(() => this.build(), 400);
       }),
       vscode.window.onDidChangeTextEditorSelection((e) => {
@@ -187,7 +193,14 @@ export class ControlFlowPanel {
         void vscode.window.showWarningMessage(message.text);
       }
     });
+    this.panel.onDidChangeViewState(() => {
+      if (this.panel?.visible && this.outdated) {
+        this.outdated = false;
+        this.build();
+      }
+    });
     this.panel.onDidDispose(() => {
+      this.outdated = false;
       this.panel = undefined;
       this.chart = undefined;
       activeFeature.closed('tsStructure.controlFlow');

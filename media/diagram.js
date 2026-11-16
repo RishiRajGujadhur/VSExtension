@@ -834,7 +834,9 @@
     if (node && node !== diagram.center && !e.target.closest('.toggle')) isolate(node);
   });
   svg.addEventListener('mouseover', (e) => {
-    const node = boxOf(e.target);
+    // A box dimmed by the search is passed over like empty space: no card for it.
+    const box = e.target.closest && e.target.closest('.node');
+    const node = box && box.classList.contains('dim') ? undefined : boxOf(e.target);
     if (node === hovered) return;
     hovered = node;
     if (node && node.el) showCard(node, 350);
@@ -979,9 +981,13 @@
     svg.classList.add('dragging');
     svg.focus({ preventScroll: true });
   });
+  // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
+  let svgRect;
+  svg.addEventListener('pointerenter', () => (svgRect = svg.getBoundingClientRect()));
+  window.addEventListener('resize', () => (svgRect = undefined));
   svg.addEventListener('pointermove', (e) => {
     if (grid) {
-      const rect = svg.getBoundingClientRect();
+      const rect = svgRect || (svgRect = svg.getBoundingClientRect());
       grid.pointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
     }
     if (!drag) return;
@@ -1127,7 +1133,14 @@
       return;
     }
     if (event.data.type !== 'diagram') return;
+    // Another chart (not the same one run again) fades in.
+    const freshChart = !!event.data.diagram && (!diagram || diagram.title !== event.data.diagram.title);
     diagram = event.data.diagram;
+    if (freshChart) {
+      svg.classList.remove('xr-fade');
+      void svg.getBoundingClientRect();
+      svg.classList.add('xr-fade');
+    }
     // The code may have changed since it was read (an edit, then a new run): read it again.
     codeLines.clear();
     codeBlocks.clear();

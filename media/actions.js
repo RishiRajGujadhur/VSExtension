@@ -16,6 +16,14 @@
   let data;
   let tab = saved.tab || 'analyze';
   let focusAfterRender;
+  /** The section just unfolded: its actions fade in when the list is drawn again. */
+  let unfolding;
+  /** Fades the element in from the start. */
+  function fadeIn(el) {
+    el.classList.remove('xr-fade');
+    void el.offsetWidth;
+    el.classList.add('xr-fade');
+  }
   /**
    * Hovering or clicking an action plays one of nine short effects on it, picked at random (never the same twice running):
    * recreated in CSS from Jerry Liu's motion language (x.com/SloppyJ44/status/1846584501847142705): Blinky, Glitch, Trail,
@@ -295,6 +303,7 @@
     if (context.inSearch) toggle.disabled = true;
     else toggle.addEventListener('click', () => {
       focusAfterRender = `section:${id}`;
+      if (folded) unfolding = id;
       send({ kind: 'toggleSection', id });
     });
     toggle.dataset.section = id;
@@ -303,6 +312,10 @@
     if (folded) return;
     const ul = make('ul', 'group');
     ul.setAttribute('aria-label', title);
+    if (unfolding === id) {
+      unfolding = undefined;
+      fadeIn(ul);
+    }
     if (context.extra) heading.append(context.extra);
     actions.forEach((a, i) => ul.append(item(a, { ...context, pinnedIndex: id === 'pinned' ? i : undefined })));
     if (id === 'pinned') dropTarget(ul);
@@ -366,6 +379,8 @@
     save({ tab });
     renderTabs();
     render();
+    // Another tab's actions fade in.
+    fadeIn(document.getElementById('list'));
     if (focus) tabsBar.querySelector('[aria-selected="true"]').focus();
   }
 

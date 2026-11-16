@@ -207,3 +207,8 @@ button.row-label .row-text { font-weight: 500; }
   .timeline .rows { margin-left: 2px; padding-left: 10px; }
   .timeline .rows > .row::before { left: -10px; width: 7px; }
 }
+
+/* New content fades in: another tab, an unfolded section, a new result or chart. */
+.xr-fade { animation: xr-fade-in 200ms ease-out; }
+@keyframes xr-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .xr-fade { animation: none; } }

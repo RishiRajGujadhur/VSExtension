@@ -249,3 +249,9 @@ svg.spotlight .node.lit { filter: drop-shadow(0 0 6px var(--vscode-focusBorder))
 /* Narrow panels: the hint line wraps instead of running off the edge; a code snippet keeps one line. */
 #info { flex-wrap: wrap; white-space: normal; row-gap: 2px; }
 #info code { white-space: nowrap; min-width: 0; max-width: 100%; }
+
+/* Fades in when shown and out when hidden (the hidden attribute only switches it off once the fade is over). */
+#legend { transition: opacity 140ms ease-out, display 140ms allow-discrete; }
+#legend[hidden] { opacity: 0; pointer-events: none; }
+@starting-style { #legend { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #legend { transition: none; } }

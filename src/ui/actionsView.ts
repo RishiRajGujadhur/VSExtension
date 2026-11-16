@@ -88,6 +88,8 @@ export class ActionsView implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({ type: 'active', active: activeFeature.active, last: activeFeature.last });
   }
   private cursorTimer: NodeJS.Timeout | undefined;
+  /** What the page was last told about the cursor. */
+  private lastCursor: string | undefined;
 
   private sendTab(): void {
     if (this.view && this.pendingTab) {
@@ -108,6 +110,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
     const editor = vscode.window.activeTextEditor;
     const source = !!editor && vscode.languages.match(languageSelector, editor.document) > 0;
     const fits = source ? fittingAt(editor!.document, editor!.document.offsetAt(editor!.selection.active)) : [];
+    // Only when it changed: moving the cursor around one function sends nothing.
+    const sent = JSON.stringify([fits, source]);
+    if (sent === this.lastCursor) return;
+    this.lastCursor = sent;
     void this.view.webview.postMessage({ type: 'cursor', fits, hasEditor: source });
   }
 
@@ -118,6 +124,8 @@ export class ActionsView implements vscode.WebviewViewProvider {
     greet(view);
     view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
       if (message.type === 'ready') {
+        // A page that has just (re)loaded knows nothing about the cursor yet.
+        this.lastCursor = undefined;
         void this.post().then(() => {
           this.sendCursor();
           this.sendTab();
