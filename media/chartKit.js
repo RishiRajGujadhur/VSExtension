@@ -974,7 +974,73 @@
       if (y + h > window.innerHeight - 6 && r.top - h - 8 >= 6) y = r.top - h - 8;
       card.style.left = `${x}px`;
       card.style.top = `${clampY(y, h)}px`;
+      // Which way the card comes out of its box: down when it sits below the box, up when above.
+      fromAbove = clampY(y, h) >= r.top;
     }
+
+    // The card comes and goes with a trail (after the FUI field guide's Trail): it slides out of its box with fading
+    // copies of itself behind, and slides back into the box when it hides. Still under reduced motion.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const restingShadow = '0 16px 24px -10px rgba(0, 0, 0, .45)';
+    let fromAbove = true;
+    let motion;
+    let leaving = false;
+    /** The trail of copies, `behind` pixels apart behind the card as it moves, in the theme's focus color. */
+    function trail(el, direction, behind, strength) {
+      const color = getComputedStyle(el).getPropertyValue('--vscode-focusBorder').trim() || '#0078d4';
+      const ghost = (gap, spread, percent) => `0 ${-direction * gap}px 0 ${spread}px color-mix(in srgb, ${color} ${Math.round(percent)}%, transparent)`;
+      return [restingShadow, ghost(behind, -3, 75 * strength), ghost(behind * 2, -7, 45 * strength), ghost(behind * 3, -12, 22 * strength)].join(', ');
+    }
+    function appear() {
+      if (motion) motion.cancel();
+      leaving = false;
+      if (reduceMotion.matches || !card.animate) return;
+      const d = fromAbove ? 1 : -1;
+      motion = card.animate(
+        [
+          { transform: `translateY(${-18 * d}px) scale(.97)`, opacity: 0, boxShadow: trail(card, d, 9, 1) },
+          { transform: `translateY(${-8 * d}px)`, opacity: 1, boxShadow: trail(card, d, 8, 1), offset: 0.3 },
+          { transform: `translateY(${-2 * d}px)`, opacity: 1, boxShadow: trail(card, d, 4, 0.5), offset: 0.65 },
+          { transform: 'none', opacity: 1, boxShadow: trail(card, d, 0, 0) },
+        ],
+        { duration: 340, easing: 'cubic-bezier(.3, .6, .4, 1)' },
+      );
+    }
+    /** Slides the card back into its box, then hides it. */
+    function leave() {
+      if (leaving) return;
+      if (motion) motion.cancel();
+      leaving = true;
+      motion = trailAway(card, fromAbove, () => {
+        if (!leaving) return;
+        leaving = false;
+        card.hidden = true;
+      });
+    }
+    /** The card slides up (or down) and away with its trail, then `done` hides it. */
+    function trailAway(el, upward, done) {
+      if (reduceMotion.matches || !el.animate) {
+        done();
+        return undefined;
+      }
+      const d = upward ? -1 : 1;
+      const away = el.animate(
+        [
+          { transform: 'none', opacity: 1, boxShadow: trail(el, d, 0, 0) },
+          { transform: `translateY(${8 * d}px)`, opacity: 1, boxShadow: trail(el, d, 8, 1), offset: 0.55 },
+          { transform: `translateY(${16 * d}px) scale(.97)`, opacity: 0, boxShadow: trail(el, d, 9, 1) },
+        ],
+        { duration: 240, easing: 'cubic-bezier(.5, 0, .8, .6)' },
+      );
+      // Hidden when it ends; a timer too, as a page in the background may not report the end.
+      const fallback = setTimeout(done, 290);
+      away.onfinish = () => {
+        clearTimeout(fallback);
+        done();
+      };
+      return away;
+    }
+
     function show(target, c, delay = 350, key) {
       clearTimeout(timer);
       timer = setTimeout(() => {
@@ -990,8 +1056,11 @@
         // Built now, not when the pointer arrived: code read in between shows straight away.
         content = typeof c === 'function' ? c() : c;
         render(card, content, false);
+        // Already open on another box, it moves there; otherwise it comes out with its trail.
+        const wasOut = !card.hidden && !leaving;
         card.hidden = false;
         place();
+        if (!wasOut) appear();
       }, delay);
     }
     /** New content for a box on show, such as its code once it has been read. */
@@ -1014,21 +1083,31 @@
       render(pinnedCard, content, true);
       pinnedCard.style.left = card.style.left;
       pinnedCard.style.top = card.style.top;
+      // Pinned again while the last one was still trailing away: it stays.
+      pinnedCard.getAnimations().forEach((animation) => animation.cancel());
       pinnedCard.hidden = false;
+      // The pinned card takes its place, where it is: no trail.
+      if (motion) motion.cancel();
+      leaving = false;
       card.hidden = true;
       shownFor = undefined;
       const unpinButton = pinnedCard.querySelector('.card-pin');
       if (unpinButton) unpinButton.focus({ preventScroll: true });
     }
     function unpin() {
-      pinnedCard.hidden = true;
+      if (!pinnedCard.hidden) {
+        const going = pinnedCard;
+        trailAway(going, true, () => {
+          if (pinnedFor === undefined) going.hidden = true;
+        });
+      }
       pinnedFor = undefined;
       pinnedContent = undefined;
     }
     function hide() {
       clearTimeout(timer);
-      card.hidden = true;
       shownFor = undefined;
+      if (!card.hidden) leave();
     }
     function hideSoon() {
       clearTimeout(timer);
