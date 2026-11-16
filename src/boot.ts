@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { EarlyViews } from './ui/sidebarPages';
 
 /**
- * The extension's entry point. It opens the sidebar views' pages straight away, with their loading animation, and only
- * then loads the rest (TypeScript and every feature), which takes a moment. VS Code waits for activate to finish
+ * The extension's entry point. It opens the sidebar views' pages straight away, and only then loads the rest
+ * (TypeScript and every feature), which takes a moment. VS Code waits for activate to finish
  * before running any of the extension's commands, so none of them is missed meanwhile.
  */
 let main: typeof import('./extension') | undefined;

@@ -2,9 +2,8 @@ import * as vscode from 'vscode';
 import { webviewPage, webviewRoots } from './webviewPage';
 
 /**
- * The two sidebar views' pages, and a light stand-in that opens them as soon as the extension starts. The rest of the
- * extension (TypeScript and every feature) takes a moment to load; meanwhile each page shows its loading animation,
- * instead of VS Code's empty view. Once loaded, each view's real provider takes over the page already open.
+ * The two sidebar views' pages, and a light stand-in that opens them as soon as the extension starts, while the rest of
+ * the extension (TypeScript and every feature) loads. Once loaded, each view's real provider takes over the page already open.
  */
 
 export const actionsViewType = 'tsStructure.actions';
@@ -13,7 +12,7 @@ export const resultViewType = 'tsStructure.valuePath';
 const options = (extensionUri: vscode.Uri): vscode.WebviewOptions => ({ enableScripts: true, localResourceRoots: webviewRoots(extensionUri) });
 
 export function actionsPage(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['loadingDots.js', 'actions.js'], body: `<div class="top">
+  return webviewPage(webview, extensionUri, { title: 'Actions', styles: ['actions.css'], scripts: ['actions.js'], body: `<div class="top">
 <div id="tabs" role="tablist" aria-label="Kinds of actions"></div>
 <div class="search">
   <i class="codicon codicon-search" aria-hidden="true"></i>
@@ -30,7 +29,7 @@ export function actionsPage(webview: vscode.Webview, extensionUri: vscode.Uri): 
 }
 
 export function resultPage(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  return webviewPage(webview, extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['loadingDots.js', 'valuePath.js'], body: '<main id="card"></main>' });
+  return webviewPage(webview, extensionUri, { title: 'Result', styles: ['valuePath.css'], scripts: ['valuePath.js'], body: '<main id="card"></main>' });
 }
 
 /**
