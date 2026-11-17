@@ -84,6 +84,7 @@ export const reportIcons: Record<string, string> = {
   exceptions: commandIcons['tsStructure.exceptionFlow'],
   duplicates: commandIcons['tsStructure.findDuplicates'],
   usages: commandIcons['tsStructure.semanticUsages'],
+  reactState: commandIcons['tsStructure.reactState'],
   reexports: commandIcons['tsStructure.reexportChain'],
   structuralSearch: commandIcons['tsStructure.structuralSearch'],
   hierarchy: commandIcons['tsStructure.typeHierarchy'],

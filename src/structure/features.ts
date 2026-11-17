@@ -40,7 +40,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Data flow and changes',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.valueTimeline', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph', 'tsStructure.reactState'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.valueTimeline', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph'],
   },
   {
     id: 'sideEffects',
@@ -80,10 +80,15 @@ export const features: Feature[] = [
   },
   {
     id: 'usages',
-    core: true,
     title: 'Find usages',
     description: 'References grouped by reads, writes, calls, imports, types and JSX.',
     commands: ['tsStructure.semanticUsages', 'tsStructure.report.findUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.report.usagesHere', 'tsStructure.callGraph'],
+  },
+  {
+    id: 'reactState',
+    title: 'React state',
+    description: 'For a React component or hook: its props, state, refs, memos and effects, and what each state change triggers.',
+    commands: ['tsStructure.reactState'],
   },
   {
     id: 'reexports',

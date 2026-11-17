@@ -217,7 +217,10 @@ export class ActionsView implements vscode.WebviewViewProvider {
     // Most Used leaves out what is already pinned, and what is hidden.
     const candidates = (tab: string) => actions.filter((a) => a.tab === tab && !layout.pinned.includes(a.id) && !layout.hidden.includes(a.id)).map((a) => a.id);
     const mostUsedByTab = Object.fromEntries(actionTabs.map((t) => [t.id, mostUsed(usage, candidates(t.id))]));
-    void this.view.webview.postMessage({ type: 'actions', actions, tabs: actionTabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan'), active: activeFeature.active, last: activeFeature.last, lastSubjects: Object.fromEntries(Object.entries(lastSubjects()).map(([command, s]) => [command, s.label])) });
+    // A tab with nothing in it (every feature behind it off, as Edit is on a new install) is left out; one always shows.
+    const withActions = actionTabs.filter((t) => actions.some((a) => a.tab === t.id));
+    const tabs = withActions.length ? withActions : actionTabs.slice(0, 1);
+    void this.view.webview.postMessage({ type: 'actions', actions, tabs, mostUsed: mostUsedByTab, usage, usedOnce: Object.values(usage).some((n) => n > 0), footer, layout, categories: graphCategories, accent: vscode.workspace.getConfiguration('tsStructure.actions').get('accentColor', 'cyan'), active: activeFeature.active, last: activeFeature.last, lastSubjects: Object.fromEntries(Object.entries(lastSubjects()).map(([command, s]) => [command, s.label])) });
   }
 }
 

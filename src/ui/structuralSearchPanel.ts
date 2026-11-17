@@ -14,6 +14,7 @@ import { isExcluded } from './exclude';
 import { plural } from '../structure/report';
 import { SearchPreset, searchTemplates } from '../search/templates';
 import { registerCommand } from './features';
+import { openFileThenRun } from './analysisActions';
 import { pathKey } from '../analysis/paths';
 import { changedFiles, openSourceFiles } from './analysisScope';
 
@@ -544,6 +545,10 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
     }),
     registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
+      // The search needs a project: with no TypeScript or JavaScript file in front, pick one, and it opens there.
+      if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
+        return openFileThenRun('tsStructure.structuralSearch', 'Search by shape: search the project of which file?');
+      }
       const selected = editor && !editor.selection.isEmpty ? editor.document.getText(editor.selection) : undefined;
       try {
         StructuralSearchPanel.open(context, projects, view, {

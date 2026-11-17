@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.72.0",
+  "version": "0.73.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -1357,7 +1357,7 @@
         "key": "ctrl+alt+s shift+r",
         "mac": "cmd+ctrl+s shift+r",
         "command": "tsStructure.reactState",
-        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
+        "when": "config.tsStructure.features.reactState && editorTextFocus && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
       },
       {
         "key": "ctrl+alt+s shift+g",
@@ -1622,7 +1622,7 @@
         },
         {
           "command": "tsStructure.reactState",
-          "when": "config.tsStructure.features.dataFlow",
+          "when": "config.tsStructure.features.reactState",
           "group": "3_analysis@8"
         }
       ],
@@ -2281,7 +2281,7 @@
         },
         {
           "command": "tsStructure.reactState",
-          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
+          "when": "config.tsStructure.features.reactState && editorLangId =~ /^(typescriptreact|javascriptreact|typescript|javascript)$/"
         },
         {
           "command": "tsStructure.report.changeControls",
@@ -2960,19 +2960,19 @@
             "type": "boolean",
             "default": false,
             "order": 1,
-            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+            "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. Off by default; turn on to show its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.intentions": {
             "type": "boolean",
             "default": false,
             "order": 2,
-            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+            "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. Off by default; turn on to show its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.inspections": {
             "type": "boolean",
             "default": false,
             "order": 3,
-            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+            "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. Off by default; turn on to show its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.dataFlow": {
             "type": "boolean",
@@ -2984,13 +2984,19 @@
             "type": "boolean",
             "default": false,
             "order": 5,
-            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+            "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. Off by default; turn on to show its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.usages": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 6,
-            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+            "markdownDescription": "**Semantic Find Usages**: References grouped by reads, writes, calls, imports, types and JSX. Off by default; turn on to show its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+          },
+          "tsStructure.features.reactState": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "**React state**: For a React component or hook, its props, state, refs, memos and effects, and what each state change triggers. Off by default; turn on to show its commands and menus.",
+            "order": 6
           },
           "tsStructure.features.sideEffects": {
             "type": "boolean",

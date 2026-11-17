@@ -34,6 +34,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 ![Find usages, grouped into definitions, calls, imports and exports](docs/images/semantic-usages.gif)
 
+- Turn on **Find usages** in Settings first (it is off on a new install).
 - Press `Alt+F7` on a symbol.
 - Usages are grouped by kind (definitions, calls, reads, writes, imports), with tests marked.
 - Filter the list, or narrow it to the current file.
@@ -58,7 +59,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 ## Settings
 
 - Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.
-- **Features**: switch each part of Code X-Ray on or off. A new install starts with Affected tests, Data flow and Find usages; **Turn all on** switches on the rest (refactorings, quick rewrites, inspections and more).
+- **Features**: switch each part of Code X-Ray on or off. A new install starts with Affected tests and Data flow; **Turn all on** switches on the rest (find usages, refactorings, quick rewrites, inspections, React state and more). With every edit feature off, the Edit tab of the Actions view is hidden.
 - **Animations**: turn on the button effects in the Actions view (off by default), or turn off the charts' moving grid and flowing lines.
 - Every other setting is there too, grouped and searchable (`Ctrl+F`), with a reset button on anything you changed.
 
