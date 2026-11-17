@@ -35,6 +35,8 @@
   const BIG = 250;
   const ANIMATION_LIMIT = window.chartKit.ANIMATION_LIMIT;
   let lite = false;
+  /** Too big to animate, or animations turned off in the settings. */
+  let animationsOff = false;
   let diagramBoxes = 0;
   let focused;
   let selected;
@@ -654,7 +656,7 @@
   // Every line carries moving pulses in the direction the value travels; after a click on a box only its way to the
   // subject and what is behind it do. Clicking the background or pressing Escape goes back to every line.
   function drawFlows() {
-    if (!prefs.flow || lite || !diagram) return window.chartKit.drawFlows(scene, null, []);
+    if (!prefs.flow || animationsOff || !diagram) return window.chartKit.drawFlows(scene, null, []);
     const edges = [];
     if (!flowing || !shownNodes.includes(flowing) || flowing === diagram.center) {
       shownNodes.forEach((n) => n.edgeEl && edges.push(n.edgeEl));
@@ -697,7 +699,7 @@
   /** The sparkle and play buttons show what is really on: off on a big chart until pressed. */
   function applyLite() {
     // Off for a chart this big, with the buttons disabled and saying why.
-    window.chartKit.limitAnimations(lite ? diagramBoxes : 0, prefs, grid);
+    animationsOff = window.chartKit.limitAnimations(lite ? diagramBoxes : 0, prefs, grid);
   }
 
   function stopFlow() {
@@ -1147,5 +1149,10 @@
   window.chartKit.attachFlowLines(document.getElementById('flowLines'), () => view);
   window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   applyLite();
+  // Turned on or off in the settings: the flowing lines follow.
+  window.addEventListener('xr-animations', (e) => {
+    animationsOff = e.detail;
+    drawFlows();
+  });
   vscode.postMessage({ type: 'ready' });
 })();

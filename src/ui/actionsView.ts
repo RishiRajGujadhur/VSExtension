@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { followAnimations } from './animationSettings';
 import { ActionLayout, actionCatalog, actionId, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
 import { graphCategories, newActions } from '../structure/actionCatalog';
 import { fittingAt } from './analysisActions';
@@ -120,6 +121,7 @@ export class ActionsView implements vscode.WebviewViewProvider {
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     openPage(view, this.extensionUri, actionsPage);
+    followAnimations(view);
     // The page may have said it was ready before this listened (the reply comes after the listener below is attached).
     greet(view);
     view.webview.onDidReceiveMessage(async (message: { type: string; id?: unknown; command?: unknown; change?: LayoutChange }) => {
@@ -225,6 +227,7 @@ const footer = [
   { command: 'tsStructure.guideMe', label: 'Guided tour', icon: 'book' },
   { command: 'tsStructure.editKeybindings', label: 'Shortcuts', icon: 'keyboard' },
   { command: 'tsStructure.configureFeatures', label: 'Toolshed…', icon: 'tools' },
+  { command: 'tsStructure.openSettings', label: 'Settings', icon: 'settings-gear' },
 ];
 
 

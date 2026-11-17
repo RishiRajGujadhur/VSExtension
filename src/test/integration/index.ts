@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { sections } from '../../ui/settingsPanel';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -524,6 +525,22 @@ async function analysisCommandsFlow(): Promise<void> {
   const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Search by shape');
   assert.ok(tab, 'Search by shape panel did not open');
   await vscode.window.tabGroups.close(tab);
+
+  // Settings: the page opens, and its sections are built from the real settings, Features and Animations first.
+  await vscode.commands.executeCommand('tsStructure.openSettings');
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const settingsTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label === 'Code X-Ray Settings');
+  assert.ok(settingsTab, 'Settings panel did not open');
+  const manifest = vscode.extensions.all.find((e) => e.packageJSON?.name === 'ts-test-impact')!.packageJSON;
+  const model = sections(manifest);
+  assert.deepEqual(model.slice(0, 3).map((s) => s.title), ['Features', 'Animations', 'General']);
+  assert.deepEqual(model[1].rows.map((r) => [r.label, r.value]), [['Button animations', true], ['Chart animations', true]]);
+  await vscode.workspace.getConfiguration('tsStructure.animations').update('charts', false, vscode.ConfigurationTarget.Global);
+  assert.equal(sections(manifest)[1].rows[1].value, false, 'the page shows a changed setting');
+  assert.equal(sections(manifest)[1].rows[1].modified, true);
+  await vscode.workspace.getConfiguration('tsStructure.animations').update('charts', undefined, vscode.ConfigurationTarget.Global);
+  await vscode.window.tabGroups.close(settingsTab);
+  console.log('settings ok');
   console.log('analysis commands ok');
 }
 

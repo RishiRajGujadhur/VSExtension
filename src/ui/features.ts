@@ -43,18 +43,25 @@ async function offerToEnable(feature: Feature): Promise<void> {
   }
 }
 
-/** Writes where the setting is already set, so a workspace override is not shadowed by a user setting. */
-async function setFeature(id: string, enabled: boolean): Promise<void> {
-  const config = vscode.workspace.getConfiguration('tsStructure.features');
-  const inspected = config.inspect<boolean>(id);
+/**
+ * Writes a setting where it is already set, so a workspace override is not shadowed by a user setting. Going back to
+ * the default removes the override instead of writing the default out; `undefined` resets it.
+ */
+export async function updateSetting(key: string, value: unknown): Promise<void> {
+  const config = vscode.workspace.getConfiguration();
+  const inspected = config.inspect(key);
   const target =
     inspected?.workspaceFolderValue !== undefined
       ? vscode.ConfigurationTarget.WorkspaceFolder
       : inspected?.workspaceValue !== undefined
         ? vscode.ConfigurationTarget.Workspace
         : vscode.ConfigurationTarget.Global;
-  // Going back to the default removes the override instead of writing it out.
-  await config.update(id, enabled === inspected?.defaultValue ? undefined : enabled, target);
+  const same = JSON.stringify(value) === JSON.stringify(inspected?.defaultValue);
+  await config.update(key, value === undefined || same ? undefined : value, target);
+}
+
+export function setFeature(id: string, enabled: boolean): Promise<void> {
+  return updateSetting(`tsStructure.features.${id}`, enabled);
 }
 
 /** Where each feature's own settings are, for its gear button in Choose Features. */

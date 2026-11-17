@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { animationAttributes } from './animationSettings';
 
 /**
  * What every Code X-Ray webview shares: where its files come from, the page skeleton with its security policy and
@@ -39,7 +40,7 @@ export function webviewPage(
 ${page.styles.map((s) => `<link rel="stylesheet" href="${mediaUri(webview, extensionUri, s)}">`).join('\n')}
 <title>${page.title}</title>
 </head>
-<body${page.bodyAttributes ? ` ${page.bodyAttributes}` : ''}>
+<body ${animationAttributes()}${page.bodyAttributes ? ` ${page.bodyAttributes}` : ''}>
 ${page.body}
 ${page.scripts.map((s) => `<script src="${mediaUri(webview, extensionUri, s)}"></script>`).join('\n')}
 </body>

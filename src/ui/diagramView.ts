@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { followAnimations } from './animationSettings';
 import { peekLines } from '../structure/peekLines';
 import { nameOf } from '../structure/names';
 import { Diagram, diagramMermaid, reportDiagram } from '../structure/diagram';
@@ -72,6 +73,7 @@ export class DiagramPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = this.html(this.panel.webview);
+    followAnimations(this.panel);
     this.panel.webview.onDidReceiveMessage(async (message: { type: string; edit?: unknown; location?: ReportLocation; svg?: string; png?: string; text?: string; title?: string; diagram?: Diagram; command?: string; id?: string; value?: unknown }) => {
       if (message.type === 'ready') {
         this.ready = true;

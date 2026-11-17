@@ -42,7 +42,10 @@
     return effect;
   }
   /** Plays the effect on the action from the start (or from `into` ms in), then clears it so the next one can play. */
+  /** Off in Code X-Ray Settings › Animations › Button animations. */
+  let buttonEffects = document.body.dataset.animationsButtons !== 'off';
   function playEffect(li, effect, into = 0) {
+    if (!buttonEffects) return;
     delete li.dataset.fx;
     li.style.setProperty('--fx-delay', `-${into}ms`);
     void li.offsetWidth;
@@ -694,6 +697,10 @@
   });
 
   window.addEventListener('message', (event) => {
+    if (event.data.type === 'animations') {
+      buttonEffects = event.data.buttons !== false;
+      return;
+    }
     // The extension finished loading after this page opened: say ready again.
     if (event.data.type === 'hello') {
       vscode.postMessage({ type: 'ready' });

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { followAnimations } from './animationSettings';
 import { showProblem, unexpectedRemedies } from './problems';
 import { offerSymbols } from './analysisActions';
 import { AnalysisError } from '../analysis/types';
@@ -129,6 +130,7 @@ export class ControlFlowPanel {
     this.panel.iconPath = { light: vscode.Uri.joinPath(media, 'structure-light.svg'), dark: vscode.Uri.joinPath(media, 'structure-dark.svg') };
     this.ready = false;
     this.panel.webview.html = html(this.panel.webview, this.extensionUri);
+    followAnimations(this.panel);
     this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; command?: string; direction?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean; id?: string; value?: unknown; dependences?: boolean }) => {
       if (message.type === 'ready') {
         this.ready = true;

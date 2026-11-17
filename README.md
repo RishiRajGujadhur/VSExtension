@@ -54,6 +54,13 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - See every test that reaches this code, and the chain of calls that connects them.
 - Run a test from the list, or run **Tests for my changes** before you commit.
 
+## Settings
+
+- Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.
+- **Features**: switch each part of Code X-Ray on or off. **Turn all on** or **Core only** with one press.
+- **Animations**: turn the button effects in the Actions view, or the charts' moving grid and flowing lines, off.
+- Every other setting is there too, grouped and searchable (`Ctrl+F`), with a reset button on anything you changed.
+
 ## More
 
 - Inspections that underline missing `await`s, unused exports, copied code and more (`Ctrl+Alt+S I`).

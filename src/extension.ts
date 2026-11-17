@@ -30,6 +30,7 @@ import { activeFeature } from './ui/activeFeature';
 import { registerLastSubjects } from './ui/lastSubjects';
 import { ValuePathView } from './ui/valuePathView';
 import { EarlyViews } from './ui/sidebarPages';
+import { SettingsPanel } from './ui/settingsPanel';
 import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -116,6 +117,7 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
   registerLastSubjects(context);
   actionsView.register(context, early);
+  new SettingsPanel(context.extensionUri, context.extension.packageJSON, context.extension.id).register(context);
   // Every result shows as a card in the panel at the bottom, in the Results list's place.
   new ValuePathView(context.extensionUri, structureView, context.globalState).register(context, early);
   context.subscriptions.push(
@@ -159,7 +161,6 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   new CompilerErrorActions().register(context);
   registerGuide(context);
   context.subscriptions.push(registerCommand('tsStructure.actionsAtCursor', () => showActionsAtCursor(context.globalState, context.extension.packageJSON.contributes?.keybindings)), registerCommand('tsStructure.configureFeatures', configureFeatures),
-    registerCommand('tsStructure.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)),
     // Every shortcut of the extension, or one command's, in the Keyboard Shortcuts editor where it can be changed.
     registerCommand('tsStructure.shortcutSheet', () => showShortcutSheet(context.extension.packageJSON.contributes)),
     registerCommand('tsStructure.showLog', () => output.show(true)),

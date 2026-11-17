@@ -222,18 +222,36 @@
    * buttons disabled and saying why; for a smaller chart they follow the saved choice again. Returns whether it is too big.
    */
   function limitAnimations(boxes, prefs, grid) {
+    lastLimit = [boxes, prefs, grid];
     const tooBig = boxes > ANIMATION_LIMIT;
-    if (grid) grid.setEnabled(prefs.effects && !tooBig);
+    const off = tooBig || !chartAnimationsAllowed;
+    if (grid) grid.setEnabled(prefs.effects && !off);
     for (const id of ['effects', 'flowToggle']) {
       const button = document.getElementById(id);
       if (!button) continue;
-      button.setAttribute('aria-pressed', String((id === 'effects' ? prefs.effects : prefs.flow) && !tooBig));
+      button.setAttribute('aria-pressed', String((id === 'effects' ? prefs.effects : prefs.flow) && !off));
       if (button.dataset.title === undefined) button.dataset.title = button.title;
-      button.disabled = tooBig;
-      button.title = tooBig ? `Off: this chart has ${boxes} boxes, and animating more than ${ANIMATION_LIMIT} would slow it down` : button.dataset.title;
+      button.disabled = off;
+      button.title = !chartAnimationsAllowed
+        ? 'Off in Code X-Ray Settings › Animations › Chart animations'
+        : tooBig
+          ? `Off: this chart has ${boxes} boxes, and animating more than ${ANIMATION_LIMIT} would slow it down`
+          : button.dataset.title;
     }
-    return tooBig;
+    return off;
   }
+
+  // Chart animations can be turned off in the settings: the page starts knowing (a body attribute) and is told of
+  // changes. The page hears of a change through an 'xr-animations' event, with whether animations are now off.
+  let chartAnimationsAllowed = document.body.dataset.animationsCharts !== 'off';
+  let lastLimit;
+  window.addEventListener('message', (event) => {
+    if (!event.data || event.data.type !== 'animations') return;
+    chartAnimationsAllowed = event.data.charts !== false;
+    if (!lastLimit) return;
+    const off = limitAnimations(...lastLimit);
+    window.dispatchEvent(new CustomEvent('xr-animations', { detail: off }));
+  });
 
   /**
    * The Grid and Flow buttons: pressed state, the grid shown or hidden, and the choice saved with the page's state.

@@ -1344,6 +1344,11 @@
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
       tooBig = kit.limitAnimations(chart ? chart.nodes.length : 0, prefs, grid);
+  // Turned on or off in the settings: the flowing lines follow.
+  window.addEventListener('xr-animations', (e) => {
+    tooBig = e.detail;
+    drawFlows();
+  });
       setTimeout(renderTypeBar, 0);
       empty.hidden = !!chart;
       svg.classList.toggle('off', !chart);
