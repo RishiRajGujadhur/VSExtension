@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.71.0",
+  "version": "0.72.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -2958,19 +2958,19 @@
           },
           "tsStructure.features.refactorings": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 1,
             "markdownDescription": "**Refactorings**: Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.intentions": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 2,
             "markdownDescription": "**Intention Actions**: Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
           "tsStructure.features.inspections": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 3,
             "markdownDescription": "**Inspections**: Live inspections in the Problems panel, Inspect Code and Audit Type Assertions. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
@@ -2982,7 +2982,7 @@
           },
           "tsStructure.features.nullability": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 5,
             "markdownDescription": "**Nullability Path Explorer**: Nullability Path Explorer and the \"Explain why this may be undefined\" action on TypeScript errors. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
@@ -3185,9 +3185,9 @@
         "properties": {
           "tsStructure.animations.buttons": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "order": 1,
-            "markdownDescription": "**Button animations**: hovering or clicking an action in the Actions view plays a short effect (blink, glitch, trail and others). They also stay still when your system asks for reduced motion."
+            "markdownDescription": "**Button animations**: hovering or clicking an action in the Actions view plays a short effect (blink, glitch, trail and others). Off by default. They also stay still when your system asks for reduced motion."
           },
           "tsStructure.animations.charts": {
             "type": "boolean",

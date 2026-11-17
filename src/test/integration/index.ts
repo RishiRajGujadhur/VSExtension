@@ -534,7 +534,7 @@ async function analysisCommandsFlow(): Promise<void> {
   const manifest = vscode.extensions.all.find((e) => e.packageJSON?.name === 'ts-test-impact')!.packageJSON;
   const model = sections(manifest);
   assert.deepEqual(model.slice(0, 3).map((s) => s.title), ['Features', 'Animations', 'General']);
-  assert.deepEqual(model[1].rows.map((r) => [r.label, r.value]), [['Button animations', true], ['Chart animations', true]]);
+  assert.deepEqual(model[1].rows.map((r) => [r.label, r.value]), [['Button animations', false], ['Chart animations', true]]);
   await vscode.workspace.getConfiguration('tsStructure.animations').update('charts', false, vscode.ConfigurationTarget.Global);
   assert.equal(sections(manifest)[1].rows[1].value, false, 'the page shows a changed setting');
   assert.equal(sections(manifest)[1].rows[1].modified, true);

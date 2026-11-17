@@ -19,21 +19,18 @@ export const features: Feature[] = [
   },
   {
     id: 'refactorings',
-    core: true,
     title: 'Refactorings',
     description: 'Change Signature, Safe Delete, Introduce Parameter and Move Members, with their lightbulb entries.',
     commands: ['tsStructure.changeSignature', 'tsStructure.safeDelete', 'tsStructure.safeDeleteFile', 'tsStructure.introduceParameter', 'tsStructure.moveMembers', 'tsStructure.report.safeDelete', 'tsStructure.report.safeDeleteFile', 'tsStructure.togglePreview', 'tsStructure.introduceOptionalParameter'],
   },
   {
     id: 'intentions',
-    core: true,
     title: 'Quick rewrites',
     description: 'Small rewrites in the lightbulb menu, such as flipping an if or converting to a template string.',
     commands: ['tsStructure.chooseIntentions', 'tsStructure.showRewrites'],
   },
   {
     id: 'inspections',
-    core: true,
     title: 'Inspections',
     description: 'Live inspections in the Problems panel, Inspect Code and Audit Type Assertions.',
     commands: ['tsStructure.inspectCode', 'tsStructure.auditTypeAssertions', 'tsStructure.report.applyFix', 'tsStructure.configureInspections', 'tsStructure.inspectionsMenu', 'tsStructure.report.applyAllFixes', 'tsStructure.toggleLiveInspections', 'tsStructure.copyProblems', 'tsStructure.nextProblem', 'tsStructure.previousProblem', 'tsStructure.inspectChanged', 'tsStructure.inspectOpen', 'tsStructure.toggleAssertionTests'],
@@ -53,7 +50,6 @@ export const features: Feature[] = [
   },
   {
     id: 'nullability',
-    core: true,
     title: 'Null checks',
     description: 'Nullability Path Explorer and the "Explain why this may be undefined" action on TypeScript errors.',
     commands: ['tsStructure.nullability', 'tsStructure.report.nullabilityHere'],

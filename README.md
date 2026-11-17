@@ -42,6 +42,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 ![The Change parameters panel, with the resulting signature](docs/images/change-signature.gif)
 
+- Turn on **Refactorings** in Settings first (it is off on a new install).
 - Press `Ctrl+F6` on a function or method.
 - Rename it, add, remove or reorder parameters, and change types and defaults.
 - The new signature updates as you type. **Preview changes** shows every call that will be updated before you apply it.
@@ -57,18 +58,20 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 ## Settings
 
 - Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.
-- **Features**: switch each part of Code X-Ray on or off. **Turn all on** or **Core only** with one press.
-- **Animations**: turn the button effects in the Actions view, or the charts' moving grid and flowing lines, off.
+- **Features**: switch each part of Code X-Ray on or off. A new install starts with Affected tests, Data flow and Find usages; **Turn all on** switches on the rest (refactorings, quick rewrites, inspections and more).
+- **Animations**: turn on the button effects in the Actions view (off by default), or turn off the charts' moving grid and flowing lines.
 - Every other setting is there too, grouped and searchable (`Ctrl+F`), with a reset button on anything you changed.
 
 ## More
+
+Most of these start off on a new install; switch them on in **Settings › Features**.
 
 - Inspections that underline missing `await`s, unused exports, copied code and more (`Ctrl+Alt+S I`).
 - Null checks, side effects, error paths, callers and calls, import loops and bundle weight.
 - 70 quick rewrites, **Move to another file**, **Delete safely** and **Search by shape** (`Ctrl+Alt+S S`).
 - Works with a keyboard, screen readers and high contrast themes.
 
-Settings are under **Code X-Ray** in VS Code's settings (`tsStructure.*`).
+All settings are on the **Code X-Ray: Settings** page, and under **Code X-Ray** in VS Code's settings (`tsStructure.*`).
 
 The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 

@@ -16,7 +16,7 @@ export interface Animations {
 
 export function animations(): Animations {
   const config = vscode.workspace.getConfiguration(section);
-  return { buttons: config.get('buttons', true), charts: config.get('charts', true) };
+  return { buttons: config.get('buttons', false), charts: config.get('charts', true) };
 }
 
 /** The body attributes a page starts with, such as data-animations-charts="off". */

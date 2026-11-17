@@ -32,7 +32,7 @@ See inside your TypeScript, JavaScript and React code. Put the cursor on somethi
 - With no file open, an action's message offers **Open a file…**: pick a file of the project (TypeScript files first, generated and tool folders last), then (for an action that starts from a variable, a function or a class) the symbol, and it runs there.
 - Shortcuts you changed in your own keybindings are the ones shown. Your arrangement is kept across windows and synced with Settings Sync.
 - The action whose result is on screen stands out: its row is raised with a colored bar on its left, its tab has a dot, and the action you ran before it says **last run**. It is cyan; pick pink or your theme's focus color with `tsStructure.actions.accentColor`.
-- Hovering or clicking an action plays a short effect on its icon, picked at random from nine: blinky, glitch, trail, stroke-n-fill, shuffle, crash-n-blink, slide-n-blink, color flash and build on. The tabs fade smoothly on hover.
+- With **Button animations** on in Settings (off by default), hovering or clicking an action plays a short effect on its icon, picked at random from nine: blinky, glitch, trail, stroke-n-fill, shuffle, crash-n-blink, slide-n-blink, color flash and build on. The tabs fade smoothly on hover.
 - In the charts, a box's card fades in when it opens and fades out when it closes; unpinning a card fades it out too.
 - Menus, tips and legends fade in and out, and new content fades in: another tab of actions, an unfolded section, a new result card or a new chart (not the same one redrawn after an edit). Boxes faded by a picked path or a search don't open a card. Both stay still when your system asks for reduced motion.
 
@@ -348,8 +348,8 @@ The extension follows the W3C's Web Content Accessibility Guidelines (WCAG 2.2) 
 
 **Code X-Ray: Settings** (the gear in the Actions view's title bar, or **Settings** at the bottom of the view) opens one page with every setting:
 
-- **Features** first: a switch for each part of Code X-Ray, with **Turn all on** and **Core only** (the parts on when the extension is first installed).
-- **Animations**: **Button animations** (the effects hovering or clicking an action plays) and **Chart animations** (the moving grid and flowing lines). A chart with animations off says so on its sparkle and play buttons.
+- **Features** first: a switch for each part of Code X-Ray, with **Turn all on** and **Core only** (the parts on when the extension is first installed: Affected tests, Data flow and changes, and Find usages).
+- **Animations**: **Button animations** (the effects hovering or clicking an action plays; off by default) and **Chart animations** (the moving grid and flowing lines). A chart with animations off says so on its sparkle and play buttons.
 - Then **General**, **Scope**, **Inspections** and the rest, as switches, lists and fields. Lists and objects open in VS Code's settings.
 - Search across all of them from the box at the top (`Ctrl+F` or `/`). A dot marks a setting you changed, the arrow resets it, and **This workspace** marks one set for this workspace only.
 - **Open in VS Code settings** shows the same settings in VS Code's own editor.
@@ -358,14 +358,14 @@ The ones you are most likely to change:
 
 | Setting | Default | |
 | --- | --- | --- |
-| `tsStructure.features.<name>` | core features on | turn features on or off, also with **Toolshed…** |
+| `tsStructure.features.<name>` | Affected tests, Data flow and Find usages on | turn features on or off, also with **Toolshed…** |
 | `tsStructure.include` / `exclude` | | files left out of analysis; right-click **Leave out of Code X-Ray** in the Explorer |
 | `tsStructure.askForScope` | `true` | ask where to look before project-wide analyses |
 | `tsStructure.contextMenu.topLevel` | `true` | the common analyses at the top of the right-click menu |
 | `tsStructure.results.progress` | `statusBar` | or `notification` |
 | `tsStructure.lightbulbAnalyses` | `true` | analyses in the lightbulb's refactor menu |
 | `tsStructure.results.alwaysShowDiagram` | `false` | every new result also opens as a chart |
-| `tsStructure.animations.buttons` / `charts` | `true` | the Actions view's button effects / the charts' moving grid and flowing lines |
+| `tsStructure.animations.buttons` / `charts` | `false` / `true` | the Actions view's button effects / the charts' moving grid and flowing lines |
 | `tsStructure.actions.accentColor` | `cyan` | the color of the action on screen and the Value path card in the Actions view: `cyan`, `pink` or `theme` |
 
 ![Choose Features](images/choose-features.gif)
