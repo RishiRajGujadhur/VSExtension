@@ -21,6 +21,13 @@ export function own(node: CfgNode): ts.Node[] {
 const defsCache = new WeakMap<CfgNode, Set<string>>();
 const usesCache = new WeakMap<CfgNode, Set<string>>();
 
+/** What an assignment (`=`, `+=`, …) or `++`/`--` writes to; undefined for anything else. */
+export function writtenExpression(n: ts.Node): ts.Expression | undefined {
+  if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) return n.left;
+  if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) return n.operand;
+  return undefined;
+}
+
 const rootName = (e: ts.Node): string | undefined => {
   while (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e) || ts.isParenthesizedExpression(e) || ts.isNonNullExpression(e)) e = e.expression;
   return ts.isIdentifier(e) ? e.text : undefined;
@@ -34,14 +41,9 @@ export function definitions(node: CfgNode): Set<string> {
   const visit = (n: ts.Node): void => {
     if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) names.add(n.name.text);
     else if (ts.isVariableDeclarationList(n)) n.declarations.forEach((d) => ts.isIdentifier(d.name) && names.add(d.name.text));
-    if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-      const name = rootName(n.left);
-      if (name) names.add(name);
-    }
-    if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) {
-      const name = rootName(n.operand);
-      if (name) names.add(name);
-    }
+    const written = writtenExpression(n);
+    const writtenName = written && rootName(written);
+    if (writtenName) names.add(writtenName);
     // items.push(x) changes items.
     if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
       const name = rootName(n.expression.expression);

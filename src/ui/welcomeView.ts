@@ -44,7 +44,7 @@ export function registerGuide(context: vscode.ExtensionContext): void {
     panel.webview.html = webviewPage(panel.webview, context.extensionUri, {
       title: 'Welcome to Code X-Ray',
       styles: ['welcome.css'],
-      scripts: ['welcome.js'],
+      scripts: ['dom.js', 'welcome.js'],
       images: true,
       body: '<canvas id="lines" aria-hidden="true"></canvas><main id="page"></main>',
     });

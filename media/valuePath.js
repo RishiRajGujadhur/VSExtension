@@ -3,17 +3,7 @@
 (function () {
   const vscode = acquireVsCodeApi();
   const box = document.getElementById('card');
-  const make = (tag, className, text) => {
-    const e = document.createElement(tag);
-    if (className) e.className = className;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  };
-  const icon = (name) => {
-    const i = make('i', `codicon codicon-${name}`);
-    i.setAttribute('aria-hidden', 'true');
-    return i;
-  };
+  const { make, icon } = window.xrDom;
   const tool = (name, label, type) => {
     const b = make('button', 'card-tool');
     b.type = 'button';

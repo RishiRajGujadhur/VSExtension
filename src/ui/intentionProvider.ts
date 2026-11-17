@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { awaitPick, ticked as tickedItems } from './quickPick';
 import { intentionList, intentionsAt } from '../intentions/intentions';
 import { parse } from './codeActions';
 import { isFeatureEnabled } from './features';
@@ -160,12 +161,7 @@ export async function showRewritesHere(): Promise<void> {
     picker.items = picker.items.filter((i) => i !== e.item);
     void vscode.window.setStatusBarMessage(`Turned off "${r.title}"`, 4000);
   });
-  const picked = await new Promise<Item | undefined>((resolve) => {
-    picker.onDidAccept(() => resolve(picker.activeItems[0]));
-    picker.onDidHide(() => resolve(undefined));
-    picker.show();
-  });
-  picker.dispose();
+  const picked = await awaitPick(picker, (p) => p.activeItems[0]);
   ghost.dispose();
   if (picked?.rewrite) await apply(picked.rewrite);
 }
@@ -218,12 +214,7 @@ export async function chooseIntentions(): Promise<void> {
   });
   // The count in the title follows the ticks.
   picker.onDidChangeSelection(() => (picker.title = titleNow()));
-  const picked = await new Promise<readonly Item[] | undefined>((resolve) => {
-    picker.onDidAccept(() => resolve(picker.selectedItems));
-    picker.onDidHide(() => resolve(undefined));
-    picker.show();
-  });
-  picker.dispose();
+  const picked = await awaitPick(picker, tickedItems);
   if (!picked) {
     return;
   }

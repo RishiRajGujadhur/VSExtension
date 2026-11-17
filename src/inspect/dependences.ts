@@ -1,6 +1,6 @@
 import ts = require('typescript');
 import { Cfg, CfgNode } from './controlFlow';
-import { definitions, own, uses } from './defUse';
+import { definitions, own, uses, writtenExpression } from './defUse';
 import { controlDependents } from './slice';
 import { isFunctionWithBody } from '../structure/util';
 
@@ -34,14 +34,9 @@ function replaced(node: CfgNode): Set<string> {
   const names = new Set<string>();
   const visit = (n: ts.Node): void => {
     if (ts.isVariableDeclaration(n)) bindingNames(n.name).forEach((name) => names.add(name));
-    if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-      const name = rootName(n.left);
-      if (name) names.add(name);
-    }
-    if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) {
-      const name = rootName(n.operand);
-      if (name) names.add(name);
-    }
+    const written = writtenExpression(n);
+    const writtenName = written && rootName(written);
+    if (writtenName) names.add(writtenName);
     if (!isFunctionWithBody(n)) ts.forEachChild(n, visit);
   };
   own(node).forEach(visit);

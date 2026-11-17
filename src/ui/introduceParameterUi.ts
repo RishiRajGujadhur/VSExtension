@@ -4,7 +4,7 @@ import { ProjectService } from '../analysis/project';
 import { isValidIdentifier } from '../refactor/common';
 import { IntroduceParameterOptions, describeIntroduceParameter, introduceParameter } from '../refactor/introduceParameter';
 import { applyRefactor, reportError } from './applyRefactor';
-import { previewEnabled } from './refactorCommands';
+import { PreviewToggle } from './refactorCommands';
 import { BACK, Flow, camelName, finished, inputStep, pickStep } from './editFlow';
 
 const command = 'tsStructure.introduceParameter';
@@ -37,7 +37,7 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     let name = info.suggestedName;
     let mode: 'required' | 'optional' = fixedMode ?? memento?.get<'required' | 'optional'>(lastModeKey) ?? 'required';
     let replaceAll = memento?.get<boolean>('tsStructure.introduceParameter.replaceAll', true) ?? true;
-    let preview = previewEnabled();
+    const preview = new PreviewToggle();
     const steps: (() => Promise<boolean | typeof BACK | undefined>)[] = [
       async () => {
         const value = await inputStep(flow, step, {
@@ -67,8 +67,6 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
         return true;
       }]),
       ...(info.occurrences > 1 ? [async () => {
-        const previewLook = (): vscode.QuickInputButton => ({ iconPath: new vscode.ThemeIcon(preview ? 'eye' : 'eye-closed'), tooltip: preview ? 'Changes open in the Refactor Preview first (click to apply straight away)' : 'Changes apply straight away (click to preview them first)' });
-        let previewButton = previewLook();
         const choices = [
           { label: `$(replace-all) Replace all ${info.occurrences} occurrences`, detail: 'Every copy of the expression in the function becomes the parameter.', all: true },
           { label: '$(replace) Replace this occurrence only', detail: 'Only the selected expression; the other copies stay as they are.', all: false },
@@ -77,14 +75,10 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
           what: `${info.occurrences} copies`,
           placeholder: `${short} appears ${info.occurrences} times in ${info.functionName}`,
           active: choices.find((c) => c.all === replaceAll),
-          buttons: [previewButton],
+          buttons: [preview.button],
           onButton: (button, picker) => {
-            if (button !== previewButton) return;
-            preview = !preview;
-            const old = previewButton;
-            previewButton = previewLook();
-            picker.buttons = picker.buttons.map((x) => (x === old ? previewButton : x));
-            picker.placeholder = `${short} appears ${info.occurrences} times · ${preview ? 'preview first' : 'apply straight away'}`;
+            if (!preview.pressed(button, picker)) return;
+            picker.placeholder = `${short} appears ${info.occurrences} times · ${preview.on ? 'preview first' : 'apply straight away'}`;
           },
         });
         if (picked === BACK || picked === undefined) return picked;
@@ -105,7 +99,7 @@ export async function runIntroduceParameter(projects: ProjectService, editor: vs
     }
     const options: IntroduceParameterOptions = { name, mode, replaceAll };
     const result = introduceParameter(projects.createVirtualProject(document.uri.fsPath, root), document.uri.fsPath, start, end, options);
-    if (await applyRefactor(result, preview)) {
+    if (await applyRefactor(result, preview.on)) {
       const files = result.changes.length;
       void finished(command, `added ${name} to ${info.functionName}${mode === 'required' && files > 1 ? `, and its callers in ${files - 1} other file${files === 2 ? '' : 's'}` : ''}.`, {
         file: document.uri.fsPath,

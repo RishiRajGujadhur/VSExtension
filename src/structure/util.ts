@@ -466,3 +466,38 @@ export function allNodes(sourceFile: ts.SourceFile): readonly ts.Node[] {
   }
   return nodes;
 }
+
+/** Visits the node and everything inside it; a whole file goes through its shared node list, built once per file. */
+export function walkNodes(node: ts.Node, visit: (node: ts.Node) => void): void {
+  if (ts.isSourceFile(node)) {
+    allNodes(node).forEach((n) => visit(n));
+    return;
+  }
+  visit(node);
+  ts.forEachChild(node, (child) => walkNodes(child, visit));
+}
+
+/**
+ * Results per key, each computed once. A key asked for again while its own result is still being computed (a function
+ * that calls itself, directly or not) gets `whileComputing()` rather than looping forever.
+ */
+export class RecursionSafeCache<K, V> {
+  private readonly done = new Map<K, V>();
+  private readonly busy = new Set<K>();
+
+  constructor(private readonly whileComputing: () => V) {}
+
+  get(key: K, compute: () => V): V {
+    const hit = this.done.get(key);
+    if (hit !== undefined) return hit;
+    if (this.busy.has(key)) return this.whileComputing();
+    this.busy.add(key);
+    try {
+      const value = compute();
+      this.done.set(key, value);
+      return value;
+    } finally {
+      this.busy.delete(key);
+    }
+  }
+}

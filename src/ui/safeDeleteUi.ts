@@ -4,7 +4,7 @@ import { analyzeImpact } from '../analysis/impact';
 import { ProjectService } from '../analysis/project';
 import { SafeDeletePlan, planFileDelete, planSafeDelete } from '../refactor/safeDelete';
 import { applyRefactor, reportError } from './applyRefactor';
-import { previewEnabled } from './refactorCommands';
+import { PreviewToggle } from './refactorCommands';
 import { Flow, finished, flowTitle, showHelp } from './editFlow';
 
 export async function safeDeleteSymbol(projects: ProjectService, editor: vscode.TextEditor): Promise<void> {
@@ -59,11 +59,11 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   removableUsages.sort(order);
   const files = new Set(blocking.map((u) => u.location.file)).size;
   const onlyTests = blocking.length > 0 && blocking.every((u) => isTest(u.location.file));
-  let preview = previewEnabled();
+  const preview = new PreviewToggle('The delete', false);
 
   // Nothing uses it, nothing else changes and nothing outside can see it: delete without asking, if the setting allows.
   if (blocking.length === 0 && removableUsages.length === 0 && !plan.exported && tests === 0 && !vscode.workspace.getConfiguration('tsStructure').get('safeDelete.confirmUnused', true)) {
-    if (await applyRefactor(plan.result, preview)) done();
+    if (await applyRefactor(plan.result, preview.on)) done();
     return;
   }
 
@@ -111,9 +111,7 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   picker.matchOnDescription = true;
   picker.ignoreFocusOut = true;
   const helpButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('question'), tooltip: 'What this does' };
-  const previewLook = (): vscode.QuickInputButton => ({ iconPath: new vscode.ThemeIcon(preview ? 'eye' : 'eye-closed'), tooltip: preview ? 'The delete opens in the Refactor Preview first (click to apply straight away)' : 'The delete applies straight away (click to preview it first)' });
-  let previewButton = previewLook();
-  picker.buttons = [previewButton, helpButton];
+  picker.buttons = [preview.button, helpButton];
   const show = (usage: Usage, options: vscode.TextDocumentShowOptions) => {
     const position = new vscode.Position(usage.location.line, usage.location.character);
     return vscode.window.showTextDocument(vscode.Uri.file(usage.location.file), { selection: new vscode.Range(position, position), ...options });
@@ -126,12 +124,7 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
     picker.onDidTriggerItemButton((e) => e.item.usage && void show(e.item.usage, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }));
     picker.onDidTriggerButton((button) => {
       if (button === helpButton) void showHelp(command);
-      else if (button === previewButton) {
-        preview = !preview;
-        const old = previewButton;
-        previewButton = previewLook();
-        picker.buttons = picker.buttons.map((b) => (b === old ? previewButton : b));
-      }
+      else preview.pressed(button, picker);
     });
     picker.onDidAccept(() => {
       const item = picker.activeItems[0];
@@ -144,7 +137,7 @@ async function confirmAndApply(plan: SafeDeletePlan, tests: number, showUsages?:
   });
   picker.dispose();
   if (chosen?.action === 'delete') {
-    if (await applyRefactor(plan.result, preview)) done();
+    if (await applyRefactor(plan.result, preview.on)) done();
   } else if (chosen?.action === 'copy') {
     await vscode.env.clipboard.writeText(blocking.map((u) => `${vscode.workspace.asRelativePath(u.location.file)}:${u.location.line + 1}  ${u.lineText.trim()}`).join('\n'));
     void vscode.window.setStatusBarMessage(`Copied ${blocking.length} usage location${blocking.length === 1 ? '' : 's'}`, 3000);

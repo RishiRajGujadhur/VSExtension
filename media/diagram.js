@@ -204,7 +204,7 @@
   }
   /** After a chip changed what shows: lay out again, refit if the chart was fitted, say what changed. */
   function applyKinds(focusKey) {
-    const wasFitted = fitted;
+    const wasFitted = vp.fitted;
     hiddenByAnalysis[analysisOf()] = new Set([...hiddenKinds].filter((k) => k !== 'test'));
     render();
     renderTypeBar();
@@ -705,58 +705,55 @@
     drawFlows();
   }
 
-  // Whether the view is as Fit left it, so resizing the tab fits again.
-  let fitted = false;
-  // Dragging and the wheel fire many events per frame: the view is redrawn once per frame.
-  let applyFrame = 0;
-  function applySoon() {
-    if (!applyFrame) applyFrame = requestAnimationFrame(() => { applyFrame = 0; apply(); });
-  }
-  function apply() {
-    view = window.chartKit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
-    scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
-    window.chartKit.redrawFlows();
-    paint(false);
-    if (grid) grid.wake();
-    zoomLevel.textContent = `${Math.round(view.k * 100)}%`;
-    zoomLevel.setAttribute('aria-label', `Zoom ${Math.round(view.k * 100)}%, reset to 100%`);
-    updateMinimapView();
-    remember();
-  }
-
-  function fit(all) {
-    const bounds = map.bounds;
-    if (!bounds) return;
-    const box = { x: bounds.x, y: bounds.y - 30, width: bounds.w, height: bounds.h + 30 };
-    const width = svg.clientWidth || 800;
-    const height = svg.clientHeight || 600;
-    if (!box.width || !box.height) return;
-    const k = Math.min(1.2, (width - 40) / box.width, (height - 40) / box.height);
-    let to;
-    if (k < 0.6 && diagram && !all) {
-      // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
-      const c = diagram.center;
-      to = { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
-    } else {
-      to = { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
-    }
-    moveTo(to, !all);
-    fitted = true;
-  }
-
-  /** Moves the view there: smoothly when asked by the person, at once when a chart first opens. */
-  function moveTo(to, atOnce) {
-    if (atOnce) {
-      view = to;
-      apply();
-    } else {
-      window.chartKit.glide(view, to, (v) => { view = v; apply(); });
-    }
-  }
+  // Pan, zoom and Fit: the kit's viewport, with what this chart adds to each redraw and where Fit goes.
+  const vp = window.chartKit.viewport({
+    svg,
+    scene,
+    getView: () => view,
+    setView: (v) => { view = v; },
+    bounds: () => map.bounds,
+    zoomLabel: zoomLevel,
+    minZoom: 0.15,
+    grid: () => grid,
+    onApply: () => {
+      paint(false);
+      updateMinimapView();
+      remember();
+    },
+    fitTarget: (all, { width, height }) => {
+      const bounds = map.bounds;
+      if (!bounds) return undefined;
+      const box = { x: bounds.x, y: bounds.y - 30, width: bounds.w, height: bounds.h + 30 };
+      if (!box.width || !box.height) return undefined;
+      const k = Math.min(1.2, (width - 40) / box.width, (height - 40) / box.height);
+      if (k < 0.6 && diagram && !all) {
+        // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
+        const c = diagram.center;
+        return { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
+      }
+      return { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
+    },
+    canDrag: (target) => !target.closest('.node'),
+    beforeInteract: () => card.hide(),
+    // A click on the background, not a drag, stops the flow animation.
+    onBackgroundClick: () => stopFlow(),
+    onLeave: () => {
+      card.hideSoon();
+      if (hovered) {
+        hovered = undefined;
+        highlightPath(focused);
+        showInfo(focused);
+      }
+    },
+  });
+  function apply() { vp.apply(); }
+  function applySoon() { vp.applySoon(); }
+  function fit(all) { vp.fit(all); }
+  function moveTo(to, atOnce) { vp.moveTo(to, atOnce); }
 
   /** Pans so the box is in the middle of the window, at the current zoom. */
   function centerOn(node) {
-    fitted = false;
+    vp.fitted = false;
     moveTo({ k: view.k, x: svg.clientWidth / 2 - (node.px + node.w / 2) * view.k, y: svg.clientHeight / 2 - (node.py + H / 2) * view.k });
   }
 
@@ -794,14 +791,7 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); searchBox.focus(); searchBox.select(); }
   });
 
-  function zoom(factor, cx, cy) {
-    fitted = false;
-    const k = Math.min(3, Math.max(0.15, view.k * factor));
-    const px = cx === undefined ? svg.clientWidth / 2 : cx;
-    const py = cy === undefined ? svg.clientHeight / 2 : cy;
-    view = { k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k };
-    applySoon();
-  }
+  function zoom(factor, cx, cy) { vp.zoom(factor, cx, cy); }
 
   // One listener per event for every box, whatever the chart's size: the box is found from the event's target.
   const boxOf = (target) => {
@@ -967,56 +957,7 @@
   svg.addEventListener('dblclick', (e) => {
     if (!boxOf(e.target)) fit(true);
   });
-  svg.addEventListener('keydown', (e) => {
-    if (e.target === svg) window.chartKit.panKey(e, (dx, dy) => { fitted = false; view = { k: view.k, x: view.x + dx, y: view.y + dy }; apply(); });
-  });
 
-  // Drag the background to pan; the wheel zooms around the pointer.
-  let drag;
-  svg.addEventListener('pointerdown', (e) => {
-    card.hide();
-    if (e.button !== 0 || e.target.closest('.node')) return;
-    drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
-    svg.setPointerCapture(e.pointerId);
-    svg.classList.add('dragging');
-    svg.focus({ preventScroll: true });
-  });
-  // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
-  let svgRect;
-  svg.addEventListener('pointerenter', () => (svgRect = svg.getBoundingClientRect()));
-  window.addEventListener('resize', () => (svgRect = undefined));
-  svg.addEventListener('pointermove', (e) => {
-    if (grid) {
-      const rect = svgRect || (svgRect = svg.getBoundingClientRect());
-      grid.pointer({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    }
-    if (!drag) return;
-    fitted = false;
-    view.x = e.clientX - drag.x;
-    view.y = e.clientY - drag.y;
-    applySoon();
-  });
-  svg.addEventListener('pointerup', (e) => {
-    // A click on the background, not a drag, stops the flow animation.
-    if (drag && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4) stopFlow();
-    drag = undefined;
-    svg.classList.remove('dragging');
-  });
-  svg.addEventListener('pointerleave', () => {
-    card.hideSoon();
-    if (grid) grid.pointer(undefined);
-    if (hovered) {
-      hovered = undefined;
-      highlightPath(focused);
-      showInfo(focused);
-    }
-  });
-  svg.addEventListener('wheel', (e) => {
-    card.hide();
-    e.preventDefault();
-    const rect = svg.getBoundingClientRect();
-    zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - rect.left, e.clientY - rect.top);
-  }, { passive: false });
 
   const setAll = (collapsed) => {
     if (!diagram) return;
@@ -1067,17 +1008,11 @@
   });
   zoomLevel.addEventListener('click', () => window.chartKit.zoomPresets(menu, zoomLevel, view.k, (k) => zoom(k / view.k), () => fit(true)));
   // The minimap can be hidden (M); the choice is kept with the other viewer preferences.
-  map.hidden = prefs.minimap === false;
-  function toggleMinimap() {
-    map.hidden = !map.hidden;
-    prefs.minimap = !map.hidden;
-    saveState();
-  }
+  const toggleMinimap = window.chartKit.minimapPreference(map, prefs, saveState);
   window.addEventListener('keydown', (e) => {
     if (e.target === searchBox || e.ctrlKey || e.metaKey || e.altKey || menu.isOpen) return;
     if (e.key === 'm' || e.key === 'M') toggleMinimap();
   });
-  window.chartKit.refitOnResize(svg, () => fitted, () => fit(true));
   // The legend: what colors, arrows and buttons mean, and the keys. Escape closes it.
   const showLegend = (open) => {
     legend.hidden = !open;
@@ -1202,17 +1137,13 @@
     }
   });
   // The grid and the two toggles in the header.
-  const onScreen = (n) => ({ x: view.x + n.px * view.k, y: view.y + n.py * view.k, w: n.w * view.k, h: H * view.k });
-  grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
-    panX: view.x,
-    panY: view.y,
-    k: view.k,
-    version: layoutVersion,
-    get boxes() {
-      return shownNodes.map(onScreen);
-    },
-    hovered: hovered && hovered.px !== undefined ? onScreen(hovered) : undefined,
-  }));
+  const asBox = (n) => ({ x: n.px, y: n.py, w: n.w, h: H });
+  grid = window.chartKit.backgroundGrid(document.getElementById('grid'), {
+    view: () => view,
+    version: () => layoutVersion,
+    boxes: () => shownNodes.map(asBox),
+    hovered: () => (hovered && hovered.px !== undefined ? asBox(hovered) : undefined),
+  });
   window.chartKit.attachFlowLines(document.getElementById('flowLines'), () => view);
   window.chartKit.bindToggles(prefs, grid, saveState, stopFlow);
   applyLite();

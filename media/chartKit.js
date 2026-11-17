@@ -635,6 +635,167 @@
     return true;
   }
 
+  /**
+   * The chart's viewport, shared by every chart page: drag the background to pan, the wheel zooms around the pointer
+   * (Shift+wheel pans sideways), arrow keys pan, Fit frames the chart (smoothly when asked, at once on opening), and a
+   * fitted chart fits again when the tab is resized. Redraws happen at most once a frame.
+   *
+   * The page keeps its own `view` ({ x, y, k }) and lends it through getView/setView. It says what else to redraw
+   * (onApply), where Fit goes (fitTarget), which presses start a drag (canDrag), what a plain click on the background
+   * does (onBackgroundClick) and what leaving the chart does (onLeave).
+   */
+  function viewport(options) {
+    const { svg, scene, getView, setView, bounds, zoomLabel, grid = () => undefined, onApply = () => {}, fitTarget, canDrag = () => true,
+      onBackgroundClick = () => {}, onLeave = () => {}, beforeInteract = () => {}, minZoom = 0.2 } = options;
+    let fitted = false;
+    let frame = 0;
+    let drag;
+    // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
+    let rect;
+    const size = () => ({ width: svg.clientWidth || 800, height: svg.clientHeight || 600 });
+
+    function apply() {
+      const { width, height } = size();
+      const view = clampView(getView(), bounds(), width, height);
+      setView(view);
+      scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
+      redrawFlows();
+      const g = grid();
+      if (g) g.wake();
+      if (zoomLabel) {
+        const percent = Math.round(view.k * 100);
+        zoomLabel.textContent = `${percent}%`;
+        zoomLabel.setAttribute('aria-label', `Zoom ${percent}%, reset to 100%`);
+      }
+      onApply(view);
+    }
+    function applySoon() {
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; apply(); });
+    }
+    /** Moves the view there: smoothly when the person asked, at once when a chart first opens. */
+    function moveTo(to, atOnce) {
+      if (atOnce) {
+        setView(to);
+        apply();
+      } else {
+        glide(getView(), to, (v) => { setView(v); apply(); });
+      }
+    }
+    function fit(all) {
+      const to = fitTarget(all, size());
+      if (!to) return;
+      moveTo(to, !all);
+      fitted = true;
+    }
+    function zoom(factor, cx, cy) {
+      fitted = false;
+      const view = getView();
+      const k = Math.min(3, Math.max(minZoom, view.k * factor));
+      const px = cx ?? svg.clientWidth / 2;
+      const py = cy ?? svg.clientHeight / 2;
+      setView({ k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k });
+      applySoon();
+    }
+    function panBy(dx, dy, atOnce) {
+      fitted = false;
+      const view = getView();
+      setView({ k: view.k, x: view.x + dx, y: view.y + dy });
+      if (atOnce) apply();
+      else applySoon();
+    }
+
+    svg.addEventListener('pointerdown', (e) => {
+      beforeInteract();
+      if (e.button !== 0 || !canDrag(e.target)) return;
+      const view = getView();
+      drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add('dragging');
+      svg.focus({ preventScroll: true });
+    });
+    svg.addEventListener('pointerenter', () => (rect = svg.getBoundingClientRect()));
+    window.addEventListener('resize', () => (rect = undefined));
+    svg.addEventListener('pointermove', (e) => {
+      const g = grid();
+      if (g) {
+        const r = rect || (rect = svg.getBoundingClientRect());
+        g.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
+      }
+      if (!drag) return;
+      fitted = false;
+      const view = getView();
+      setView({ k: view.k, x: e.clientX - drag.x, y: e.clientY - drag.y });
+      applySoon();
+    });
+    svg.addEventListener('pointerup', (e) => {
+      // A click on the background, not a drag.
+      if (drag && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4) onBackgroundClick();
+      drag = undefined;
+      svg.classList.remove('dragging');
+    });
+    svg.addEventListener('pointerleave', () => {
+      const g = grid();
+      if (g) g.pointer(undefined);
+      onLeave();
+    });
+    svg.addEventListener('wheel', (e) => {
+      beforeInteract();
+      e.preventDefault();
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        // Shift+wheel moves the chart sideways.
+        panBy(-(e.deltaY || e.deltaX), 0);
+        return;
+      }
+      const r = svg.getBoundingClientRect();
+      zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+    svg.addEventListener('keydown', (e) => {
+      if (e.target === svg) panKey(e, (dx, dy) => panBy(dx, dy, true));
+    });
+    refitOnResize(svg, () => fitted, () => fit(true));
+
+    return {
+      apply, applySoon, moveTo, fit, zoom, panBy,
+      get fitted() { return fitted; },
+      set fitted(value) { fitted = value; },
+    };
+  }
+
+  /**
+   * The animated grid behind a chart, bent by its boxes. `boxes()` and `hovered()` give boxes in chart coordinates
+   * ({ x, y, w, h }); they are put on screen with the current view.
+   */
+  function backgroundGrid(canvas, { view, version, boxes, hovered }) {
+    const onScreen = (b) => {
+      const v = view();
+      return { x: v.x + b.x * v.k, y: v.y + b.y * v.k, w: b.w * v.k, h: b.h * v.k };
+    };
+    return window.diagramGrid.create(canvas, () => {
+      const v = view();
+      const over = hovered();
+      return {
+        panX: v.x,
+        panY: v.y,
+        k: v.k,
+        version: version(),
+        get boxes() {
+          return boxes().map(onScreen);
+        },
+        hovered: over ? onScreen(over) : undefined,
+      };
+    });
+  }
+
+  /** Shows or hides the minimap as last chosen (M toggles it); returns the toggle. The choice is kept with the chart's preferences. */
+  function minimapPreference(map, prefs, saveState) {
+    map.hidden = prefs.minimap === false;
+    return () => {
+      map.hidden = !map.hidden;
+      prefs.minimap = !map.hidden;
+      saveState();
+    };
+  }
+
   /** Calls `refit` when the chart area changes size while the chart is still as Fit left it. */
   function refitOnResize(element, isFitted, refit) {
     let last = `${element.clientWidth}x${element.clientHeight}`;
@@ -1185,5 +1346,5 @@
 
   window.chartKit = { el, toast, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles,
     limitAnimations,
-    ANIMATION_LIMIT, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize };
+    ANIMATION_LIMIT, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize, viewport, backgroundGrid, minimapPreference };
 })();

@@ -8,7 +8,7 @@ import { normalizePath, pathKey } from '../analysis/paths';
 import { listMovableMembers, moveMembers } from '../refactor/moveMembers';
 import { projectSourceFiles } from '../analysis/referenceIndex';
 import { applyRefactor, reportError } from './applyRefactor';
-import { previewEnabled } from './refactorCommands';
+import { PreviewToggle } from './refactorCommands';
 
 const recentTargetsKey = 'tsStructure.moveMembers.recentTargets';
 
@@ -57,7 +57,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     let picked: MemberItem[] = memberItems.filter((i) => i.member && atCursor.includes(i.member));
     let target = '';
     let keepReExport = memento?.get<boolean>('tsStructure.moveMembers.keepReExport', false) ?? false;
-    let preview = previewEnabled();
+    const preview = new PreviewToggle();
     while (step <= 3) {
       if (step === 1) {
         const result = await pickStep(flow, 1, memberItems, {
@@ -88,8 +88,6 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
         step = picked.some((p) => p.member!.exported) ? 3 : 4;
       } else {
         const lastKeep = memento?.get<boolean>('tsStructure.moveMembers.keepReExport');
-        const previewLook = (): vscode.QuickInputButton => ({ iconPath: new vscode.ThemeIcon(preview ? 'eye' : 'eye-closed'), tooltip: preview ? 'Changes open in the Refactor Preview first (click to apply straight away)' : 'Changes apply straight away (click to preview them first)' });
-        let previewButton = previewLook();
         const choices = [
           { label: '$(references) Update imports to the new module', description: `importers and re-exports point at the new module${lastKeep === false ? ' · last used' : ''}`, detail: 'Cleanest result; code outside this project that imports from the old module would break.', keep: false },
           { label: `$(export) Also keep a re-export in ${path.basename(source)}`, description: `the source module's public API stays the same${lastKeep === true ? ' · last used' : ''}`, detail: 'Safest for published libraries: the old import path keeps working.', keep: true },
@@ -98,14 +96,8 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
           what: `to ${path.basename(target)}`,
           active: choices.find((c) => c.keep === keepReExport),
           placeholder: 'What happens to imports of the old module? Enter repeats your last choice.',
-          buttons: [previewButton],
-          onButton: (button, picker) => {
-            if (button !== previewButton) return;
-            preview = !preview;
-            const old = previewButton;
-            previewButton = previewLook();
-            picker.buttons = picker.buttons.map((x) => (x === old ? previewButton : x));
-          },
+          buttons: [preview.button],
+          onButton: (button, picker) => preview.pressed(button, picker),
         });
         if (result === undefined) return;
         if (result === BACK) { step = 2; continue; }
@@ -121,7 +113,7 @@ export async function runMoveMembers(projects: ProjectService, editor: vscode.Te
     }
     const names = picked.map((p) => p.member!.name);
     const result = moveMembers(projects.createVirtualProject(source, root), source, names, target, { keepReExport });
-    if (await applyRefactor(result, preview)) {
+    if (await applyRefactor(result, preview.on)) {
       const what = names.length <= 3 ? names.join(', ') : `${names.length} declarations`;
       void finished(command, `moved ${what} to ${path.basename(target)}${result.changes.length > 2 ? `; imports updated in ${result.changes.length - 2} other file${result.changes.length === 3 ? '' : 's'}` : ''}.`, {
         file: source,

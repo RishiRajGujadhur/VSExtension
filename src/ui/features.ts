@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { awaitPick, ticked } from './quickPick';
 import { Feature, enabledByDefault, featureOf, features } from '../structure/features';
 import { featureIcon } from '../structure/icons';
 import { actionCatalog } from '../structure/actionCatalog';
@@ -97,12 +98,7 @@ export async function configureFeatures(): Promise<void> {
     picker.hide();
     void vscode.commands.executeCommand('workbench.action.openSettings', featureSettings[e.item.feature!.id] ?? `tsStructure.features.${e.item.feature!.id}`);
   });
-  const picked = await new Promise<readonly Item[] | undefined>((resolve) => {
-    picker.onDidAccept(() => resolve(picker.selectedItems));
-    picker.onDidHide(() => resolve(undefined));
-    picker.show();
-  });
-  picker.dispose();
+  const picked = await awaitPick(picker, ticked);
   if (!picked) {
     return;
   }

@@ -14,6 +14,7 @@ import {
   sourceFileOf,
   symbolAt,
   writeOf,
+  RecursionSafeCache,
 } from '../structure/util';
 import { resolveAlias } from '../analysis/referenceIndex';
 import { findIdentifier } from '../analysis/impact';
@@ -144,27 +145,17 @@ ioPackages.push({ pattern: /^(stripe|twilio|@slack\/.+|openai|@anthropic-ai\/sdk
 
 /** Computes the side effects of functions, following calls into other project functions. */
 export class EffectAnalyzer {
-  private readonly cache = new Map<FunctionWithBody, Effect[]>();
-  private readonly active = new Set<FunctionWithBody>();
+  /** Each function's effects, computed once; a function reached again through recursion adds nothing more. */
+  private readonly cache = new RecursionSafeCache<FunctionWithBody, Effect[]>(() => []);
 
   constructor(private readonly checker: ts.TypeChecker) {}
 
   effectsOf(fn: FunctionWithBody): Effect[] {
-    const cached = this.cache.get(fn);
-    if (cached) {
-      return cached;
-    }
-    if (this.active.has(fn)) {
-      // Recursion: the effects are being collected further up the stack.
-      return [];
-    }
-    this.active.add(fn);
-    const effects: Effect[] = [];
-    forEachDescendant(fn.body!, (node) => this.visit(fn, node, effects));
-    this.active.delete(fn);
-    const unique = dedupe(effects);
-    this.cache.set(fn, unique);
-    return unique;
+    return this.cache.get(fn, () => {
+      const effects: Effect[] = [];
+      forEachDescendant(fn.body!, (node) => this.visit(fn, node, effects));
+      return dedupe(effects);
+    });
   }
 
   private visit(fn: FunctionWithBody, node: ts.Node, effects: Effect[]): void {

@@ -973,7 +973,7 @@
     centerOn(n);
   }
   function centerOn(n, k = view.k) {
-    fitted = false;
+    vp.fitted = false;
     moveTo({ k, x: svg.clientWidth / 2 - (n.x + n.width / 2) * k, y: svg.clientHeight / 2 - (n.y + n.height / 2) * k });
   }
   function zoomTo(n) {
@@ -1186,24 +1186,47 @@
     }
   });
 
-  // Pan by dragging, zoom with the wheel (Shift+wheel pans sideways), Fit to see it all.
-  // Whether the view is as Fit left it, so resizing the tab fits again.
-  let fitted = false;
-  // Dragging and the wheel fire many events per frame: the view is redrawn once per frame.
-  let applyFrame = 0;
-  function applySoon() {
-    if (!applyFrame) applyFrame = requestAnimationFrame(() => { applyFrame = 0; apply(); });
-  }
-  function apply() {
-    view = kit.clampView(view, map.bounds, svg.clientWidth || 800, svg.clientHeight || 600);
-    scene.setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`);
-    kit.redrawFlows();
-    if (grid) grid.wake();
-    map.update();
-    document.getElementById('zoomLevel').textContent = `${Math.round(view.k * 100)}%`;
-    svg.classList.toggle('low-detail', view.k < 0.45);
-    rememberView();
-  }
+  // Pan, zoom and Fit: the kit's viewport, with what this chart adds to each redraw and where Fit goes.
+  const vp = kit.viewport({
+    svg,
+    scene,
+    getView: () => view,
+    setView: (v) => { view = v; },
+    bounds: () => map.bounds,
+    zoomLabel: document.getElementById('zoomLevel'),
+    grid: () => grid,
+    onApply: () => {
+      map.update();
+      svg.classList.toggle('low-detail', view.k < 0.45);
+      rememberView();
+    },
+    fitTarget: (all, { width: w, height: h }) => {
+      if (!chart) return undefined;
+      const k = Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height);
+      if (k < 0.55 && !all) {
+        // Too small to read when it all fits: start at the top at a readable size, centered on the start circle.
+        const start = chart.nodes.find((n) => n.kind === 'start') || chart.nodes[0];
+        return { k: 0.85, x: w / 2 - (start.x + start.width / 2) * 0.85, y: 20 };
+      }
+      const fitK = Math.max(0.2, k);
+      return { k: fitK, x: Math.max(20, (w - chart.width * fitK) / 2), y: 20 };
+    },
+    canDrag: (target) => !target.closest('.node') && !target.closest('.edge') && !target.closest('.dep'),
+    beforeInteract: () => card.hide(),
+    // A click on the background, not a drag, stops the flowing lines.
+    onBackgroundClick: () => { if (flowing !== undefined) stopFlow(); },
+    onLeave: () => {
+      hovered = undefined;
+      card.hideSoon();
+      touchEdges(undefined);
+      showInfo(focusedNode);
+    },
+  });
+  function apply() { vp.apply(); }
+  function applySoon() { vp.applySoon(); }
+  function fit(all) { vp.fit(all); }
+  function moveTo(to, atOnce) { vp.moveTo(to, atOnce); }
+  function zoom(factor, cx, cy) { vp.zoom(factor, cx, cy); }
   let rememberTimer;
   function rememberView() {
     clearTimeout(rememberTimer);
@@ -1214,87 +1237,6 @@
       saveState();
     }, 400);
   }
-  function fit(all) {
-    if (!chart) return;
-    const w = svg.clientWidth || 800;
-    const h = svg.clientHeight || 600;
-    let k = Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height);
-    let to;
-    if (k < 0.55 && !all) {
-      // Too small to read when it all fits: start at the top at a readable size, centered on the start circle.
-      k = 0.85;
-      const start = chart.nodes.find((n) => n.kind === 'start') || chart.nodes[0];
-      to = { k, x: w / 2 - (start.x + start.width / 2) * k, y: 20 };
-    } else {
-      k = Math.max(0.2, k);
-      to = { k, x: Math.max(20, (w - chart.width * k) / 2), y: 20 };
-    }
-    moveTo(to, !all);
-    fitted = true;
-  }
-  /** Moves the view there: smoothly when the person asked, at once when a chart first opens. */
-  function moveTo(to, atOnce) {
-    if (atOnce) {
-      view = to;
-      apply();
-    } else {
-      kit.glide(view, to, (v) => { view = v; apply(); });
-    }
-  }
-  function zoom(f, cx, cy) {
-    fitted = false;
-    const k = Math.min(3, Math.max(0.2, view.k * f));
-    const px = cx ?? svg.clientWidth / 2;
-    const py = cy ?? svg.clientHeight / 2;
-    view = { k, x: px - ((px - view.x) * k) / view.k, y: py - ((py - view.y) * k) / view.k };
-    applySoon();
-  }
-  let drag;
-  svg.addEventListener('pointerdown', (e) => {
-    card.hide();
-    if (e.button !== 0 || e.target.closest('.node') || e.target.closest('.edge') || e.target.closest('.dep')) return;
-    drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
-    svg.setPointerCapture(e.pointerId);
-    svg.classList.add('dragging');
-    svg.focus({ preventScroll: true });
-  });
-  // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
-  let svgRect;
-  svg.addEventListener('pointerenter', () => (svgRect = svg.getBoundingClientRect()));
-  window.addEventListener('resize', () => (svgRect = undefined));
-  svg.addEventListener('pointermove', (e) => {
-    if (grid) {
-      const r = svgRect || (svgRect = svg.getBoundingClientRect());
-      grid.pointer({ x: e.clientX - r.left, y: e.clientY - r.top });
-    }
-    if (drag) { fitted = false; view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; applySoon(); }
-  });
-  svg.addEventListener('pointerup', (e) => {
-    // A click on the background, not a drag, stops the flowing lines.
-    if (drag && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4 && flowing !== undefined) stopFlow();
-    drag = undefined;
-    svg.classList.remove('dragging');
-  });
-  svg.addEventListener('pointerleave', () => {
-    if (grid) grid.pointer(undefined);
-    hovered = undefined;
-    card.hideSoon();
-    touchEdges(undefined);
-    showInfo(focusedNode);
-  });
-  svg.addEventListener('wheel', (e) => {
-    card.hide();
-    e.preventDefault();
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey) {
-      // Shift+wheel moves the chart sideways.
-      fitted = false;
-      view.x -= e.deltaY || e.deltaX;
-      applySoon();
-      return;
-    }
-    const r = svg.getBoundingClientRect();
-    zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top);
-  }, { passive: false });
 
   // Export: Mermaid text is made by the extension; SVG and PNG are the chart as drawn, with its colors written in.
   function copyMermaid() {
@@ -1330,17 +1272,8 @@
   svg.addEventListener('dblclick', (e) => {
     if (!nodeOf(e.target) && !e.target.closest('.edge')) fit(true);
   });
-  svg.addEventListener('keydown', (e) => {
-    if (e.target === svg) kit.panKey(e, (dx, dy) => { fitted = false; view = { k: view.k, x: view.x + dx, y: view.y + dy }; apply(); });
-  });
   // The minimap can be hidden (M); the choice is kept.
-  map.hidden = prefs.minimap === false;
-  function toggleMinimap() {
-    map.hidden = !map.hidden;
-    prefs.minimap = !map.hidden;
-    saveState();
-  }
-  kit.refitOnResize(svg, () => fitted, () => fit(true));
+  const toggleMinimap = kit.minimapPreference(map, prefs, saveState);
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('toCursor').addEventListener('click', toCursor);
   document.getElementById('togglePaths').addEventListener('click', () => togglePanel(panel.hidden));
@@ -1469,17 +1402,13 @@
     }
   });
   // The grid behind the chart: every box bends it, the hovered one pushes further.
-  const onScreen = (n) => ({ x: view.x + n.x * view.k, y: view.y + n.y * view.k, w: n.width * view.k, h: n.height * view.k });
-  grid = window.diagramGrid.create(document.getElementById('grid'), () => ({
-    panX: view.x,
-    panY: view.y,
-    k: view.k,
-    version: layoutVersion,
-    get boxes() {
-      return chart ? chart.nodes.map(onScreen) : [];
-    },
-    hovered: hovered ? onScreen(hovered) : undefined,
-  }));
+  const asBox = (n) => ({ x: n.x, y: n.y, w: n.width, h: n.height });
+  grid = kit.backgroundGrid(document.getElementById('grid'), {
+    view: () => view,
+    version: () => layoutVersion,
+    boxes: () => (chart ? chart.nodes.map(asBox) : []),
+    hovered: () => (hovered ? asBox(hovered) : undefined),
+  });
   kit.attachFlowLines(document.getElementById('flowLines'), () => view);
   document.getElementById('deps').addEventListener('click', () => toggleDependences());
   document.getElementById('otherGraphs').addEventListener('click', () => vscode.postMessage({ type: 'otherGraphs' }));

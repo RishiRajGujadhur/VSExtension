@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { awaitPick } from './quickPick';
 import { FileSymbol, SymbolKind, SymbolOrder, fileSymbols, measureSymbols, sortSymbols, symbolAt } from '../structure/symbols';
 import { parse, refactorKind } from './codeActions';
 import { isFeatureEnabled } from './features';
@@ -273,12 +274,7 @@ async function pickSymbol(editor: vscode.TextEditor, symbols: readonly FileSymbo
     symbolOrder = (button as vscode.QuickInputButton & { order: SymbolOrder }).order;
     render();
   });
-  const picked = await new Promise<Item | undefined>((resolve) => {
-    picker.onDidAccept(() => resolve(picker.selectedItems[0] ?? picker.activeItems[0]));
-    picker.onDidHide(() => resolve(undefined));
-    picker.show();
-  });
-  picker.dispose();
+  const picked = await awaitPick(picker, (p) => p.selectedItems[0] ?? p.activeItems[0]);
   return picked?.symbol;
 }
 

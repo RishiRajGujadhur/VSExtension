@@ -37,6 +37,38 @@ export function previewEnabled(): boolean {
   return vscode.workspace.getConfiguration('tsStructure').get('previewRefactorings', true);
 }
 
+/**
+ * The eye button of a refactoring's picker: whether the changes open in the Refactor Preview first or apply straight
+ * away, starting from the setting. Pressing it flips the choice and swaps the button's look in the picker.
+ */
+export class PreviewToggle {
+  on = previewEnabled();
+  button: vscode.QuickInputButton;
+
+  /** `subject` is what is changed, as in "Changes" or "The delete"; `plural` picks the verbs that go with it. */
+  constructor(private readonly subject = 'Changes', private readonly plural = true) {
+    this.button = this.look();
+  }
+
+  /** Flips the choice if the button pressed is this one; returns whether it was. */
+  pressed(button: vscode.QuickInputButton, picker: { buttons: readonly vscode.QuickInputButton[] }): boolean {
+    if (button !== this.button) return false;
+    this.on = !this.on;
+    const old = this.button;
+    this.button = this.look();
+    picker.buttons = picker.buttons.map((b) => (b === old ? this.button : b));
+    return true;
+  }
+
+  private look(): vscode.QuickInputButton {
+    const [open, apply, them] = this.plural ? ['open', 'apply', 'them'] : ['opens', 'applies', 'it'];
+    return {
+      iconPath: new vscode.ThemeIcon(this.on ? 'eye' : 'eye-closed'),
+      tooltip: this.on ? `${this.subject} ${open} in the Refactor Preview first (click to apply straight away)` : `${this.subject} ${apply} straight away (click to preview ${them} first)`,
+    };
+  }
+}
+
 export function registerRefactorings(context: vscode.ExtensionContext, projects: ProjectService): void {
   context.subscriptions.push(
     registerCommand('tsStructure.changeSignature', () => {

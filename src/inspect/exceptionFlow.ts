@@ -2,7 +2,7 @@ import ts = require('typescript');
 import { VirtualProject } from '../refactor/virtualProject';
 import { ReportBuilder, ReportNode, Report, Tone, nodeSnippet, plural } from '../structure/report';
 import { howToFix } from '../structure/howToFix';
-import { FunctionWithBody, callSitesOf, calledFunction, enclosingFunction, forEachInFunction, functionAtOffset, functionLabel, nodeText } from '../structure/util';
+import { FunctionWithBody, RecursionSafeCache, callSitesOf, calledFunction, enclosingFunction, forEachInFunction, functionAtOffset, functionLabel, nodeText } from '../structure/util';
 import { isAsync } from './missingAwait';
 import { RejectionTracer, classifyCatch, enclosingCatch, unhandledPaths, worst } from './rejections';
 
@@ -132,8 +132,8 @@ export interface ThrowPath {
 
 /** Computes which errors escape each function, following synchronous calls. */
 export class ThrowAnalyzer {
-  private readonly cache = new Map<FunctionWithBody, ThrowPath[]>();
-  private readonly active = new Set<FunctionWithBody>();
+  /** Each function's errors, computed once; a function reached again through recursion adds nothing more. */
+  private readonly cache = new RecursionSafeCache<FunctionWithBody, ThrowPath[]>(() => []);
 
   constructor(private readonly checker: ts.TypeChecker) {}
 
@@ -145,43 +145,34 @@ export class ThrowAnalyzer {
 
   /** Every error raised in the function's own code or its synchronous callees, caught or not. */
   raised(fn: FunctionWithBody): ThrowPath[] {
-    const cached = this.cache.get(fn);
-    if (cached) {
-      return cached;
-    }
-    if (this.active.has(fn)) {
-      return [];
-    }
-    this.active.add(fn);
-    const paths: ThrowPath[] = [];
-    forEachInFunction(fn.body!, (node) => {
-      if (ts.isThrowStatement(node)) {
-        paths.push({ origin: node, description: `throw ${nodeText(node.expression ?? node)}`, chain: [] });
-      } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
-        const name = `${ts.isNewExpression(node) ? 'new ' : ''}${node.expression.getText()}`;
-        if (throwingCalls[name]) {
-          paths.push({ origin: node, description: `${name}(): ${throwingCalls[name]}`, chain: [] });
-          return;
+    return this.cache.get(fn, () => {
+      const paths: ThrowPath[] = [];
+      forEachInFunction(fn.body!, (node) => {
+        if (ts.isThrowStatement(node)) {
+          paths.push({ origin: node, description: `throw ${nodeText(node.expression ?? node)}`, chain: [] });
+        } else if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+          const name = `${ts.isNewExpression(node) ? 'new ' : ''}${node.expression.getText()}`;
+          if (throwingCalls[name]) {
+            paths.push({ origin: node, description: `${name}(): ${throwingCalls[name]}`, chain: [] });
+            return;
+          }
+          const method = ts.isCallExpression(node) ? throwingMethod(this.checker, node) : undefined;
+          if (method) {
+            paths.push({ origin: node, description: method, chain: [] });
+            return;
+          }
+          const callee = calledFunction(this.checker, node);
+          // An async callee's errors become rejections: they only rethrow where they are awaited.
+          if (!callee || callee === fn || (isAsync(callee) && !ts.isAwaitExpression(node.parent))) {
+            return;
+          }
+          for (const inner of this.escaping(callee)) {
+            paths.push({ origin: inner.origin, description: inner.description, chain: [node, ...inner.chain] });
+          }
         }
-        const method = ts.isCallExpression(node) ? throwingMethod(this.checker, node) : undefined;
-        if (method) {
-          paths.push({ origin: node, description: method, chain: [] });
-          return;
-        }
-        const callee = calledFunction(this.checker, node);
-        // An async callee's errors become rejections: they only rethrow where they are awaited.
-        if (!callee || callee === fn || (isAsync(callee) && !ts.isAwaitExpression(node.parent))) {
-          return;
-        }
-        for (const inner of this.escaping(callee)) {
-          paths.push({ origin: inner.origin, description: inner.description, chain: [node, ...inner.chain] });
-        }
-      }
+      });
+      return paths.filter((p, i) => paths.findIndex((q) => q.origin === p.origin && q.chain[0] === p.chain[0]) === i).slice(0, 200);
     });
-    this.active.delete(fn);
-    const unique = paths.filter((p, i) => paths.findIndex((q) => q.origin === p.origin && q.chain[0] === p.chain[0]) === i).slice(0, 200);
-    this.cache.set(fn, unique);
-    return unique;
   }
 }
 

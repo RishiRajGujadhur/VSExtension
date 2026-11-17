@@ -581,14 +581,9 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: fineScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
     // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
     registerCommand('tsStructure.deadExportsInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
-      const folders = selected?.length ? selected : uri ? [uri] : [];
-      const anchor = (await Promise.all(folders.map((f) => vscode.workspace.findFiles(new vscode.RelativePattern(f, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1)))).flat()[0];
-      if (!anchor) {
-        void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
-        return;
-      }
-      const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
-      const roots = folders.map((f) => pathKey(f.fsPath));
+      const picked = await explorerFolders(uri, selected);
+      if (!picked) return;
+      const { anchor, folder, roots, folders } = picked;
       const inside = (file: string) => roots.some((root) => pathKey(file).startsWith(`${root}/`));
       const target: AnalysisTarget = { fileName: anchor.fsPath, offset: 0, end: 0, folder, project: () => projects.analysisProject(anchor.fsPath, folder) };
       return runAnalysis(view, 'Dead Export Analysis', async () => {
@@ -664,14 +659,9 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     // From the Explorer: copies among the files in the folders picked.
     registerCommand('tsStructure.findDuplicatesInFolder', async (uri?: vscode.Uri, selected?: vscode.Uri[]) => {
-      const folders = selected?.length ? selected : uri ? [uri] : [];
-      const anchor = (await Promise.all(folders.map((f) => vscode.workspace.findFiles(new vscode.RelativePattern(f, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1)))).flat()[0];
-      if (!anchor) {
-        void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
-        return;
-      }
-      const folder = vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath;
-      const roots = folders.map((f) => pathKey(f.fsPath));
+      const picked = await explorerFolders(uri, selected);
+      if (!picked) return;
+      const { anchor, folder, roots, folders } = picked;
       const config = vscode.workspace.getConfiguration('tsStructure.duplicates', anchor);
       return runAnalysis(view, 'Finding duplicates', () => {
         const program = projects.analysisProject(anchor.fsPath, folder).program();
@@ -830,4 +820,19 @@ async function changeControls(view: StructureView, id?: string, value?: unknown)
     value = chosen.value;
   }
   if (setGraphOption(report.kind, control, value)) await view.rerun();
+}
+
+/**
+ * The folders picked in the Explorer (several when more are selected), with a source file inside them to anchor the
+ * project on; undefined, after saying so, when they hold no TypeScript or JavaScript.
+ */
+async function explorerFolders(uri: vscode.Uri | undefined, selected: vscode.Uri[] | undefined): Promise<{ anchor: vscode.Uri; folder: string | undefined; roots: string[]; folders: vscode.Uri[] } | undefined> {
+  const folders = selected?.length ? selected : uri ? [uri] : [];
+  const found = await Promise.all(folders.map((f) => vscode.workspace.findFiles(new vscode.RelativePattern(f, '**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'), '**/node_modules/**', 1)));
+  const anchor = found.flat()[0];
+  if (!anchor) {
+    void vscode.window.showInformationMessage('There are no TypeScript or JavaScript files there.');
+    return undefined;
+  }
+  return { anchor, folder: vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath, roots: folders.map((f) => pathKey(f.fsPath)), folders };
 }

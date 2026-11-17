@@ -174,17 +174,7 @@
     return svg;
   }
 
-  const make = (tag, className, text) => {
-    const e = document.createElement(tag);
-    if (className) e.className = className;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  };
-  const icon = (name) => {
-    const i = make('i', `codicon codicon-${name}`);
-    i.setAttribute('aria-hidden', 'true');
-    return i;
-  };
+  const { make, icon } = window.xrDom;
   /** A button: `box` is the white square one, the rest read as uppercase links. */
   function button(label, onClick, box, iconName) {
     const b = make('button', box ? 'box-button' : 'link-button');

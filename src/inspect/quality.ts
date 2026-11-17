@@ -1,19 +1,11 @@
 import ts = require('typescript');
-import { allNodes } from '../structure/util';
+import { allNodes, walkNodes } from '../structure/util';
 import { Finding, Fix, Inspection, Severity } from './inspection';
 
 /** Inspections for common slips: what is wrong in a few words and, where it is clear, the fix. */
 export const qualityInspections: Inspection[] = [];
 
-function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
-  // A whole file: the shared list of its nodes, walked once for all inspections.
-  if (ts.isSourceFile(node)) {
-    allNodes(node).forEach((n) => visit(n));
-    return;
-  }
-  visit(node);
-  ts.forEachChild(node, (child) => walk(child, visit));
-}
+const walk = walkNodes;
 
 /** Like walk, without entering nested functions or classes. */
 function walkInScope(node: ts.Node, visit: (node: ts.Node) => void): void {

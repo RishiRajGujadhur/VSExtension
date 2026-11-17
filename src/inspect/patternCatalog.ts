@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { allNodes } from '../structure/util';
+import { allNodes, walkNodes } from '../structure/util';
 
 /** What a catalog detector found: the node that shows the pattern and how. */
 export interface Found {
@@ -28,14 +28,7 @@ const text = (node: ts.Node | undefined): string => node?.getText() ?? '';
 
 const hasModifier = (node: ts.Node, kind: ts.SyntaxKind): boolean => (ts.canHaveModifiers(node) ? (ts.getModifiers(node) ?? []).some((m) => m.kind === kind) : false);
 
-function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
-  if (ts.isSourceFile(node)) {
-    allNodes(node).forEach((n) => visit(n));
-    return;
-  }
-  visit(node);
-  ts.forEachChild(node, (child) => walk(child, visit));
-}
+const walk = walkNodes;
 
 /** Results computed once per file and shared by the detectors. */
 function perFile<T>(compute: (sourceFile: ts.SourceFile) => T): (sourceFile: ts.SourceFile) => T {

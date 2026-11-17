@@ -60,18 +60,8 @@
   const isPinned = (a) => data.layout.pinned.includes(a.id);
   const isHidden = (a) => data.layout.hidden.includes(a.id);
 
-  function make(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
+  const { make, icon } = window.xrDom;
   const spoken = (shortcut) => shortcut.replace(/ /g, ', then ');
-  const icon = (name) => {
-    const i = make('i', `codicon codicon-${name}`);
-    i.setAttribute('aria-hidden', 'true');
-    return i;
-  };
 
   // Where a searched word is found in a text: at the start of a word, or anywhere for three letters or more, so a
   // single letter doesn't light up every word that has it.
