@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.73.0",
+  "version": "0.74.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,8 @@
     "onLanguage:typescript",
     "onLanguage:typescriptreact",
     "onLanguage:javascript",
-    "onLanguage:javascriptreact"
+    "onLanguage:javascriptreact",
+    "onLanguage:csharp"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -1047,7 +1048,7 @@
       {
         "command": "tsStructure.semanticUsages",
         "key": "alt+f7",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "command": "tsStructure.actionsAtCursor",
@@ -1079,7 +1080,7 @@
       {
         "key": "shift+alt+f7",
         "command": "tsStructure.semanticUsagesInFile",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s d",
@@ -1127,7 +1128,7 @@
         "key": "ctrl+alt+s h",
         "mac": "cmd+ctrl+s h",
         "command": "tsStructure.typeHierarchy",
-        "when": "config.tsStructure.features.hierarchy && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.hierarchy && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s o",
@@ -1157,7 +1158,7 @@
         "key": "ctrl+alt+s u",
         "mac": "cmd+ctrl+s u",
         "command": "tsStructure.semanticUsages",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s i",
@@ -1345,7 +1346,7 @@
         "key": "ctrl+alt+s shift+c",
         "mac": "cmd+ctrl+s shift+c",
         "command": "tsStructure.callGraph",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s shift+d",
@@ -1374,12 +1375,12 @@
         },
         {
           "command": "tsStructure.semanticUsagesInFile",
-          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/",
           "group": "navigation@90"
         },
         {
           "command": "tsStructure.semanticUsages",
-          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/",
           "group": "navigation@91"
         },
         {
@@ -2273,7 +2274,7 @@
         },
         {
           "command": "tsStructure.callGraph",
-          "when": "config.tsStructure.features.usages && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+          "when": "config.tsStructure.features.usages && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
         },
         {
           "command": "tsStructure.dependenceGraph",

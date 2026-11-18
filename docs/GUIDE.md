@@ -344,6 +344,16 @@ The extension follows the W3C's Web Content Accessibility Guidelines (WCAG 2.2) 
 - **Change parameters** and **Search by shape** name every field, mark invalid input, announce problems and result counts without interrupting, keep keyboard focus when rows move, and open search results with Enter.
 - Animations stop when your system asks for reduced motion.
 
+## C#
+
+Find usages, Callers and calls and Family tree work in C# files too. They ask the C# language server (from the **C# extension** or C# Dev Kit) through VS Code's standard reference, call hierarchy and type hierarchy providers, so the answers are the compiler's own, and nothing leaves your computer. The reports look the same as for TypeScript:
+
+- **Find usages**: Definitions, Calls (including `new`), Writes (`=`, `+=`, `++`, `out`, `ref`) and Reads, by file, with the method each usage is in and test projects marked.
+- **Callers and calls**: the call hierarchy a few levels each way, as a chart, with the same Levels and Show controls.
+- **Family tree**: supertypes and interfaces, subtypes and implementations, and the type's members.
+
+With no C# extension, or before it has loaded the solution, these say so instead of showing an empty report. The rest of Code X-Ray is TypeScript and JavaScript only for now.
+
 ## Settings
 
 **Code X-Ray: Settings** (the gear in the Actions view's title bar, or **Settings** at the bottom of the view) opens one page with every setting:

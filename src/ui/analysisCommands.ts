@@ -1,4 +1,5 @@
 import ts = require('typescript');
+import { csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport, isCSharp } from '../csharp/languageServer';
 import { bundleWeightReport } from '../navigate/bundleWeight';
 import { graphOption, setGraphOption } from '../structure/graphOptions';
 import { termFor } from '../structure/glossary';
@@ -295,9 +296,17 @@ function followEdits(target: AnalysisTarget, before: string | undefined): Analys
 
 export function registerAnalyses(context: vscode.ExtensionContext, projects: ProjectService, view: StructureView): void {
   let latestArgumentRun: { extra: number } | undefined;
-  /** A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other extensions. */
-  const editorCommand = (id: string, title: string, compute: Compute) =>
+  /**
+   * A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other
+   * extensions. With `csharp`, it also works in C# files, through the C# language server (src/csharp).
+   */
+  const editorCommand = (id: string, title: string, compute: Compute, csharp?: (document: vscode.TextDocument, position: vscode.Position) => Promise<Report>) =>
     registerCommand(id, () => {
+      const active = vscode.window.activeTextEditor;
+      if (csharp && active && isCSharp(active.document)) {
+        const word = active.document.getWordRangeAtPosition(active.selection.active);
+        return runAnalysis(view, `${title}${word ? ` of ${active.document.getText(word)}` : ''}`, () => csharp(active.document, active.selection.active));
+      }
       const editor = sourceEditor();
       if (editor) {
         const target = editorTarget(projects, editor);
@@ -674,7 +683,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return report;
       });
     }),
-    editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder), csharpUsagesReport),
     // The usages in the file at hand only: the whole project is still searched, then the report is limited.
     registerCommand('tsStructure.semanticUsagesInFile', async () => {
       const report = await vscode.commands.executeCommand<Report | undefined>('tsStructure.semanticUsages');
@@ -684,7 +693,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return report;
     }),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
-    editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder), csharpHierarchyReport),
     editorCommand('tsStructure.overrideImpact', 'Override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
     registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
       const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
@@ -786,11 +795,11 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
     // Graphs: drawn as a chart as soon as they are ready (see extension.ts).
-    editorCommand('tsStructure.callGraph', 'Call graph', (t) =>
-      callGraphReport(t.project(), t.fileName, t.offset, {
-        depth: graphOption('callGraph', 'levels', vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('callGraph.depth', 3)),
-        direction: graphOption('callGraph', 'direction', 'both') as CallDirection,
-      }),
+    editorCommand(
+      'tsStructure.callGraph',
+      'Call graph',
+      (t) => callGraphReport(t.project(), t.fileName, t.offset, callGraphOptions(vscode.Uri.file(t.fileName))),
+      (document, position) => csharpCallGraphReport(document, position, callGraphOptions(document.uri)),
     ),
     editorCommand('tsStructure.reactState', 'React state', (t) => reactStateReport(t.project(), t.fileName, t.offset, { levels: graphOption('reactState', 'levels', 1) })),
   );
@@ -835,4 +844,12 @@ async function explorerFolders(uri: vscode.Uri | undefined, selected: vscode.Uri
     return undefined;
   }
   return { anchor, folder: vscode.workspace.getWorkspaceFolder(anchor)?.uri.fsPath, roots: folders.map((f) => pathKey(f.fsPath)), folders };
+}
+
+/** The call graph's levels and direction: as last chosen on the chart, else the setting. */
+function callGraphOptions(resource: vscode.Uri): { depth: number; direction: CallDirection } {
+  return {
+    depth: graphOption('callGraph', 'levels', vscode.workspace.getConfiguration('tsStructure', resource).get('callGraph.depth', 3)),
+    direction: graphOption('callGraph', 'direction', 'both') as CallDirection,
+  };
 }

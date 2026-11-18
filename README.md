@@ -56,6 +56,12 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - See every test that reaches this code, and the chain of calls that connects them.
 - Run a test from the list, or run **Tests for my changes** before you commit.
 
+## C#
+
+- **Find usages**, **Callers and calls** and **Family tree** also work in C# files, with the same shortcuts (`Alt+F7`, `Ctrl+Alt+S Shift+C`, `Ctrl+Alt+S H`).
+- They use the C# language server, so install the **C# extension** (or C# Dev Kit) and let it load the solution first.
+- The other features are TypeScript and JavaScript only for now; more C# support is on the way.
+
 ## Settings
 
 - Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.

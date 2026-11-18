@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { sections } from '../../ui/settingsPanel';
+import type { Report } from '../../structure/report';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -541,6 +542,8 @@ async function analysisCommandsFlow(): Promise<void> {
   await vscode.workspace.getConfiguration('tsStructure.animations').update('charts', undefined, vscode.ConfigurationTarget.Global);
   await vscode.window.tabGroups.close(settingsTab);
   console.log('settings ok');
+
+  await csharpThroughLanguageServer();
   console.log('analysis commands ok');
 }
 
@@ -562,4 +565,86 @@ async function revert(uris: vscode.Uri[]): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.files.revert');
   }
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+/**
+ * C#: Find usages, Callers and calls and the family tree are built from the C# language server's answers. Here stand-in
+ * providers give those answers (as the C# extension would), so the reports can be checked without it.
+ */
+async function csharpThroughLanguageServer(): Promise<void> {
+  const code = [
+    'namespace Shop {',
+    '  public interface IPriced { decimal Price(); }',
+    '  public class Cart : IPriced {',
+    '    private decimal total;',
+    '    public decimal Price() { total = 0; Add(1); return total; }',
+    '    public void Add(decimal amount) { total += amount; }',
+    '  }',
+    '  public class Checkout { public decimal Pay(Cart cart) => cart.Price(); }',
+    '}',
+  ].join('\n');
+  const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'src', 'Cart.cs');
+  await vscode.workspace.fs.writeFile(uri, Buffer.from(code));
+  let document = await vscode.workspace.openTextDocument(uri);
+  if (document.languageId !== 'csharp') document = await vscode.languages.setTextDocumentLanguage(document, 'csharp');
+  const at = (text: string, from = 0) => document.positionAt(code.indexOf(text, from));
+  const range = (text: string, from = 0) => new vscode.Range(at(text, from), at(text, from).translate(0, text.length));
+  const every = (word: string) => [...code.matchAll(new RegExp(`(?<![A-Za-z0-9_])${word}(?![A-Za-z0-9_])`, 'g'))].map((m) => new vscode.Location(uri, new vscode.Range(document.positionAt(m.index!), document.positionAt(m.index! + word.length))));
+  const item = (name: string, text: string, kind = vscode.SymbolKind.Method) => new vscode.CallHierarchyItem(kind, name, '', uri, range(text), range(text));
+  const price = item('Price', 'Price() {'), pay = item('Pay', 'Pay('), add = item('Add', 'Add(decimal');
+  const typeItem = (name: string, text: string, kind: vscode.SymbolKind) => new vscode.TypeHierarchyItem(kind, name, '', uri, range(text), range(text));
+  const cart = typeItem('Cart', 'Cart :', vscode.SymbolKind.Class), priced = typeItem('IPriced', 'IPriced {', vscode.SymbolKind.Interface);
+  const selector = { language: 'csharp' };
+  const providers = [
+    vscode.languages.registerReferenceProvider(selector, { provideReferences: (d, p) => every(d.getText(d.getWordRangeAtPosition(p))) }),
+    vscode.languages.registerDefinitionProvider(selector, { provideDefinition: () => new vscode.Location(uri, range('total;')) }),
+    vscode.languages.registerCallHierarchyProvider(selector, {
+      prepareCallHierarchy: () => price,
+      provideCallHierarchyIncomingCalls: (i) => (i.name === 'Price' ? [new vscode.CallHierarchyIncomingCall(pay, [range('Price();', code.indexOf('Pay'))])] : []),
+      provideCallHierarchyOutgoingCalls: (i) => (i.name === 'Price' ? [new vscode.CallHierarchyOutgoingCall(add, [range('Add(1)')])] : []),
+    }),
+    vscode.languages.registerTypeHierarchyProvider(selector, {
+      prepareTypeHierarchy: () => cart,
+      provideTypeHierarchySupertypes: (t) => (t.name === 'Cart' ? [priced] : []),
+      provideTypeHierarchySubtypes: () => [],
+    }),
+    vscode.languages.registerDocumentSymbolProvider(selector, {
+      provideDocumentSymbols: () => {
+        const cls = new vscode.DocumentSymbol('Cart', '', vscode.SymbolKind.Class, new vscode.Range(2, 0, 6, 3), range('Cart :'));
+        const method = (name: string, line: number) => new vscode.DocumentSymbol(name, '', vscode.SymbolKind.Method, new vscode.Range(line, 0, line, 80), new vscode.Range(line, 4, line, 20));
+        cls.children = [new vscode.DocumentSymbol('total', 'decimal', vscode.SymbolKind.Field, new vscode.Range(3, 0, 3, 30), range('total;')), method('Price', 4), method('Add', 5)];
+        return [cls];
+      },
+    }),
+  ];
+  try {
+    const editor = await vscode.window.showTextDocument(document);
+    editor.selection = new vscode.Selection(at('total = 0'), at('total = 0'));
+    const usages = await vscode.commands.executeCommand<Report>('tsStructure.semanticUsages');
+    assert.ok(usages, 'C# usages report');
+    assert.equal(usages.kind, 'usages');
+    assert.deepEqual(usages.roots.map((r) => `${r.label} ${r.description?.split(' · ')[0]}`), ['Definitions 1', 'Writes 2', 'Reads 1']);
+    const writes = usages.roots[1].children![0].children!.map((r) => `${r.label} | ${r.description}`);
+    assert.deepEqual(writes, ['public decimal Price() { total = 0; Add(1); return total; } | Cart.Price · line 5 · at cursor', 'public void Add(decimal amount) { total += amount; } | Cart.Add · line 6']);
+
+    editor.selection = new vscode.Selection(at('Price() {'), at('Price() {'));
+    const calls = await vscode.commands.executeCommand<Report>('tsStructure.callGraph');
+    assert.equal(calls?.kind, 'callGraph');
+    assert.deepEqual(calls!.roots.map((r) => [r.label, r.children?.map((c) => c.label)]), [['Called by', ['Pay']], ['Calls', ['Add']]]);
+    assert.equal(calls!.title, 'Call graph of Price');
+
+    // The call graph opened as a chart, in front: back to the C# file.
+    const again = await vscode.window.showTextDocument(document);
+    again.selection = new vscode.Selection(at('Cart :'), at('Cart :'));
+    const family = await vscode.commands.executeCommand<Report>('tsStructure.typeHierarchy');
+    assert.equal(family?.kind, 'hierarchy');
+    assert.deepEqual(family!.roots.map((r) => r.label), ['class Cart', 'Supertypes', 'Subtypes and implementations', 'Members']);
+    assert.deepEqual(family!.roots[1].children!.map((c) => c.label), ['IPriced']);
+    assert.deepEqual(family!.roots[3].children!.map((c) => c.label), ['total', 'Price', 'Add']);
+    console.log('csharp ok');
+  } finally {
+    providers.forEach((p) => p.dispose());
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await vscode.workspace.fs.delete(uri);
+  }
 }
