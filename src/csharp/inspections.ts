@@ -1,5 +1,6 @@
 import type { Node as SyntaxNode, Tree } from 'web-tree-sitter';
 import type { Severity } from '../inspect/inspection';
+import { parseCSharp } from './parser';
 
 /**
  * Inspections for C#, from the bundled parser's syntax tree: slips the code itself shows, without types, so each one
@@ -92,4 +93,14 @@ export function inspectCSharp(tree: Tree): CSharpFinding[] {
     if (condition?.text.trim() === 'false') report('csharpConstantCondition', condition, 'while (false): the loop never runs.');
   }
   return findings.sort((a, b) => a.start - b.start);
+}
+
+/** The C# inspections of a file's text. */
+export async function inspectCSharpText(text: string): Promise<CSharpFinding[]> {
+  const tree = await parseCSharp(text);
+  try {
+    return inspectCSharp(tree);
+  } finally {
+    tree.delete();
+  }
 }

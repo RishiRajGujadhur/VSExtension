@@ -64,6 +64,14 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - **Find usages**, **Callers and calls** and **Family tree** use the C# language server, so install the **C# extension** (or C# Dev Kit) and let it load the solution first.
 - The other features are TypeScript and JavaScript only for now.
 
+## T-SQL
+
+- **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart stored procedures, functions, triggers and scripts: `IF`/`ELSE`, `WHILE` with `BREAK` and `CONTINUE`, `BEGIN TRY`/`BEGIN CATCH`, `RETURN`, `THROW` and `GOTO`, with every path and how `@variables` flow.
+- **Find usages** (`Alt+F7`) of a table, column, procedure or `@variable`, across the workspace's `.sql` files, as definitions, calls, writes and reads.
+- **Callers and calls** (`Ctrl+Alt+S Shift+C`): which procedures `EXEC` this one, and what it calls.
+- **Inspections** as you type: `UPDATE`/`DELETE` without `WHERE`, `= NULL`, `SELECT *`, `NOLOCK`, `@@IDENTITY`, `TOP` without `ORDER BY`, empty `CATCH` and more.
+- All from the code alone: no database connection and nothing else to install.
+
 ## Settings
 
 - Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.

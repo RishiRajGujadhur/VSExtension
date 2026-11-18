@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import { hashText, normalizePath } from '../analysis/paths';
 import { Report, ReportLocation, ReportNode, plural } from '../structure/report';
 import { CallDirection, callGraphControls } from '../navigate/callGraph';
-import { UsageKind, classifyCSharpUsage } from './usageKind';
+import { classifyCSharpUsage } from './usageKind';
+import { Usage, UsageKind, isTestPath, usageReport } from '../structure/usageReport';
 
 /**
  * C# through the language server the C# extension (or C# Dev Kit) runs: Find usages, Callers and calls and the family
@@ -22,7 +23,7 @@ export class NoLanguageServer extends Error {
   }
 }
 
-const isTestFile = (file: string) => /([\\/](tests?|specs?)[\\/])|(\.Tests?[\\/])|(Tests?\.cs$)/i.test(file);
+const isTestFile = isTestPath;
 
 /** Files read once per report: their text for code lines, hash for stale checks, and symbols for "in which method". */
 class Sources {
@@ -72,12 +73,6 @@ class Sources {
   }
 }
 
-const usageGroups: { kind: UsageKind; label: string; icon: string }[] = [
-  { kind: 'definition', label: 'Definitions', icon: 'symbol-class' },
-  { kind: 'call', label: 'Calls', icon: 'symbol-method' },
-  { kind: 'write', label: 'Writes', icon: 'edit' },
-  { kind: 'read', label: 'Reads', icon: 'eye' },
-];
 
 
 const asLocations = (found: (vscode.Location | vscode.LocationLink)[] | vscode.Location | undefined): vscode.Location[] =>
@@ -100,60 +95,25 @@ export async function csharpUsagesReport(document: vscode.TextDocument, position
   if (!all.length) throw new NoLanguageServer(`usages of ${name}`);
 
   const sources = new Sources();
-  const kinds = new Map<UsageKind, vscode.Location[]>();
+  const usages: Usage[] = [];
   for (const location of all) {
     const text = (await sources.document(location.uri)).lineAt(location.range.start.line).text;
     const kind: UsageKind = defs.some((d) => d.uri.toString() === location.uri.toString() && d.range.intersection(location.range))
       ? 'definition'
       : classifyCSharpUsage(text, location.range.start.character, location.range.end.character);
-    kinds.set(kind, [...(kinds.get(kind) ?? []), location]);
+    usages.push({
+      kind,
+      location: await sources.location(location.uri, location.range),
+      line: text.trim(),
+      where: await sources.enclosing(location.uri, location.range.start),
+      atCursor: location.uri.toString() === document.uri.toString() && location.range.contains(position),
+    });
   }
-
-  const roots: ReportNode[] = [];
-  let tests = 0;
-  const files = new Set<string>();
-  for (const group of usageGroups) {
-    const list = kinds.get(group.kind);
-    if (!list?.length) continue;
-    const byFile = new Map<string, vscode.Location[]>();
-    for (const l of list) byFile.set(l.uri.toString(), [...(byFile.get(l.uri.toString()) ?? []), l]);
-    const fileNodes: ReportNode[] = [];
-    for (const locations of byFile.values()) {
-      const uri = locations[0].uri;
-      files.add(uri.fsPath);
-      const test = isTestFile(uri.fsPath);
-      if (test) tests += locations.length;
-      const root = workspaceRoot(uri);
-      const folder = root ? path.relative(root, path.dirname(uri.fsPath)).replace(/\\/g, '/') || '.' : '';
-      locations.sort((a, b) => a.range.start.line - b.range.start.line);
-      const rows: ReportNode[] = [];
-      for (const l of locations) {
-        const where = await sources.enclosing(uri, l.range.start);
-        const atCursor = uri.toString() === document.uri.toString() && l.range.contains(position);
-        rows.push({
-          label: await sources.line(uri, l.range.start.line),
-          description: `${where ? `${where} · ` : ''}line ${l.range.start.line + 1}${atCursor ? ' · at cursor' : ''}`,
-          icon: group.icon,
-          location: await sources.location(uri, l.range),
-          role: group.kind === 'definition' ? 'definition' : group.kind === 'write' ? 'write' : 'read',
-          focus: atCursor || undefined,
-        });
-      }
-      fileNodes.push({ label: path.basename(uri.fsPath), description: `${folder}${test ? ' · test' : ''} · ${locations.length}`, icon: 'file-code', expanded: true, children: rows });
-    }
-    const count = list.length;
-    const inTests = list.filter((l) => isTestFile(l.uri.fsPath)).length;
-    roots.push({ label: group.label, description: `${count}${inTests ? ` (${inTests} in tests)` : ''}`, icon: group.icon, expanded: true, children: fileNodes });
-  }
-  const parts = usageGroups.filter((g) => kinds.get(g.kind)?.length).map((g) => `${kinds.get(g.kind)!.length} ${g.label.toLowerCase()}`);
-  return {
-    kind: 'usages',
-    title: `Usages of ${name}`,
-    description: `${plural(all.length, 'usage')} in ${plural(files.size, 'file')}: ${parts.join(', ')}${tests ? `; ${tests} in tests` : ''}`,
-    roots,
-    warnings: [],
-    fileHashes: sources.hashes,
+  const folderOf = (file: string) => {
+    const root = workspaceRoot(vscode.Uri.file(file));
+    return root ? path.relative(root, path.dirname(file)).split(path.sep).join('/') || '.' : '';
   };
+  return usageReport(name, usages, folderOf, sources.hashes);
 }
 
 const callKey = (item: vscode.CallHierarchyItem) => `${item.uri.toString()}#${item.selectionRange.start.line}:${item.selectionRange.start.character}`;

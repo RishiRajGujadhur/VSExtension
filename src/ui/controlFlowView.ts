@@ -6,6 +6,7 @@ import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
 import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset, nodeAtPosition } from '../inspect/controlFlowChart';
 import { csharpFlowChart } from '../csharp/flow';
+import { tsqlFlowChart } from '../tsql/flow';
 import { normalizePath } from '../analysis/paths';
 import { besideChartColumn, iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { sliceAt } from '../inspect/slice';
@@ -65,7 +66,7 @@ export class ControlFlowPanel {
       }),
       vscode.window.onDidChangeTextEditorSelection((e) => {
         if (!this.panel || !this.chart || !this.target || e.textEditor.document.uri.toString() !== this.target.uri.toString()) return;
-        if (!this.source && !isCSharpFile(this.target.uri)) return;
+        if (!this.source && !isOtherLanguage(this.target.uri)) return;
         // The box under the cursor, from the file the chart was drawn from: moving the cursor never rebuilds the
         // project, and holding an arrow key sends one update rather than one per line.
         clearTimeout(this.cursorTimer);
@@ -143,8 +144,8 @@ export class ControlFlowPanel {
         await openBeside(message.location);
       } else if (message.type === 'edits' && message.location) {
         const where = message.location;
-        // The quick edits come from TypeScript; C# boxes have none yet.
-        const edits = isCSharpFile(vscode.Uri.file(where.file)) ? [] : await vscode.workspace.openTextDocument(where.file).then((d) => editsFor(d, where.line, where.character), () => []);
+        // The quick edits come from TypeScript; C# and T-SQL boxes have none.
+        const edits = isOtherLanguage(vscode.Uri.file(where.file)) ? [] : await vscode.workspace.openTextDocument(where.file).then((d) => editsFor(d, where.line, where.character), () => []);
         void this.panel?.webview.postMessage({ type: 'edits', id: (message as { id?: unknown }).id, edits });
       } else if (message.type === 'edit' && message.location) {
         await runEdit(message.location.file, (message as { edit?: unknown }).edit);
@@ -215,14 +216,15 @@ export class ControlFlowPanel {
   }
 
   /** The chart for the target, sent to the page; false when there is no function there. */
-  /** C#: the chart from the bundled C# parser (syntax only: no calls to expand). */
-  private async buildCSharp(fromCommand?: vscode.TextEditor): Promise<void> {
+  /** C# (the bundled C# parser) and T-SQL (the T-SQL reader): syntax only, so no calls to expand. */
+  private async buildOther(fromCommand?: vscode.TextEditor): Promise<void> {
     const target = this.target;
     if (!target) return;
     try {
       const document = await vscode.workspace.openTextDocument(target.uri);
       const code = { unfolded: this.unfolded, showAll: graphOption<string>('controlFlow', 'code', 'fold') === 'all' };
-      const chart = await csharpFlowChart(document.getText(), normalizePath(target.uri.fsPath), target.anchor, code);
+      const file = normalizePath(target.uri.fsPath);
+      const chart = isTsqlFile(target.uri) ? tsqlFlowChart(document.getText(), file, target.anchor, code) : await csharpFlowChart(document.getText(), file, target.anchor, code);
       // Another chart was asked for meanwhile.
       if (this.target !== target) return;
       this.chart = chart;
@@ -240,8 +242,8 @@ export class ControlFlowPanel {
 
   private build(fromCommand?: vscode.TextEditor): boolean {
     if (!this.target) return false;
-    if (isCSharpFile(this.target.uri)) {
-      void this.buildCSharp(fromCommand);
+    if (isOtherLanguage(this.target.uri)) {
+      void this.buildOther(fromCommand);
       return true;
     }
     try {
@@ -414,5 +416,6 @@ function codeControl(): ReportControl {
   };
 }
 
-/** A C# file: charted by the bundled C# parser, not TypeScript. */
-const isCSharpFile = (uri: vscode.Uri): boolean => uri.fsPath.toLowerCase().endsWith('.cs');
+/** A file charted without TypeScript: C# by the bundled parser, T-SQL by the T-SQL reader. */
+const isTsqlFile = (uri: vscode.Uri): boolean => uri.fsPath.toLowerCase().endsWith('.sql');
+const isOtherLanguage = (uri: vscode.Uri): boolean => uri.fsPath.toLowerCase().endsWith('.cs') || isTsqlFile(uri);

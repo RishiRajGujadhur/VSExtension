@@ -31,7 +31,9 @@ import { registerLastSubjects } from './ui/lastSubjects';
 import { ValuePathView } from './ui/valuePathView';
 import { EarlyViews } from './ui/sidebarPages';
 import { SettingsPanel } from './ui/settingsPanel';
-import { CSharpDiagnostics } from './ui/csharpDiagnostics';
+import { SyntaxDiagnostics } from './ui/syntaxDiagnostics';
+import { inspectCSharpText } from './csharp/inspections';
+import { inspectTsql } from './tsql/inspections';
 import { registerGuide } from './ui/welcomeView';
 import { registerScope } from './ui/exclude';
 import { rememberScopesIn } from './ui/analysisScope';
@@ -119,8 +121,9 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   registerLastSubjects(context);
   actionsView.register(context, early);
   new SettingsPanel(context.extensionUri, context.extension.packageJSON, context.extension.id).register(context);
-  // C#: live syntax inspections from the bundled parser.
-  new CSharpDiagnostics().register(context);
+  // C# and T-SQL: live syntax inspections, from the bundled C# parser and the T-SQL reader.
+  new SyntaxDiagnostics(['csharp'], inspectCSharpText).register(context);
+  new SyntaxDiagnostics(['sql'], inspectTsql).register(context);
   // Every result shows as a card in the panel at the bottom, in the Results list's place.
   new ValuePathView(context.extensionUri, structureView, context.globalState).register(context, early);
   context.subscriptions.push(
@@ -138,13 +141,13 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
     // The chart on show, without drawing it again: for tests, and for a chart drawn in the background (C#).
     vscode.commands.registerCommand('tsStructure.controlFlow.current', () => ({ current: controlFlow.current })),
     registerCommand('tsStructure.controlFlow', () => {
-      const editor = csharpEditor() ?? sourceEditor();
+      const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.show(editor);
       return controlFlow.current;
     }),
     // The Program Dependence Graph: the control flow chart with its data and control dependences drawn on it.
     registerCommand('tsStructure.dependenceGraph', () => {
-      const editor = csharpEditor() ?? sourceEditor();
+      const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.showDependences(editor);
       return controlFlow.current;
     }),
@@ -468,8 +471,8 @@ async function toggleSetting(key: string, fallback: boolean, what: string): Prom
 
 export function deactivate(): void {}
 
-/** The C# file in front, if any: the flowchart charts it with the bundled C# parser. */
-function csharpEditor(): vscode.TextEditor | undefined {
+/** The C# or T-SQL file in front, if any: the flowchart charts it without TypeScript. */
+function otherLanguageEditor(): vscode.TextEditor | undefined {
   const editor = vscode.window.activeTextEditor;
-  return editor && editor.document.languageId === 'csharp' ? editor : undefined;
+  return editor && (editor.document.languageId === 'csharp' || editor.document.languageId === 'sql') ? editor : undefined;
 }

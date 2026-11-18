@@ -1,5 +1,6 @@
 import ts = require('typescript');
-import { csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport, isCSharp } from '../csharp/languageServer';
+import { csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
+import { tsqlCallGraphReport, tsqlUsagesReport } from '../tsql/workspace';
 import { bundleWeightReport } from '../navigate/bundleWeight';
 import { graphOption, setGraphOption } from '../structure/graphOptions';
 import { termFor } from '../structure/glossary';
@@ -47,6 +48,7 @@ import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
 import { reportCsv } from '../structure/markdown';
 import { AnalysisError } from '../analysis/types';
+import { showProblem } from './problems';
 import { analyzeSymbol, offerSymbols } from './analysisActions';
 import { explainValueReport } from '../inspect/paths';
 import { asyncTimelineReport, valueTimelineReport } from '../inspect/timelines';
@@ -298,14 +300,16 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
   let latestArgumentRun: { extra: number } | undefined;
   /**
    * A command that analyzes the symbol or selection in the active editor. Returns the report for tests and other
-   * extensions. With `csharp`, it also works in C# files, through the C# language server (src/csharp).
+   * extensions. `others` makes it work in other languages too, by VS Code language id: C# (src/csharp) and T-SQL
+   * (src/tsql).
    */
-  const editorCommand = (id: string, title: string, compute: Compute, csharp?: (document: vscode.TextDocument, position: vscode.Position) => Promise<Report>) =>
+  const editorCommand = (id: string, title: string, compute: Compute, others: OtherLanguages = {}) =>
     registerCommand(id, () => {
       const active = vscode.window.activeTextEditor;
-      if (csharp && active && isCSharp(active.document)) {
-        const word = active.document.getWordRangeAtPosition(active.selection.active);
-        return runAnalysis(view, `${title}${word ? ` of ${active.document.getText(word)}` : ''}`, () => csharp(active.document, active.selection.active));
+      const other = active && others[active.document.languageId];
+      if (active && other) {
+        const word = active.document.getWordRangeAtPosition(active.selection.active, /@?[\w#$]+/);
+        return runAnalysis(view, `${title}${word ? ` of ${active.document.getText(word)}` : ''}`, () => startingAtCursorIn(() => other(active.document, active.selection.active)));
       }
       const editor = sourceEditor();
       if (editor) {
@@ -683,7 +687,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         return report;
       });
     }),
-    editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder), csharpUsagesReport),
+    editorCommand('tsStructure.semanticUsages', 'Finding usages', (t) => semanticUsagesReport(t.project(), t.fileName, t.offset, t.folder), { csharp: csharpUsagesReport, sql: tsqlUsagesReport }),
     // The usages in the file at hand only: the whole project is still searched, then the report is limited.
     registerCommand('tsStructure.semanticUsagesInFile', async () => {
       const report = await vscode.commands.executeCommand<Report | undefined>('tsStructure.semanticUsages');
@@ -693,7 +697,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return report;
     }),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
-    editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder), csharpHierarchyReport),
+    editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder), { csharp: csharpHierarchyReport }),
     editorCommand('tsStructure.overrideImpact', 'Override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
     registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
       const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
@@ -799,7 +803,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       'tsStructure.callGraph',
       'Call graph',
       (t) => callGraphReport(t.project(), t.fileName, t.offset, callGraphOptions(vscode.Uri.file(t.fileName))),
-      (document, position) => csharpCallGraphReport(document, position, callGraphOptions(document.uri)),
+      {
+        csharp: (document, position) => csharpCallGraphReport(document, position, callGraphOptions(document.uri)),
+        sql: (document, position) => tsqlCallGraphReport(document, position, callGraphOptions(document.uri)),
+      },
     ),
     editorCommand('tsStructure.reactState', 'React state', (t) => reactStateReport(t.project(), t.fileName, t.offset, { levels: graphOption('reactState', 'levels', 1) })),
   );
@@ -852,4 +859,20 @@ function callGraphOptions(resource: vscode.Uri): { depth: number; direction: Cal
     depth: graphOption('callGraph', 'levels', vscode.workspace.getConfiguration('tsStructure', resource).get('callGraph.depth', 3)),
     direction: graphOption('callGraph', 'direction', 'both') as CallDirection,
   };
+}
+
+/** An analysis in a language read without TypeScript, by VS Code language id (csharp, sql). */
+type OtherLanguages = Partial<Record<string, (document: vscode.TextDocument, position: vscode.Position) => Report | Promise<Report>>>;
+
+/** Runs it; a cursor in the wrong place is said plainly rather than reported as a failure. */
+async function startingAtCursorIn(compute: () => Report | Promise<Report>): Promise<Report | undefined> {
+  try {
+    return await compute();
+  } catch (error) {
+    if (error instanceof AnalysisError) {
+      void showProblem(error.message, [], 'info');
+      return undefined;
+    }
+    throw error;
+  }
 }

@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.75.0",
+  "version": "0.76.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,8 @@
     "onLanguage:typescriptreact",
     "onLanguage:javascript",
     "onLanguage:javascriptreact",
-    "onLanguage:csharp"
+    "onLanguage:csharp",
+    "onLanguage:sql"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -1048,7 +1049,7 @@
       {
         "command": "tsStructure.semanticUsages",
         "key": "alt+f7",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "command": "tsStructure.actionsAtCursor",
@@ -1080,7 +1081,7 @@
       {
         "key": "shift+alt+f7",
         "command": "tsStructure.semanticUsagesInFile",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "key": "ctrl+alt+s d",
@@ -1158,7 +1159,7 @@
         "key": "ctrl+alt+s u",
         "mac": "cmd+ctrl+s u",
         "command": "tsStructure.semanticUsages",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "key": "ctrl+alt+s i",
@@ -1334,7 +1335,7 @@
         "key": "ctrl+alt+s 1",
         "mac": "cmd+ctrl+s 1",
         "command": "tsStructure.controlFlow",
-        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "key": "ctrl+alt+s 0",
@@ -1346,13 +1347,13 @@
         "key": "ctrl+alt+s shift+c",
         "mac": "cmd+ctrl+s shift+c",
         "command": "tsStructure.callGraph",
-        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.usages && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "key": "ctrl+alt+s shift+d",
         "mac": "cmd+ctrl+s shift+d",
         "command": "tsStructure.dependenceGraph",
-        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
       },
       {
         "key": "ctrl+alt+s shift+r",
@@ -1375,12 +1376,12 @@
         },
         {
           "command": "tsStructure.semanticUsagesInFile",
-          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/",
           "group": "navigation@90"
         },
         {
           "command": "tsStructure.semanticUsages",
-          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/",
+          "when": "config.tsStructure.features.usages && config.tsStructure.contextMenu.topLevel && resourceScheme == file && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/",
           "group": "navigation@91"
         },
         {
@@ -2254,7 +2255,7 @@
         },
         {
           "command": "tsStructure.controlFlow",
-          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
         },
         {
           "command": "tsStructure.explainValue",
@@ -2274,11 +2275,11 @@
         },
         {
           "command": "tsStructure.callGraph",
-          "when": "config.tsStructure.features.usages && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+          "when": "config.tsStructure.features.usages && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
         },
         {
           "command": "tsStructure.dependenceGraph",
-          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp|sql)$/"
         },
         {
           "command": "tsStructure.reactState",

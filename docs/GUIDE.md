@@ -361,6 +361,15 @@ Two more work with nothing else installed, from a C# parser (tree-sitter's C# gr
 
 The rest of Code X-Ray is TypeScript and JavaScript only for now.
 
+## T-SQL
+
+Code X-Ray reads T-SQL itself (its own tokenizer and statement reader, no database connection), in files VS Code opens as SQL:
+
+- **Flowchart** and **What depends on what**: a `CREATE`/`ALTER` `PROCEDURE`, `FUNCTION` or `TRIGGER`, or the statements of a script batch (batches split at `GO`). `IF … ELSE`, `WHILE` (with `BREAK` and `CONTINUE`), `BEGIN … END`, `BEGIN TRY … END TRY BEGIN CATCH … END CATCH`, `RETURN`, `THROW`, labels and `GOTO` become boxes and edges; every path is listed, impossible ones flagged, and dependences follow the `@variables` (set by `SET`, `SELECT @x =`, `DECLARE … =`, `FETCH … INTO` and `EXEC … OUTPUT`) from the parameters on. Statements need no semicolons: one ends where the next statement keyword starts, so `INSERT … SELECT`, `… UNION SELECT`, `UPDATE … SET`, a CTE's `WITH … SELECT` and `CASE … END` stay whole. `RAISERROR` is a plain step (it only stops the batch inside `TRY` at severity 11 or more).
+- **Find usages**: a table, view, column, procedure or function by name across the workspace's `.sql` files (case-insensitive, with or without `[brackets]` and schema), filed as definitions (`CREATE`, `DECLARE`), calls (`EXEC`, `schema.fn(…)`), writes (`INSERT INTO`, `UPDATE`, `DELETE FROM`, `MERGE INTO`, `TRUNCATE TABLE`, `UPDATE … SET column =`) and reads. A `@variable` is found within its routine. Names are matched by text, so two tables of the same name in different schemas are only told apart where the code writes the schema.
+- **Callers and calls**: the procedures that `EXEC` this one (or call this function), and what it calls, a few levels each way; procedures not in the workspace (`sp_who`) are listed as such.
+- **Inspections** as you type: `UPDATE` or `DELETE` without `WHERE` (table variables and temp tables excepted), `= NULL` or `<> NULL` in a condition, empty `CATCH`, `NOLOCK` and `READ UNCOMMITTED`, `@@IDENTITY`, `SELECT *` (not inside `EXISTS`), `TOP` without `ORDER BY`, the deprecated `ntext` and `image` types, and, as a hint, a procedure without `SET NOCOUNT ON`. Ids such as `tsqlSelectStar` set their severity in Inspections: Severity.
+
 ## Settings
 
 **Code X-Ray: Settings** (the gear in the Actions view's title bar, or **Settings** at the bottom of the view) opens one page with every setting:

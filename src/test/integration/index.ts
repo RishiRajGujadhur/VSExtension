@@ -544,6 +544,7 @@ async function analysisCommandsFlow(): Promise<void> {
   console.log('settings ok');
 
   await csharpThroughLanguageServer();
+  await tsql();
   console.log('analysis commands ok');
 }
 
@@ -674,5 +675,57 @@ async function csharpThroughLanguageServer(): Promise<void> {
     providers.forEach((p) => p.dispose());
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await vscode.workspace.fs.delete(uri);
+  }
+}
+
+/** T-SQL: Find usages and Callers and calls across .sql files, the flowchart and live inspections, all from the T-SQL reader. */
+async function tsql(): Promise<void> {
+  const root = vscode.workspace.workspaceFolders![0].uri;
+  const save = vscode.Uri.joinPath(root, 'db', 'SaveOrder.sql');
+  const nightly = vscode.Uri.joinPath(root, 'db', 'Nightly.sql');
+  const code = [
+    'CREATE PROCEDURE dbo.SaveOrder @OrderId INT AS',
+    'BEGIN',
+    '  SET NOCOUNT ON',
+    '  IF @OrderId IS NULL RETURN -1',
+    '  UPDATE dbo.Orders SET Total = 0 WHERE Id = @OrderId',
+    '  SELECT * FROM dbo.Orders',
+    'END',
+  ].join('\n');
+  await vscode.workspace.fs.writeFile(save, Buffer.from(code));
+  await vscode.workspace.fs.writeFile(nightly, Buffer.from('CREATE PROC dbo.Nightly AS EXEC dbo.SaveOrder 1'));
+  try {
+    let document = await vscode.workspace.openTextDocument(save);
+    if (document.languageId !== 'sql') document = await vscode.languages.setTextDocumentLanguage(document, 'sql');
+    const editor = await vscode.window.showTextDocument(document);
+    const at = (text: string) => document.positionAt(code.indexOf(text) + 1);
+    editor.selection = new vscode.Selection(at('Orders SET'), at('Orders SET'));
+    const usages = await vscode.commands.executeCommand<Report>('tsStructure.semanticUsages');
+    assert.equal(usages?.title, 'Usages of Orders');
+    assert.deepEqual(usages!.roots.map((r) => r.label), ['Writes', 'Reads']);
+
+    const again = await vscode.window.showTextDocument(document);
+    again.selection = new vscode.Selection(at('SET NOCOUNT'), at('SET NOCOUNT'));
+    const calls = await vscode.commands.executeCommand<Report>('tsStructure.callGraph');
+    assert.deepEqual(calls?.roots.map((r) => [r.label, r.children?.map((c) => c.label)]), [['Called by', ['dbo.Nightly']], ['Calls', []]]);
+
+    const flowEditor = await vscode.window.showTextDocument(document);
+    flowEditor.selection = new vscode.Selection(at('SET NOCOUNT'), at('SET NOCOUNT'));
+    await vscode.commands.executeCommand('tsStructure.controlFlow');
+    let chart: { name: string; nodes: { kind: string }[] } | undefined;
+    for (let i = 0; i < 40 && chart?.name !== 'dbo.SaveOrder'; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      chart = (await vscode.commands.executeCommand<{ current?: typeof chart }>('tsStructure.controlFlow.current'))?.current;
+    }
+    assert.equal(chart?.name, 'dbo.SaveOrder', 'T-SQL flowchart');
+    assert.deepEqual(chart!.nodes.map((n) => n.kind), ['start', 'end', 'statement', 'decision', 'return', 'statement']);
+
+    await vscode.window.showTextDocument(document);
+    const found = await waitForDiagnostics(save, (d) => d.source === 'X-Ray' && d.code === 'tsqlSelectStar');
+    assert.equal(found.length, 1, 'SELECT * is reported live');
+    console.log('tsql ok');
+  } finally {
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await vscode.workspace.fs.delete(vscode.Uri.joinPath(root, 'db'), { recursive: true });
   }
 }

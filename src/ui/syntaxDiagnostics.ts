@@ -1,15 +1,22 @@
 import * as vscode from 'vscode';
-import { inspectCSharp } from '../csharp/inspections';
-import { parseCSharp } from '../csharp/parser';
 import type { Severity } from '../inspect/inspection';
 import { isFeatureEnabled } from './features';
 import { isExcluded } from './exclude';
 
 /**
- * Live C# inspections: the bundled parser's syntax checks (src/csharp/inspections.ts) on open C# files, in the
- * Problems panel with the TypeScript ones. They follow the same switches: the Inspections feature, Inspections:
+ * Live inspections for a language Code X-Ray reads without TypeScript (C#, T-SQL): its syntax checks on open files,
+ * in the Problems panel with the TypeScript ones. They follow the same switches: the Inspections feature, Inspections:
  * Enabled, the delay after typing, and each inspection's severity (or off) in Inspections: Severity.
  */
+
+/** What a language's checks report: an inspection id, a message, a severity and a character range. */
+export interface SyntaxFinding {
+  inspection: string;
+  message: string;
+  severity: Severity;
+  start: number;
+  end: number;
+}
 const severities: Record<Severity, vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
   warning: vscode.DiagnosticSeverity.Warning,
@@ -17,9 +24,17 @@ const severities: Record<Severity, vscode.DiagnosticSeverity> = {
   hint: vscode.DiagnosticSeverity.Hint,
 };
 
-export class CSharpDiagnostics {
-  private readonly collection = vscode.languages.createDiagnosticCollection('tsStructure.csharp');
+export class SyntaxDiagnostics {
+  private readonly collection: vscode.DiagnosticCollection;
   private readonly timers = new Map<string, NodeJS.Timeout>();
+
+  /** `languages` are VS Code language ids, such as csharp or sql; `inspect` runs the checks on a file's text. */
+  constructor(
+    private readonly languages: readonly string[],
+    private readonly inspect: (text: string) => SyntaxFinding[] | Promise<SyntaxFinding[]>,
+  ) {
+    this.collection = vscode.languages.createDiagnosticCollection(`tsStructure.${languages[0]}`);
+  }
 
   register(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -38,39 +53,35 @@ export class CSharpDiagnostics {
   }
 
   private schedule(document: vscode.TextDocument, delay?: number): void {
-    if (document.languageId !== 'csharp' || document.uri.scheme !== 'file') return;
+    if (!this.languages.includes(document.languageId) || document.uri.scheme !== 'file') return;
     const key = document.uri.toString();
     clearTimeout(this.timers.get(key));
     const wait = delay ?? vscode.workspace.getConfiguration('tsStructure', document.uri).get('inspections.delay', 500);
-    this.timers.set(key, setTimeout(() => void this.inspect(document), wait));
+    this.timers.set(key, setTimeout(() => void this.run(document), wait));
   }
 
   /** Inspects the file now; returns the diagnostics, for tests. */
-  async inspect(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
+  async run(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
     const config = vscode.workspace.getConfiguration('tsStructure', document.uri);
     if (document.isClosed || !config.get('inspections.enabled', true) || !isFeatureEnabled('inspections') || isExcluded(document.uri.fsPath)) {
       this.collection.delete(document.uri);
       return [];
     }
     const version = document.version;
-    const tree = await parseCSharp(document.getText());
-    try {
-      if (document.isClosed || document.version !== version) return [];
-      const overrides = config.get<Record<string, Severity | 'off' | 'default'>>('inspections.severity', {});
-      const diagnostics = inspectCSharp(tree)
-        .filter((f) => overrides[f.inspection] !== 'off')
-        .map((f) => {
-          const chosen = overrides[f.inspection];
-          const severity: Severity = chosen && chosen !== 'default' && chosen !== 'off' ? chosen : f.severity;
-          const diagnostic = new vscode.Diagnostic(new vscode.Range(document.positionAt(f.start), document.positionAt(f.end)), f.message, severities[severity]);
-          diagnostic.source = 'X-Ray';
-          diagnostic.code = f.inspection;
-          return diagnostic;
-        });
-      this.collection.set(document.uri, diagnostics);
-      return diagnostics;
-    } finally {
-      tree.delete();
-    }
+    const findings = await this.inspect(document.getText());
+    if (document.isClosed || document.version !== version) return [];
+    const overrides = config.get<Record<string, Severity | 'off' | 'default'>>('inspections.severity', {});
+    const diagnostics = findings
+      .filter((f) => overrides[f.inspection] !== 'off')
+      .map((f) => {
+        const chosen = overrides[f.inspection];
+        const severity: Severity = chosen && chosen !== 'default' && chosen !== 'off' ? chosen : f.severity;
+        const diagnostic = new vscode.Diagnostic(new vscode.Range(document.positionAt(f.start), document.positionAt(f.end)), f.message, severities[severity]);
+        diagnostic.source = 'X-Ray';
+        diagnostic.code = f.inspection;
+        return diagnostic;
+      });
+    this.collection.set(document.uri, diagnostics);
+    return diagnostics;
   }
 }
