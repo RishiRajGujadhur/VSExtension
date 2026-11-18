@@ -642,6 +642,34 @@ async function csharpThroughLanguageServer(): Promise<void> {
     assert.deepEqual(family!.roots[1].children!.map((c) => c.label), ['IPriced']);
     assert.deepEqual(family!.roots[3].children!.map((c) => c.label), ['total', 'Price', 'Add']);
     console.log('csharp ok');
+
+    // The flowchart comes from the bundled C# parser, which needs no language server.
+    providers.forEach((p) => p.dispose());
+    const flowEditor = await vscode.window.showTextDocument(document);
+    flowEditor.selection = new vscode.Selection(at('total = 0'), at('total = 0'));
+    let chart: { name: string; nodes: { kind: string; lines: string[] }[]; paths: unknown[] } | undefined;
+    // The chart is drawn in the background (the parser loads on first use): ask once, then read it once it is there.
+    await vscode.commands.executeCommand('tsStructure.controlFlow');
+    for (let i = 0; i < 40 && chart?.name !== 'Cart.Price'; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      chart = (await vscode.commands.executeCommand<{ current?: typeof chart }>('tsStructure.controlFlow.current'))?.current;
+    }
+    assert.equal(chart?.name, 'Cart.Price', 'C# flowchart from the bundled parser');
+    assert.deepEqual(chart!.nodes.map((n) => `${n.kind}: ${n.lines.join(' | ')}`), ['start: Cart.Price', 'end: end', 'statement: total = 0 | Add(1)', 'return: return total']);
+    console.log('csharp flowchart ok');
+
+    // Live C# inspections, from the same parser.
+    const bad = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'src', 'Bad.cs');
+    await vscode.workspace.fs.writeFile(bad, Buffer.from('class Bad { void Run() { try { Go(); } catch { } } }'));
+    try {
+      await vscode.window.showTextDocument(bad);
+      const found = await waitForDiagnostics(bad, (d) => d.source === 'X-Ray' && d.code === 'csharpEmptyCatch');
+      assert.equal(found.length, 1, 'empty catch in C# is reported');
+    } finally {
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscode.workspace.fs.delete(bad);
+    }
+    console.log('csharp inspections ok');
   } finally {
     providers.forEach((p) => p.dispose());
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

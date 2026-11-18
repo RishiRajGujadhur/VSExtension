@@ -4,7 +4,9 @@ import { showProblem, unexpectedRemedies } from './problems';
 import { offerSymbols } from './analysisActions';
 import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
-import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset } from '../inspect/controlFlowChart';
+import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset, nodeAtPosition } from '../inspect/controlFlowChart';
+import { csharpFlowChart } from '../csharp/flow';
+import { normalizePath } from '../analysis/paths';
 import { besideChartColumn, iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
 import { sliceAt } from '../inspect/slice';
 import { boxAnalyses, menuAnalyses } from './diagramView';
@@ -62,14 +64,16 @@ export class ControlFlowPanel {
         this.refresh = setTimeout(() => this.build(), 400);
       }),
       vscode.window.onDidChangeTextEditorSelection((e) => {
-        if (!this.panel || !this.chart || !this.source || !this.target || e.textEditor.document.uri.toString() !== this.target.uri.toString()) return;
+        if (!this.panel || !this.chart || !this.target || e.textEditor.document.uri.toString() !== this.target.uri.toString()) return;
+        if (!this.source && !isCSharpFile(this.target.uri)) return;
         // The box under the cursor, from the file the chart was drawn from: moving the cursor never rebuilds the
         // project, and holding an arrow key sends one update rather than one per line.
         clearTimeout(this.cursorTimer);
-        const offset = e.textEditor.document.offsetAt(e.selections[0].active);
+        const active = e.selections[0].active;
+        const offset = e.textEditor.document.offsetAt(active);
         this.cursorTimer = setTimeout(() => {
-          if (!this.panel || !this.chart || !this.source) return;
-          const id = nodeAtOffset(this.chart, this.source, offset);
+          if (!this.panel || !this.chart || !this.target) return;
+          const id = this.source ? nodeAtOffset(this.chart, this.source, offset) : nodeAtPosition(this.chart, normalizePath(this.target.uri.fsPath), active.line, active.character);
           if (id === this.cursorId) return;
           this.cursorId = id;
           void this.panel.webview.postMessage({ type: 'cursor', id });
@@ -139,7 +143,8 @@ export class ControlFlowPanel {
         await openBeside(message.location);
       } else if (message.type === 'edits' && message.location) {
         const where = message.location;
-        const edits = await vscode.workspace.openTextDocument(where.file).then((d) => editsFor(d, where.line, where.character), () => []);
+        // The quick edits come from TypeScript; C# boxes have none yet.
+        const edits = isCSharpFile(vscode.Uri.file(where.file)) ? [] : await vscode.workspace.openTextDocument(where.file).then((d) => editsFor(d, where.line, where.character), () => []);
         void this.panel?.webview.postMessage({ type: 'edits', id: (message as { id?: unknown }).id, edits });
       } else if (message.type === 'edit' && message.location) {
         await runEdit(message.location.file, (message as { edit?: unknown }).edit);
@@ -210,8 +215,35 @@ export class ControlFlowPanel {
   }
 
   /** The chart for the target, sent to the page; false when there is no function there. */
+  /** C#: the chart from the bundled C# parser (syntax only: no calls to expand). */
+  private async buildCSharp(fromCommand?: vscode.TextEditor): Promise<void> {
+    const target = this.target;
+    if (!target) return;
+    try {
+      const document = await vscode.workspace.openTextDocument(target.uri);
+      const code = { unfolded: this.unfolded, showAll: graphOption<string>('controlFlow', 'code', 'fold') === 'all' };
+      const chart = await csharpFlowChart(document.getText(), normalizePath(target.uri.fsPath), target.anchor, code);
+      // Another chart was asked for meanwhile.
+      if (this.target !== target) return;
+      this.chart = chart;
+      this.source = undefined;
+      this.cursorId = undefined;
+      target.anchor = chart.anchor;
+      this.post();
+    } catch (error) {
+      if (fromCommand) {
+        const message = error instanceof AnalysisError ? error.message : `Control Flow failed: ${String(error)}`;
+        void showProblem(message, error instanceof AnalysisError ? [] : unexpectedRemedies('Control Flow', error));
+      }
+    }
+  }
+
   private build(fromCommand?: vscode.TextEditor): boolean {
     if (!this.target) return false;
+    if (isCSharpFile(this.target.uri)) {
+      void this.buildCSharp(fromCommand);
+      return true;
+    }
     try {
       const project = this.projects.analysisProject(this.target.uri.fsPath, this.target.folder);
       // Calls expanded in place: those picked with ƒ+, and every call down to the chosen number of levels.
@@ -381,3 +413,6 @@ function codeControl(): ReportControl {
     ],
   };
 }
+
+/** A C# file: charted by the bundled C# parser, not TypeScript. */
+const isCSharpFile = (uri: vscode.Uri): boolean => uri.fsPath.toLowerCase().endsWith('.cs');

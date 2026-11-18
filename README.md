@@ -58,9 +58,11 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 ## C#
 
-- **Find usages**, **Callers and calls** and **Family tree** also work in C# files, with the same shortcuts (`Alt+F7`, `Ctrl+Alt+S Shift+C`, `Ctrl+Alt+S H`).
-- They use the C# language server, so install the **C# extension** (or C# Dev Kit) and let it load the solution first.
-- The other features are TypeScript and JavaScript only for now; more C# support is on the way.
+- **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart any C# method, constructor, property accessor or lambda, with every path listed and impossible ones flagged.
+- **Inspections** underline C# slips as you type: empty `catch`, `throw ex`, `async void`, assigning or comparing a value with itself, identical `if`/`else` branches and more.
+- These two need nothing else installed: a C# parser ships with Code X-Ray.
+- **Find usages**, **Callers and calls** and **Family tree** use the C# language server, so install the **C# extension** (or C# Dev Kit) and let it load the solution first.
+- The other features are TypeScript and JavaScript only for now.
 
 ## Settings
 

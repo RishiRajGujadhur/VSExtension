@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { Cfg, CfgNode, buildCfg, callTargets, expandCalls } from './controlFlow';
+import { Cfg, CfgNode, FlowGraph, buildCfg, callTargets, expandCalls } from './controlFlow';
 import { cfgPaths, describeChoice } from './paths';
 import { Dependences, dependencesOf } from './dependences';
 import { layoutFlow } from '../structure/flowLayout';
@@ -113,8 +113,7 @@ function sourceLines(node: CfgNode): string[] | undefined {
 }
 
 /** A box's code in full (within limits), for the info bar. */
-function fullText(node: CfgNode): string {
-  const source = sourceLines(node);
+function fullText(node: CfgNode, source: string[] | undefined): string {
   if (source) return (source.length > MAX_TEXT ? [...source.slice(0, MAX_TEXT), `… ${source.length - MAX_TEXT} more lines`] : source).join('\n');
   const lines = node.lines.length > MAX_TEXT ? [...node.lines.slice(0, MAX_TEXT), `… ${node.lines.length - MAX_TEXT} more lines`] : node.lines;
   return lines.join('\n');
@@ -137,12 +136,59 @@ export function controlFlowChart(project: VirtualProject, fileName: string, offs
   return chartOf(cfg, fn.getSourceFile(), (node) => callTargets(node, checker).map((c) => ({ key: c.key, name: c.name, expanded: expanded.has(c.key) })), code);
 }
 
-export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => [], code: CodeOptions = {}): ControlFlowChart {
-  const foldKey = (node: CfgNode) => {
-    if (!node.nodes.length) return `#${node.id}`;
-    const file = node.nodes[0].getSourceFile();
-    return `${normalizePath(file.fileName)}:${node.nodes[0].getStart(file)}`;
+/** Where a chart's boxes are in the code, and their code as written: TypeScript nodes, or a parser's facts (C#). */
+export interface ChartSource {
+  file: string;
+  /** Offset of the function in its file, to find it again after edits. */
+  anchor: number;
+  /** Where the box's code is, for opening it and following the cursor. */
+  locate(node: CfgNode): ReportLocation | undefined;
+  /** What the page sends to unfold or fold the box. */
+  foldKey(node: CfgNode): string;
+  /** The code of a box of plain statements as written, without its indentation. */
+  sourceLines(node: CfgNode): string[] | undefined;
+}
+
+/** The chart source for a TypeScript function. */
+function typeScriptSource(cfg: Cfg, sourceFile: ts.SourceFile): ChartSource {
+  return {
+    file: normalizePath(sourceFile.fileName),
+    anchor: cfg.fn.getStart(sourceFile),
+    locate(node) {
+      if (!node.nodes.length || node.kind === 'start' || node.kind === 'end') {
+        return node.kind === 'start' ? place(sourceFile, cfg.fn.getStart(sourceFile), cfg.fn.getStart(sourceFile)) : undefined;
+      }
+      // A spliced-in node points into the file of its own function.
+      const file = node.nodes[0].getSourceFile();
+      return place(file, node.nodes[0].getStart(file), node.nodes[node.nodes.length - 1].end);
+    },
+    foldKey(node) {
+      if (!node.nodes.length) return `#${node.id}`;
+      const file = node.nodes[0].getSourceFile();
+      return `${normalizePath(file.fileName)}:${node.nodes[0].getStart(file)}`;
+    },
+    sourceLines,
   };
+}
+
+/** The chart source for boxes that carry their own facts (C#). */
+export function factSource(file: string, anchor: number, start: ReportLocation): ChartSource {
+  return {
+    file,
+    anchor,
+    locate: (node) => (node.kind === 'start' ? start : node.facts?.location),
+    foldKey: (node) => (node.facts ? `${file}:${node.facts.location.line}:${node.facts.location.character}` : `#${node.id}`),
+    sourceLines: (node) => (node.facts && ['statement', 'return', 'throw'].includes(node.kind) ? node.facts.source : undefined),
+  };
+}
+
+export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => [], code: CodeOptions = {}): ControlFlowChart {
+  return chartFrom(cfg, typeScriptSource(cfg, sourceFile), callsOf, code);
+}
+
+/** A flowchart of any function's control flow: boxes sized and laid out, every path, and the dependences. */
+export function chartFrom(cfg: FlowGraph, source: ChartSource, callsOf: (node: CfgNode) => ControlFlowChart['nodes'][number]['calls'] = () => [], code: CodeOptions = {}): ControlFlowChart {
+  const foldKey = (node: CfgNode) => source.foldKey(node);
   const shown = cfg.nodes.map((n) => shownLines(n, !!code.showAll || !!code.unfolded?.has(foldKey(n))));
   const lines = shown.map((s) => s.lines);
   // A chip under the code: "N more lines" on a folded box, "Fold" on an unfolded one (not when all code is shown).
@@ -153,23 +199,15 @@ export function chartOf(cfg: Cfg, sourceFile: ts.SourceFile, callsOf: (node: Cfg
     cfg.start,
     cfg.end,
   );
-  const locate = (node: CfgNode): ReportLocation | undefined => {
-    if (!node.nodes.length || node.kind === 'start' || node.kind === 'end') {
-      return node.kind === 'start' ? place(sourceFile, cfg.fn.getStart(sourceFile), cfg.fn.getStart(sourceFile)) : undefined;
-    }
-    // A spliced-in node points into the file of its own function.
-    const file = node.nodes[0].getSourceFile();
-    return place(file, node.nodes[0].getStart(file), node.nodes[node.nodes.length - 1].end);
-  };
   const { paths, truncated } = cfgPaths(cfg);
   const describeEnding = (p: (typeof paths)[number]) => (p.ending.kind === 'return' ? (p.ending.text ? `returns ${p.ending.text}` : 'returns') : p.ending.kind === 'throw' ? `throws ${p.ending.text}` : 'reaches the end');
   return {
     name: cfg.name,
-    file: normalizePath(sourceFile.fileName),
-    anchor: cfg.fn.getStart(sourceFile),
+    file: source.file,
+    anchor: source.anchor,
     nodes: cfg.nodes.map((n, i) => {
       const p = layout.nodes.get(n.id)!;
-      return { id: n.id, kind: n.kind, lines: lines[i], hiddenLines: shown[i].hidden, unfolded: shown[i].foldable && shown[i].hidden === 0 && !code.showAll, foldKey: foldKey(n), text: fullText(n), unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
+      return { id: n.id, kind: n.kind, lines: lines[i], hiddenLines: shown[i].hidden, unfolded: shown[i].foldable && shown[i].hidden === 0 && !code.showAll, foldKey: foldKey(n), text: fullText(n, source.sourceLines(n)), unreachable: !!n.unreachable, owner: n.owner, calls: callsOf(n), location: source.locate(n), x: p.x, y: p.y, width: p.width, height: p.height };
     }),
     edges: cfg.edges.map((e, i) => ({
       from: e.from,
@@ -205,7 +243,11 @@ function place(sourceFile: ts.SourceFile, start: number, end: number): ReportLoc
 /** The node whose code holds the offset, innermost first, for following the editor's cursor. */
 export function nodeAtOffset(chart: ControlFlowChart, sourceFile: ts.SourceFile, offset: number): number | undefined {
   const { line, character } = sourceFile.getLineAndCharacterOfPosition(offset);
-  const file = normalizePath(sourceFile.fileName);
+  return nodeAtPosition(chart, normalizePath(sourceFile.fileName), line, character);
+}
+
+/** The node whose code holds the line and character, innermost first. */
+export function nodeAtPosition(chart: ControlFlowChart, file: string, line: number, character: number): number | undefined {
   const inside = chart.nodes.filter((n) => n.location && n.location.file === file && n.kind !== 'start' && (line > n.location.line || (line === n.location.line && character >= n.location.character)) && (line < n.location.endLine || (line === n.location.endLine && character <= n.location.endCharacter)));
   const sizeOf = (n: (typeof inside)[number]) => (n.location!.endLine - n.location!.line) * 1000 + (n.location!.endCharacter - n.location!.character);
   return inside.sort((a, b) => sizeOf(a) - sizeOf(b))[0]?.id;

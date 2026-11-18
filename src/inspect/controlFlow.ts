@@ -1,4 +1,5 @@
 import ts = require('typescript');
+import type { ReportLocation } from '../structure/report';
 import { FunctionWithBody, calledFunction, functionLabel, functionOfDeclaration, isFunctionWithBody } from '../structure/util';
 import { own } from './defUse';
 
@@ -22,6 +23,21 @@ export interface CfgNode {
   unreachable?: boolean;
   /** For a node spliced in by expanding a call: the function it belongs to. */
   owner?: string;
+  /**
+   * For code not parsed by TypeScript (C#): where the box's code is, its lines as written, and the names it sets,
+   * replaces and reads, worked out by the parser that built the box. TypeScript boxes work these out from `nodes`.
+   */
+  facts?: CodeFacts;
+}
+
+export interface CodeFacts {
+  location: ReportLocation;
+  source: string[];
+  /** Names given a value here, also by changing them (`x.a = 1`, `list.Add(x)`). */
+  defines: Set<string>;
+  /** Names given a whole new value: declarations, `x = …`, `x += …`, `x++`. */
+  replaces: Set<string>;
+  reads: Set<string>;
 }
 
 export type CfgEdgeKind = 'next' | 'true' | 'false' | 'case' | 'default' | 'back' | 'break' | 'continue' | 'return' | 'throw' | 'exit' | 'call';
@@ -47,13 +63,20 @@ export interface Choice {
   excludes?: string[];
 }
 
-export interface Cfg {
+/** A function's control flow, in any language: what paths, dependences and the flowchart work on. */
+export interface FlowGraph {
   name: string;
-  fn: FunctionWithBody;
   nodes: CfgNode[];
   edges: CfgEdge[];
   start: number;
   end: number;
+  /** The parameters, which the start of the function sets; read from `fn` for TypeScript. */
+  parameters?: string[];
+}
+
+/** A TypeScript function's control flow. */
+export interface Cfg extends FlowGraph {
+  fn: FunctionWithBody;
 }
 
 /** A dangling edge waiting for the next node. */

@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { Cfg, CfgNode } from './controlFlow';
+import { Cfg, CfgNode, FlowGraph } from './controlFlow';
 import { definitions, own, uses, writtenExpression } from './defUse';
 import { controlDependents } from './slice';
 import { isFunctionWithBody } from '../structure/util';
@@ -31,6 +31,7 @@ const rootName = (e: ts.Node): string | undefined => {
  * method such as `push` changes the value but doesn't replace it, so assignments before it still reach later reads.
  */
 function replaced(node: CfgNode): Set<string> {
+  if (node.facts) return node.facts.replaces;
   const names = new Set<string>();
   const visit = (n: ts.Node): void => {
     if (ts.isVariableDeclaration(n)) bindingNames(n.name).forEach((name) => names.add(name));
@@ -48,13 +49,13 @@ function bindingNames(name: ts.BindingName): string[] {
   return name.elements.flatMap((e) => (ts.isOmittedExpression(e) ? [] : bindingNames(e.name)));
 }
 
-export function dependencesOf(cfg: Cfg): Dependences {
+export function dependencesOf(cfg: FlowGraph): Dependences {
   const ids = cfg.nodes.map((n) => n.id);
   const preds = new Map<number, number[]>(ids.map((id) => [id, []]));
   for (const e of cfg.edges) preds.get(e.to)?.push(e.from);
   const terminal = (n: CfgNode) => n.kind === 'start' || n.kind === 'end';
   // The start of the function sets its parameters.
-  const parameters = new Set(cfg.fn.parameters.flatMap((p) => bindingNames(p.name)));
+  const parameters = new Set('fn' in cfg ? (cfg as Cfg).fn.parameters.flatMap((p) => bindingNames(p.name)) : (cfg.parameters ?? []));
   const defined = new Map(cfg.nodes.map((n) => [n.id, n.kind === 'start' ? new Set(parameters) : terminal(n) ? new Set<string>() : definitions(n)]));
   const kills = new Map(cfg.nodes.map((n) => [n.id, n.kind === 'start' ? new Set(parameters) : terminal(n) ? new Set<string>() : replaced(n)]));
   const used = new Map(cfg.nodes.map((n) => [n.id, terminal(n) ? new Set<string>() : uses(n)]));

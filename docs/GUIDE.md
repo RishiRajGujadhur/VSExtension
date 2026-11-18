@@ -352,7 +352,14 @@ Find usages, Callers and calls and Family tree work in C# files too. They ask th
 - **Callers and calls**: the call hierarchy a few levels each way, as a chart, with the same Levels and Show controls.
 - **Family tree**: supertypes and interfaces, subtypes and implementations, and the type's members.
 
-With no C# extension, or before it has loaded the solution, these say so instead of showing an empty report. The rest of Code X-Ray is TypeScript and JavaScript only for now.
+With no C# extension, or before it has loaded the solution, these say so instead of showing an empty report.
+
+Two more work with nothing else installed, from a C# parser (tree-sitter's C# grammar, as WebAssembly) that ships with Code X-Ray:
+
+- **Flowchart** and **What depends on what**: any method, constructor, property accessor (an expression-bodied property is its getter), local function or lambda. Decisions, `for`/`foreach`/`while`/`do` loops, `switch` sections with patterns and `when` clauses, `try`/`catch`/`finally` (with filters), `using` and `lock` blocks, `break`, `continue`, `return` and `throw` become boxes and edges as in TypeScript, with every path listed, impossible ones flagged (the same condition taken both ways with nothing changed in between), and data and control dependences. Calls are not expanded in place, and boxes have no quick edits, since the parser sees syntax only, not types.
+- **Inspections** in the Problems panel as you type: empty catch block, `throw ex;` that resets the stack trace, `async void` outside event handlers, assignment to itself, comparison with itself, identical `if` and `else` branches, `if (…);` and constant conditions. They follow the same switches as the TypeScript ones (Inspections: Enabled, the delay, and each one's severity or `off` in Inspections: Severity, by ids such as `csharpEmptyCatch`).
+
+The rest of Code X-Ray is TypeScript and JavaScript only for now.
 
 ## Settings
 

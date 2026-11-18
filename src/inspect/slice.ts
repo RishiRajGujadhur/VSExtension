@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { Cfg, buildCfg, cfgNodeAt } from './controlFlow';
+import { Cfg, FlowGraph, buildCfg, cfgNodeAt } from './controlFlow';
 import { AnalysisError } from '../analysis/types';
 import { VirtualProject } from '../refactor/virtualProject';
 import { enclosingFunction, identifierAt } from '../structure/util';
@@ -24,7 +24,7 @@ export interface Slice {
 }
 
 /** For each box, the boxes control-dependent on it: those that run only for some of its branches. */
-export function controlDependents(cfg: Cfg): Map<number, Set<number>> {
+export function controlDependents(cfg: FlowGraph): Map<number, Set<number>> {
   const succ = new Map<number, number[]>();
   for (const e of cfg.edges) succ.set(e.from, [...(succ.get(e.from) ?? []), e.to]);
   const all = cfg.nodes.map((n) => n.id);

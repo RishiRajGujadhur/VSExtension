@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { Cfg, CfgEdge, Choice, buildCfg, cfgNodeAt } from './controlFlow';
+import { Cfg, CfgEdge, Choice, FlowGraph, buildCfg, cfgNodeAt } from './controlFlow';
 import { definitions } from './defUse';
 import { AnalysisError } from '../analysis/types';
 import { FunctionWithBody, enclosingFunction, identifierAt, isFunctionWithBody, symbolAt } from '../structure/util';
@@ -26,7 +26,7 @@ export const maxPaths = 300;
  * Every path from the start of the function to its end. Each loop is taken zero or one times, which is enough to
  * show what every branch inside it does without enumerating iteration counts.
  */
-export function cfgPaths(cfg: Cfg, limit = maxPaths): { paths: CfgPath[]; truncated: boolean } {
+export function cfgPaths(cfg: FlowGraph, limit = maxPaths): { paths: CfgPath[]; truncated: boolean } {
   const outgoing = new Map<number, number[]>();
   cfg.edges.forEach((edge, index) => outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), index]));
   const paths: CfgPath[] = [];
@@ -54,7 +54,7 @@ export function cfgPaths(cfg: Cfg, limit = maxPaths): { paths: CfgPath[]; trunca
   return { paths, truncated };
 }
 
-function finish(cfg: Cfg, nodes: number[], edges: number[]): CfgPath {
+function finish(cfg: FlowGraph, nodes: number[], edges: number[]): CfgPath {
   const last = cfg.nodes[nodes[nodes.length - 2]];
   const ending: CfgPath['ending'] =
     last?.kind === 'return' ? { kind: 'return', text: last.lines[0].replace(/^return\s*/, '') || undefined } : last?.kind === 'throw' ? { kind: 'throw', text: last.lines[0].replace(/^throw\s*/, '') } : { kind: 'end' };
@@ -85,7 +85,7 @@ const mentions = (subject: string, names: Set<string>): boolean =>
   });
 
 /** Why a path cannot happen, if it tests the same thing two incompatible ways with nothing changed in between. */
-function contradictionIn(cfg: Cfg, nodes: number[], edges: number[]): string | undefined {
+function contradictionIn(cfg: FlowGraph, nodes: number[], edges: number[]): string | undefined {
   // What each tested subject was found to be, forgotten when something it mentions is assigned.
   let known = new Map<string, { outcome: string; excludes?: string[] }>();
   for (let i = 0; i < edges.length; i++) {

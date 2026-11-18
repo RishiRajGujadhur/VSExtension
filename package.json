@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.74.0",
+  "version": "0.75.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -1334,7 +1334,7 @@
         "key": "ctrl+alt+s 1",
         "mac": "cmd+ctrl+s 1",
         "command": "tsStructure.controlFlow",
-        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s 0",
@@ -1352,7 +1352,7 @@
         "key": "ctrl+alt+s shift+d",
         "mac": "cmd+ctrl+s shift+d",
         "command": "tsStructure.dependenceGraph",
-        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+        "when": "config.tsStructure.features.dataFlow && editorTextFocus && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
       },
       {
         "key": "ctrl+alt+s shift+r",
@@ -2254,7 +2254,7 @@
         },
         {
           "command": "tsStructure.controlFlow",
-          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
         },
         {
           "command": "tsStructure.explainValue",
@@ -2278,7 +2278,7 @@
         },
         {
           "command": "tsStructure.dependenceGraph",
-          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/"
+          "when": "config.tsStructure.features.dataFlow && editorLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact|csharp)$/"
         },
         {
           "command": "tsStructure.reactState",
@@ -3658,7 +3658,9 @@
     "@types/node": "22.20.5",
     "@types/vscode": "1.90.0",
     "@vscode/vsce": "4.1.0",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "tree-sitter-c-sharp": "^0.23.1",
+    "web-tree-sitter": "^0.25.10"
   },
   "icon": "media/icon.png"
 }

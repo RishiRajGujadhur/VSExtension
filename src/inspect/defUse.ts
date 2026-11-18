@@ -35,6 +35,7 @@ const rootName = (e: ts.Node): string | undefined => {
 
 /** Names a box assigns: declarations, assignments (also to a property of it), ++ and --, and calls on it. */
 export function definitions(node: CfgNode): Set<string> {
+  if (node.facts) return node.facts.defines;
   const cached = defsCache.get(node);
   if (cached) return cached;
   const names = new Set<string>();
@@ -58,6 +59,7 @@ export function definitions(node: CfgNode): Set<string> {
 
 /** Names a box reads: identifiers outside declarations' names, property names, types and plain `x =` targets. */
 export function uses(node: CfgNode): Set<string> {
+  if (node.facts) return node.facts.reads;
   const cached = usesCache.get(node);
   if (cached) return cached;
   const names = new Set<string>();
