@@ -101,3 +101,26 @@ select:focus, input.field:focus { outline: none; border-color: var(--vscode-focu
   .xr-fade { animation: none; }
   .switch, .switch::after, .nav-item, .row, .icon-btn { transition: none; }
 }
+
+/* Copy ID: shown on hover or focus. */
+.copy-id { opacity: 0; }
+.row:hover .copy-id, .row:focus-within .copy-id { opacity: 1; }
+/* What the chosen option means. */
+.row-hint { margin-top: 4px; color: var(--muted); font-size: 12px; font-style: italic; }
+/* A number outside its range: not saved. */
+input.field.invalid { border-color: var(--vscode-inputValidation-errorBorder, #f14c4c); }
+/* The Changed only filter in the sidebar. */
+.nav-item.filter { margin-bottom: 2px; }
+.nav-item.filter.on { background: color-mix(in srgb, var(--accent) 22%, transparent); font-weight: 600; }
+/* Inspections: Severity, inspection by inspection. */
+.row.stacked { flex-wrap: wrap; }
+.severities { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.severity-group { border: 1px solid var(--line); border-radius: 8px; padding: 2px 10px; }
+.severity-group > summary { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; font-weight: 600; }
+.severity-group > summary .count { padding: 0 6px; border-radius: 8px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-size: 10px; font-weight: 400; }
+.severity-row { display: flex; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid var(--line); }
+.severity-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.severity-name .row-key { margin-top: 1px; }
+.severity-row select { min-width: 150px; }
+.severity-row select.changed { border-color: var(--accent); }
+@media (max-width: 640px) { .severity-row { flex-wrap: wrap; } .severity-row select { width: 100%; } }

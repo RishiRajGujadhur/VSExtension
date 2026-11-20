@@ -23,34 +23,74 @@ export interface Slice {
   nodes: number[];
 }
 
-/** For each box, the boxes control-dependent on it: those that run only for some of its branches. */
+/**
+ * For each box, the boxes control-dependent on it: those that run only for some of its branches.
+ *
+ * From the post-dominator tree (a box post-dominates another when every path from the other to the end passes through
+ * it), built with Cooper, Harvey and Kennedy's iterative algorithm, which stays quick on long functions. For each
+ * branch A → B, the boxes from B up the tree to A's immediate post-dominator (not included) run only when A takes
+ * that branch.
+ */
 export function controlDependents(cfg: FlowGraph): Map<number, Set<number>> {
   const succ = new Map<number, number[]>();
-  for (const e of cfg.edges) succ.set(e.from, [...(succ.get(e.from) ?? []), e.to]);
-  const all = cfg.nodes.map((n) => n.id);
-  // Post-dominators: a box post-dominates another when every path from the other to the end passes through it.
-  const postdom = new Map<number, Set<number>>(all.map((id) => [id, new Set(id === cfg.end ? [id] : all)]));
+  const pred = new Map<number, number[]>();
+  for (const e of cfg.edges) {
+    succ.set(e.from, [...(succ.get(e.from) ?? []), e.to]);
+    pred.set(e.to, [...(pred.get(e.to) ?? []), e.from]);
+  }
+  // Reverse postorder of the reversed graph, from the end (iteratively: long functions would overflow the stack).
+  const order: number[] = [];
+  const visited = new Set<number>([cfg.end]);
+  const stack: { id: number; next: number }[] = [{ id: cfg.end, next: 0 }];
+  while (stack.length) {
+    const top = stack[stack.length - 1];
+    const preds = pred.get(top.id) ?? [];
+    if (top.next < preds.length) {
+      const p = preds[top.next++];
+      if (!visited.has(p)) {
+        visited.add(p);
+        stack.push({ id: p, next: 0 });
+      }
+    } else {
+      order.push(top.id);
+      stack.pop();
+    }
+  }
+  const rpo = order.reverse();
+  const rank = new Map(rpo.map((id, i) => [id, i]));
+  const ipdom = new Map<number, number>([[cfg.end, cfg.end]]);
+  const intersect = (a: number, b: number) => {
+    while (a !== b) {
+      while (rank.get(a)! > rank.get(b)!) a = ipdom.get(a)!;
+      while (rank.get(b)! > rank.get(a)!) b = ipdom.get(b)!;
+    }
+    return a;
+  };
   for (let changed = true; changed; ) {
     changed = false;
-    for (const id of all) {
+    for (const id of rpo) {
       if (id === cfg.end) continue;
-      const next = succ.get(id) ?? [];
-      const meet = next.length ? [...postdom.get(next[0])!].filter((d) => next.every((s) => postdom.get(s)!.has(d))) : [];
-      const updated = new Set([id, ...meet]);
-      if (updated.size !== postdom.get(id)!.size) {
-        postdom.set(id, updated);
+      const done = (succ.get(id) ?? []).filter((s) => ipdom.has(s));
+      if (!done.length) continue;
+      const idom = done.slice(1).reduce((acc, s) => intersect(s, acc), done[0]);
+      if (ipdom.get(id) !== idom) {
+        ipdom.set(id, idom);
         changed = true;
       }
     }
   }
   const dependents = new Map<number, Set<number>>();
-  for (const id of all) {
-    const next = [...new Set(succ.get(id) ?? [])];
-    if (next.length < 2) continue;
+  for (const [id, next] of succ) {
+    const branches = [...new Set(next)];
+    if (branches.length < 2) continue;
+    const stop = ipdom.get(id);
     const set = new Set<number>();
-    for (const s of next) {
-      for (const y of postdom.get(s)!) {
-        if (y === id || !postdom.get(id)!.has(y)) set.add(y);
+    for (const b of branches) {
+      // Up the tree from the branch to where every branch of A meets again.
+      for (let runner: number | undefined = b; runner !== undefined && runner !== stop; ) {
+        set.add(runner);
+        const up: number | undefined = ipdom.get(runner);
+        runner = up === runner ? undefined : up;
       }
     }
     set.delete(id);

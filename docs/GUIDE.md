@@ -380,6 +380,9 @@ Code X-Ray reads T-SQL itself (its own tokenizer and statement reader, no databa
 - **Animations**: **Button animations** (the effects hovering or clicking an action plays; off by default) and **Chart animations** (the moving grid and flowing lines). A chart with animations off says so on its sparkle and play buttons.
 - Then **General**, **Scope**, **Inspections** and the rest, as switches, lists and fields. Lists and objects open in VS Code's settings.
 - Search across all of them from the box at the top (`Ctrl+F` or `/`). A dot marks a setting you changed, the arrow resets it, and **This workspace** marks one set for this workspace only.
+- **Inspections › Severity** lists every inspection (TypeScript and JavaScript, C#, T-SQL) with a choice of Default, Error, Warning, Info, Hint or Off, grouped by language; search finds a single inspection by name.
+- **Changed only** (top of the sidebar) shows every setting you changed, across sections; **Reset section** puts a section's changed settings back to their defaults.
+- A list setting says under it what the chosen option does; a number field shows its range and keeps a value outside it unsaved, saying why. Each row's copy button copies the setting's ID. Up and down move between sections.
 - **Open in VS Code settings** shows the same settings in VS Code's own editor.
 
 The ones you are most likely to change:

@@ -60,45 +60,46 @@ export function dependencesOf(cfg: FlowGraph): Dependences {
   const kills = new Map(cfg.nodes.map((n) => [n.id, n.kind === 'start' ? new Set(parameters) : terminal(n) ? new Set<string>() : replaced(n)]));
   const used = new Map(cfg.nodes.map((n) => [n.id, terminal(n) ? new Set<string>() : uses(n)]));
 
-  // Reaching definitions: the settings (box and name) that may hold when each box starts.
-  const key = (id: number, name: string) => `${id}\u0000${name}`;
-  const nameOf = (d: string) => d.slice(d.indexOf('\u0000') + 1);
-  const reachIn = new Map<number, Set<string>>(ids.map((id) => [id, new Set()]));
-  const reachOut = new Map<number, Set<string>>(ids.map((id) => [id, new Set([...defined.get(id)!].map((name) => key(id, name)))]));
-  for (let changed = true, rounds = 0; changed && rounds < ids.length + 5; rounds++) {
-    changed = false;
-    for (const id of ids) {
-      const incoming = new Set<string>();
-      for (const p of preds.get(id)!) for (const d of reachOut.get(p)!) incoming.add(d);
-      reachIn.set(id, incoming);
-      const killed = kills.get(id)!;
-      const out = new Set([...defined.get(id)!].map((name) => key(id, name)));
-      for (const d of incoming) if (!killed.has(nameOf(d))) out.add(d);
-      if (out.size !== reachOut.get(id)!.size) {
-        reachOut.set(id, out);
-        changed = true;
-      }
-    }
-  }
-
+  // Reaching definitions, one name at a time: only the boxes that set that name travel along the flow, so the sets
+  // stay small and a long function stays quick (doing all names at once grew with the cube of the function's size).
   const data: Dependences['data'] = [];
   const seen = new Set<string>();
   let truncated = false;
+  const names = new Set<string>();
+  for (const reads of used.values()) for (const name of reads) names.add(name);
+  const found = new Map<number, { from: number; name: string }[]>();
+  for (const name of names) {
+    const reachIn = new Map<number, Set<number>>();
+    const reachOut = new Map<number, Set<number>>();
+    for (let changed = true; changed; ) {
+      changed = false;
+      for (const id of ids) {
+        const incoming = new Set<number>();
+        for (const p of preds.get(id)!) for (const d of reachOut.get(p) ?? []) incoming.add(d);
+        reachIn.set(id, incoming);
+        // A box that replaces the name starts afresh; one that only changes it adds itself to what reaches it.
+        const sets = defined.get(id)!.has(name);
+        const out = kills.get(id)!.has(name) ? new Set<number>(sets ? [id] : []) : sets ? new Set([...incoming, id]) : incoming;
+        const before = reachOut.get(id);
+        if (!before || before.size !== out.size) {
+          reachOut.set(id, out);
+          changed = true;
+        }
+      }
+    }
+    for (const id of ids) {
+      if (!used.get(id)!.has(name)) continue;
+      for (const from of reachIn.get(id) ?? []) if (from !== id) found.set(id, [...(found.get(id) ?? []), { from, name }]);
+    }
+  }
+  // In box order, as the arcs are drawn.
   for (const id of ids) {
-    const reads = used.get(id)!;
-    if (!reads.size) continue;
-    for (const d of reachIn.get(id)!) {
-      const name = nameOf(d);
-      const from = Number(d.slice(0, d.indexOf('\u0000')));
-      if (!reads.has(name) || from === id) continue;
+    for (const { from, name } of found.get(id) ?? []) {
       const k = `${from}>${id}>${name}`;
       if (seen.has(k)) continue;
       seen.add(k);
-      if (data.length >= maxDependences) {
-        truncated = true;
-        continue;
-      }
-      data.push({ from, to: id, name, ...(from === cfg.start ? { parameter: true } : {}) });
+      if (data.length >= maxDependences) truncated = true;
+      else data.push({ from, to: id, name, ...(from === cfg.start ? { parameter: true } : {}) });
     }
   }
 

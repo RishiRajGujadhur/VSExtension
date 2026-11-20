@@ -148,3 +148,20 @@ test('T-SQL Callers and calls: EXEC and function calls across files, and procedu
   const nightly = tsqlCallGraph([orders, log], log.file, log.text.indexOf('Nightly'), { depth: 1, direction: 'callees' });
   assert.deepEqual(nightly.roots[0].children?.map((c) => `${c.label} ${c.description}`), ['dbo.SaveOrder procedure · orders.sql:1', 'sp_who not in this workspace']);
 });
+
+test('T-SQL statements: CASE … ELSE … END, WITH cte … UPDATE … SET … JOIN stay whole, and a JOIN is not a missing WHERE', () => {
+  const code = `CREATE PROC p AS
+BEGIN
+  WITH recent AS (SELECT Id FROM dbo.Orders) UPDATE o SET Flag = 1 FROM dbo.Orders o JOIN recent r ON r.Id = o.Id;
+  SELECT CASE WHEN COUNT(*) > 0 THEN 'some' ELSE 'none' END FROM #work
+END`;
+  const [routine] = routines(code);
+  const body = routine.body[0].statements!.map((s) => code.slice(s.start, s.end).replace(/\s+/g, ' '));
+  assert.deepEqual(body, ['WITH recent AS (SELECT Id FROM dbo.Orders) UPDATE o SET Flag = 1 FROM dbo.Orders o JOIN recent r ON r.Id = o.Id', "SELECT CASE WHEN COUNT(*) > 0 THEN 'some' ELSE 'none' END FROM #work"]);
+  assert.ok(!inspectTsql(code).some((f) => f.inspection === 'tsqlUpdateWithoutWhere'));
+});
+
+test('T-SQL Find usages: a cursor just before a name (dbo.|Orders) means the name', () => {
+  const report = tsqlUsages([orders], orders.file, orders.text.indexOf('Orders WHERE'));
+  assert.equal(report.title, 'Usages of Orders');
+});

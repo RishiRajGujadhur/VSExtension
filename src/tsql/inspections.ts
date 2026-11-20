@@ -101,7 +101,8 @@ export function inspectTsql(text: string): TsqlFinding[] {
       const first = statement[0];
       const top = topLevel(statement);
       // UPDATE … / DELETE … with no WHERE changes every row (table variables and temp tables excepted).
-      if (isWord(first, 'UPDATE', 'DELETE') && !top.some((t) => isWord(t, 'WHERE')) && !top.some((t, i) => isWord(t, 'CURRENT') && isWord(top[i + 1], 'OF'))) {
+      // (A JOIN limits the rows too: UPDATE o SET … FROM Orders o JOIN recent r ON ….)
+      if (isWord(first, 'UPDATE', 'DELETE') && !top.some((t) => isWord(t, 'WHERE', 'JOIN', 'APPLY')) && !top.some((t, i) => isWord(t, 'CURRENT') && isWord(top[i + 1], 'OF'))) {
         const target = statement.find((t, i) => i > 0 && !isWord(t, 'FROM', 'TOP') && t.text !== '(' && t.kind !== 'number' && t.text !== ')');
         if (target && target.kind !== 'variable' && !target.text.startsWith('#')) report('tsqlUpdateWithoutWhere', first, target, `${first.value} without WHERE changes every row of ${target.kind === 'name' ? target.value : target.text}.`);
       }

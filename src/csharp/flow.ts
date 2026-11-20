@@ -27,6 +27,9 @@ const functionTypes = new Set([
 
 /** Statements with no branches of their own, merged into one box when they follow each other. */
 const simpleTypes = new Set(['expression_statement', 'local_declaration_statement', 'empty_statement', 'local_function_statement', 'yield_statement', 'goto_statement']);
+/** `yield break` ends the method, like return: not a plain step. */
+const isYieldBreak = (n: SyntaxNode) => n.type === 'yield_statement' && /^\s*yield\s+break\b/.test(n.text);
+const isSimple = (n: SyntaxNode) => simpleTypes.has(n.type) && !isYieldBreak(n);
 /** Statements that wrap a block: the header is a step, the block runs inside it. */
 const wrapperTypes = new Set(['using_statement', 'lock_statement', 'checked_statement', 'unsafe_statement', 'fixed_statement']);
 
@@ -254,7 +257,7 @@ export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
       run = [];
     };
     for (const s of statements) {
-      if (simpleTypes.has(s.type)) {
+      if (isSimple(s)) {
         run.push(s);
         continue;
       }
@@ -387,9 +390,13 @@ export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
         else for (const p of pending) edges.push({ from: p.from, to: jump.continueTo ?? -1, kind: 'continue', label: p.label ?? 'continue', choice: p.choice });
         return [];
       }
+      case 'yield_statement':
+        // yield return is a step (merged with its neighbours); yield break ends the method like return.
+        if (!isYieldBreak(s)) return list([s], pending);
+      // falls through
       case 'return_statement': {
         const value = children(s)[0];
-        const id = enter(pending, 'return', [value ? `return ${oneLine(value.text)}` : 'return'], [s]);
+        const id = enter(pending, 'return', [isYieldBreak(s) ? 'yield break' : value ? `return ${oneLine(value.text)}` : 'return'], [s]);
         edges.push({ from: id, to: end, kind: 'return' });
         return [];
       }
@@ -435,7 +442,7 @@ export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
           const id = enter(pending, 'statement', [oneLine(header)], headerSyntax.length ? headerSyntax : [s]);
           return body ? stmt(body, [{ from: id, kind: 'next' }]) : [{ from: id, kind: 'next' }];
         }
-        if (simpleTypes.has(s.type)) return list([s], pending);
+        if (isSimple(s)) return list([s], pending);
         const id = enter(pending, 'statement', [oneLine(s.text)], [s]);
         return [{ from: id, kind: 'next' }];
       }

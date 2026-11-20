@@ -152,3 +152,10 @@ test('C# Find usages by name (no language server): declaration, writes and reads
     'write Other.Go 1',
   ]);
 });
+
+test('C# flowchart: yield break ends the method, yield return is a step', async () => {
+  const code = 'class A { IEnumerable<int> F(int[] xs) { foreach (var x in xs) { if (x < 0) yield break; yield return x; } } }';
+  const chart = await chartAt(code, 'foreach');
+  assert.deepEqual(chart.nodes.filter((n) => n.kind === 'return').map((n) => n.lines[0]), ['yield break']);
+  assert.ok(chart.nodes.some((n) => n.kind === 'statement' && n.lines[0] === 'yield return x'));
+});

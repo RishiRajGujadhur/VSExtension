@@ -2,6 +2,12 @@ import * as vscode from 'vscode';
 import { features, enabledByDefault } from '../structure/features';
 import { isFeatureEnabled, setFeature, updateSetting } from './features';
 import { webviewPage, webviewRoots } from './webviewPage';
+import { builtInInspections } from '../inspect/registry';
+import type { Severity } from '../inspect/inspection';
+import { csharpInspections } from '../csharp/inspections';
+import { tsqlInspections } from '../tsql/inspections';
+
+const severityKey = 'tsStructure.inspections.severity';
 
 /**
  * Code X-Ray Settings: one page for everything the extension can be told, in the style of an app's settings screen.
@@ -17,7 +23,7 @@ interface Row {
   label: string;
   /** Markdown-lite: **bold**, `code` and [links](…) are shown, the rest is text. */
   description: string;
-  kind: 'boolean' | 'enum' | 'number' | 'string' | 'json';
+  kind: 'boolean' | 'enum' | 'number' | 'string' | 'json' | 'severities';
   value: unknown;
   /** Changed from its default, somewhere (user or workspace). */
   modified: boolean;
@@ -28,6 +34,8 @@ interface Row {
   max?: number;
   /** A badge beside the name, such as "Core". */
   badge?: string;
+  /** For Inspections: Severity: every inspection by language, with its default and the choice made. */
+  severities?: { group: string; items: { id: string; title: string; byDefault: Severity; value?: string }[] }[];
 }
 
 interface Section {
@@ -100,6 +108,24 @@ function rowOf(key: string, property: ConfigProperty, section: string): Row | un
   const type = Array.isArray(property.type) ? property.type[0] : property.type;
   const kind: Row['kind'] = property.enum ? 'enum' : type === 'boolean' ? 'boolean' : type === 'number' || type === 'integer' ? 'number' : type === 'string' ? 'string' : 'json';
   const enumText = property.markdownEnumDescriptions ?? property.enumDescriptions;
+  if (key === severityKey) {
+    // Not an object to edit as JSON: a list of every inspection with its own choice.
+    const chosen = (config.get<Record<string, string>>(key) ?? {}) as Record<string, string>;
+    const group = (name: string, list: readonly { id: string; title: string; severity: Severity }[]) => ({ group: name, items: list.map((i) => ({ id: i.id, title: i.title, byDefault: i.severity, value: chosen[i.id] })) });
+    return {
+      key,
+      ...titled(key, 'How each inspection is reported, or off. Default keeps its own severity.', section),
+      kind: 'severities',
+      value: chosen,
+      modified: inspected?.globalValue !== undefined || inspected?.workspaceValue !== undefined,
+      scope: inspected?.workspaceValue !== undefined ? 'workspace' : undefined,
+      severities: [
+        group('TypeScript and JavaScript', builtInInspections.map((i) => ({ id: i.id, title: i.title, severity: i.defaultSeverity }))),
+        group('C#', csharpInspections),
+        group('T-SQL', tsqlInspections),
+      ],
+    };
+  }
   return {
     key,
     ...titled(key, property.markdownDescription ?? property.description ?? '', section),
@@ -194,6 +220,19 @@ export class SettingsPanel {
         for (const f of features) await setFeature(f.id, message.on === true || enabledByDefault(f));
       } else if (message.type === 'json' && this.known(message.key)) {
         await vscode.commands.executeCommand('workbench.action.openSettings', message.key);
+      } else if (message.type === 'severity' && typeof message.id === 'string') {
+        // One inspection's choice inside the Inspections: Severity object; Default removes it.
+        const current = { ...((vscode.workspace.getConfiguration().get<Record<string, string>>(severityKey) ?? {}) as Record<string, string>) };
+        if (message.value === 'default' || !message.value) delete current[message.id];
+        else current[message.id] = String(message.value);
+        await updateSetting(severityKey, Object.keys(current).length ? current : undefined);
+      } else if (message.type === 'resetSection' && typeof message.section === 'string') {
+        // Every changed setting in the section back to its default.
+        const target = sections(this.manifest).find((x) => x.id === message.section);
+        for (const row of target?.rows.filter((r) => r.modified) ?? []) await resetSetting(row.key);
+      } else if (message.type === 'copy' && this.known(message.key)) {
+        await vscode.env.clipboard.writeText(message.key);
+        void vscode.window.setStatusBarMessage(`Copied ${message.key}`, 3000);
       } else if (message.type === 'vscodeSettings') {
         await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.extensionId}`);
       }

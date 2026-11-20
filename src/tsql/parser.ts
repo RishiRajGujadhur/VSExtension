@@ -116,6 +116,8 @@ function simple(r: Reader): Statement {
   let sawSet = false;
   let continued = 0;
   const lead = first.value;
+  // The statement's verb so far: WITH cte AS (…) UPDATE … makes it UPDATE, so its SET belongs to it.
+  let verb = lead;
   while (!r.done) {
     const t = r.peek()!;
     if (t.text === ';' && depth === 0) {
@@ -127,18 +129,22 @@ function simple(r: Reader): Statement {
     if (isWord(t, 'CASE')) cases++;
     // A label (name:) starts a statement of its own.
     if (out.length && depth === 0 && t.kind === 'word' && !starters.has(t.value) && r.peek(1)?.text === ':' && r.peek(2)?.text !== ':') break;
-    if (out.length && depth === 0 && isStarter(t) && !(isWord(t, 'END') && cases > 0)) {
+    // Inside CASE … END, WHEN, THEN, ELSE and END belong to the expression.
+    if (out.length && depth === 0 && cases === 0 && isStarter(t)) {
       const previous = out[out.length - 1];
       const continues =
         lead === 'MERGE' ||
         (dml.has(t.value) && previous && isWord(previous, 'UNION', 'ALL', 'EXCEPT', 'INTERSECT', 'FOR', 'AS')) ||
         (lead === 'INSERT' && isWord(t, 'SELECT', 'EXEC', 'EXECUTE', 'WITH') && continued === 0) ||
-        (lead === 'UPDATE' && t.value === 'SET' && !sawSet) ||
+        (verb === 'UPDATE' && t.value === 'SET' && !sawSet) ||
         (lead === 'WITH' && dml.has(t.value) && continued === 0) ||
         (lead === 'DECLARE' && t.value === 'SELECT' && previous && isWord(previous, 'FOR'));
       if (!continues) break;
       if (t.value === 'SET') sawSet = true;
-      else continued++;
+      else {
+        continued++;
+        if (dml.has(t.value)) verb = t.value;
+      }
     }
     if (isWord(t, 'END') && cases > 0) cases--;
     out.push(r.next()!);

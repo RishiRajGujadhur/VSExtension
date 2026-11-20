@@ -7,9 +7,12 @@
   let model = [];
   let current = saved.section || 'features';
   let query = '';
+  /** Only the settings changed from their defaults, across every section. */
+  let changedOnly = !!saved.changedOnly;
 
   const words = () => query.toLowerCase().split(/\s+/).filter(Boolean);
-  const rowText = (row) => `${row.label} ${row.description} ${row.key} ${row.badge || ''}`.toLowerCase();
+  const rowText = (row) =>
+    `${row.label} ${row.description} ${row.key} ${row.badge || ''} ${(row.severities || []).flatMap((g) => g.items.map((i) => `${i.title} ${i.id}`)).join(' ')}`.toLowerCase();
 
   /** Text with its search words marked. */
   function marked(text) {
@@ -85,16 +88,28 @@
       input.value = row.value === undefined || row.value === null ? '' : String(row.value);
       input.setAttribute('aria-label', row.label);
       input.dataset.key = row.key;
+      const range = row.kind === 'number' && (row.min !== undefined || row.max !== undefined)
+        ? `${row.min !== undefined ? row.min : '…'} to ${row.max !== undefined ? row.max : '…'}`
+        : '';
+      if (range) input.title = `From ${range}`;
       const commit = () => {
         if (row.kind === 'number') {
           const n = Number(input.value);
-          if (input.value.trim() === '' || Number.isNaN(n)) return;
-          set(row.key, n);
+          const out = input.value.trim() === '' || Number.isNaN(n) || (row.min !== undefined && n < row.min) || (row.max !== undefined && n > row.max);
+          // A value outside the range is not saved: the field says why and keeps the value to correct.
+          input.classList.toggle('invalid', out);
+          input.setAttribute('aria-invalid', String(out));
+          input.title = out ? `Not saved: enter a number${range ? ` from ${range}` : ''}` : range ? `From ${range}` : '';
+          if (!out) set(row.key, n);
         } else set(row.key, input.value);
       };
       input.addEventListener('change', commit);
       input.addEventListener('keydown', (e) => e.key === 'Enter' && input.blur());
       box.append(input);
+    } else if (row.kind === 'severities') {
+      // Shown under the row (see severityList); the count of changes sits here.
+      const changed = row.severities.reduce((n, g) => n + g.items.filter((i) => i.value).length, 0);
+      box.append(make('span', 'tag', changed ? `${changed} changed` : 'all default'));
     } else {
       // Lists and objects are edited where VS Code shows them best.
       const edit = make('button', 'btn');
@@ -111,6 +126,44 @@
       reset.append(icon('discard'));
       reset.addEventListener('click', () => send({ type: 'reset', key: row.key }));
       box.prepend(reset);
+    }
+    return box;
+  }
+
+  const severityChoices = ['default', 'error', 'warning', 'info', 'hint', 'off'];
+
+  /** Inspections: Severity as a list: each inspection with its default and a choice, by language. */
+  function severityList(row) {
+    const box = make('div', 'severities');
+    const found = query ? words() : [];
+    for (const group of row.severities) {
+      const items = group.items.filter((i) => !found.length || found.every((w) => `${i.title} ${i.id} ${row.label}`.toLowerCase().includes(w)));
+      if (!items.length) continue;
+      const details = make('details', 'severity-group');
+      // Open when searching, or when something in it was changed.
+      details.open = !!found.length || items.some((i) => i.value);
+      const summary = make('summary', '', group.group);
+      summary.append(make('span', 'count', String(items.length)));
+      details.append(summary);
+      for (const item of items) {
+        const line = make('div', 'severity-row');
+        const name = make('div', 'severity-name');
+        name.append(marked(item.title), make('span', 'row-key', item.id));
+        const select = make('select');
+        select.setAttribute('aria-label', `${item.title}: how it is reported`);
+        select.dataset.key = `${row.key}#${item.id}`;
+        for (const choice of severityChoices) {
+          const option = make('option', '', choice === 'default' ? `Default (${item.byDefault})` : choice[0].toUpperCase() + choice.slice(1));
+          option.value = choice;
+          option.selected = (item.value || 'default') === choice;
+          select.append(option);
+        }
+        select.classList.toggle('changed', !!item.value);
+        select.addEventListener('change', () => send({ type: 'severity', id: item.id, value: select.value }));
+        line.append(name, select);
+        details.append(line);
+      }
+      box.append(details);
     }
     return box;
   }
@@ -135,8 +188,34 @@
     const desc = make('div', 'row-desc');
     desc.append(richText(row.description));
     text.append(title, desc);
+    // What the chosen option of a list means.
+    if (row.kind === 'enum') {
+      const chosen = row.options.find((o) => o.value === String(row.value));
+      if (chosen && chosen.description) {
+        const hint = make('div', 'row-hint');
+        hint.append(richText(`${chosen.label}: ${chosen.description}`));
+        text.append(hint);
+      }
+    }
     if (query) text.append(make('div', 'row-key', row.key));
-    el.append(text, control(row));
+    const controls = control(row);
+    // Copy the setting's ID, for settings.json or a message to a colleague.
+    const copy = make('button', 'icon-btn copy-id');
+    copy.type = 'button';
+    copy.title = `Copy ${row.key}`;
+    copy.setAttribute('aria-label', `Copy the setting ID ${row.key}`);
+    copy.append(icon('copy'));
+    copy.addEventListener('click', () => {
+      send({ type: 'copy', key: row.key });
+      copy.replaceChildren(icon('check'));
+      setTimeout(() => copy.replaceChildren(icon('copy')), 1200);
+    });
+    controls.prepend(copy);
+    el.append(text, controls);
+    if (row.kind === 'severities') {
+      el.classList.add('stacked');
+      el.append(severityList(row));
+    }
     return el;
   }
 
@@ -169,21 +248,52 @@
         item.append(count);
       }
       item.addEventListener('click', () => show(section.id, true));
+      // Up and down move between sections, Home and End to the first and last.
+      item.addEventListener('keydown', (e) => {
+        const items = [...nav.querySelectorAll('.nav-item')];
+        const at = items.indexOf(item);
+        const to = e.key === 'ArrowDown' ? at + 1 : e.key === 'ArrowUp' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -2;
+        if (to === -2 || !items[to]) return;
+        e.preventDefault();
+        items[to].focus();
+        show(items[to].dataset.section, true);
+      });
       nav.append(item);
     }
+    const total = model.reduce((n, sec) => n + sec.rows.filter((r) => r.modified).length, 0);
+    const filter = make('button', `nav-item filter${changedOnly ? ' on' : ''}`);
+    filter.type = 'button';
+    filter.id = 'changedOnly';
+    filter.setAttribute('aria-pressed', String(changedOnly));
+    filter.title = 'Show only the settings changed from their defaults, in every section';
+    filter.append(icon('filter'), make('span', '', 'Changed only'));
+    if (total) filter.append(make('span', 'count', String(total)));
+    filter.addEventListener('click', () => {
+      changedOnly = !changedOnly;
+      vscode.setState({ ...saved, section: current, changedOnly });
+      render();
+    });
     const foot = make('div', 'side-foot');
     const open = make('button', 'link');
     open.type = 'button';
     open.append(icon('link-external'), 'Open in VS Code settings');
     open.addEventListener('click', () => send({ type: 'vscodeSettings' }));
     foot.append(open);
-    side.append(search, nav, foot);
+    side.append(search, filter, nav, foot);
     return side;
   }
 
   function sectionTools(section) {
-    if (section.id !== 'features') return undefined;
     const tools = make('div', 'tools');
+    const changed = section.rows.filter((r) => r.modified).length;
+    if (changed) {
+      const reset = make('button', 'btn', `Reset section (${changed})`);
+      reset.type = 'button';
+      reset.title = `Put the ${changed} changed setting${changed === 1 ? '' : 's'} of ${section.title} back to the default`;
+      reset.addEventListener('click', () => send({ type: 'resetSection', section: section.id }));
+      tools.append(reset);
+    }
+    if (section.id !== 'features') return changed ? tools : undefined;
     const all = make('button', 'btn', 'Turn all on');
     all.type = 'button';
     all.addEventListener('click', () => send({ type: 'features', on: true }));
@@ -198,13 +308,20 @@
   let main;
   function renderMain(fade) {
     const page = make('div', 'page');
-    if (query) {
+    if (query || changedOnly) {
       const found = words();
-      const hits = model.map((s) => ({ s, rows: s.rows.filter((r) => found.every((w) => rowText(r).includes(w))) })).filter((x) => x.rows.length);
+      const hits = model
+        .map((s) => ({ s, rows: s.rows.filter((r) => (!changedOnly || r.modified) && found.every((w) => rowText(r).includes(w))) }))
+        .filter((x) => x.rows.length);
       const head = make('div', 'page-head');
       const titles = make('div');
       const count = hits.reduce((n, x) => n + x.rows.length, 0);
-      titles.append(make('h2', '', 'Search'), make('p', '', count ? `${count} setting${count === 1 ? '' : 's'} match “${query}”` : `No setting matches “${query}”`));
+      const what = changedOnly ? 'changed from the default' : '';
+      const heading = changedOnly && !query ? 'Changed settings' : 'Search';
+      const sentence = count
+        ? `${count} setting${count === 1 ? '' : 's'} ${query ? `match “${query}”` : ''}${query && what ? ' and are ' : ''}${what}`
+        : changedOnly && !query ? 'Every setting has its default value.' : `No setting matches “${query}”${what ? ' among the changed ones' : ''}`;
+      titles.append(make('h2', '', heading), make('p', '', sentence.trim()));
       head.append(titles);
       page.append(head);
       for (const { s, rows } of hits) {
@@ -213,7 +330,7 @@
         rows.forEach((r) => list.append(rowElement(r)));
         page.append(list);
       }
-      if (!count) page.append(make('div', 'empty', 'Try another word, or a setting’s ID such as tsStructure.warmUp.'));
+      if (!count && query) page.append(make('div', 'empty', 'Try another word, or a setting’s ID such as tsStructure.warmUp.'));
     } else {
       const section = model.find((s) => s.id === current) || model[0];
       if (!section) return;
@@ -234,15 +351,23 @@
       page.classList.add('xr-fade');
       main.scrollTop = 0;
     }
-    document.querySelectorAll('.nav-item').forEach((n) => n.setAttribute('aria-current', String(!query && n.dataset.section === current)));
+    document.querySelectorAll('.nav-item[data-section]').forEach((n) => n.setAttribute('aria-current', String(!query && !changedOnly && n.dataset.section === current)));
   }
 
   function show(id, fade) {
     current = id;
     query = '';
+    if (changedOnly) {
+      changedOnly = false;
+      const filter = document.getElementById('changedOnly');
+      if (filter) {
+        filter.classList.remove('on');
+        filter.setAttribute('aria-pressed', 'false');
+      }
+    }
     const search = document.getElementById('search');
     if (search) search.value = '';
-    vscode.setState({ ...saved, section: current });
+    vscode.setState({ ...saved, section: current, changedOnly });
     renderMain(fade);
     window.scrollTo(0, 0);
   }

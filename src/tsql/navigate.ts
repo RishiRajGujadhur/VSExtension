@@ -110,9 +110,19 @@ function classifyVariable(tokens: Token[], i: number, routine: Routine | undefin
   return 'read';
 }
 
-/** The name token at an offset, and its routine. */
+const named = (t: Token | undefined) => !!t && (t.kind === 'word' || t.kind === 'name' || t.kind === 'variable');
+
+/**
+ * The name at an offset: the one the cursor is in or just before (|Orders), else the one it is just after (Orders|),
+ * so a cursor between `.` and a name means the name.
+ */
+export function nameAt(tokens: Token[], offset: number): Token | undefined {
+  return tokens.find((t) => named(t) && offset >= t.start && offset < t.end) ?? tokens.find((t) => named(t) && offset === t.end);
+}
+
+/** The name token at an offset. */
 function subjectAt(index: Indexed, offset: number): Token {
-  const t = index.tokens.find((x) => offset >= x.start && offset <= x.end);
+  const t = nameAt(index.tokens, offset);
   if (!t || (t.kind !== 'word' && t.kind !== 'name' && t.kind !== 'variable') || isKeyword(t) || t.text.startsWith('@@')) {
     throw new AnalysisError('Put the cursor on a table, column, procedure, function or @variable name.');
   }
@@ -182,7 +192,7 @@ export function tsqlCallGraph(files: SqlFile[], file: string, offset: number, op
   const entries = callIndex(indexes);
   const here = indexes.find((x) => x.source.file === file);
   // The routine at the cursor, or the one named there (EXEC dbo.Save → Save).
-  const token = here?.tokens.find((t) => offset >= t.start && offset <= t.end);
+  const token = here ? nameAt(here.tokens, offset) : undefined;
   const byKey = new Map(entries.filter((e) => e.routine.key).map((e) => [e.routine.key, e]));
   const named = token && (token.kind === 'word' || token.kind === 'name') ? byKey.get(keyOf(token)) : undefined;
   const root = named ?? entries.find((e) => e.index === here && offset >= e.routine.start && offset <= e.routine.end && e.routine.key);
