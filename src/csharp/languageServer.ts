@@ -1,6 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { hashText, normalizePath } from '../analysis/paths';
+import { AnalysisError } from '../analysis/types';
+import { csharpUsagesByName } from './nameSearch';
 import { Report, ReportLocation, ReportNode, plural } from '../structure/report';
 import { CallDirection, callGraphControls } from '../navigate/callGraph';
 import { classifyCSharpUsage } from './usageKind';
@@ -17,7 +19,7 @@ import { Usage, UsageKind, isTestPath, usageReport } from '../structure/usageRep
 export const isCSharp = (document: vscode.TextDocument): boolean => document.languageId === 'csharp';
 
 /** Said when the language server has nothing: the C# extension is missing, or still loading the project. */
-export class NoLanguageServer extends Error {
+export class NoLanguageServer extends AnalysisError {
   constructor(what: string) {
     super(`No ${what} from the C# language server. Install the C# extension (or C# Dev Kit), or wait until it has loaded the project, then try again.`);
   }
@@ -92,7 +94,8 @@ export async function csharpUsagesReport(document: vscode.TextDocument, position
   const all = [...(references ?? [])];
   // The definition is usually among the references; a slightly different range for it (with the `;`, say) is still it.
   for (const d of defs) if (!all.some((r) => r.uri.toString() === d.uri.toString() && r.range.intersection(d.range))) all.push(d);
-  if (!all.length) throw new NoLanguageServer(`usages of ${name}`);
+  // No language server answered (no C# extension, or the solution still loading): find the name instead.
+  if (!all.length) return usagesByName(document, position, name);
 
   const sources = new Sources();
   const usages: Usage[] = [];
@@ -241,4 +244,29 @@ export async function csharpHierarchyReport(document: vscode.TextDocument, posit
     warnings: [],
     fileHashes: sources.hashes,
   };
+}
+
+/** Find usages by name, with the bundled parser, in the workspace's C# files: for when no language server answers. */
+async function usagesByName(document: vscode.TextDocument, position: vscode.Position, name: string): Promise<Report> {
+  if (!/^@?[A-Za-z_]\w*$/.test(name)) throw new AnalysisError('Put the cursor on a name: a class, method, property, field, variable or parameter.');
+  const uris = await vscode.workspace.findFiles('**/*.cs', '{**/bin/**,**/obj/**,**/node_modules/**,**/.git/**}', 4000);
+  const open = new Map(vscode.workspace.textDocuments.filter((d) => d.uri.scheme === 'file').map((d) => [normalizePath(d.uri.fsPath), d]));
+  const here = normalizePath(document.uri.fsPath);
+  const files: { file: string; text: string }[] = [{ file: here, text: document.getText() }];
+  for (const uri of uris) {
+    const file = normalizePath(uri.fsPath);
+    if (file === here) continue;
+    const text = open.get(file)?.getText() ?? Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+    files.push({ file, text });
+  }
+  const usages = await csharpUsagesByName(files, name.replace(/^@/, ''), { file: here, offset: document.offsetAt(position) });
+  if (!usages.length) throw new AnalysisError(`No ${name} found in the workspace's C# files.`);
+  const hashes = Object.fromEntries(files.filter((f) => usages.some((u) => u.location.file === f.file)).map((f) => [f.file, hashText(f.text)]));
+  const folderOf = (file: string) => {
+    const root = workspaceRoot(vscode.Uri.file(file));
+    return root ? path.relative(root, path.dirname(file)).split(path.sep).join('/') || '.' : '';
+  };
+  const report = usageReport(name, usages, folderOf, hashes);
+  report.warnings.push('Found by name: no C# language server answered, so other symbols with the same name are included. Install the C# extension (or C# Dev Kit) for exact results.');
+  return report;
 }

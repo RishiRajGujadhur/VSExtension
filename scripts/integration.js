@@ -15,7 +15,8 @@ const root = path.resolve(__dirname, '..');
 const result = spawnSync(
   executable,
   [
-    `--extensionDevelopmentPath=${root}`,
+    // EXTENSION_PATH tests another copy of the extension, such as a packaged .vsix unzipped (its extension/ folder).
+    `--extensionDevelopmentPath=${process.env.EXTENSION_PATH || root}`,
     `--extensionTestsPath=${path.join(root, 'out', 'test', 'integration', 'index.js')}`,
     '--disable-extensions',
     '--skip-welcome',

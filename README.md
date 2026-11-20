@@ -58,10 +58,13 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 ## C#
 
+![The flowchart of a C# method, with its paths listed beside it](docs/images/csharp-flowchart.gif)
+
 - **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart any C# method, constructor, property accessor or lambda, with every path listed and impossible ones flagged.
 - **Inspections** underline C# slips as you type: empty `catch`, `throw ex`, `async void`, assigning or comparing a value with itself, identical `if`/`else` branches and more.
 - These two need nothing else installed: a C# parser ships with Code X-Ray.
-- **Find usages**, **Callers and calls** and **Family tree** use the C# language server, so install the **C# extension** (or C# Dev Kit) and let it load the solution first.
+- **Find usages** uses the C# extension's language server when it is installed, and otherwise finds the name in the workspace's `.cs` files (it says so). **Callers and calls** and **Family tree** need the **C# extension** (or C# Dev Kit).
+- **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`) in a C# file lists what works there; a TypeScript-only action says so and offers those instead.
 - The other features are TypeScript and JavaScript only for now.
 
 ## T-SQL

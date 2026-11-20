@@ -1,5 +1,5 @@
 import ts = require('typescript');
-import { csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
+import { NoLanguageServer, csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
 import { tsqlCallGraphReport, tsqlUsagesReport } from '../tsql/workspace';
 import { bundleWeightReport } from '../navigate/bundleWeight';
 import { graphOption, setGraphOption } from '../structure/graphOptions';
@@ -870,7 +870,9 @@ async function startingAtCursorIn(compute: () => Report | Promise<Report>): Prom
     return await compute();
   } catch (error) {
     if (error instanceof AnalysisError) {
-      void showProblem(error.message, [], 'info');
+      // Without a C# language server: a way to get one.
+      const install = error instanceof NoLanguageServer ? [{ title: 'Install the C# extension', run: () => vscode.commands.executeCommand('workbench.extensions.search', 'ms-dotnettools.csharp') }] : [];
+      void showProblem(error.message, install, 'info');
       return undefined;
     }
     throw error;

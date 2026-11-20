@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { otherLanguageActions, otherLanguageInFront } from './otherLanguages';
 import { sourceEditor } from './refactorCommands';
 import { Keybinding, shortcuts } from '../structure/keys';
 import { featureOf, features } from '../structure/features';
@@ -77,6 +78,9 @@ const maxRecent = 5;
 
 /** "Analyze or Refactor This": every refactoring and analysis for the cursor in one searchable list, the last ones used first. */
 export async function showActionsAtCursor(memento?: vscode.Memento, keybindings: readonly Keybinding[] = []): Promise<void> {
+  // In a C# or T-SQL file: the actions that work there.
+  const other = otherLanguageInFront();
+  if (other) return otherLanguageActions(other);
   const editor = sourceEditor();
   if (!editor) {
     return;

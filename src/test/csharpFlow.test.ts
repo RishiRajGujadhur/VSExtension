@@ -129,3 +129,26 @@ test('C# flowchart: expression-bodied members, accessors, constructors and lambd
 test('C# flowchart: outside any method, it says where to put the cursor', async () => {
   await assert.rejects(chartAt('class A { int x; }', 'int x'), /Put the cursor inside a C# method/);
 });
+
+test('C# Find usages by name (no language server): declaration, writes and reads, with where each is', async () => {
+  const { csharpUsagesByName } = await import('../csharp/nameSearch');
+  const fs = await import('fs');
+  const path = await import('path');
+  const text = fs.readFileSync(path.resolve(__dirname, '../../docs/demo/csharp/OrderService.cs'), 'utf8');
+  const file = 'c:/demo/OrderService.cs';
+  const usages = await csharpUsagesByName([{ file, text }, { file: 'c:/demo/Other.cs', text: 'class Other { int attempts; void Go() { attempts--; } }' }], 'attempts', { file, offset: text.indexOf('attempts++') });
+  const shown = usages.map((u) => `${u.kind} ${u.where} ${u.location.line + 1}${u.atCursor ? ' cursor' : ''}`);
+  assert.deepEqual(shown, [
+    'definition OrderService 53',
+    'read OrderService.PlaceOrderAsync 89',
+    'write OrderService.PlaceOrderAsync 91 cursor',
+    'read OrderService.PlaceOrderAsync 97',
+    'read OrderService.PlaceOrderAsync 99',
+    'write OrderService.Refresh 128',
+    'read OrderService.Refresh 128',
+    'read OrderService.Refresh 129',
+    'read OrderService.Refresh 129',
+    'definition Other 1',
+    'write Other.Go 1',
+  ]);
+});

@@ -352,7 +352,9 @@ Find usages, Callers and calls and Family tree work in C# files too. They ask th
 - **Callers and calls**: the call hierarchy a few levels each way, as a chart, with the same Levels and Show controls.
 - **Family tree**: supertypes and interfaces, subtypes and implementations, and the type's members.
 
-With no C# extension, or before it has loaded the solution, these say so instead of showing an empty report.
+With no C# extension, or before it has loaded the solution, Find usages finds the name instead: every identifier with that name in the workspace's `.cs` files, from the bundled parser, filed the same way (declarations as definitions), with a note that same-named symbols elsewhere are included. Callers and calls and Family tree say they need the C# extension, with a button to install it.
+
+In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (Data flow, Null checks…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.
 
 Two more work with nothing else installed, from a C# parser (tree-sitter's C# grammar, as WebAssembly) that ships with Code X-Ray:
 

@@ -95,6 +95,15 @@ function inspection(name: string, file: string, needle: string): Scene {
   };
 }
 
+
+/** Presses a key in the window as a person would, with Ctrl, Alt and Shift as asked (real key events, not a command). */
+async function press(cdp: Cdp, key: string, code: string, keyCode: number, mods: { ctrl?: boolean; alt?: boolean; shift?: boolean } = {}): Promise<void> {
+  const modifiers = (mods.alt ? 1 : 0) | (mods.ctrl ? 2 : 0) | (mods.shift ? 8 : 0);
+  await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode, modifiers });
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode, modifiers });
+}
+
+
 export const scenes: Scene[] = [
   // Getting started
   {
@@ -264,5 +273,59 @@ export const scenes: Scene[] = [
       await settings().update('exclude', undefined, vscode.ConfigurationTarget.Workspace);
       await settings().update('include', undefined, vscode.ConfigurationTarget.Workspace);
     },
+  },
+  // C#: what a person does in a C# file, with real key presses.
+  {
+    name: 'csharp-flowchart',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'var amount = cart.Price()');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, '1', 'Digit1', 49);
+    },
+    settle: 5000,
+  },
+  {
+    name: 'csharp-usages',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'attempts++');
+      await delay(1500);
+      await press(cdp, 'F7', 'F7', 118, { alt: true });
+    },
+    settle: 4000,
+  },
+  {
+    name: 'csharp-dataflow',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'amount *= 0.9m');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, 'd', 'KeyD', 68);
+    },
+    settle: 3000,
+  },
+  {
+    name: 'csharp-actions',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'var amount = cart.Price()');
+      await delay(1500);
+      await press(cdp, 't', 'KeyT', 84, { ctrl: true, alt: true, shift: true });
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    },
+    settle: 2500,
+  },
+  {
+    name: 'csharp-inspections',
+    async run({ open, delay }) {
+      await open('csharp/OrderService.cs', 'throw ex;');
+      await delay(2500);
+      await vscode.commands.executeCommand('editor.action.showHover');
+      await vscode.commands.executeCommand('workbench.actions.view.problems');
+    },
+    settle: 3000,
   },
 ];

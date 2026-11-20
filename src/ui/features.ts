@@ -5,6 +5,7 @@ import { featureIcon } from '../structure/icons';
 import { actionCatalog } from '../structure/actionCatalog';
 import { activeFeature } from './activeFeature';
 import { noteSubject } from './lastSubjects';
+import { explainUnsupported, otherLanguageInFront } from './otherLanguages';
 
 /** The commands the Actions view lists: running one marks it as the feature on screen once its result shows. */
 const listed = new Set(actionCatalog.map((a) => a.command));
@@ -23,6 +24,13 @@ export function registerCommand(id: string, handler: (...args: any[]) => unknown
   return vscode.commands.registerCommand(id, (...args: unknown[]) => {
     if (feature && !isFeatureEnabled(feature.id)) {
       void offerToEnable(feature);
+      return undefined;
+    }
+    // Asked for in a C# or T-SQL file (from a key, the palette or the Actions view, so with no arguments of its own):
+    // a TypeScript-only command says so and offers what works there, rather than looking for a TypeScript file.
+    const other = listed.has(id) && args.length === 0 ? otherLanguageInFront() : undefined;
+    if (other && !other.commands.includes(id)) {
+      explainUnsupported(other, id);
       return undefined;
     }
     if (listed.has(id)) {

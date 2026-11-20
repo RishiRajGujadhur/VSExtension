@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { otherLanguageInFront } from './ui/otherLanguages';
 import { showLastRefactoring } from './ui/applyRefactor';
 import { rememberRewriteUses } from './ui/intentionProvider';
 import { registerWarmUp } from './ui/warmUp';
@@ -472,7 +473,4 @@ async function toggleSetting(key: string, fallback: boolean, what: string): Prom
 export function deactivate(): void {}
 
 /** The C# or T-SQL file in front, if any: the flowchart charts it without TypeScript. */
-function otherLanguageEditor(): vscode.TextEditor | undefined {
-  const editor = vscode.window.activeTextEditor;
-  return editor && (editor.document.languageId === 'csharp' || editor.document.languageId === 'sql') ? editor : undefined;
-}
+const otherLanguageEditor = (): vscode.TextEditor | undefined => otherLanguageInFront()?.editor;

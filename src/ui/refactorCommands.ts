@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { explainUnsupported, otherLanguageInFront } from './otherLanguages';
 import { activeFeature } from './activeFeature';
 import { remedies, showProblem } from './problems';
 import { ProjectService } from '../analysis/project';
@@ -22,6 +23,12 @@ export function sourceEditor(): vscode.TextEditor | undefined {
   // A chart, the output or a Markdown file in front: the TypeScript file shown beside it is the one meant.
   const editor = isSource(vscode.window.activeTextEditor) ? vscode.window.activeTextEditor : vscode.window.visibleTextEditors.find(isSource);
   if (!editor || !isSource(editor)) {
+    // A C# or T-SQL file in front: this command is TypeScript only; say what works in that language instead.
+    const other = otherLanguageInFront();
+    if (other) {
+      explainUnsupported(other, activeFeature.recent());
+      return undefined;
+    }
     // No file open: straight to picking one (and then the symbol), instead of a message with a link to click.
     if (vscode.workspace.workspaceFolders?.length) {
       void import('./analysisActions').then((m) => m.openFileThenRun(activeFeature.recent()));
