@@ -8,6 +8,17 @@ import { KITTEN_VOICES, phonemeParts, spaceTokens, toWav } from './kittenModel';
 import { VoiceClip, wavSeconds } from './voice';
 
 /**
+ * The environment the phonemizer runs with: enough for Node to start (and the system's temporary folder and locale),
+ * nothing else from the editor's environment.
+ */
+export function phonemizerEnvironment(from: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const keep = ['PATH', 'Path', 'SystemRoot', 'SYSTEMROOT', 'windir', 'TEMP', 'TMP', 'TMPDIR', 'LANG', 'LC_ALL', 'NODE_OPTIONS'];
+  const env: NodeJS.ProcessEnv = { ELECTRON_RUN_AS_NODE: '1' };
+  for (const key of keep) if (from[key] !== undefined) env[key] = from[key];
+  return env;
+}
+
+/**
  * The bundled Kitten TTS voice-over: text → phonemes in the eSpeak NG phonemizer (its own GPL program, started once
  * and kept), phonemes → audio in the Kitten model (a worker thread, so the editor never waits), each clip kept in a
  * cache by voice and text. `home` is dist/kitten; `workerFile` is dist/kittenWorker.js.
@@ -28,18 +39,23 @@ export class KittenNarrator {
     return fs.existsSync(path.join(this.home, 'model', 'kitten_tts_nano_v0_8.onnx')) && fs.existsSync(path.join(this.home, 'phonemize.mjs')) && fs.existsSync(this.workerFile);
   }
 
-  /** "Kitten Jasper" and the like, the names the voice picker shows. */
+  /** The natural voices by name, as the voice picker shows them: "Jasper", "Bella"… */
   static voices(): string[] {
-    return Object.keys(KITTEN_VOICES).map((v) => `Kitten ${v}`);
+    return Object.keys(KITTEN_VOICES);
+  }
+
+  /** Whether a voice is one of the natural voices (an older "Kitten Jasper" counts as "Jasper"). */
+  static isNatural(name: string | undefined): boolean {
+    return !!name && !!KITTEN_VOICES[name.replace(/^Kitten /, '')];
   }
 
   /**
-   * Records each text with the voice ("Kitten Jasper"), using the cache in `cacheDir`; `onClip` is told after each
+   * Records each text with the voice ("Jasper"), using the cache in `cacheDir`; `onClip` is told after each
    * one made, and `cancelled` stops between clips.
    */
   async speak(items: { id: string; text: string }[], voiceName: string, cacheDir: string, onClip?: (done: number, total: number) => void, cancelled?: () => boolean): Promise<VoiceClip[]> {
     const voice = voiceName.replace(/^Kitten /, '');
-    if (!KITTEN_VOICES[voice]) throw new Error(`No Kitten voice called ${voice}`);
+    if (!KITTEN_VOICES[voice]) throw new Error(`No natural voice called ${voice}`);
     fs.mkdirSync(cacheDir, { recursive: true });
     const target = (text: string) => path.join(cacheDir, `kitten-${createHash('sha1').update(`kitten-nano-0.8-int8\n${voice}\n${text}`).digest('hex').slice(0, 20)}.wav`);
     const missing = items.filter((i) => i.text.trim() && !fs.existsSync(target(i.text)));
@@ -113,9 +129,10 @@ export class KittenNarrator {
 
   private askPhonemizer(text: string): Promise<unknown> {
     if (!this.phonemizer) {
-      // A separate program (GPL, see dist/kitten/ESPEAK-NG-NOTICE.md): the editor's own Node, as plain Node.
+      // A separate program (GPL, see dist/kitten/ESPEAK-NG-NOTICE.md): the editor's own Node, as plain Node. It gets
+      // only the environment it needs to run, never the rest (tokens, keys and the like in environment variables).
       const child = spawn(process.execPath, [path.join(this.home, 'phonemize.mjs')], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        env: phonemizerEnvironment(),
         stdio: ['pipe', 'pipe', 'ignore'],
         windowsHide: true,
       });

@@ -123,6 +123,7 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     { dispose: () => reel.dispose() },
+    vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.reel') && reel.settingsChanged()),
     vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),
     // For tests: records the open reel to a file.
     vscode.commands.registerCommand('tsStructure.gitReel.exportTo', (file: string, format: 'webm' | 'mp4') => reel.exportTo(file, format)),

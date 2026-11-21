@@ -239,7 +239,22 @@ export class ReelPanel {
   private async loadVoices(): Promise<void> {
     if (this.voice.voices.length) return;
     this.systemVoices = await listVoices();
-    this.voice.voices = [...(this.kitten.available ? KittenNarrator.voices() : []), ...this.systemVoices];
+    this.voice.voices = [...(this.naturalVoicesOn() ? KittenNarrator.voices() : []), ...this.systemVoices];
+  }
+
+  /** The natural voices: bundled, and not turned off in the settings. */
+  private naturalVoicesOn(): boolean {
+    return this.kitten.available && vscode.workspace.getConfiguration('tsStructure.reel').get<boolean>('naturalVoices', true);
+  }
+
+  /** The Git reel settings changed: the voices offered again; natural voices turned off stop at once. */
+  settingsChanged(): void {
+    this.voice.voices = [];
+    if (!this.naturalVoicesOn()) {
+      this.kitten.dispose();
+      if (KittenNarrator.isNatural(this.voice.name)) this.voice.name = undefined;
+    }
+    void this.loadVoices().then(() => this.post());
   }
   private systemVoices: string[] = [];
 
@@ -249,9 +264,11 @@ export class ReelPanel {
 
   /** The voice to read with: the one picked in the player, else the Narration voice setting. */
   private chosenVoice(): string | undefined {
-    if (this.voice.name && this.voice.voices.includes(this.voice.name)) return this.voice.name;
-    const setting = vscode.workspace.getConfiguration('tsStructure.reel').get<string>('narrationVoice', `Kitten ${DEFAULT_KITTEN_VOICE}`);
-    if (setting === 'System voice') return this.systemVoices[0];
+    const name = this.voice.name?.replace(/^Kitten /, '');
+    if (name && this.voice.voices.includes(name)) return name;
+    // Settings written as "Kitten Jasper" by an earlier version read as "Jasper".
+    const setting = vscode.workspace.getConfiguration('tsStructure.reel').get<string>('narrationVoice', DEFAULT_KITTEN_VOICE).replace(/^Kitten /, '');
+    if (setting === 'System voice' || (KittenNarrator.isNatural(setting) && !this.naturalVoicesOn())) return this.systemVoices[0];
     return this.voice.voices.includes(setting) ? setting : this.voice.voices[0];
   }
 
@@ -262,7 +279,7 @@ export class ReelPanel {
    */
   private async record(items: { id: string; text: string }[], voiceName: string): Promise<VoiceClip[]> {
     const cache = path.join(this.storage, 'reel-voice');
-    if (!voiceName.startsWith('Kitten ')) return speak(items, voiceName, cache);
+    if (!KittenNarrator.isNatural(voiceName) || !this.naturalVoicesOn()) return speak(items, voiceName, cache);
     try {
       const missing = this.kitten.missing(items, voiceName, cache);
       if (!missing) return await this.kitten.speak(items, voiceName, cache);

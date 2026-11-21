@@ -19,3 +19,31 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---------------------------------------------------------------------------
+
+The license above covers Code X-Ray's own code. The extension package also
+bundles the components below, each under its own license (texts and notices
+in THIRD_PARTY_NOTICES.md and in the extension's dist/kitten folder). The
+sizes are what each adds to the installed extension and to the download.
+
+- Extension code, pages and icons: Code X-Ray (MIT).
+  2.2 MB installed, 1.0 MB of the download.
+- Analyses of TypeScript and JavaScript: TypeScript compiler 6.0.3 (Apache-2.0).
+  23.2 MB installed, 4.4 MB of the download.
+- C# support: tree-sitter and tree-sitter-c-sharp (MIT).
+  5.8 MB installed, 0.4 MB of the download.
+- Git reel natural voices: the voice model: Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0).
+  23.2 MB installed, 19.6 MB of the download.
+- Git reel natural voices: the eight voices: Kitten TTS voices file (Apache-2.0).
+  3.1 MB installed, 2.9 MB of the download.
+- Git reel natural voices: the model runtime: ONNX Runtime Web 1.24.3, by Microsoft (MIT).
+  11.9 MB installed, 3.0 MB of the download.
+- Git reel natural voices: pronunciation: eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0).
+  1.3 MB installed, 0.7 MB of the download.
+
+Total: about 70.9 MB installed, a 32.0 MB download. The Git reel natural voices
+(the last four) are 39.5 MB installed and 26.2 MB of the download; they run
+only on your computer and can be turned off with the setting
+tsStructure.reel.naturalVoices. eSpeak NG (GPL-3.0) runs as a separate program,
+dist/kitten/phonemize.mjs, with the GPL text and a source notice next to it.

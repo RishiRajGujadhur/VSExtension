@@ -43,6 +43,10 @@ export async function run(): Promise<void> {
     await compareWithCommitFlow();
     await selectionActionsFlow();
     await gitReelFlow();
+  } catch (error) {
+    // VS Code exits with 1 and does not always print why.
+    console.error(`INTEGRATION FAILED: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+    throw error;
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -669,8 +673,9 @@ async function gitReelFlow(): Promise<void> {
     assert.ok(voiced && voiced.scenes.length === plan.scenes.length && voiced.scenes.every((s) => s.seconds >= 3), 'scenes timed to the voice');
     // The bundled Kitten voice reads, by default, a clip for every scene.
     const info = await vscode.commands.executeCommand<{ name?: string; voices: string[]; clips: number }>('tsStructure.gitReel.voiceInfo');
-    assert.equal(info?.name, 'Kitten Jasper', JSON.stringify(info));
-    assert.equal(info?.voices.filter((v) => v.startsWith('Kitten ')).length, 8);
+    assert.equal(info?.name, 'Jasper', JSON.stringify(info));
+    assert.deepEqual(info?.voices.slice(0, 8), ['Jasper', 'Bella', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo']);
+    assert.ok(info?.voices.every((v) => !/kitten/i.test(v)), 'no voice says Kitten');
     assert.equal(info?.clips, plan.scenes.length);
     console.log(`git reel voice ok: ${info?.name}, ${info?.clips} clips, ${info?.voices.length} voices offered`);
     await new Promise((r) => setTimeout(r, 1500));

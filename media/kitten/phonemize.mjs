@@ -9,7 +9,11 @@
 //   in:  {"id": 1, "text": "Returns 0 early."}
 //   out: {"id": 1, "phonemes": "ɹᵻtˈɜːnz zˈiəɹoʊ ˈɜːli ."}
 import { createInterface } from 'node:readline';
-import { phonemize } from './phonemizer/phonemizer.js';
+
+// No network: everything eSpeak NG needs is in phonemizer.js itself. Any request is refused.
+globalThis.fetch = () => Promise.reject(new Error('The phonemizer does not use the network.'));
+
+const { phonemize } = await import('./phonemizer/phonemizer.js');
 
 /** Phonemes for a text, its punctuation kept between the pieces (as the Kitten model expects). */
 async function toPhonemes(text) {

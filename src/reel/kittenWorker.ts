@@ -21,6 +21,15 @@ interface Session {
 }
 
 const home: string = workerData.home;
+
+// Everything the model needs is in the extension's folder: no request leaves this thread. A runtime that tried to
+// fetch anything (a wasm file from a CDN, say) is refused here rather than allowed out.
+const localFetch = globalThis.fetch;
+globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (!/^(file|data|blob):/i.test(url)) return Promise.reject(new Error(`The voice model does not use the network (${new URL(url).host}).`));
+  return localFetch(input, init);
+}) as typeof fetch;
 let ready: Promise<{ ort: Ort; session: Session; voices: Record<string, VoiceTable> }> | undefined;
 
 function load() {

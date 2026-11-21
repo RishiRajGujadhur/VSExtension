@@ -62,7 +62,7 @@ test('Kitten: the narrator speaks a caption with the bundled model, offline, and
     assert.ok(loud > pcm.length / 2 / 50, 'loud enough to be speech');
     // Kept: asked again, nothing to make.
     assert.equal(narrator.missing(items, 'Kitten Jasper', cache), 0);
-    await assert.rejects(narrator.speak(items, 'Kitten Nobody', cache), /No Kitten voice/);
+    await assert.rejects(narrator.speak(items, 'Nobody', cache), /No natural voice/);
   } finally {
     narrator.dispose();
     fs.rmSync(cache, { recursive: true, force: true });

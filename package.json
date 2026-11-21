@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
-  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.86.0",
+  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: adds 26 MB to the download, 40 MB installed; can be turned off). Chart animations adapted from robot-components (MIT).",
+  "version": "0.87.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -3198,35 +3198,6 @@
             "default": "all",
             "markdownDescription": "Which buttons the title of the **Code X-Ray** results view shows. You can also hide a single button by right-clicking the title bar."
           },
-          "tsStructure.reel.narrationVoice": {
-            "type": "string",
-            "enum": [
-              "Kitten Jasper",
-              "Kitten Bella",
-              "Kitten Luna",
-              "Kitten Bruno",
-              "Kitten Rosie",
-              "Kitten Hugo",
-              "Kitten Kiki",
-              "Kitten Leo",
-              "System voice",
-              "Off"
-            ],
-            "enumDescriptions": [
-              "Kitten TTS, bundled: a man's voice, the quickest to make.",
-              "Kitten TTS, bundled: a woman's voice, slower and calm.",
-              "Kitten TTS, bundled: a woman's voice.",
-              "Kitten TTS, bundled: a man's voice.",
-              "Kitten TTS, bundled: a woman's voice.",
-              "Kitten TTS, bundled: a man's voice.",
-              "Kitten TTS, bundled: a woman's voice.",
-              "Kitten TTS, bundled: a man's voice.",
-              "Your computer's own voice: made at once, more robotic.",
-              "No voice-over: the reel has captions only."
-            ],
-            "default": "Kitten Jasper",
-            "markdownDescription": "Git reel: the voice that reads the captions when the voice-over is on. The Kitten voices are bundled and run on your computer (the first reading of a reel takes about as long as the reel; clips are kept after that); **System voice** uses your computer's own voice; **Off** turns the voice-over off. The player's voice picker changes it for one reel."
-          },
           "tsStructure.dataFlow.groupByDirection": {
             "type": "boolean",
             "default": true,
@@ -3273,6 +3244,47 @@
             "default": true,
             "order": 2,
             "markdownDescription": "**Chart animations**: the moving grid behind charts and the pulses flowing along their lines. Charts with more than 100 boxes are never animated."
+          }
+        }
+      },
+      {
+        "title": "Git reel",
+        "properties": {
+          "tsStructure.reel.naturalVoices": {
+            "type": "boolean",
+            "default": true,
+            "order": 1,
+            "markdownDescription": "Git reel: the **natural voices** for the voice-over (Jasper, Bella, Luna, Bruno, Rosie, Hugo, Kiki and Leo), bundled with the extension and run on your computer only: no download, nothing sent. They take **39.5 MB of the installed extension** (26.2 MB of the download). **Off**: they are neither offered nor started, and the voice-over uses your computer's own voice."
+          },
+          "tsStructure.reel.narrationVoice": {
+            "type": "string",
+            "enum": [
+              "Jasper",
+              "Bella",
+              "Luna",
+              "Bruno",
+              "Rosie",
+              "Hugo",
+              "Kiki",
+              "Leo",
+              "System voice",
+              "Off"
+            ],
+            "enumDescriptions": [
+              "A natural voice: a man's voice, the quickest to make.",
+              "A natural voice: a woman's voice, slower and calm.",
+              "A natural voice: a woman's voice.",
+              "A natural voice: a man's voice.",
+              "A natural voice: a woman's voice.",
+              "A natural voice: a man's voice.",
+              "A natural voice: a woman's voice.",
+              "A natural voice: a man's voice.",
+              "Your computer's own voice: made at once, more robotic.",
+              "No voice-over: the reel has captions only."
+            ],
+            "default": "Jasper",
+            "order": 2,
+            "markdownDescription": "Git reel: the voice that reads the captions when the voice-over is on. The natural voices run on your computer (the first reading of a reel takes about as long as the reel; clips are kept after that); **System voice** uses your computer's own voice; **Off** turns the voice-over off. The player's voice picker changes it for one reel."
           }
         }
       },

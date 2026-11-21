@@ -127,6 +127,27 @@ All settings are on the **Code X-Ray: Settings** page, and under **Code X-Ray** 
 
 The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 
+## Size and privacy
+
+Everything runs on your computer: no code, caption or recording is sent anywhere, and the extension makes no network
+requests of its own (a test runs the voice-over with every network route blocked). The only things that go online are
+links you click, such as a documentation page, which open in your browser. What each part adds:
+
+| Feature | Bundled component | Installed | Download |
+|---|---|---|---|
+| Extension code, pages and icons | Code X-Ray (MIT) | 2.2 MB | 1.0 MB |
+| Analyses of TypeScript and JavaScript | TypeScript compiler 6.0.3 (Apache-2.0) | 23.2 MB | 4.4 MB |
+| C# support | tree-sitter and tree-sitter-c-sharp (MIT) | 5.8 MB | 0.4 MB |
+| Git reel natural voices: the voice model | Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0) | 23.2 MB | 19.6 MB |
+| Git reel natural voices: the eight voices | Kitten TTS voices file (Apache-2.0) | 3.1 MB | 2.9 MB |
+| Git reel natural voices: the model runtime | ONNX Runtime Web 1.24.3, by Microsoft (MIT) | 11.9 MB | 3.0 MB |
+| Git reel natural voices: pronunciation | eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0) | 1.3 MB | 0.7 MB |
+| **Total** |  | **70.9 MB** | **32.0 MB** |
+
+The Git reel natural voices are the last four rows: 39.5 MB installed, 26.2 MB of the download. Turn them off with
+**Natural voices** in the Git reel settings (`tsStructure.reel.naturalVoices`); the voice-over then uses your
+computer's own voice.
+
 ## Credits
 
 The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
