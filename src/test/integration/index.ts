@@ -662,7 +662,10 @@ async function explainCodeFlow(): Promise<void> {
     type VideoPlan = { meta: { title: string }; scenes: { kind: string; chapter?: string; caption: string }[] };
     const video = await vscode.commands.executeCommand<VideoPlan>('tsStructure.explainCode.video');
     assert.equal(video?.meta.title, 'What addToCart() does');
-    assert.deepEqual(video!.scenes.filter((s) => s.kind === 'flow').map((s) => s.caption), e!.steps);
+    // A scene per step on the flowchart (steps on one box together), then the whole path.
+    const flows = video!.scenes.filter((s) => s.kind === 'flow');
+    assert.ok(flows.length >= 2 && flows[flows.length - 1].chapter === 'The whole path', JSON.stringify(flows.map((s) => s.chapter)));
+    assert.ok(video!.scenes.every((s) => !/walk through/i.test(s.caption)));
     const player = await tabLabelled((label) => label === 'Video: What addToCart() does');
     assert.ok(player, `the video opens in the reel's player: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
     console.log(`explain this code video ok: ${video!.scenes.map((s) => s.chapter ?? s.kind).join(', ')}`);

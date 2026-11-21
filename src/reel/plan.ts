@@ -35,6 +35,8 @@ export interface ReelPlan {
     chip?: string;
     /** The line under the title, in place of "The key changes, file by file". */
     subtitle?: string;
+    /** Code shown on the opening card under the title, such as the function's signature. */
+    signature?: string;
   };
   scenes: ReelScene[];
 }
@@ -77,6 +79,12 @@ export interface FlowSnapshot {
    * steps before it "added", and the view stays on this step's boxes.
    */
   walk?: boolean;
+  /** In a walk: the boxes of the step before, for the view to glide from. */
+  from?: number[];
+  /** In a walk: how this step's boxes glow (red for what happens when something fails). */
+  tone?: 'step' | 'decision' | 'exit' | 'error';
+  /** The end of a walk: the whole chart, every step lit, the flow running along all of it. */
+  finale?: boolean;
 }
 
 export type ReelScene =
@@ -97,7 +105,21 @@ export type ReelScene =
       feature?: string;
     })
   /** A function's flowchart on its own, after its code: zoomed to the boxes that changed. */
-  | (SceneBase & { kind: 'flow'; file: string; symbol: string; flow: FlowSnapshot; line?: number; /** The line under the heading, in place of what the colors mean. */ legend?: string })
+  | (SceneBase & {
+      kind: 'flow';
+      file: string;
+      symbol: string;
+      flow: FlowSnapshot;
+      line?: number;
+      /** The line under the heading, in place of what the colors mean. */
+      legend?: string;
+      /** What kind of step it is, as a chip: "Decision", "If it fails". */
+      badge?: string;
+      /** The step's own code, shown under the chart. */
+      code?: string[];
+      /** Where the walk is: this step of how many, as dots. */
+      progress?: { index: number; total: number };
+    })
   | (SceneBase & { kind: 'files'; files: { file: string; added: number; removed: number; status: string }[] })
   | (SceneBase & { kind: 'summary'; points: string[] });
 

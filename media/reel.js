@@ -248,7 +248,19 @@
       text(line, W / 2, top + i * (L.title + 26) + lift, font, c.text, 'center', 'middle');
     });
     ctx.globalAlpha = ease(p * 3 - 0.5);
-    text(fit(plan.meta.subtitle || 'The key changes, file by file', W - 2 * L.m, `${L.small}px ${uiFont}`), W / 2, top + lines.length * (L.title + 26) + 40, `${L.small}px ${uiFont}`, c.muted, 'center', 'middle');
+    if (plan.meta.signature) {
+      // The function's signature, in its own code panel, typed in.
+      const font = `${L.code + 4}px ${codeFont}`;
+      const shown = fit(plan.meta.signature, W - 2 * L.m - 120, font);
+      ctx.font = font;
+      const w = ctx.measureText(shown).width + 56;
+      const y = top + lines.length * (L.title + 26) + 14;
+      ctx.globalAlpha = ease(p * 4 - 0.4);
+      panel(W / 2 - w / 2, y, w, L.code + 40, c, c.code, c.border, 12);
+      drawCode(shown.slice(0, Math.ceil(shown.length * ease((p - 0.12) / 0.4))), W / 2 - w / 2 + 28, y + (L.code + 40) / 2, font, c, w - 40);
+    } else {
+      text(fit(plan.meta.subtitle || 'The key changes, file by file', W - 2 * L.m, `${L.small}px ${uiFont}`), W / 2, top + lines.length * (L.title + 26) + 40, `${L.small}px ${uiFont}`, c.muted, 'center', 'middle');
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -301,9 +313,52 @@
   /** A function's flowchart on its own: the whole chart first, then the view glides to the boxes that changed. */
   function drawFlowScene(s, p, c, W, H, L) {
     text(fit(`${s.file}  ·  ${s.symbol}()`, W - 2 * L.m, `600 ${L.body}px ${codeFont}`), L.m, L.top + 20, `600 ${L.body}px ${codeFont}`, c.text, 'left', 'middle');
-    text(fit(s.legend || 'Flowchart: new boxes green, changed boxes amber', W - 2 * L.m, `${L.small}px ${uiFont}`), L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, c.muted, 'left', 'middle');
+    const row = L.top + 20 + L.body + 14;
+    if (s.badge) {
+      // What kind of step: a chip in the step's color (red for what happens when something fails).
+      const tone = s.flow.tone;
+      const color = s.flow.finale ? c.add : tone === 'error' ? c.del : c.changed;
+      const fill = s.flow.finale ? c.addSoft : tone === 'error' ? c.delSoft : 'rgba(214,160,58,0.16)';
+      ctx.save();
+      ctx.globalAlpha = ease(p * 6);
+      chip(s.badge, L.m, row - 23, c, `700 ${L.small - 2}px ${uiFont}`, 'left', fill, color);
+      ctx.restore();
+    } else if (s.legend !== '') {
+      text(fit(s.legend || 'Flowchart: new boxes green, changed boxes amber', W - 2 * L.m, `${L.small}px ${uiFont}`), L.m, row, `${L.small}px ${uiFont}`, c.muted, 'left', 'middle');
+    }
+    // How far the walk has come: a dot per step, the ones done filled, this one wide.
+    if (s.progress && s.progress.total > 1) {
+      const { index, total } = s.progress;
+      const gap = 14;
+      const size = 10;
+      const widths = Array.from({ length: total }, (_, i) => (i === index ? 34 : size));
+      let x = W - L.m - widths.reduce((n, w) => n + w, 0) - gap * (total - 1);
+      widths.forEach((w, i) => {
+        round(x, L.top + 20 - size / 2, w, size, size / 2);
+        ctx.fillStyle = i < index ? c.add : i === index ? (s.flow.tone === 'error' ? c.del : c.changed) : c.border;
+        ctx.fill();
+        x += w + gap;
+      });
+    }
     const areaTop = L.top + 20 + L.body * 2 + 30;
-    const areaBottom = H - L.captionH - 40;
+    let areaBottom = H - L.captionH - 40;
+    // The step's own code, under the chart, typed in as the step begins.
+    const code = s.code || [];
+    if (code.length) {
+      const size = Math.round(L.code * 1.15);
+      const lineH = size + 14;
+      const stripH = code.length * lineH + 30;
+      const y = areaBottom - stripH;
+      areaBottom = y - 16;
+      panel(L.m, y, W - 2 * L.m, stripH, c, c.code, s.flow.tone === 'error' ? c.del : c.changed);
+      const total = code.reduce((n, l) => n + l.length, 0);
+      let left = Math.ceil(total * ease((p - 0.08) / 0.32));
+      code.forEach((line, i) => {
+        const shown = line.slice(0, Math.max(0, left));
+        left -= line.length;
+        if (shown) drawCode(shown, L.m + 24, y + 15 + i * lineH + lineH / 2, `${size}px ${codeFont}`, c, W - 2 * L.m - 48);
+      });
+    }
     drawFlow(s.flow, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L, p * s.seconds);
   }
 
@@ -412,7 +467,8 @@
     for (const e of flow.edges) {
       if (e.from === undefined || e.to === undefined) continue;
       // Into this step from where the walk has been (or within the step): pulsing. Along the walk so far: a wire.
-      const arriving = current.has(e.to) && (walked.has(e.from) || current.has(e.from));
+      // The finale: the flow runs along the whole path walked.
+      const arriving = flow.finale ? walked.has(e.from) && walked.has(e.to) : current.has(e.to) && (walked.has(e.from) || current.has(e.from));
       const along = walked.has(e.from) && walked.has(e.to);
       if (!arriving && !along) continue;
       let pts = e.points.map(toScreen);
@@ -487,17 +543,19 @@
     const whole = { x: 0, y: 0, w: flow.width, h: flow.height };
     // A walk through a function (an explanation video): the view is on this step's boxes only.
     const changedNodes = flow.nodes.filter((n) => (flow.walk ? n.state === 'changed' : n.state !== 'same'));
-    let focus = whole;
-    if (changedNodes.length) {
-      const x0 = Math.min(...changedNodes.map((n) => n.x)) - 120;
-      const y0 = Math.min(...changedNodes.map((n) => n.y)) - 120;
-      const x1 = Math.max(...changedNodes.map((n) => n.x + n.width)) + 120;
-      const y1 = Math.max(...changedNodes.map((n) => n.y + n.height)) + 120;
+    // The part of the chart around some boxes, with room round them.
+    const around = (list) => {
+      if (!list.length) return whole;
+      const x0 = Math.min(...list.map((n) => n.x)) - 120;
+      const y0 = Math.min(...list.map((n) => n.y)) - 120;
+      const x1 = Math.max(...list.map((n) => n.x + n.width)) + 120;
+      const y1 = Math.max(...list.map((n) => n.y + n.height)) + 120;
       // At least the box's own shape, so a lone box is not blown up.
       const w = Math.max(x1 - x0, innerW / 1.6);
       const h = Math.max(y1 - y0, innerH / 1.6);
-      focus = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
-    }
+      return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
+    };
+    const focus = around(changedNodes);
     const fitScale = (r) => Math.min(innerW / Math.max(1, r.w), innerH / Math.max(1, r.h), 2.2);
     // Boxes are read at a scale of at least 1.6 (code at about 19px): when the changes do not fit at that size, the
     // view travels from one group of changed boxes to the next, top to bottom.
@@ -527,7 +585,14 @@
     }
     // A walk is already close in, step after step: no glide from the whole chart each time.
     const zoomIn = fitScale(target) > fitScale(whole) * 1.15 ? (flow.walk ? 1 : ease((p - 0.1) / 0.22)) : 0;
-    const view = { x: whole.x + (target.x - whole.x) * zoomIn, y: whole.y + (target.y - whole.y) * zoomIn, w: whole.w + (target.w - whole.w) * zoomIn, h: whole.h + (target.h - whole.h) * zoomIn };
+    let view = { x: whole.x + (target.x - whole.x) * zoomIn, y: whole.y + (target.y - whole.y) * zoomIn, w: whole.w + (target.w - whole.w) * zoomIn, h: whole.h + (target.h - whole.h) * zoomIn };
+    // A walk glides from the step before to this one (and, at the end, out to the whole chart) instead of cutting.
+    const fromNodes = flow.walk && flow.from ? flow.from.map((i) => flow.nodes[i]).filter(Boolean) : [];
+    if (fromNodes.length) {
+      const prev = around(fromNodes);
+      const g = ease(p / (flow.finale ? 0.45 : 0.28));
+      view = { x: prev.x + (view.x - prev.x) * g, y: prev.y + (view.y - prev.y) * g, w: prev.w + (view.w - prev.w) * g, h: prev.h + (view.h - prev.h) * g };
+    }
     const scale = fitScale(view);
     const ox = box.x + pad + innerW / 2 - (view.x + view.w / 2) * scale;
     const oy = box.y + pad + innerH / 2 - (view.y + view.h / 2) * scale;
@@ -538,7 +603,7 @@
     // A walk builds the chart up step by step: what it has not reached yet is a faint outline, this step's line draws
     // itself in, then its box pops up (all at once when motion is off).
     const still = reducedMotion.matches || document.body.dataset.animationsCharts === 'off';
-    const grow = flow.walk && !still ? ease((p - 0.04) / 0.26) : 1;
+    const grow = flow.walk && !flow.finale && !still ? ease((p - 0.04) / 0.26) : 1;
     const pop = flow.walk && !still ? Math.min(1, Math.max(0, (p - 0.22) / 0.16)) : 1;
     const ghost = 0.13;
     ctx.globalAlpha = appear * (flow.walk ? ghost : 1);
@@ -566,7 +631,9 @@
       const h = n.height * scale * k;
       const x = ox + (n.x + n.width / 2) * scale - w / 2;
       const y = oy + (n.y + n.height / 2) * scale - h / 2;
-      const color = n.state === 'added' ? c.add : n.state === 'changed' ? c.changed : c.border;
+      // A step of what happens when something fails glows red.
+      const failing = flow.tone === 'error';
+      const color = n.state === 'added' ? c.add : n.state === 'changed' ? (failing ? c.del : c.changed) : c.border;
       if (n.kind === 'start' || n.kind === 'end') {
         ctx.beginPath();
         ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
@@ -581,7 +648,7 @@
         ctx.shadowColor = color;
         ctx.shadowBlur = 12 + 18 * pulse;
         round(x, y, w, h, Math.min(12, h / 3));
-        ctx.fillStyle = n.state === 'added' ? c.addSoft : 'rgba(214,160,58,0.16)';
+        ctx.fillStyle = n.state === 'added' ? c.addSoft : failing ? c.delSoft : 'rgba(214,160,58,0.16)';
         ctx.fill();
         ctx.restore();
       }

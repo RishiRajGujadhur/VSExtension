@@ -26,13 +26,13 @@ export interface CodeExplanation {
   /** What it does, step by step. */
   steps: string[];
   /** For a whole function: its flowchart and the boxes each step is about, for the explanation video. */
-  walk?: { name: string; chart: ControlFlowChart; nodes: number[][] };
+  walk?: { name: string; chart: ControlFlowChart; nodes: number[][]; /** Its first line, up to the body: "async function poll(currentGeneration: number)". */ signature?: string };
 }
 
 /** The explanation of a function from its flowchart: the steps, and the boxes each one lights up. */
-function fromChart(subject: string, name: string, chart: ControlFlowChart, summary?: string): CodeExplanation {
+function fromChart(subject: string, name: string, chart: ControlFlowChart, summary?: string, signature?: string): CodeExplanation {
   const walk = explainFunctionWalk(chart);
-  return { subject, summary, steps: walk.map((w) => w.text), walk: { name, chart, nodes: walk.map((w) => w.nodes) } };
+  return { subject, summary, steps: walk.map((w) => w.text), walk: { name, chart, nodes: walk.map((w) => w.nodes), ...(signature ? { signature } : {}) } };
 }
 
 type Understand = (texts: string[]) => Promise<Float32Array[]>;
@@ -47,7 +47,7 @@ export async function explainCode(file: string, text: string, start: number, end
       const at = start + (selected.length - selected.trimStart().length);
       const chart = ext === '.cs' ? await csharpFlowChart(text, file, at) : tsqlFlowChart(text, file, at);
       const name = chart.name.replace(/\(\)$/, '');
-      return withPurpose(fromChart(`${name}()`, name, chart), name, file, lines, understand);
+      return withPurpose(fromChart(`${name}()`, name, chart, undefined, oneLine(lines.find((l) => l.trim()) ?? '')), name, file, lines, understand);
     } catch {
       return withPurpose({ subject: 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
     }
@@ -61,7 +61,8 @@ export async function explainCode(file: string, text: string, start: number, end
     const anchor = fn.name?.getStart(source) ?? (ts.isVariableDeclaration(fn.parent) ? fn.parent.name.getStart(source) : fn.getStart(source));
     const chart = standaloneCharts(file, text)(anchor);
     const body = text.slice(fn.getStart(source), fn.end).split('\n');
-    return withPurpose(fromChart(`the function ${name}()`, name, chart, signatureSentence(fn, name, source)), name, file, body, understand);
+    const head = fn.body ? text.slice(fn.getStart(source), fn.body.getStart(source)) : body[0];
+    return withPurpose(fromChart(`the function ${name}()`, name, chart, signatureSentence(fn, name, source), oneLine(head.replace(/\s*=>\s*$/, ''))), name, file, body, understand);
   }
   return withPurpose({ subject: name ? `the highlighted lines in ${name}()` : 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
 }
@@ -122,4 +123,10 @@ function signatureSentence(fn: ts.FunctionLikeDeclaration, name: string, source:
   const gives = returns && returns !== 'void' ? `returns ${/^[A-Z]/.test(returns) && !/[<|[]/.test(returns) ? `a ${returns}` : returns}${isAsync || promised ? ', once it finishes' : ''}` : '';
   const what = [takes, gives].filter(Boolean).join(' and ');
   return `${name} is ${isAsync ? 'an async' : 'a'} ${kind}${what ? ` that ${what}` : ''}.`;
+}
+
+/** Code on one line, spaces squeezed, cut to a length a title card can show. */
+function oneLine(code: string, max = 90): string {
+  const line = code.replace(/\s+/g, ' ').replace(/\s*\{\s*$/, '').trim();
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }

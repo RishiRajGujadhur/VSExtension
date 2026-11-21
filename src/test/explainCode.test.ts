@@ -5,7 +5,7 @@ import * as path from 'path';
 import { explainCode } from '../explain/explainCode';
 import { CodeModel } from '../reel/codeModel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
-import { explanationReel } from '../explain/explainReel';
+import { explanationReel, stepKind, walkSteps } from '../explain/explainReel';
 import { explanationHtml } from '../explain/explainHtml';
 import type { ReelScene } from '../reel/plan';
 
@@ -79,27 +79,54 @@ test('Explain this code: the code model names what the rules cannot', { skip: !r
   }
 });
 
-test('Explain this code as a video: a scene per step on the flowchart, this step amber, the steps so far green', async () => {
+test('Explain this code as a video: essential only, a scene per step on the flowchart, then the whole path', async () => {
   const e = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
   const plan = explanationReel(e, 'src/workspace.ts')!;
-  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', ...e.steps.map(() => 'flow'), 'summary']);
   assert.equal(plan.meta.title, 'What currentConfig() does');
   assert.equal(plan.meta.chip, 'workspace.ts');
-  assert.match(plan.scenes[0].caption, /^currentConfig is an async function .* Let's walk through it, step by step\.$/);
-  const steps = plan.scenes.filter((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow');
-  assert.deepEqual(steps.map((s) => s.caption), e.steps);
-  assert.deepEqual(steps.map((s) => s.chapter), e.steps.map((_, i) => `Step ${i + 1}`));
+  // The opening: the signature on the card, and what it is, no filler.
+  assert.equal(plan.meta.signature, 'export async function currentConfig(): Promise<Config>');
+  assert.equal(plan.scenes[0].caption, 'currentConfig is an async function that returns a Config, once it finishes.');
+  assert.ok(plan.scenes.every((s) => !/walk through|step by step/i.test(s.caption)));
+  const flows = plan.scenes.filter((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow');
+  const steps = flows.filter((s) => s.id !== 'finale');
+  // Steps on the same box are one scene.
+  assert.equal(steps[0].caption, "It asks the server for the workspace, and sets the context repository to the config's repository root.");
+  assert.ok(steps.length < e.steps.length);
+  assert.deepEqual(steps.map((s) => s.chapter), steps.map((_, i) => `Step ${i + 1}`));
   for (const [i, s] of steps.entries()) {
     assert.ok(s.flow.walk);
-    // Each step lights its own boxes; the ones before stay green.
     assert.ok(s.flow.nodes.some((n) => n.state === 'changed'), `step ${i + 1} lights a box`);
+    // Dots for how far the walk has come, the step's own code, and the step before to glide from.
+    assert.deepEqual(s.progress, { index: i, total: steps.length });
+    assert.ok(s.code && s.code.length, `step ${i + 1} shows its code`);
+    if (i) assert.ok(s.flow.from && s.flow.from.length, `step ${i + 1} glides from the step before`);
   }
-  // The lines know the boxes they join, so the player can send the flow along them into each step.
-  assert.ok(steps.every((s) => s.flow.edges.every((edge) => typeof edge.from === "number" && typeof edge.to === "number")));
-  // Steps in the same box light the same box; by the last step the ones before are green.
-  assert.ok(steps[steps.length - 1].flow.nodes.some((n) => n.state === 'added'), 'the last step keeps the steps so far');
+  assert.match(steps[0].code!.join(' '), /apiCall/);
+  // Labelled by kind: what happens when something fails is red.
+  const failing = steps.find((s) => /^If something goes wrong/.test(s.caption))!;
+  assert.deepEqual([failing.badge, failing.flow.tone], ['If it fails', 'error']);
+  assert.equal(steps.find((s) => /returns the config\.$/.test(s.caption))?.badge, 'Returns');
+  // The finale: every step lit, nothing current, the flow along all of it.
+  const finale = flows[flows.length - 1];
+  assert.equal(finale.id, 'finale');
+  assert.ok(finale.flow.finale);
+  assert.ok(!finale.flow.nodes.some((n) => n.state === 'changed'));
+  assert.ok(finale.flow.nodes.some((n) => n.state === 'added'));
+  // The lines know the boxes they join, so the player can send the flow along them.
+  assert.ok(flows.every((s) => s.flow.edges.every((edge) => typeof edge.from === 'number' && typeof edge.to === 'number')));
   // Lines that are not a whole function have no flowchart to walk.
   assert.equal(explanationReel(await explainCode('workspace.ts', code, ...range('    const config = saved', 'fixtures\') };')), 'x.ts'), undefined);
+});
+
+test('Explain this code as a video: steps that say little are left out, and kinds read from the step', () => {
+  const steps = walkSteps(['It uses the config.', 'It sets the name to the user name.', 'It returns the name.', 'Then it uses the abort.'], [[1], [2], [3], [4]]);
+  assert.deepEqual(steps.map((s) => s.text), ['It sets the name to the user name.', 'It returns the name.']);
+  // Three steps on one box: two in one scene, the third in its own.
+  assert.equal(walkSteps(['It a b.', 'It c d.', 'It e f.'], [[1], [1], [1]]).length, 2);
+  assert.deepEqual(stepKind('If the cart is empty, it returns 0.', ['decision', 'return']), { label: 'Decision', tone: 'decision' });
+  assert.deepEqual(stepKind('It goes through each item in the items.', ['loop']), { label: 'Loop', tone: 'step' });
+  assert.deepEqual(stepKind('It sets the name.', ['statement']), { label: 'Step', tone: 'step' });
 });
 
 test('Explain this code: the page offers the video only for a whole function, as a command link', async () => {

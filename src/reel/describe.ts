@@ -616,8 +616,8 @@ export function explainFunctionWalk(chart: ControlFlowChart, max = 10): { text: 
     if (!phrase || !readable(phrase)) return;
     const key = phrase.toLowerCase();
     if (said.has(key)) {
-      // Said already: these boxes go with the step that said it.
-      steps.find((s) => s.text.toLowerCase().endsWith(` ${key}.`))?.nodes.push(...ids);
+      // Said already: these boxes go with the step being told now, so a walk lights them in the order the code runs.
+      steps[steps.length - 1]?.nodes.push(...ids.filter((id) => !steps[steps.length - 1].nodes.includes(id)));
       return;
     }
     said.add(key);
