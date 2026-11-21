@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ReelPanel } from './reel/reelPanel';
+import { ExplainCodeView } from './ui/explainCodeView';
 import { otherLanguageInFront } from './ui/otherLanguages';
 import { showLastRefactoring } from './ui/applyRefactor';
 import { rememberRewriteUses } from './ui/intentionProvider';
@@ -120,11 +121,16 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   controlFlow.register(context);
   // The Git reel: the changes since a revision, as a short video.
   const reel = new ReelPanel(context.extensionUri, context.workspaceState, context.globalStorageUri.fsPath);
+  // Explain this code: the highlighted code in plain sentences, with the code model when it is downloaded.
+  const explain = new ExplainCodeView(context.extensionUri, reel);
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     { dispose: () => reel.dispose() },
     vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.reel') && reel.settingsChanged()),
-    registerCommand('tsStructure.gitReel.downloadCodeModel', () => reel.downloadCodeModel()),
+    registerCommand('tsStructure.gitReel.downloadCodeModel', () => reel.confirmAndDownloadCodeModel()),
+    registerCommand('tsStructure.explainCode', () => explain.run()),
+    // For tests: the last explanation shown.
+    vscode.commands.registerCommand('tsStructure.explainCode.last', () => explain.last),
     registerCommand('tsStructure.gitReel.removeCodeModel', () => reel.removeCodeModel()),
     // For tests: whether the code model is downloaded.
     vscode.commands.registerCommand('tsStructure.gitReel.codeModelInfo', () => ({ downloaded: reel.codeModel.downloaded })),

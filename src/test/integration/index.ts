@@ -28,6 +28,7 @@ export async function run(): Promise<void> {
   // The code model is never downloaded by the tests (the unit tests run it from assets/code-model): no prompt.
   await vscode.workspace.getConfiguration('tsStructure.reel').update('codeModel', 'off', vscode.ConfigurationTarget.Global);
   try {
+    await explainCodeFlow();
     await testImpact();
     // Before the refactorings, which edit the sample files.
     await analysisCommandsFlow();
@@ -639,6 +640,24 @@ async function selectionActionsFlow(): Promise<void> {
 }
 
 /** Git reel: the changes since the last commit as a plan the player draws, in its own tab. */
+/** Explain this code: highlighted code in plain sentences, in a page beside the editor, with nothing downloaded. */
+async function explainCodeFlow(): Promise<void> {
+  const file = path.join(sample, 'src', 'explainMe.ts');
+  const code = 'export function addToCart(items: number[], item: number): number[] {\n  if (item <= 0) return items;\n  return [...items, item];\n}\n';
+  fs.writeFileSync(file, code);
+  const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+  editor.selection = new vscode.Selection(0, 0, 3, 1);
+  type Explained = { subject: string; purpose?: { text: string; by: string }; steps: string[] };
+  const e = await vscode.commands.executeCommand<Explained>('tsStructure.explainCode');
+  assert.equal(e?.subject, 'the function addToCart()', JSON.stringify(e));
+  assert.deepEqual(e?.purpose, { text: 'Adds item to cart', by: 'rules' });
+  assert.ok(e!.steps.length >= 1, JSON.stringify(e));
+  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Explain: '));
+  assert.ok(tab, `the explanation opens beside the editor: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
+  console.log(`explain this code ok: ${e!.purpose!.text}; ${e!.steps.join(' ')}`);
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
 async function gitReelFlow(): Promise<void> {
   const file = path.join(sample, 'src', 'grade.ts');
   fs.writeFileSync(file, "export function grade(score: number) {\n  if (score > 90) return 'A';\n  if (score > 75) return 'B';\n  return 'C';\n}\n");

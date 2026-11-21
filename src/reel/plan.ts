@@ -106,11 +106,11 @@ export interface ReelRequest {
 }
 
 /** One scene per file, its key change: this many files at most. */
-const MAX_SCENES = 6;
+const MAX_SCENES = 8;
 /** Lines of diff a scene shows at most; the rest are summed up. */
 const MAX_LINES = 40;
-/** A reel lasts about a minute at most. */
-const MAX_SECONDS = 90;
+/** A reel lasts two and a half minutes at most. */
+const MAX_SECONDS = 150;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Git
@@ -370,7 +370,8 @@ export function flowCaption(symbol: string, comparison: FlowComparison, added: n
 
 /** Seconds a scene stays: long enough to read its caption, plus time for its code. */
 function secondsFor(caption: string, lines = 0): number {
-  return Math.round(Math.min(9, Math.max(3, 1.6 + caption.length / 22 + lines * 0.12)) * 10) / 10;
+  // Time to read it unhurried (about 15 characters a second), and to look at the code.
+  return Math.round(Math.min(16, Math.max(4, 2.5 + caption.length / 15 + lines * 0.3)) * 10) / 10;
 }
 
 /** "feat/retry-checkout" → "Retry checkout". */
@@ -458,7 +459,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
           const symbol = chart.name.replace(/\(\)$/, '');
           // What the function is for (its name and all its changed lines), then what the key change does.
           const feature = featureIntent({ name: symbol, file: file.path, added: lines.filter((l) => l.kind === 'add').map((l) => l.text), removed: lines.filter((l) => l.kind === 'del').map((l) => l.text) });
-          const described = describeFunctionChange(symbol, chart, focusComparison(chart, comparison, keyed.lines), 2, keyed.lines);
+          const described = describeFunctionChange(symbol, chart, focusComparison(chart, comparison, keyed.lines), 3, keyed.lines);
           // Nothing the describer could put in words: what the key lines do, by the intent model.
           const vague = described.length === 1 && described[0].endsWith(' works a little differently now.');
           const sentences = vague && keyIntent && keyIntent.score >= 2 ? [`${symbol} now ${keyIntent.phrase}.`] : described;
@@ -480,7 +481,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
       const testFile = isTestFile(file.path);
       // The file's own name counts as a name: "CartItems.tsx" shows the cart items.
       const feature = testFile ? undefined : featureIntent({ name: base.replace(/\.[^.]+$/, ''), file: file.path, added: lines.filter((l) => l.kind === 'add').map((l) => l.text), removed: lines.filter((l) => l.kind === 'del').map((l) => l.text) });
-      const described = describeFileChange(file.path, keyAdded, keyRemoved, isNew, now, 2, testFile ? testsAround(now, list) : []);
+      const described = describeFileChange(file.path, keyAdded, keyRemoved, isNew, now, 3, testFile ? testsAround(now, list) : []);
       // A sentence that still reads as code is left out; with none left, what the key change does, by the intent model.
       const plain = described.filter((s) => !/=>|\|\||&&|\s\|\s|\?:|[{};]/.test(s.replace(/"[^"]*"/g, '""')));
       const sentences = plain.length ? plain : [`This file now ${keyIntent && keyIntent.score >= 2 ? keyIntent.phrase : feature ? feature.phrase : 'works a little differently'}.`];
@@ -519,25 +520,70 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
 
   // The files whose key changes matter most get a scene each, in the order of the files; the rest are listed on one card.
   const chosen = new Set([...candidates].sort((a, b) => b.weight - a.weight).slice(0, maxScenes));
-  const chosenList = candidates.filter((c) => chosen.has(c));
+  // The code first, in the order of the files; the tests at the end, after what they test.
+  const chosenList = [...candidates.filter((c) => chosen.has(c) && !isTestFile(c.file)), ...candidates.filter((c) => chosen.has(c) && isTestFile(c.file))];
   const diffScenes = chosenList.map(({ weight: _weight, model: _model, ...scene }) => scene);
+  varyCaptions(diffScenes);
   const others = candidates.filter((c) => !chosen.has(c));
   const additions = kept.reduce((n, f) => n + f.added, 0);
   const deletions = kept.reduce((n, f) => n + f.removed, 0);
   const scenes: ReelScene[] = [];
-  const overview = `${title.replace(/\.$/, '')}. Here is what it changes, and what the new code does.`;
+  const overview = `${title.replace(/\.$/, '')}. Let's walk through the key changes, file by file.`;
   scenes.push({ kind: 'overview', id: 'overview', caption: overview, captionSource: 'heuristic', seconds: secondsFor(overview) + 1 });
   scenes.push(...diffScenes);
   if (others.length || fileRows.length > new Set(diffScenes.map((s) => s.file)).size) {
-    const caption = 'It also touches these files.';
+    const caption = 'A few other files changed along the way.';
     scenes.push({ kind: 'files', id: 'files', files: fileRows.slice(0, 14), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(fileRows.length, 14)) });
   }
-  // What each change does, its first sentence, as the summary's points.
-  const points = diffScenes.map((d) => d.caption.split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/)[0]).slice(0, 5);
-  const summary = points.length ? `To sum up: ${points.slice(0, 2).map((p) => p.replace(/^[\w@./-]+\.[A-Za-z]{1,6}\s+—\s+/, '')).join(' ')}` : 'That is the whole change.';
+  // What each change does, its first sentence, as the summary's points (shown, and copied as Markdown).
+  const points = diffScenes.map((d) => d.caption.replace(/^[\w@./-]+\.[A-Za-z]{1,6}\s+—\s+/, '').replace(/^(Next|Then|Also|After that|Meanwhile|Finally), (\w)/, (_, _o, ch: string) => ch.toUpperCase()).split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/)[0]).slice(0, 5);
+  const summary = summaryCaption(diffScenes);
   scenes.push({ kind: 'summary', id: 'summary', points, caption: summary, captionSource: 'heuristic', seconds: secondsFor(summary, points.length * 2) });
   fitDuration(scenes, MAX_SECONDS);
   return { version: 1, meta: { title, base: request.baseLabel, head, additions, deletions, files: kept.length, skipped }, scenes };
+}
+
+type DiffScene = Extract<ReelScene, { kind: 'diff' }>;
+const OPENERS = ['Next', 'Then', 'Also', 'After that', 'Meanwhile'];
+
+/**
+ * Captions that do not all sound alike: each scene after the first opens with a different word ("Next, …", "Then,
+ * …", the last one "Finally, …"), and a sentence already said in an earlier scene is not said again.
+ */
+export function varyCaptions(scenes: DiffScene[]): void {
+  const said = new Set<string>();
+  scenes.forEach((s, i) => {
+    const m = /^([\w@./-]+\.[A-Za-z]{1,6} — )?([\s\S]*)$/.exec(s.caption)!;
+    const prefix = m[1] ?? '';
+    const sentences = m[2].split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/).filter((x, k) => {
+      const key = x.replace(/^(It also|And it|It)\s+/, '').toLowerCase();
+      if (k > 0 && said.has(key)) return false;
+      said.add(key);
+      return true;
+    });
+    if (!sentences.length) return;
+    if (i > 0) {
+      const opener = i === scenes.length - 1 && scenes.length > 2 ? 'Finally' : OPENERS[(i - 1) % OPENERS.length];
+      const first = sentences[0];
+      // "This file now …" → "Next, this file now …"; a name stays as it is written.
+      sentences[0] = `${opener}, ${/^(This|The|It|A|An)\b/.test(first) ? first[0].toLowerCase() + first.slice(1) : first}`;
+    }
+    s.caption = prefix + sentences.join(' ');
+    s.seconds = secondsFor(s.caption, s.lines.length);
+  });
+}
+
+/**
+ * The summary in a sentence of its own, not the scenes again: what the change works on (by what each part is for,
+ * when known, else the function's name), and whether the tests changed too.
+ */
+export function summaryCaption(scenes: DiffScene[]): string {
+  const code = scenes.filter((s) => !isTestFile(s.file));
+  const tests = scenes.length - code.length;
+  const parts = [...new Set(code.map((s) => (s.feature ? s.feature.charAt(0).toLowerCase() + s.feature.slice(1) : s.symbol ? `changes how ${s.symbol} works` : '')).filter(Boolean))].slice(0, 3);
+  const listed = parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  if (!listed) return tests ? 'To sum up: the change is in the tests.' : 'That is the whole change.';
+  return `To sum up: this change ${listed}${tests ? ', and the tests are updated to match' : ''}.`;
 }
 
 /** Shortens the change scenes (not below three seconds) so the whole reel lasts at most `max` seconds. */

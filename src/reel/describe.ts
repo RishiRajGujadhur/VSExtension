@@ -568,3 +568,80 @@ const stripIf = (code: string) => conditionIn(code.trim()) ?? (code.replace(/^(?
 /** A line that is only a comment: a line comment, a block comment line, or -- in SQL. */
 const isComment = (line: string) => /^\s*(\/\/|\/\*|\*|--)/.test(line);
 const firstAction = (code: string) => actionsIn(code)[0];
+
+/**
+ * What a piece of code does, as verb phrases, for explaining it: the describer's actions, and two things it says
+ * better here: a request to a path ("asks the server for the workspace") and a value with a fallback ("falls back to
+ * a default when there is none").
+ */
+function explainActions(code: string): string[] {
+  const out: string[] = [];
+  for (const raw of code.split('\n')) {
+    const line = oneLine(raw);
+    const request = /\b([\w$.]*(?:api|fetch|request|http|axios|client|get|post)[\w$]*)\s*(?:<[^>]*>)?\s*\([^)]*?['"`](\/[\w/{}$.-]*)['"`]/i.exec(line);
+    if (request) {
+      const part = request[2].split('/').filter((x) => x && !/^[:{$]/.test(x) && !/^(api|v\d+)$/.test(x)).pop();
+      out.push(part ? `asks the server for the ${words(part).join(' ')}` : 'asks the server');
+      continue;
+    }
+    const found = actionsIn(raw).filter(readable);
+    out.push(...found);
+    if (!found.length && /[^?]\?\?\s*[^?\s]|\|\|\s*(['"`\d[{]|null|false|true)/.test(line) && /=/.test(line)) out.push('falls back to a default when there is none');
+  }
+  return [...new Set(out)];
+}
+
+/**
+ * What a whole function does, step by step, in the order its code runs: for "Explain this code". Each box of its
+ * flowchart becomes a plain sentence ("It asks the server for the workspace.", "If there are no items, it returns 0.",
+ * "If something goes wrong, it reads the JSON."), anything that would still read as code is left out, and nothing is
+ * said twice.
+ */
+export function explainFunctionSteps(chart: ControlFlowChart, max = 10): string[] {
+  const nodes = chart.nodes;
+  const textOf = (id: number) => oneLine(nodes[id].text || nodes[id].lines.join(' '));
+  const used = new Set<number>();
+  const steps: string[] = [];
+  const said = new Set<string>();
+  // After the first catch, what runs is the fallback: its first step says so, the rest go on "then it …".
+  let fallback: 'none' | 'next' | 'in' = 'none';
+  const say = (phrase: string | undefined, condition?: string) => {
+    if (!phrase || !readable(phrase)) return;
+    const key = phrase.toLowerCase();
+    if (said.has(key)) return;
+    said.add(key);
+    let lead = condition ? `If ${condition}, it` : 'It';
+    if (!condition && fallback === 'next') {
+      lead = 'If something goes wrong, it';
+      fallback = 'in';
+    } else if (!condition && fallback === 'in') lead = 'Then it';
+    steps.push(`${lead} ${phrase}.`);
+  };
+  for (const n of nodes) {
+    if (used.has(n.id) || n.kind === 'start' || n.kind === 'end' || n.unreachable) continue;
+    const code = textOf(n.id);
+    if (n.kind === 'decision') {
+      const cond = conditionWords(stripIf(code));
+      const exit = chart.edges.find((e) => e.from === n.id && e.label !== 'no' && ['return', 'throw'].includes(nodes[e.to].kind));
+      if (exit && readable(cond)) {
+        say(exitPhrase(textOf(exit.to), nodes[exit.to].kind), cond);
+        used.add(exit.to);
+      } else say(`checks whether ${cond}`);
+    } else if (n.kind === 'switch') say(`chooses what to do based on ${valueWords(stripIf(code.replace(/^switch\s*/, '')))}`);
+    else if (n.kind === 'loop') say(loopPhrase(code));
+    else if (n.kind === 'return' || n.kind === 'throw') say(exitPhrase(code, n.kind));
+    else if (n.kind === 'catch') {
+      if (fallback === 'none') fallback = 'next';
+    } else if (n.kind === 'finally') say('always tidies up at the end');
+    else for (const a of explainActions(n.text || n.lines.join('\n')).slice(0, 3)) say(a);
+    if (steps.length >= max) break;
+  }
+  return steps;
+}
+
+/** What some lines of code do, for a highlight that is not a whole function. */
+export function explainLines(lines: string[], max = 8): string[] {
+  return explainActions(lines.join('\n'))
+    .slice(0, max)
+    .map((a) => `It ${a}.`);
+}

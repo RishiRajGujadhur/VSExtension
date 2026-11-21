@@ -53,10 +53,14 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 ![A Git reel of a change: the code with lines added and removed beside the function's flowchart, its new boxes in green](docs/images/git-reel.gif)
 
 - Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
-- It plays a short video of your changes in a player like YouTube's (chapters, captions, full screen): an overview, then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
+- It plays a video of your changes, up to two and a half minutes, in a player like YouTube's (chapters, captions, full screen): the title (no counts), then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
 - Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, bundled and run on your computer: eight voices, or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
 - Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
 - **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis, nothing uploaded. With the optional **code model** (offered the first time, a one-time 23.2 MB download from Hugging Face, run on your computer), the key change in each file is the part closest to what the change is about, and functions the rules cannot place get named (*applyCoupon* → *Works out coupon*).
+
+## Explain this code
+
+Highlight code and choose **Explain this code** (Actions view, right-click menu or Command Palette): what it is, what it is for, and what it does step by step, in plain sentences, beside the editor. It is worked out on your computer; with the optional code model downloaded it also names what a function is for when the rules cannot tell. Before any download you are told what it sends (a file request that shows Hugging Face your IP address) and that none of your code is sent.
 
 ## Find usages
 

@@ -234,31 +234,22 @@
   // Scenes
 
   function drawOverview(s, p, c, W, H, L) {
-    const cy = L.tall ? H * 0.36 : H * 0.36;
+    // The branch and the title only: no counts of lines or files, the reel is about what the code does.
+    const cy = H * 0.4;
     const a = ease(p * 4);
     ctx.globalAlpha = a;
-    chip(`${plan.meta.head} → ${plan.meta.base}`, W / 2, cy - 150, c, `600 ${L.small}px ${codeFont}`, 'center');
-    const lines = wrap(plan.meta.title, W - 2 * L.m - 80, `700 ${L.title + 16}px ${uiFont}`).slice(0, 3);
-    lines.forEach((line, i) => text(line, W / 2, cy + i * (L.title + 26) - (lines.length - 1) * 20, `700 ${L.title + 16}px ${uiFont}`, c.text, 'center', 'middle'));
-    const stats = [
-      [`+${plan.meta.additions}`, 'ADDITIONS', c.add, c.addSoft],
-      [`−${plan.meta.deletions}`, 'DELETIONS', c.del, c.delSoft],
-      [String(plan.meta.files), plan.meta.files === 1 ? 'FILE' : 'FILES', c.text, c.panel],
-    ];
-    const bw = L.tall ? 260 : 220;
-    const bh = L.tall ? 170 : 150;
-    const gap = 30;
-    const sx = W / 2 - (stats.length * bw + (stats.length - 1) * gap) / 2;
-    const sy = cy + lines.length * (L.title + 26) + 30;
-    stats.forEach(([n, label, color, fill], i) => {
-      const lift = (1 - ease(p * 4 - 0.2 - i * 0.15)) * 40;
-      ctx.globalAlpha = ease(p * 4 - 0.2 - i * 0.15);
-      panel(sx + i * (bw + gap), sy + lift, bw, bh, c, fill, color);
-      text(n, sx + i * (bw + gap) + bw / 2, sy + lift + bh * 0.42, `700 ${L.title - 4}px ${codeFont}`, color, 'center', 'middle');
-      text(label, sx + i * (bw + gap) + bw / 2, sy + lift + bh * 0.76, `600 ${L.small - 4}px ${uiFont}`, c.muted, 'center', 'middle');
+    const font = `700 ${L.title + 16}px ${uiFont}`;
+    const lines = wrap(plan.meta.title, W - 2 * L.m - 80, font).slice(0, 3);
+    const top = cy - ((lines.length - 1) * (L.title + 26)) / 2;
+    chip(`${plan.meta.head} → ${plan.meta.base}`, W / 2, top - 150, c, `600 ${L.small}px ${codeFont}`, 'center');
+    lines.forEach((line, i) => {
+      const lift = (1 - ease(p * 4 - i * 0.1)) * 30;
+      ctx.globalAlpha = ease(p * 4 - i * 0.1);
+      text(line, W / 2, top + i * (L.title + 26) + lift, font, c.text, 'center', 'middle');
     });
+    ctx.globalAlpha = ease(p * 3 - 0.5);
+    text('The key changes, file by file', W / 2, top + lines.length * (L.title + 26) + 40, `${L.small}px ${uiFont}`, c.muted, 'center', 'middle');
     ctx.globalAlpha = 1;
-    if (plan.meta.skipped) text(`${plan.meta.skipped} file${plan.meta.skipped === 1 ? '' : 's'} left out: lock files, build output, secrets, binaries`, W / 2, sy + bh + 70, `${L.small - 2}px ${uiFont}`, c.muted, 'center', 'middle');
   }
 
   function drawDiff(s, p, c, W, H, L) {

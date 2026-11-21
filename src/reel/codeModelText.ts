@@ -168,3 +168,14 @@ function words(name: string): string[] {
 }
 
 const STOP = new Set('const let var function return if else for of in new this await async export import from true false null undefined void typeof instanceof class extends public private protected static readonly string number boolean any unknown as type interface the and or not is are be to a an it its'.split(' '));
+
+/**
+ * What downloading the code model sends, said before it happens: for the download prompts.
+ */
+export function downloadDisclosure(): string {
+  return [
+    `What the download sends: a request to huggingface.co for each of the model's two files (${CODE_MODEL.files.map((f) => f.name).join(' and ')}), which Hugging Face may redirect to its file storage. Like any download, this shows Hugging Face your IP address, and the request names the client as "code-x-ray".`,
+    'It sends none of your code, file names, account details, tokens or settings.',
+    'The files are checked against their published hashes, kept in the extension\'s storage, and the model then runs on your computer only. Remove it any time with "Git reel: remove the code model".',
+  ].join('\n\n');
+}

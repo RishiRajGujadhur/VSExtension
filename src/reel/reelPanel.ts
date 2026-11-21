@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { buildReelPlan, keepUserCaptions, ReelPlan, ReelRequest } from './plan';
+import { buildReelPlan, changedFiles, keepUserCaptions, ReelPlan, ReelRequest, skipReason } from './plan';
 import { gitRoot } from '../navigate/graphDiff';
 import { pickRef } from '../ui/graphDiffCommand';
 import { iconButton, webviewPage, webviewRoots } from '../ui/webviewPage';
@@ -13,7 +13,7 @@ import { KittenNarrator } from './kitten';
 import { DEFAULT_KITTEN_VOICE } from './kittenModel';
 import { speakable } from './describe';
 import { CodeModel } from './codeModel';
-import { CODE_MODEL } from './codeModelText';
+import { CODE_MODEL, downloadDisclosure } from './codeModelText';
 
 const lastRefKey = 'tsStructure.reel.lastRevision';
 const captionsKey = 'tsStructure.reel.captions';
@@ -108,6 +108,16 @@ export class ReelPanel {
     return true;
   }
 
+  /** The download command: says what the download sends, and downloads only when you confirm. */
+  async confirmAndDownloadCodeModel(): Promise<boolean> {
+    if (this.codeModel.downloaded) {
+      void vscode.window.showInformationMessage('The code model is already downloaded. It runs on your computer.');
+      return true;
+    }
+    const choice = await vscode.window.showInformationMessage(`Download the code model (all-MiniLM-L6-v2, Apache-2.0, ${CODE_MODEL.megabytes} MB)?`, { modal: true, detail: downloadDisclosure() }, 'Download');
+    return choice === 'Download' ? this.downloadCodeModel() : false;
+  }
+
   /** Removes the downloaded code model; Git reels go back to the rules alone. */
   async removeCodeModel(): Promise<void> {
     this.codeModel.remove();
@@ -124,8 +134,9 @@ export class ReelPanel {
       await this.downloadCodeModel();
       return;
     }
+    // What a download sends is said before it happens: only a request for the files, never your code.
     const choice = await vscode.window.showInformationMessage(
-      `Git reel can explain changes better with a small code model: a one-time ${CODE_MODEL.megabytes} MB download from Hugging Face (all-MiniLM-L6-v2, Apache-2.0). It runs on your computer: your code is never sent.`,
+      `Git reel can explain changes better with a small code model: a one-time ${CODE_MODEL.megabytes} MB download from Hugging Face (all-MiniLM-L6-v2, Apache-2.0). The download sends only a request for the model's files, which shows Hugging Face your IP address; none of your code is sent, and the model runs on your computer.`,
       'Download',
       'Not Now',
       "Don't Ask Again",
@@ -153,6 +164,17 @@ export class ReelPanel {
     if (!choice) return undefined;
     void this.state.update(lastRefKey, choice);
     this.request = { repo, ref: choice.ref, baseLabel: baseLabelOf(choice) };
+    // No changes: no player opens at all.
+    let changed = true;
+    try {
+      changed = changedFiles(repo, choice.ref).some((f) => !skipReason(f));
+    } catch {
+      // Git could not say: the build reports why.
+    }
+    if (!changed) {
+      void showProblem(`No changes since ${this.request.baseLabel}, so there is no reel to show.`, [], 'info');
+      return undefined;
+    }
     this.reveal();
     return this.build();
   }
@@ -277,6 +299,12 @@ export class ReelPanel {
     try {
       const fresh = await buildReelPlan({ ...request, understand: this.understanding() });
       if (request !== this.request) return undefined;
+      // Nothing changed (or only files a reel leaves out, such as lock files): no video, just a word saying so.
+      if (!fresh.meta.files) {
+        this.panel?.dispose();
+        void showProblem(`No changes since ${request.baseLabel}, so there is no reel to show.`, [], 'info');
+        return fresh;
+      }
       this.generated = Object.fromEntries(fresh.scenes.map((s) => [s.id, s.caption]));
       // Captions written by hand for this change come back.
       const written = this.state.get<Record<string, string>>(this.captionKey()) ?? {};
@@ -285,9 +313,6 @@ export class ReelPanel {
       this.baseSeconds = Object.fromEntries(this.plan.scenes.map((s) => [s.id, s.seconds]));
       this.voice.clips = {};
       if (this.voice.on) await this.voiceOver(undefined, false);
-      if (this.plan.scenes.length <= 2 && !this.plan.meta.files) {
-        void showProblem(`No changes since ${request.baseLabel}: the reel has nothing to show.`, [], 'info');
-      }
       if (this.panel) this.panel.title = `Git reel: ${this.plan.meta.title}`;
       this.post();
       void this.offerCodeModel();

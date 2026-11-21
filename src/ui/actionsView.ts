@@ -256,14 +256,16 @@ function fitForSelection(editor: vscode.TextEditor): SelectionFit | undefined {
     return !feature || isFeatureEnabled(feature.id);
   };
   const other = otherLanguages[document.languageId];
+  // Any highlighted code can be explained, first in the list.
+  const explain = 'tsStructure.explainCode';
   if (other) {
     const fit = otherLanguageSelectionFit(document.getText(), start, end, other.commands);
-    return fit && { ...fit, commands: fit.commands.filter(enabled) };
+    return fit && { ...fit, commands: [explain, ...fit.commands].filter(enabled) };
   }
   if (vscode.languages.match(languageSelector, document) === 0) return undefined;
   const fit = selectionFit(parse(document), start, end, fittingSymbol);
   if (!fit) return undefined;
   // Rewrites that apply where the cursor is in the highlight, such as "Replace 'if else' with '?:'".
   const rewrites = intentionsAtCursor(editor).length ? ['tsStructure.showRewrites', 'tsStructure.chooseIntentions'] : [];
-  return { ...fit, commands: [...fit.commands, ...rewrites].filter(enabled) };
+  return { ...fit, commands: [explain, ...fit.commands, ...rewrites].filter(enabled) };
 }

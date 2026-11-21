@@ -29,7 +29,7 @@ export interface CatalogAction {
 }
 
 /** The newest actions, marked "new" in the Actions view until the next round of features. */
-export const newActions = new Set(['tsStructure.bundleWeight', 'tsStructure.valueTimeline', 'tsStructure.asyncTimeline']);
+export const newActions = new Set(['tsStructure.explainCode', 'tsStructure.valueTimeline', 'tsStructure.asyncTimeline']);
 
 export const actionTabs: { id: CatalogAction['tab']; label: string; icon: string }[] = [
   { id: 'analyze', label: 'Analyze', icon: 'search-fuzzy' },
@@ -181,6 +181,8 @@ export const actionCatalog: CatalogAction[] = [
   a('analyze', 'Values', 'tsStructure.raceConditions', 'Race Conditions', 'Async changes between uses',
     'Finds code where an await sits between reading a value and writing it back, so another task may change it in the meantime.', 'await concurrency'),
 
+  a('analyze', 'Flow and errors', 'tsStructure.explainCode', 'Explain This Code', 'What it does, in plain words',
+    'Explains the highlighted code (or the function the cursor line starts) step by step in plain sentences, and what it is for. Worked out on your computer by Code X-Ray\'s rules, with the optional code model when you have downloaded it; nothing is sent.', 'explain describe summarize what does this do understand meaning'),
   a('analyze', 'Flow and errors', 'tsStructure.controlFlow', 'Control Flow Graph', 'A function as a flowchart',
     'Draws the function at the cursor as a flowchart, with a Path Explorer that lists, compares and filters every path and flags the impossible ones.', 'paths branches flowchart cfg'),
   a('analyze', 'Flow and errors', 'tsStructure.controlFlowCompare', 'Flowchart vs Last Commit', 'What changed in this function',

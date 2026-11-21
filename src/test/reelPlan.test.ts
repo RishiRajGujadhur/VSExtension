@@ -4,7 +4,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { buildReelPlan, fitDuration, keepUserCaptions, parseHunks, redact, ReelScene, skipReason, titleFromBranch } from '../reel/plan';
+import { buildReelPlan, fitDuration, keepUserCaptions, parseHunks, redact, ReelScene, skipReason, summaryCaption, titleFromBranch, varyCaptions } from '../reel/plan';
 
 /** A throwaway repository: one commit, then the working tree changed. */
 function repo(): string {
@@ -47,7 +47,7 @@ test('Git reel: overview, a scene per changed function with its flowchart, other
   // The secret is masked in the code shown.
   const config = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.file === 'config.ts')!;
   // The caption shows the file's name; the voice says neither it nor any number.
-  assert.equal(config.caption, 'config.ts — This new file adds the API key setting.');
+  assert.equal(config.caption, 'config.ts — Finally, this new file adds the API key setting.');
   assert.ok(plan.scenes.every((sc) => !/\b\d+ (files?|lines?|boxes|paths?|changes?)\b/.test(sc.caption)), plan.scenes.map((sc) => sc.caption).join(' | '));
   assert.match(config.lines[0].text, /apiKey = "••••"/);
   assert.ok(plan.scenes.reduce((n, s) => n + s.seconds, 0) <= 90);
@@ -103,10 +103,25 @@ test('Git reel: one scene per file, its key change, and what each file is for', 
   assert.deepEqual(diffs.map((d) => d.file).sort(), ['CartItems.tsx', 'cart.ts']);
   const add = diffs.find((d) => d.file === 'cart.ts')!;
   assert.equal(add.feature, 'Adds item to cart');
-  assert.match(add.caption, /^addToCart adds an item to the cart\. It now /);
+  assert.match(add.caption, /^(Next, )?addToCart adds an item to the cart\. It now /);
   assert.equal(add.lines[add.key!.focus].text.trim(), 'if (!item.inStock) return items;');
   assert.equal(add.key!.label, 'Key change: early exit');
   const show = diffs.find((d) => d.file === 'CartItems.tsx')!;
   assert.equal(show.feature, 'Shows cart items');
   assert.ok(show.lines.length <= 12);
+});
+
+test('Git reel captions: openers that vary, no sentence said twice, tests last, a summary of its own', () => {
+  const scene = (file: string, caption: string, extra: Partial<Extract<ReelScene, { kind: 'diff' }>> = {}): Extract<ReelScene, { kind: 'diff' }> => ({ kind: 'diff', id: file, file, added: 1, removed: 0, lines: [], caption, captionSource: 'heuristic', seconds: 3, ...extra });
+  const scenes = [
+    scene('a.ts', 'a.ts — This file now loads the orders. It also falls back to a default value.', { feature: 'Loads orders' }),
+    scene('b.ts', 'pay now checks the card. It also falls back to a default value.', { symbol: 'pay' }),
+    scene('tests/a.test.ts', 'This test file now also checks that it loads the orders.'),
+  ];
+  varyCaptions(scenes);
+  assert.equal(scenes[0].caption, 'a.ts — This file now loads the orders. It also falls back to a default value.');
+  assert.equal(scenes[1].caption, 'Next, pay now checks the card.');
+  assert.equal(scenes[2].caption, 'Finally, this test file now also checks that it loads the orders.');
+  assert.equal(summaryCaption(scenes), 'To sum up: this change loads orders and changes how pay works, and the tests are updated to match.');
+  assert.ok(scenes.every((s) => s.seconds >= 4));
 });
