@@ -40,7 +40,10 @@ test('Git reel: overview, a scene per changed function with its flowchart, other
   // What it does, in words; no counts.
   assert.equal(fn.caption, 'total now returns 0 early when there are no items.');
   assert.equal(fn.line, 2);
+  // Only the key change: the new early exit, framed, the callout on it.
   assert.deepEqual(fn.lines.filter((l) => l.kind === 'add').map((l) => l.text), ['  if (!items.length) return 0;']);
+  assert.equal(fn.lines[fn.key!.focus].kind, 'add');
+  assert.match(fn.key!.label, /^Key change/);
   // The secret is masked in the code shown.
   const config = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.file === 'config.ts')!;
   // The caption shows the file's name; the voice says neither it nor any number.
@@ -79,4 +82,31 @@ test('Git reel helpers: hunks, redaction, files left out, titles, length', () =>
   fitDuration(scenes, 60);
   assert.ok(scenes.reduce((n, s) => n + s.seconds, 0) <= 60.5);
   assert.equal(scenes[0].seconds, 5);
+});
+
+test('Git reel: one scene per file, its key change, and what each file is for', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-cart-'));
+  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'init.defaultBranch=main', ...args], { cwd: dir, stdio: 'pipe' });
+  const cart = (extra: string) =>
+    `import { log } from './log';\n\nexport function addToCart(items: Item[], item: Item): Item[] {\n${extra}  log('add');\n  return [...items, item];\n}\n\nexport function cartLabel(n: number) {\n  return \`\${n} items\`;\n}\n`;
+  const view = (extra: string) => `export function CartItems({ items }: { items: Item[] }) {\n  return (\n    <ul>\n${extra}    </ul>\n  );\n}\n`;
+  fs.writeFileSync(path.join(dir, 'cart.ts'), cart(''));
+  fs.writeFileSync(path.join(dir, 'CartItems.tsx'), view(''));
+  git('init', '-q');
+  git('config', 'core.autocrlf', 'false');
+  git('add', '-A');
+  git('commit', '-q', '-m', 'Cart');
+  fs.writeFileSync(path.join(dir, 'cart.ts'), cart('  if (!item.inStock) return items;\n  // Keep the order the items were added in.\n'));
+  fs.writeFileSync(path.join(dir, 'CartItems.tsx'), view('      {items.map((item) => (\n        <li key={item.id}>{item.name}</li>\n      ))}\n'));
+  const plan = await buildReelPlan({ repo: dir, ref: 'HEAD', baseLabel: 'the last commit' });
+  const diffs = plan.scenes.filter((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff');
+  assert.deepEqual(diffs.map((d) => d.file).sort(), ['CartItems.tsx', 'cart.ts']);
+  const add = diffs.find((d) => d.file === 'cart.ts')!;
+  assert.equal(add.feature, 'Adds item to cart');
+  assert.match(add.caption, /^addToCart adds an item to the cart\. It now /);
+  assert.equal(add.lines[add.key!.focus].text.trim(), 'if (!item.inStock) return items;');
+  assert.equal(add.key!.label, 'Key change: early exit');
+  const show = diffs.find((d) => d.file === 'CartItems.tsx')!;
+  assert.equal(show.feature, 'Shows cart items');
+  assert.ok(show.lines.length <= 12);
 });

@@ -19,3 +19,4 @@ node_modules/@vscode/codicons/**
 # from dist/kitten instead.
 assets/**
 media/kitten/**
+.claude/**

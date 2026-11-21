@@ -9,6 +9,8 @@ import { csharpFlowChart } from '../csharp/flow';
 import { tsqlFlowChart } from '../tsql/flow';
 import { AnalysisError } from '../analysis/types';
 import { describeFileChange, describeFunctionChange, differingSpan, isTestFile } from './describe';
+import { featureIntent, intentLabel, intentsOf, keyLabel as keyLabelOf } from './intent';
+import { dedent, keyChange } from './keyChange';
 
 /**
  * A Git reel: a short video of a change, as a plan the player draws. The video is a pure function of this plan, so it
@@ -66,7 +68,21 @@ export interface FlowSnapshot {
 
 export type ReelScene =
   | (SceneBase & { kind: 'overview' })
-  | (SceneBase & { kind: 'diff'; file: string; symbol?: string; added: number; removed: number; lines: DiffLine[]; isNew?: boolean; line?: number })
+  | (SceneBase & {
+      kind: 'diff';
+      file: string;
+      symbol?: string;
+      added: number;
+      removed: number;
+      /** Only the key change: the few lines that matter most in the file, with a line of context. */
+      lines: DiffLine[];
+      isNew?: boolean;
+      line?: number;
+      /** The line in `lines` the callout points at, and what it says: "Key change: stops early". */
+      key?: { focus: number; label: string };
+      /** What the function or file is for, by the intent model: "Adds item to cart". */
+      feature?: string;
+    })
   /** A function's flowchart on its own, after its code: zoomed to the boxes that changed. */
   | (SceneBase & { kind: 'flow'; file: string; symbol: string; flow: FlowSnapshot; line?: number })
   | (SceneBase & { kind: 'files'; files: { file: string; added: number; removed: number; status: string }[] })
@@ -83,7 +99,8 @@ export interface ReelRequest {
   maxScenes?: number;
 }
 
-const MAX_SCENES = 8;
+/** One scene per file, its key change: this many files at most. */
+const MAX_SCENES = 6;
 /** Lines of diff a scene shows at most; the rest are summed up. */
 const MAX_LINES = 40;
 /** A reel lasts about a minute at most. */
@@ -408,8 +425,16 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
       return before;
     };
     const chartAt = language ? chartMaker(language, full) : undefined;
+    const fileCandidates: Candidate[] = [];
     for (const [key, list] of groups) {
       const lines = joinHunks(list);
+      // The key change: what the scene shows, and what its caption is about.
+      const keyed = keyChange(lines);
+      const shown = dedent(keyed.lines);
+      const keyAdded = keyed.lines.filter((l) => l.kind === 'add').map((l) => l.text);
+      const keyRemoved = keyed.lines.filter((l) => l.kind === 'del').map((l) => l.text);
+      const keyIntent = intentsOf({ added: keyAdded, removed: keyRemoved })[0];
+      const keyLabel = keyLabelOf(keyIntent && keyIntent.score >= 2 ? keyIntent : undefined);
       const added = lines.filter((l) => l.kind === 'add').length;
       const removed = lines.filter((l) => l.kind === 'del').length;
       const base = path.basename(file.path);
@@ -423,14 +448,19 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
           // Past the limit of paths listed, comparing them says nothing: only the boxes count then.
           const comparison = chart.truncated || old.chart?.truncated ? { ...compared, newPaths: [], gonePaths: [] } : compared;
           const symbol = chart.name.replace(/\(\)$/, '');
-          // What the code change does, in sentences.
-          const sentences = describeFunctionChange(symbol, chart, comparison, 4, lines);
-          const caption = sentences.join(' ');
-          const line = firstChangedLine(lines);
-          candidates.push({
-            kind: 'diff', id: `${file.path}#${symbol}`, file: file.path, symbol, added, removed, isNew: comparison.isNew, line,
-            lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)),
-            weight: 40 + Math.min(added + removed, 80) + comparison.added.length * 3 + comparison.changed.length * 2,
+          // What the function is for (its name and all its changed lines), then what the key change does.
+          const feature = featureIntent({ name: symbol, file: file.path, added: lines.filter((l) => l.kind === 'add').map((l) => l.text), removed: lines.filter((l) => l.kind === 'del').map((l) => l.text) });
+          const described = describeFunctionChange(symbol, chart, focusComparison(chart, comparison, keyed.lines), 2, keyed.lines);
+          // Nothing the describer could put in words: what the key lines do, by the intent model.
+          const vague = described.length === 1 && described[0].endsWith(' works a little differently now.');
+          const sentences = vague && keyIntent && keyIntent.score >= 2 ? [`${symbol} now ${keyIntent.phrase}.`] : described;
+          // Only when it says what the function works on: "addToCart adds an item to the cart", not "total works out a value".
+          const caption = featureCaption(symbol, feature && (feature.object || feature.target) ? feature.phrase : undefined, sentences, !!comparison.isNew);
+          fileCandidates.push({
+            kind: 'diff', id: `${file.path}#${symbol}`, file: file.path, symbol, added, removed, isNew: comparison.isNew, line: firstChangedLine(keyed.lines),
+            lines: shown, key: { focus: keyed.focus, label: keyLabel }, ...(feature ? { feature: intentLabel(feature) } : {}),
+            caption, captionSource: 'heuristic', seconds: secondsFor(caption, shown.length),
+            weight: 20 + keyed.score * 4 + (feature?.score ?? 0) + Math.min(added + removed, 30) / 3,
           });
           continue;
         } catch {
@@ -439,16 +469,28 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
       }
       const isNew = file.status === 'added' || file.status === 'untracked';
       const testFile = isTestFile(file.path);
-      const sentences = describeFileChange(file.path, lines.filter((l) => l.kind === 'add').map((l) => l.text), lines.filter((l) => l.kind === 'del').map((l) => l.text), isNew, now, 3, testFile ? testsAround(now, list) : []);
+      // The file's own name counts as a name: "CartItems.tsx" shows the cart items.
+      const feature = testFile ? undefined : featureIntent({ name: base.replace(/\.[^.]+$/, ''), file: file.path, added: lines.filter((l) => l.kind === 'add').map((l) => l.text), removed: lines.filter((l) => l.kind === 'del').map((l) => l.text) });
+      const described = describeFileChange(file.path, keyAdded, keyRemoved, isNew, now, 2, testFile ? testsAround(now, list) : []);
+      // A sentence that still reads as code is left out; with none left, what the key change does, by the intent model.
+      const plain = described.filter((s) => !/=>|\|\||&&|\s\|\s|\?:|[{};]/.test(s.replace(/"[^"]*"/g, '""')));
+      const sentences = plain.length ? plain : [`This file now ${keyIntent && keyIntent.score >= 2 ? keyIntent.phrase : feature ? feature.phrase : 'works a little differently'}.`];
       // The caption shows the file's name (the voice leaves it out and says "this file"); a test file is "This test
       // file" in both.
       const caption = testFile ? sentences.join(' ') : `${base} — ${sentences.join(' ')}`;
-      candidates.push({ kind: 'diff', id: `${file.path}#${key === 'file' ? 'file' : key}`, file: file.path, added, removed, line: firstChangedLine(lines), lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)), weight: Math.min(added + removed, 60) });
+      fileCandidates.push({
+        kind: 'diff', id: `${file.path}#${key === 'file' ? 'file' : key}`, file: file.path, added, removed, line: firstChangedLine(keyed.lines),
+        lines: shown, key: { focus: keyed.focus, label: keyLabel }, ...(feature ? { feature: intentLabel(feature) } : {}),
+        caption, captionSource: 'heuristic', seconds: secondsFor(caption, shown.length),
+        weight: keyed.score * 4 + (feature?.score ?? 0) / 2 + Math.min(added + removed, 30) / 3,
+      });
     }
+    // The file's key change: its strongest piece. A file's whole change is summed up by it.
+    const best = fileCandidates.sort((a, b) => b.weight - a.weight)[0];
+    if (best) candidates.push(best);
   }
 
-  // The biggest changes get scenes (a function with its flowchart before a file's lines), in the order of the files;
-  // the rest are listed on one card.
+  // The files whose key changes matter most get a scene each, in the order of the files; the rest are listed on one card.
   const chosen = new Set([...candidates].sort((a, b) => b.weight - a.weight).slice(0, maxScenes));
   const chosenList = candidates.filter((c) => chosen.has(c));
   const diffScenes = chosenList.map(({ weight: _weight, ...scene }) => scene);
@@ -486,7 +528,39 @@ export function fitDuration(scenes: ReelScene[], max: number): void {
   for (const s of flexible) s.seconds = Math.round(Math.max(3, s.seconds * factor) * 10) / 10;
 }
 
-/** The first added or removed line, for opening the code at the change. */
+/**
+ * The comparison narrowed to the boxes the key lines are in, so the caption tells the key change, not every change in
+ * the function; the whole comparison when none of its boxes are in them.
+ */
+function focusComparison(chart: ControlFlowChart, comparison: FlowComparison, shown: DiffLine[]): FlowComparison {
+  if (comparison.isNew) return comparison;
+  const norm = (code: string) => code.replace(/\s+/g, ' ').trim();
+  const keys = shown.filter((l) => l.kind === 'add' || l.kind === 'del').map((l) => norm(l.text)).filter((t) => t.length > 3 && /\w/.test(t));
+  const touches = (code: string) => {
+    const c = norm(code);
+    return c.length > 3 && keys.some((k) => c.includes(k) || k.includes(c));
+  };
+  const textOf = (id: number) => chart.nodes[id].text || chart.nodes[id].lines.join(' ');
+  const focused = {
+    ...comparison,
+    added: comparison.added.filter((id) => touches(textOf(id))),
+    changed: comparison.changed.filter((c) => touches(textOf(c.id)) || touches(c.before)),
+    removed: comparison.removed.filter((r) => touches(r.text)),
+  };
+  return focused.added.length + focused.changed.length + focused.removed.length ? focused : comparison;
+}
+
+/**
+ * "addToCart adds an item to the cart. It now stops early when …": what the function is for first, when the intent
+ * model is sure of it, then what the key change does.
+ */
+export function featureCaption(symbol: string, feature: string | undefined, sentences: string[], isNew: boolean): string {
+  if (!feature || isNew || !sentences.length) return sentences.join(' ');
+  const [first, ...rest] = sentences;
+  const lead = first.startsWith(`${symbol} `) ? `It ${first.slice(symbol.length + 1)}` : first;
+  return [`${symbol} ${feature}.`, lead, ...rest.slice(0, 1)].join(' ');
+}
+
 /** The names of the tests the changed lines are in: the nearest `test('…')` or `it('…')` above each hunk's change. */
 function testsAround(text: string, hunks: Hunk[]): string[] {
   const lines = text.split('\n');
@@ -505,6 +579,7 @@ function testsAround(text: string, hunks: Hunk[]): string[] {
   return names;
 }
 
+/** The first added or removed line, for opening the code at the change. */
 function firstChangedLine(lines: DiffLine[]): number | undefined {
   return lines.find((l) => l.kind === 'add')?.line ?? lines.find((l) => l.kind === 'del')?.line;
 }

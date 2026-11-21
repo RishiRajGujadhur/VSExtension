@@ -264,10 +264,47 @@
   function drawDiff(s, p, c, W, H, L) {
     const head = `${s.file}${s.symbol ? `  ·  ${s.symbol}()` : ''}`;
     text(fit(head, W - 2 * L.m, `600 ${L.body}px ${codeFont}`), L.m, L.top + 20, `600 ${L.body}px ${codeFont}`, c.text, 'left', 'middle');
-    text(s.isNew ? 'New' : 'Changed', L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, s.isNew ? c.add : c.muted, 'left', 'middle');
+    // What the function or file is for, by the intent model, next to New or Changed.
+    const second = `${s.isNew ? 'New' : 'Changed'}${s.feature ? `  ·  ${s.feature}` : ''}`;
+    text(fit(second, W - 2 * L.m - (s.key ? 520 : 0), `${L.small}px ${uiFont}`), L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, s.isNew ? c.add : c.muted, 'left', 'middle');
     const areaTop = L.top + 20 + L.body * 2 + 30;
     const areaBottom = H - L.captionH - 40;
-    drawLines(s.lines, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L);
+    const box = { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop };
+    const marks = drawLines(s.lines, p, c, box, L, !!s.key);
+    if (s.key && marks) drawCallout(s.key.label, p, c, { x: W - L.m, y: L.top + 20 + L.body + 14 - 23 }, marks, L);
+  }
+
+  /** "Key change: …" in a chip at the top right, with an arrow drawn to the box around the key lines. */
+  function drawCallout(label, p, c, at, marks, L) {
+    const a = ease((p - 0.3) * 5);
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    const font = `700 ${L.small - 2}px ${uiFont}`;
+    const w = chip(label, at.x, at.y, c, font, 'right', c.accentSoft, c.changed);
+    // The arrow: from under the chip to the top edge of the key box, a gentle curve with a head.
+    const x0 = at.x - w / 2;
+    const y0 = at.y + 52;
+    const x1 = Math.min(marks.right - 60, x0);
+    const y1 = marks.top - 6;
+    if (y1 > y0 + 10) {
+      ctx.strokeStyle = c.changed;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(x0 + 40, (y0 + y1) / 2, x1, y1);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = c.changed;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1 + 2);
+      ctx.lineTo(x1 - 9, y1 - 14);
+      ctx.lineTo(x1 + 9, y1 - 14);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   /** A function's flowchart on its own: the whole chart first, then the view glides to the boxes that changed. */
@@ -279,22 +316,30 @@
     drawFlow(s.flow, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L);
   }
 
-  /** The diff, revealed line by line in the first part of the scene, scrolled when it is taller than its box. */
-  function drawLines(lines, p, c, box, L) {
+  /**
+   * The diff, revealed line by line in the first part of the scene, scrolled when it is taller than its box. A key
+   * change (a few lines) is drawn large, its changed lines framed; returns where the frame is, for the callout.
+   */
+  function drawLines(lines, p, c, box, L, keyed = false) {
     panel(box.x, box.y, box.w, box.h, c, c.code);
     ctx.save();
     round(box.x, box.y, box.w, box.h, 18);
     ctx.clip();
-    const lineH = Math.max(L.code + 10, Math.min(L.code + 20, (box.h - 40) / Math.max(1, lines.length)));
-    const font = `${L.code}px ${codeFont}`;
+    // Few lines read large: the key change fills its box.
+    const size = Math.round(L.code * (keyed ? (lines.length <= 7 ? 1.45 : lines.length <= 10 ? 1.3 : 1.12) : 1));
+    const lineH = Math.max(size + 10, Math.min(size + 24, (box.h - 40) / Math.max(1, lines.length)));
+    const font = `${size}px ${codeFont}`;
     const visible = Math.floor((box.h - 40) / lineH);
     const overflow = Math.max(0, lines.length - visible);
     const scroll = overflow * ease((p - 0.25) / 0.6);
     const reveal = Math.ceil(lines.length * ease(p / 0.3));
-    const gutter = L.code * 3.2;
+    const gutter = size * 3.2;
+    // A short key change sits in the middle of its box, not at the top.
+    const pad = keyed && !overflow ? Math.max(20, (box.h - lines.length * lineH) / 2) : 20;
+    const rowY = (i) => box.y + pad + (i - scroll) * lineH;
     for (let i = 0; i < Math.min(lines.length, reveal); i++) {
       const l = lines[i];
-      const y = box.y + 20 + (i - scroll) * lineH;
+      const y = rowY(i);
       if (y < box.y - lineH || y > box.y + box.h) continue;
       if (l.kind === 'add' || l.kind === 'del') {
         ctx.fillStyle = l.kind === 'add' ? c.addSoft : c.delSoft;
@@ -320,14 +365,33 @@
         }
       }
       if (l.kind === 'gap') {
-        text(l.text, box.x + gutter, mid, `${L.code - 2}px ${codeFont}`, c.muted, 'left', 'middle');
+        text(l.text, box.x + gutter, mid, `${size - 2}px ${codeFont}`, c.muted, 'left', 'middle');
         continue;
       }
-      text(l.line ? String(l.line) : '', box.x + gutter - 26, mid, `${L.code - 4}px ${codeFont}`, c.muted, 'right', 'middle');
+      text(l.line ? String(l.line) : '', box.x + gutter - 26, mid, `${size - 4}px ${codeFont}`, c.muted, 'right', 'middle');
       text(l.kind === 'add' ? '+' : l.kind === 'del' ? '−' : '', box.x + gutter - 10, mid, font, l.kind === 'add' ? c.add : c.del, 'left', 'middle');
       drawCode(l.text.replace(/\t/g, '  '), box.x + gutter + 14, mid, font, c, box.w - gutter - 34);
     }
     ctx.restore();
+    if (!keyed) return undefined;
+    // The frame around the changed lines, glowing in once the lines are in.
+    const changed = lines.map((l, i) => (l.kind === 'add' || l.kind === 'del' ? i : -1)).filter((i) => i >= 0);
+    if (!changed.length) return undefined;
+    const top = Math.max(box.y + 6, rowY(changed[0]) - 4);
+    const bottom = Math.min(box.y + box.h - 6, rowY(changed[changed.length - 1]) + lineH + 4);
+    const a = ease((p - 0.28) * 5);
+    if (a > 0) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = c.changed;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = c.changed;
+      ctx.shadowBlur = 18;
+      round(box.x + 8, top, box.w - 16, bottom - top, 12);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return { top, bottom, right: box.x + box.w - 8 };
   }
 
   /** The function's flowchart, scaled into its box: new boxes green, changed ones amber, drawn in as the scene goes. */

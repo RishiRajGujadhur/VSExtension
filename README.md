@@ -53,7 +53,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 ![A Git reel of a change: the code with lines added and removed beside the function's flowchart, its new boxes in green](docs/images/git-reel.gif)
 
 - Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
-- It plays a short video of your changes in a player like YouTube's (chapters, captions, full screen): an overview, then each change's code with the changed words marked and what it does, then a summary.
+- It plays a short video of your changes in a player like YouTube's (chapters, captions, full screen): an overview, then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
 - Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, bundled and run on your computer: eight voices, or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
 - Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
 - **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis: no AI, nothing uploaded.
