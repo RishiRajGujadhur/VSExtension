@@ -340,9 +340,12 @@ export const scenes: Scene[] = [
       await delay(1500);
       await vscode.commands.executeCommand('tsStructure.gitReel.voice', true);
       await delay(1500);
+      // The "Generating narration…" notice may have taken the focus: back to the reel before the key press.
+      await vscode.commands.executeCommand('tsStructure.gitReel.focus');
+      await delay(800);
       const done = vscode.commands.executeCommand<number>('tsStructure.gitReel.expectExport', path.join(require('os').tmpdir(), 'reel-voice-e2e.webm'));
       await press(cdp, 'e', 'KeyE', 69);
-      const size = await done;
+      const size = await Promise.race([done, new Promise<number>((resolve) => setTimeout(() => resolve(-1), 120_000))]);
       const sound = await vscode.commands.executeCommand('tsStructure.gitReel.lastSound');
       fs.writeFileSync(path.join(require('os').tmpdir(), 'reel-voice-e2e.txt'), `size ${size} ${JSON.stringify(sound)}`);
     },

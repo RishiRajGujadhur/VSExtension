@@ -35,11 +35,52 @@ async function bundle() {
   for (const [pkg, file] of [['web-tree-sitter', 'tree-sitter.wasm'], ['tree-sitter-c-sharp', 'tree-sitter-c_sharp.wasm']]) {
     fs.copyFileSync(path.join(root, 'node_modules', pkg, file), path.join(parsers, file));
   }
-  const output = Object.values(result.metafile.outputs).find((o) => o.entryPoint);
+  await bundleKitten();
+  const output = Object.values(result.metafile.outputs).find((o) => o.entryPoint && o.entryPoint.endsWith('boot.ts'));
   console.log(`bundled ${Object.keys(result.metafile.inputs).length} modules into dist/extension.js (${Math.round(output.bytes / 1024)} KB${production ? ', minified' : ''}) in ${Date.now() - started} ms`);
+}
+
+/**
+ * The Kitten TTS voice-over, in dist/kitten: the model (assets/kitten, fetched at a pinned, checksummed revision), the
+ * one ONNX Runtime Web build it runs on (WebAssembly, one thread), the model's worker (dist/kittenWorker.js), and the
+ * eSpeak NG phonemizer, which runs as its own GPL program (media/kitten) with its license and notice.
+ */
+async function bundleKitten() {
+  const { fetchKitten } = require('./fetch-kitten');
+  await fetchKitten();
+  const home = path.join(root, 'dist', 'kitten');
+  fs.rmSync(home, { recursive: true, force: true });
+  const copy = (from, to) => {
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.copyFileSync(from, to);
+  };
+  for (const file of ['kitten_tts_nano_v0_8.onnx', 'voices.npz', 'config.json']) copy(path.join(root, 'assets', 'kitten', file), path.join(home, 'model', file));
+  const ort = path.join(root, 'node_modules', 'onnxruntime-web');
+  for (const file of ['ort.wasm.min.mjs', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) copy(path.join(ort, 'dist', file), path.join(home, 'ort', file));
+  // The npm package has no license file; its license is MIT (Microsoft), shipped from media/kitten.
+  copy(path.join(root, 'media', 'kitten', 'ONNXRUNTIME-LICENSE.txt'), path.join(home, 'ort', 'LICENSE'));
+  const phonemizer = path.join(root, 'node_modules', 'phonemizer');
+  copy(path.join(phonemizer, 'dist', 'phonemizer.js'), path.join(home, 'phonemizer', 'phonemizer.js'));
+  copy(path.join(phonemizer, 'LICENSE'), path.join(home, 'phonemizer', 'LICENSE'));
+  // An ES module: the folder says so, as the package did.
+  fs.writeFileSync(path.join(home, 'phonemizer', 'package.json'), '{ "type": "module" }\n');
+  for (const file of ['phonemize.mjs', 'GPL-3.0.txt', 'ESPEAK-NG-NOTICE.md']) copy(path.join(root, 'media', 'kitten', file), path.join(home, file));
+  await esbuild.build({
+    entryPoints: [path.join(root, 'src', 'reel', 'kittenWorker.ts')],
+    outfile: path.join(root, 'dist', 'kittenWorker.js'),
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    minify: production,
+    logLevel: 'warning',
+  });
 }
 
 module.exports = { bundle };
 if (require.main === module) {
-  bundle().catch(() => process.exit(1));
+  bundle().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
 }

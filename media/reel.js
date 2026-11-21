@@ -1122,6 +1122,7 @@
   });
   voiceSelect.addEventListener('change', () => vscode.postMessage({ type: 'voice', on: true, voice: voiceSelect.value }));
   function showVoice() {
+    voiceToggle.hidden = !!voice.off;
     voiceToggle.setAttribute('aria-pressed', String(voice.on));
     voiceToggle.classList.toggle('on', voice.on);
     voiceToggle.replaceChildren(icon(voice.on ? 'unmute' : 'mute'));
@@ -1173,7 +1174,7 @@
       plan = message.plan;
       generated = message.generated || {};
       skipped = new Set(message.skipped || []);
-      voice = { on: !!(message.voice && message.voice.on), voices: (message.voice && message.voice.voices) || [], name: (message.voice && message.voice.name) || '' };
+      voice = { on: !!(message.voice && message.voice.on), off: !!(message.voice && message.voice.off), voices: (message.voice && message.voice.voices) || [], name: (message.voice && message.voice.name) || '' };
       showVoice();
       stopAudio();
       void loadClips(message.voice && message.voice.clips).then(() => {

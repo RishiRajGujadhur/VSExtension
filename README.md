@@ -54,7 +54,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 - Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
 - It plays a short video of your changes in a player like YouTube's (chapters, captions, full screen): an overview, then each change's code with the changed words marked and what it does, then a summary.
-- Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and your computer's own voice reads them, in the preview and in the exported video; it says "this file" rather than reading file names.
+- Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, bundled and run on your computer: eight voices, or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
 - Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
 - **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis: no AI, nothing uploaded.
 
@@ -130,5 +130,7 @@ The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 ## Credits
 
 The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
+
+The Git reel's voice-over speaks with [Kitten TTS](https://github.com/KittenML/KittenTTS) by KittenML / Stellon Labs (the Nano 0.8 int8 model, Apache-2.0), bundled and run on your computer with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT). Its phonemes come from [eSpeak NG](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) via [phonemizer.js](https://github.com/xenova/phonemizer.js), run as a separate program, with its licence and source notice in the extension's `dist/kitten` folder.
 
 Other credits (the animated chart grid, the Welcome page) are in the [guide](docs/GUIDE.md#credits), with licence notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

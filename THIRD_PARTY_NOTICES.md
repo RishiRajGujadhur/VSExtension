@@ -103,3 +103,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Kitten TTS (the Git reel voice-over)
+
+https://github.com/KittenML/KittenTTS and https://huggingface.co/KittenML/kitten-tts-nano-0.8-int8
+(revision 84781d74e29ee25217551556398b42f80593a813)
+
+The model `kitten_tts_nano_v0_8.onnx`, its voices `voices.npz` and `config.json` are bundled unchanged in
+`dist/kitten/model`. They are licensed under the Apache License 2.0 by KittenML / Stellon Labs
+(https://www.apache.org/licenses/LICENSE-2.0). The model architecture follows StyleTTS 2. Code X-Ray's own engine
+(`src/reel/kittenModel.ts`, `src/reel/kittenWorker.ts`) follows the official KittenTTS-web engine
+(https://github.com/KittenML/KittenTTS-web, Apache-2.0): its symbol table, style selection and speed priors.
+
+## ONNX Runtime Web
+
+https://github.com/microsoft/onnxruntime, onnxruntime-web 1.24.3. MIT License, Copyright (c) Microsoft Corporation.
+Its WebAssembly build is bundled in `dist/kitten/ort`, with the license text in `dist/kitten/ort/LICENSE`.
+
+## phonemizer.js and eSpeak NG
+
+https://github.com/xenova/phonemizer.js (phonemizer 1.2.1, Apache-2.0) and https://github.com/espeak-ng/espeak-ng
+(GPL-3.0-or-later). Bundled in `dist/kitten/phonemizer` and run as a separate program (`dist/kitten/phonemize.mjs`,
+GPL-3.0-or-later) that Code X-Ray starts and talks to through its standard input and output only. Its license text and
+source notice are in `dist/kitten/GPL-3.0.txt` and `dist/kitten/ESPEAK-NG-NOTICE.md`.

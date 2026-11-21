@@ -3,3 +3,6 @@ out/
 *.vsix
 
 dist/
+
+# The Kitten voice model, fetched by scripts/fetch-kitten.js (pinned, checksummed) and bundled at packaging.
+assets/kitten/

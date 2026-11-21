@@ -667,6 +667,12 @@ async function gitReelFlow(): Promise<void> {
   const voiced = await vscode.commands.executeCommand<{ scenes: { seconds: number }[] }>('tsStructure.gitReel.voice', true);
   if (process.platform === 'win32') {
     assert.ok(voiced && voiced.scenes.length === plan.scenes.length && voiced.scenes.every((s) => s.seconds >= 3), 'scenes timed to the voice');
+    // The bundled Kitten voice reads, by default, a clip for every scene.
+    const info = await vscode.commands.executeCommand<{ name?: string; voices: string[]; clips: number }>('tsStructure.gitReel.voiceInfo');
+    assert.equal(info?.name, 'Kitten Jasper', JSON.stringify(info));
+    assert.equal(info?.voices.filter((v) => v.startsWith('Kitten ')).length, 8);
+    assert.equal(info?.clips, plan.scenes.length);
+    console.log(`git reel voice ok: ${info?.name}, ${info?.clips} clips, ${info?.voices.length} voices offered`);
     await new Promise((r) => setTimeout(r, 1500));
     for (const format of ['webm', 'mp4'] as const) {
       const out = path.join(os.tmpdir(), `reel-voice.${format}`);

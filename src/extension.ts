@@ -122,11 +122,14 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   const reel = new ReelPanel(context.extensionUri, context.workspaceState, context.globalStorageUri.fsPath);
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
+    { dispose: () => reel.dispose() },
     vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),
     // For tests: records the open reel to a file.
     vscode.commands.registerCommand('tsStructure.gitReel.exportTo', (file: string, format: 'webm' | 'mp4') => reel.exportTo(file, format)),
     vscode.commands.registerCommand('tsStructure.gitReel.expectExport', (file: string) => reel.expectExport(file)),
     vscode.commands.registerCommand('tsStructure.gitReel.lastSound', () => reel.lastSound),
+    vscode.commands.registerCommand('tsStructure.gitReel.voiceInfo', () => reel.voiceInfo),
+    vscode.commands.registerCommand('tsStructure.gitReel.focus', () => reel.focus()),
     vscode.commands.registerCommand('tsStructure.gitReel.voice', async (on: boolean) => {
       await reel.setVoice(on);
       return reel.current;

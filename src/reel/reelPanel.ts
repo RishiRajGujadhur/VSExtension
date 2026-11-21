@@ -8,7 +8,9 @@ import { iconButton, webviewPage, webviewRoots } from '../ui/webviewPage';
 import { followAnimations } from '../ui/animationSettings';
 import { remedies, showProblem, unexpectedRemedies } from '../ui/problems';
 import { AnalysisError } from '../analysis/types';
-import { listVoices, speak } from './voice';
+import { listVoices, speak, VoiceClip } from './voice';
+import { KittenNarrator } from './kitten';
+import { DEFAULT_KITTEN_VOICE } from './kittenModel';
 import { speakable } from './describe';
 
 const lastRefKey = 'tsStructure.reel.lastRevision';
@@ -47,6 +49,13 @@ export class ReelPanel {
   ) {
     const saved = state.get<{ on: boolean; name?: string }>(voiceKey);
     if (saved) this.voice = { ...this.voice, on: saved.on, name: saved.name };
+    this.kitten = new KittenNarrator(path.join(extensionUri.fsPath, 'dist', 'kitten'), path.join(extensionUri.fsPath, 'dist', 'kittenWorker.js'));
+  }
+  /** The bundled Kitten voices, started on first use and stopped with the extension. */
+  private readonly kitten: KittenNarrator;
+
+  dispose(): void {
+    this.kitten.dispose();
   }
 
   /** Asks what to compare with (unless given), builds the plan and shows the player. Returns the plan, for tests. */
@@ -92,6 +101,11 @@ export class ReelPanel {
 
   /** Turns the voice-over on (recording every caption) or off, with a voice by name if given. */
   async setVoice(on: boolean, name?: string): Promise<void> {
+    if (on && this.narrationOff()) {
+      void showProblem('The voice-over is off in the Narration voice setting.', [{ title: 'Open the Setting', run: () => vscode.commands.executeCommand('workbench.action.openSettings', 'tsStructure.reel.narrationVoice') }], 'info');
+      return;
+    }
+    if (on) await this.loadVoices();
     this.voice.on = on;
     if (name !== undefined) this.voice.name = name || undefined;
     void this.state.update(voiceKey, { on: this.voice.on, name: this.voice.name });
@@ -101,6 +115,16 @@ export class ReelPanel {
   }
 
   /** For tests: the plan on show. */
+  /** For tests: the reel's tab in front, with the focus. */
+  focus(): void {
+    this.panel?.reveal(undefined, false);
+  }
+
+  /** For tests: the voice the voice-over reads with, the voices offered, and how many clips it has. */
+  get voiceInfo(): { name: string | undefined; voices: string[]; clips: number } {
+    return { name: this.voice.on ? this.chosenVoice() : undefined, voices: this.voice.voices, clips: Object.keys(this.voice.clips).length };
+  }
+
   get current(): ReelPlan | undefined {
     return this.plan;
   }
@@ -211,9 +235,56 @@ export class ReelPanel {
    * Records the voice-over of the scenes (all, or those given) with the system voice and fits each scene to its clip.
    * Says so, and turns the voice off, when this computer has no voice to use.
    */
+  /** The voices the picker offers: the bundled Kitten voices first, then this computer's own. */
+  private async loadVoices(): Promise<void> {
+    if (this.voice.voices.length) return;
+    this.systemVoices = await listVoices();
+    this.voice.voices = [...(this.kitten.available ? KittenNarrator.voices() : []), ...this.systemVoices];
+  }
+  private systemVoices: string[] = [];
+
+  private narrationOff(): boolean {
+    return vscode.workspace.getConfiguration('tsStructure.reel').get<string>('narrationVoice') === 'Off';
+  }
+
+  /** The voice to read with: the one picked in the player, else the Narration voice setting. */
+  private chosenVoice(): string | undefined {
+    if (this.voice.name && this.voice.voices.includes(this.voice.name)) return this.voice.name;
+    const setting = vscode.workspace.getConfiguration('tsStructure.reel').get<string>('narrationVoice', `Kitten ${DEFAULT_KITTEN_VOICE}`);
+    if (setting === 'System voice') return this.systemVoices[0];
+    return this.voice.voices.includes(setting) ? setting : this.voice.voices[0];
+  }
+
+  /**
+   * Records the clips: with a Kitten voice in the background, behind a "Generating narration…" notification that can
+   * be cancelled (only the clips not made before); with the system voice at once. If the Kitten voice cannot run, the
+   * system voice reads instead, and a short message says so.
+   */
+  private async record(items: { id: string; text: string }[], voiceName: string): Promise<VoiceClip[]> {
+    const cache = path.join(this.storage, 'reel-voice');
+    if (!voiceName.startsWith('Kitten ')) return speak(items, voiceName, cache);
+    try {
+      const missing = this.kitten.missing(items, voiceName, cache);
+      if (!missing) return await this.kitten.speak(items, voiceName, cache);
+      return await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Generating narration…', cancellable: true },
+        async (progress, token) => {
+          progress.report({ message: `${missing} clip${missing === 1 ? '' : 's'}` });
+          return this.kitten.speak(items, voiceName, cache, (done, total) => progress.report({ increment: 100 / total, message: `${done} of ${total}` }), () => token.isCancellationRequested);
+        },
+      );
+    } catch (error) {
+      const fallback = this.systemVoices[0];
+      void showProblem(`The ${voiceName} voice could not run, so the system voice reads instead. ${error instanceof Error ? error.message : String(error)}`, [], 'info');
+      if (!fallback) throw error;
+      this.voice.name = fallback;
+      return speak(items, fallback, cache);
+    }
+  }
+
   private async voiceOver(ids?: string[], post = true): Promise<void> {
     if (!this.plan) return;
-    if (!this.voice.voices.length) this.voice.voices = await listVoices();
+    await this.loadVoices();
     if (!this.voice.voices.length) {
       this.voice.on = false;
       void showProblem(process.platform === 'linux' ? 'The voice-over needs espeak-ng (or espeak): install it, then turn the voice on again.' : 'No system voice was found for the voice-over.', [], 'info');
@@ -221,9 +292,10 @@ export class ReelPanel {
       return;
     }
     const scenes = this.plan.scenes.filter((s) => !ids || ids.includes(s.id));
-    void this.panel?.webview.postMessage({ type: 'busy', text: `Recording the voice-over (${scenes.length} scene${scenes.length === 1 ? '' : 's'})…` });
+    void this.panel?.webview.postMessage({ type: 'busy', text: 'Generating narration…' });
     try {
-      const clips = await speak(scenes.map((s) => ({ id: s.id, text: speakable(s.caption) })), this.voice.name ?? this.voice.voices[0], path.join(this.storage, 'reel-voice'));
+      const voiceName = this.chosenVoice() ?? this.voice.voices[0];
+      const clips = await this.record(scenes.map((s) => ({ id: s.id, text: speakable(s.caption) })), voiceName);
       for (const id of ids ?? this.plan.scenes.map((s) => s.id)) delete this.voice.clips[id];
       for (const clip of clips) this.voice.clips[clip.id] = clip.wav.toString('base64');
       this.clipSeconds = { ...this.clipSeconds, ...Object.fromEntries(clips.map((c) => [c.id, c.seconds])) };
@@ -266,7 +338,8 @@ export class ReelPanel {
       plan: this.plan,
       generated: this.generated,
       skipped: this.state.get<string[]>(this.key(skippedKey)) ?? [],
-      voice: { on: this.voice.on, name: this.voice.name ?? this.voice.voices[0], voices: this.voice.voices, clips: this.voice.on ? this.voice.clips : {} },
+      // Off in the Narration voice setting: no voice-over, and no button for it.
+      voice: { on: this.voice.on && !this.narrationOff(), off: this.narrationOff(), name: this.chosenVoice() ?? this.voice.voices[0], voices: this.voice.voices, clips: this.voice.on && !this.narrationOff() ? this.voice.clips : {} },
     });
   }
 

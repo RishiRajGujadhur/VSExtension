@@ -1,0 +1,61 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { pathToFileURL } from 'url';
+import { parentPort, workerData } from 'worker_threads';
+import { encode, KITTEN_VOICES, modelSpeed, readVoices, styleFor, trimEnd, VoiceTable } from './kittenModel';
+
+/**
+ * The Kitten TTS model, run in a worker thread so the editor never waits on it: ONNX Runtime Web (WebAssembly, one
+ * thread) loads the bundled model once, then turns phonemes into samples, one clip at a time.
+ * Bundled to dist/kittenWorker.js; workerData.home is dist/kitten (the model and the runtime's files).
+ */
+
+interface Ort {
+  env: { wasm: { numThreads: number; wasmPaths: string } };
+  InferenceSession: { create(model: Uint8Array): Promise<Session> };
+  Tensor: new (type: string, data: unknown, dims: number[]) => unknown;
+}
+interface Session {
+  outputNames: readonly string[];
+  run(feeds: Record<string, unknown>): Promise<Record<string, { data: Float32Array }>>;
+}
+
+const home: string = workerData.home;
+let ready: Promise<{ ort: Ort; session: Session; voices: Record<string, VoiceTable> }> | undefined;
+
+function load() {
+  ready ??= (async () => {
+    const runtime = path.join(home, 'ort');
+    // An ES module, loaded from its file: the bundle is CommonJS, and the runtime finds its .wasm next to it.
+    const ort = (await import(pathToFileURL(path.join(runtime, 'ort.wasm.min.mjs')).href)) as Ort;
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.wasmPaths = `${pathToFileURL(runtime).href}/`;
+    const session = await ort.InferenceSession.create(fs.readFileSync(path.join(home, 'model', 'kitten_tts_nano_v0_8.onnx')));
+    const voices = readVoices(fs.readFileSync(path.join(home, 'model', 'voices.npz')));
+    return { ort, session, voices };
+  })();
+  return ready;
+}
+
+parentPort?.on('message', async (message: { id: number; phonemes: string; voice: string; pace?: number } | { id: number; warm: true }) => {
+  try {
+    const { ort, session, voices } = await load();
+    if ('warm' in message) {
+      parentPort?.postMessage({ id: message.id, ok: true });
+      return;
+    }
+    const table = voices[KITTEN_VOICES[message.voice] ?? KITTEN_VOICES.Jasper];
+    const tokens = encode(message.phonemes);
+    const style = styleFor(table, tokens.length);
+    const result = await session.run({
+      input_ids: new ort.Tensor('int64', BigInt64Array.from(tokens.map(BigInt)), [1, tokens.length]),
+      style: new ort.Tensor('float32', style, [1, style.length]),
+      speed: new ort.Tensor('float32', Float32Array.of(modelSpeed(message.voice, message.pace)), [1]),
+    });
+    const key = session.outputNames.find((n) => /wave/i.test(n)) ?? session.outputNames[0];
+    const samples = trimEnd(result[key].data);
+    parentPort?.postMessage({ id: message.id, samples }, [samples.buffer as ArrayBuffer]);
+  } catch (error) {
+    parentPort?.postMessage({ id: message.id, error: error instanceof Error ? error.message : String(error) });
+  }
+});
