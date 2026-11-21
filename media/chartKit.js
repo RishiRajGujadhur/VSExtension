@@ -1060,8 +1060,21 @@
       i.setAttribute('aria-hidden', 'true');
       return i;
     };
+    /**
+     * How much the card holds, from the size of the chart's window, so a small window still shows the boxes around it:
+     * full (everything), compact (a few lines of code, two edits and the rest under "…", two facts, no keys) or tiny
+     * (the title, a few lines of code and the note). A pinned card was asked for, so it gets one size more.
+     */
+    function sizeOf(isPinned) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const size = w >= 720 && h >= 600 ? 2 : w < 460 || h < 420 ? 0 : 1;
+      return ['tiny', 'compact', 'full'][Math.min(2, size + (isPinned ? 1 : 0))];
+    }
     function render(target, c, isPinned) {
       target.textContent = '';
+      const size = sizeOf(isPinned);
+      target.dataset.size = size;
       const head = document.createElement('div');
       head.className = 'card-head';
       if (isPinned) head.title = 'Drag to move';
@@ -1129,7 +1142,7 @@
         pre.append(spin);
         target.append(pre);
       }
-      if (c.actions && c.actions.length) {
+      if (c.actions && c.actions.length && size !== 'tiny') {
         // Edits that fit the code, in two rows: Edit (rename, signature, rewrites) and File (move, export), with
         // Delete set apart at the end of the File row. At most three buttons a row; the rest wait under "…".
         const bar = document.createElement('div');
@@ -1186,7 +1199,18 @@
           return wrap;
         };
         const PER_ROW = 3;
-        const editRow = c.actions.filter((a) => (a.group || 'edit') === 'edit');
+        if (size === 'compact') {
+          // One row: the first two edits, the rest (Delete included) under "…".
+          const r = document.createElement('div');
+          r.className = 'card-action-row';
+          bar.append(r);
+          const first = c.actions.filter((a) => a.group !== 'danger' && !a.underMove).slice(0, 2);
+          const rest = c.actions.filter((a) => !first.includes(a));
+          first.forEach((a) => r.append(actionButton(a)));
+          if (rest.length) r.append(more(rest, `${rest.length} more edit${rest.length === 1 ? '' : 's'}`));
+          target.append(bar);
+        }
+        const editRow = size === 'compact' ? [] : c.actions.filter((a) => (a.group || 'edit') === 'edit');
         const fileRow = c.actions.filter((a) => a.group === 'file' && !a.underMove);
         const underMove = c.actions.filter((a) => a.group === 'file' && a.underMove);
         const danger = c.actions.filter((a) => a.group === 'danger');
@@ -1201,7 +1225,7 @@
           editRow.slice(0, PER_ROW).forEach((a) => r.append(actionButton(a)));
           if (editRow.length > PER_ROW) r.append(more(editRow.slice(PER_ROW), `${editRow.length - PER_ROW} more edits`));
         }
-        if (fileRow.length || danger.length) {
+        if (size !== 'compact' && (fileRow.length || danger.length)) {
           const r = row('file-row');
           fileRow.forEach((a, i) => {
             if (i >= PER_ROW - 1) return;
@@ -1231,7 +1255,7 @@
             r.append(zone);
           }
         }
-        target.append(bar);
+        if (size !== 'compact') target.append(bar);
       }
       if (c.note) {
         const note = document.createElement('p');
@@ -1239,7 +1263,7 @@
         note.textContent = c.note;
         target.append(note);
       }
-      const facts = (c.facts || []).filter((f) => f && f[1] !== undefined && f[1] !== '');
+      const facts = (c.facts || []).filter((f) => f && f[1] !== undefined && f[1] !== '').slice(0, size === 'full' ? undefined : size === 'compact' ? 2 : 0);
       if (facts.length) {
         const grid = document.createElement('dl');
         grid.className = 'card-facts';
@@ -1252,7 +1276,7 @@
         }
         target.append(grid);
       }
-      if (c.keys && c.keys.length) {
+      if (c.keys && c.keys.length && size === 'full') {
         const keys = document.createElement('div');
         keys.className = 'card-keys';
         for (const [key, what] of c.keys) {
@@ -1274,10 +1298,18 @@
       card.style.top = '0px';
       const w = card.offsetWidth;
       const h = card.offsetHeight;
-      // Under the box, lined up with its left edge; above it when there is no room below.
-      const x = clampX(r.left, w);
+      // Under the box, lined up with its left edge; above it when there is no room below; beside it (right, then
+      // left) when there is room for neither, so the card does not cover the box.
+      let x = clampX(r.left, w);
       let y = r.bottom + 8;
-      if (y + h > window.innerHeight - 6 && r.top - h - 8 >= 6) y = r.top - h - 8;
+      const below = y + h <= window.innerHeight - 6;
+      const above = r.top - h - 8 >= 6;
+      if (!below && above) y = r.top - h - 8;
+      else if (!below) {
+        if (r.right + 8 + w <= window.innerWidth - 6) x = r.right + 8;
+        else if (r.left - 8 - w >= 6) x = r.left - 8 - w;
+        y = r.top;
+      }
       card.style.left = `${x}px`;
       card.style.top = `${clampY(y, h)}px`;
     }
@@ -1318,6 +1350,18 @@
       };
       return away;
     }
+
+    // The window changed size: the cards on show take the size that now fits.
+    let lastSize = sizeOf(false);
+    window.addEventListener('resize', () => {
+      if (sizeOf(false) === lastSize) return;
+      lastSize = sizeOf(false);
+      if (!card.hidden && content) {
+        render(card, content, false);
+        place();
+      }
+      if (!pinnedCard.hidden && pinnedContent) render(pinnedCard, pinnedContent, true);
+    });
 
     function show(target, c, delay = 350, key) {
       clearTimeout(timer);

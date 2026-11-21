@@ -279,3 +279,12 @@ button.card-meta:hover { text-decoration: underline; }
 .dock-zoom { min-width: 54px; font-variant-numeric: tabular-nums; }
 .dock-map.on { background: color-mix(in srgb, var(--vscode-button-background, #0e639c) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) { .map-card { transition: none; } }
+
+/* The hover card in a small window (chartKit.hoverCard sizeOf): narrower and shorter, so the boxes stay in sight. */
+.hover-card[data-size="full"] { max-height: min(70vh, calc(100vh - 12px)); }
+.hover-card[data-size="compact"] { width: min(340px, calc(100vw - 12px)); max-height: min(55vh, calc(100vh - 12px)); padding: 8px 10px; }
+.hover-card[data-size="compact"] .card-code { max-height: 7.4em; padding: 6px 8px; }
+.hover-card[data-size="tiny"] { width: min(260px, calc(100vw - 12px)); max-height: min(45vh, calc(100vh - 12px)); padding: 6px 8px; }
+.hover-card[data-size="tiny"] .card-code { max-height: 5.6em; margin-top: 6px; padding: 4px 6px; }
+.hover-card[data-size="tiny"] .card-meta { display: none; }
+.hover-card:not([data-size="full"]) .card-note { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; }
