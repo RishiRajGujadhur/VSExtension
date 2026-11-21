@@ -66,7 +66,8 @@ export interface DiffLine {
 export interface FlowSnapshot {
   width: number;
   height: number;
-  nodes: { x: number; y: number; width: number; height: number; kind: string; state: 'added' | 'changed' | 'same'; label: string }[];
+  /** `icon`: a codicon for what the box does (an explanation video's badges). */
+  nodes: { x: number; y: number; width: number; height: number; kind: string; state: 'added' | 'changed' | 'same'; label: string; icon?: string }[];
   /** `from` and `to`: the boxes a line joins, by index (a walk animates the lines into its step). */
   edges: { points: { x: number; y: number }[]; back: boolean; from?: number; to?: number }[];
   newPaths: number;

@@ -36,6 +36,7 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
       kind: n.kind,
       state: current.has(n.id) ? 'changed' : done.has(n.id) ? 'added' : 'same',
       label: n.kind === 'start' ? chart.name : n.kind === 'end' ? '' : (n.lines[0] ?? '').trim(),
+      ...(boxIcon(n.kind, n.text || n.lines.join('\n')) ? { icon: boxIcon(n.kind, n.text || n.lines.join('\n')) } : {}),
     })),
     edges: chart.edges.map((edge) => ({ points: edge.points, back: edge.back, from: edge.from, to: edge.to })),
     newPaths: 0,
@@ -54,7 +55,13 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
     before = [...current];
     // Where the step's code is, for the scene's Open button (locations count lines from 0, scenes from 1).
     const located = step.nodes.map((id) => chart.nodes[id]?.location).find((l) => l);
-    const code = step.nodes.flatMap((id) => (chart.nodes[id]?.lines ?? []).map((l) => l.trim())).filter((l) => l && !/^[{}()[\];,]+$/.test(l)).slice(0, 3);
+    // The step's code the boxes do not show (a box shows its first line): never the same line twice on screen.
+    // Whole source lines (a box wraps long ones), so the strip never starts mid-statement.
+    const labels = new Set(step.nodes.map((id) => (chart.nodes[id]?.lines[0] ?? '').trim()));
+    const code = step.nodes
+      .flatMap((id) => (chart.nodes[id]?.text || chart.nodes[id]?.lines.join('\n') || '').split('\n').map((l) => l.trim().replace(/;$/, '')))
+      .filter((l) => l && !labels.has(l) && !/^[{}()[\];,]+$/.test(l))
+      .slice(0, 3);
     scenes.push({
       kind: 'flow',
       id: `step-${i + 1}`,
@@ -125,4 +132,41 @@ export function stepKind(text: string, kinds: (string | undefined)[]): { label: 
   if (kinds.includes('loop')) return { label: 'Loop', tone: 'step' };
   if (kinds.includes('return') || /\breturns\b/.test(text)) return { label: 'Returns', tone: 'exit' };
   return { label: 'Step', tone: 'step' };
+}
+
+/** Icons by what the code in a box does, the first that matches: a codicon name. */
+const ICONS: [RegExp, string][] = [
+  [/\b(fetch|axios|apiCall|api\.\w+|request\(|http\w*\.|\.(get|post|put|patch|delete)\(\s*['"`/])/i, 'cloud'],
+  [/\b(localStorage|sessionStorage|indexedDB|\.save\(|\.persist|db\.|repository\.|SaveChanges|INSERT\b|UPDATE\b|DELETE\s+FROM)/i, 'database'],
+  [/\b(readFile|writeFile|appendFile|existsSync|mkdir|unlink|fs\.|createReadStream|createWriteStream)/, 'file'],
+  [/\bJSON\.(parse|stringify)/, 'json'],
+  [/\b(notify|showMessageBox|showInformationMessage|showWarningMessage|showErrorMessage|alert|toast|Notification)\b/, 'bell'],
+  [/\b(console\.\w+|logger\.\w+|log\()/, 'output'],
+  [/\b(setTimeout|setInterval|clearTimeout|clearInterval|delay\(|sleep\(|wait\(|Date\.now|performance\.now)/, 'watch'],
+  [/\.(abort|cancel)\(/, 'circle-slash'],
+  [/\b(navigate|router\.(push|replace)|location\.href|redirect|openExternal)\b/, 'arrow-right'],
+  [/\b(emit|dispatch|postMessage|send|publish)\(/, 'broadcast'],
+  [/\.(push|unshift|splice|filter|map|reduce|sort|concat)\(|\[\s*\.\.\./, 'list-unordered'],
+  [/\bnew\s+[A-Z]\w*/, 'add'],
+  [/\b(password|token|auth|login|logout|permission|role)\w*/i, 'lock'],
+];
+
+/**
+ * The icon for a box of the flowchart: by its kind (a decision, a loop, a return, a throw, a catch), else by what
+ * its code does (a request, a save, a file, a notification…), else none.
+ */
+export function boxIcon(kind: string, code: string): string | undefined {
+  if (kind === 'decision') return 'question';
+  if (kind === 'switch') return 'list-selection';
+  if (kind === 'loop') return 'sync';
+  if (kind === 'throw') return 'warning';
+  if (kind === 'catch') return 'shield';
+  if (kind === 'finally') return 'check-all';
+  if (kind === 'start' || kind === 'end') return undefined;
+  for (const [pattern, icon] of ICONS) if (pattern.test(code)) return icon;
+  if (kind === 'return') return 'sign-out';
+  // A value set, or a call: an edit, or a function run.
+  if (/^\s*(const|let|var)?\s*[\w$.[\]]+\s*[+\-*/]?=[^=]/.test(code)) return 'edit';
+  if (/[\w$]\s*\(/.test(code)) return 'symbol-method';
+  return undefined;
 }

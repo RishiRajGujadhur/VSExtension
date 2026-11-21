@@ -340,16 +340,16 @@
         x += w + gap;
       });
     }
-    const areaTop = L.top + 20 + L.body * 2 + 30;
-    let areaBottom = H - L.captionH - 40;
-    // The step's own code, under the chart, typed in as the step begins.
+    let areaTop = L.top + 20 + L.body * 2 + 30;
+    const areaBottom = H - L.captionH - 40;
+    // The step's own code, above the chart (clear of the captions, which rise above the controls), typed in.
     const code = s.code || [];
     if (code.length) {
       const size = Math.round(L.code * 1.15);
       const lineH = size + 14;
       const stripH = code.length * lineH + 30;
-      const y = areaBottom - stripH;
-      areaBottom = y - 16;
+      const y = areaTop;
+      areaTop = y + stripH + 16;
       panel(L.m, y, W - 2 * L.m, stripH, c, c.code, s.flow.tone === 'error' ? c.del : c.changed);
       const total = code.reduce((n, l) => n + l.length, 0);
       let left = Math.ceil(total * ease((p - 0.08) / 0.32));
@@ -452,6 +452,48 @@
   const PULSE_SPACING = 110;
   const PULSE_WIDTH = 64;
   const reducedMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  /**
+   * A codicon as a character, read from the icon font's own stylesheet (the page loads it for its buttons), so the
+   * canvas, and so the exported video, draws the same icons.
+   */
+  const glyphs = new Map();
+  let iconFamily = 'codicon';
+  function glyph(name) {
+    if (glyphs.has(name)) return glyphs.get(name);
+    const i = document.createElement('i');
+    i.className = `codicon codicon-${name}`;
+    i.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+    document.body.append(i);
+    const content = getComputedStyle(i, '::before').content;
+    iconFamily = getComputedStyle(i).fontFamily || iconFamily;
+    i.remove();
+    const ch = content && content !== 'none' && content !== 'normal' ? content.replace(/^["']|["']$/g, '') : '';
+    glyphs.set(name, ch);
+    return ch;
+  }
+  // The icon font loads on its own: the first frames are drawn again once it is there.
+  if (document.fonts && document.fonts.load) document.fonts.load('16px codicon').then(() => plan && render(), () => undefined);
+
+  /** A round badge on a box's corner with an icon in it: what the box does. */
+  function drawBadge(name, x, y, r, ring, ink, c) {
+    const ch = glyph(name);
+    if (!ch) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + r * 0.4, y + r * 0.4, r, 0, Math.PI * 2);
+    ctx.fillStyle = c.panel;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, r / 8);
+    ctx.strokeStyle = ring;
+    ctx.stroke();
+    ctx.fillStyle = ink;
+    ctx.font = `${Math.round(r * 1.15)}px ${iconFamily}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ch, x + r * 0.4, y + r * 0.4 + 1);
+    ctx.restore();
+  }
+
   function drawWalkFlow(flow, c, toScreen, scale, seconds, grow, still) {
     const current = new Set();
     const walked = new Set();
@@ -671,6 +713,8 @@
         text(fit(n.label, w - 12, `${fontPx}px ${codeFont}`), x + w / 2, y + h / 2, `${fontPx}px ${codeFont}`, n.state === 'same' ? c.muted : c.text, 'center', 'middle');
         ctx.restore();
       }
+      // What the box does, as an icon on its corner: a request, a save, a decision, a loop, error handling…
+      if (n.icon && w > 24) drawBadge(n.icon, x, y, Math.min(26, Math.max(11, 12 * scale)), color, n.state === 'same' ? c.muted : n.state === 'changed' ? color : c.text, c);
     }
     ctx.restore();
     // Legend: what the colors mean, and the paths.

@@ -5,7 +5,7 @@ import * as path from 'path';
 import { explainCode } from '../explain/explainCode';
 import { CodeModel } from '../reel/codeModel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
-import { explanationReel, stepKind, walkSteps } from '../explain/explainReel';
+import { boxIcon, explanationReel, stepKind, walkSteps } from '../explain/explainReel';
 import { explanationHtml } from '../explain/explainHtml';
 import type { ReelScene } from '../reel/plan';
 
@@ -99,7 +99,9 @@ test('Explain this code as a video: essential only, a scene per step on the flow
     assert.ok(s.flow.nodes.some((n) => n.state === 'changed'), `step ${i + 1} lights a box`);
     // Dots for how far the walk has come, the step's own code, and the step before to glide from.
     assert.deepEqual(s.progress, { index: i, total: steps.length });
-    assert.ok(s.code && s.code.length, `step ${i + 1} shows its code`);
+    // The code strip only when it adds to what the boxes show (their first line): never the same line twice.
+    const lit = s.flow.nodes.filter((n) => n.state === 'changed').map((n) => n.label);
+    assert.ok(!s.code?.length || s.code.some((line) => !lit.includes(line)), `step ${i + 1} repeats its box: ${s.code}`);
     if (i) assert.ok(s.flow.from && s.flow.from.length, `step ${i + 1} glides from the step before`);
   }
   assert.match(steps[0].code!.join(' '), /apiCall/);
@@ -135,4 +137,24 @@ test('Explain this code: the page offers the video only for a whole function, as
   const lines = await explainCode('workspace.ts', code, ...range('    const config = saved', 'fixtures\') };'));
   assert.doesNotMatch(explanationHtml(lines, false), /Generate video/);
   assert.match(explanationHtml(fn, false), /Nothing was sent anywhere/);
+});
+
+test('Explain this code as a video: an icon on each box, by what its code does', async () => {
+  assert.equal(boxIcon('decision', 'ctx.win'), 'question');
+  assert.equal(boxIcon('loop', 'for (const x of xs)'), 'sync');
+  assert.equal(boxIcon('catch', 'catch'), 'shield');
+  assert.equal(boxIcon('statement', "const r = await apiCall(ctx.origin, '/workspace');"), 'cloud');
+  assert.equal(boxIcon('statement', 'saved = JSON.parse(fs.readFileSync(file))'), 'file');
+  assert.equal(boxIcon('statement', "localStorage.setItem('cart', data)"), 'database');
+  assert.equal(boxIcon('statement', "notify('Local API is not responding')"), 'bell');
+  assert.equal(boxIcon('statement', 'clearTimeout(timeout)'), 'watch');
+  assert.equal(boxIcon('statement', 'request.abort()'), 'circle-slash');
+  assert.equal(boxIcon('statement', 'const request = new AbortController()'), 'add');
+  assert.equal(boxIcon('statement', 'state.apiDown = false'), 'edit');
+  assert.equal(boxIcon('return', 'return config'), 'sign-out');
+  assert.equal(boxIcon('start', 'poll'), undefined);
+  const e = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
+  const plan = explanationReel(e, 'src/workspace.ts')!;
+  const step = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow')!;
+  assert.ok(step.flow.nodes.some((n) => n.icon === 'cloud'), 'the request box has its icon');
 });
