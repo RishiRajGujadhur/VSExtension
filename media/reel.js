@@ -304,7 +304,7 @@
     text(fit(s.legend || 'Flowchart: new boxes green, changed boxes amber', W - 2 * L.m, `${L.small}px ${uiFont}`), L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, c.muted, 'left', 'middle');
     const areaTop = L.top + 20 + L.body * 2 + 30;
     const areaBottom = H - L.captionH - 40;
-    drawFlow(s.flow, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L);
+    drawFlow(s.flow, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L, p * s.seconds);
   }
 
   /**
@@ -386,7 +386,98 @@
   }
 
   /** The function's flowchart, scaled into its box: new boxes green, changed ones amber, drawn in as the scene goes. */
-  function drawFlow(flow, p, c, box, L) {
+  /**
+   * The flow in a walk through a function, as the charts draw it (chartKit.js, after robot-components' node grid,
+   * MIT): the path walked so far is a blue wire, and the lines into this step carry soft cyan pulses travelling the
+   * way execution goes, to the step's boxes. Time is the scene's own (`seconds` into it), so a recording is the same
+   * as the preview. Still wires when the Charts animations are off or the system asks for less motion.
+   */
+  const WIRE = '#3B82F6';
+  const PULSE_SPEED = 120; // screen pixels a second, at the canvas' size
+  const PULSE_SPACING = 110;
+  const PULSE_WIDTH = 64;
+  const reducedMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  function drawWalkFlow(flow, c, toScreen, scale, seconds, grow, still) {
+    const current = new Set();
+    const walked = new Set();
+    flow.nodes.forEach((n, i) => {
+      if (n.state === 'changed') current.add(i);
+      else if (n.state === 'added' || n.kind === 'start') walked.add(i);
+    });
+    const width = Math.max(2.5, 3 * scale);
+    const base = ctx.globalAlpha;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const e of flow.edges) {
+      if (e.from === undefined || e.to === undefined) continue;
+      // Into this step from where the walk has been (or within the step): pulsing. Along the walk so far: a wire.
+      const arriving = current.has(e.to) && (walked.has(e.from) || current.has(e.from));
+      const along = walked.has(e.from) && walked.has(e.to);
+      if (!arriving && !along) continue;
+      let pts = e.points.map(toScreen);
+      // A line into this step draws itself in, from where the walk was to the step.
+      if (arriving && grow < 1) {
+        const total = pts.slice(1).reduce((n, pt, i) => n + Math.hypot(pt.x - pts[i].x, pt.y - pts[i].y), 0);
+        let left = total * grow;
+        const cut = [pts[0]];
+        for (let i = 1; i < pts.length && left > 0; i++) {
+          const a = pts[i - 1];
+          const b = pts[i];
+          const length = Math.hypot(b.x - a.x, b.y - a.y);
+          const f = Math.min(1, left / Math.max(0.001, length));
+          cut.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
+          left -= length;
+        }
+        pts = cut;
+        if (pts.length < 2) continue;
+        // The head of the line, a bright dot as it travels.
+        const head = pts[pts.length - 1];
+        ctx.globalAlpha = base;
+        ctx.fillStyle = 'rgba(0, 200, 255, 0.95)';
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, width * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = base * (arriving ? 0.85 : 0.55);
+      ctx.strokeStyle = WIRE;
+      ctx.lineWidth = width;
+      ctx.setLineDash(e.back ? [10, 7] : []);
+      ctx.beginPath();
+      pts.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (!arriving) continue;
+      // Pulses: every piece of the line lit by its distance to the nearest pulse, with a cosine falloff.
+      const at = still ? PULSE_SPACING / 2 : (seconds * PULSE_SPEED) % PULSE_SPACING;
+      let walkedLength = 0;
+      for (let k = 0; k + 1 < pts.length; k++) {
+        const a = pts[k];
+        const b = pts[k + 1];
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        const pieces = Math.max(1, Math.ceil(length / 5));
+        for (let i = 0; i < pieces; i++) {
+          const mid = walkedLength + ((i + 0.5) * length) / pieces;
+          const offset = (((mid - at) % PULSE_SPACING) + PULSE_SPACING) % PULSE_SPACING;
+          const dist = Math.min(offset, PULSE_SPACING - offset);
+          if (dist >= PULSE_WIDTH / 2) continue;
+          const glow = (Math.cos((dist / (PULSE_WIDTH / 2)) * Math.PI) + 1) / 2;
+          if (glow <= 0.03) continue;
+          ctx.globalAlpha = base;
+          ctx.strokeStyle = `rgba(0, 200, 255, ${(glow * 0.95).toFixed(3)})`;
+          ctx.lineWidth = width + glow * 3;
+          ctx.beginPath();
+          ctx.moveTo(a.x + ((b.x - a.x) * i) / pieces, a.y + ((b.y - a.y) * i) / pieces);
+          ctx.lineTo(a.x + ((b.x - a.x) * (i + 1)) / pieces, a.y + ((b.y - a.y) * (i + 1)) / pieces);
+          ctx.stroke();
+        }
+        walkedLength += length;
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawFlow(flow, p, c, box, L, seconds = 0) {
     panel(box.x, box.y, box.w, box.h, c);
     const legendH = L.small + 34;
     const pad = 28;
@@ -444,7 +535,13 @@
     ctx.save();
     round(box.x + 2, box.y + 2, box.w - 4, box.h - legendH - 4, 16);
     ctx.clip();
-    ctx.globalAlpha = appear;
+    // A walk builds the chart up step by step: what it has not reached yet is a faint outline, this step's line draws
+    // itself in, then its box pops up (all at once when motion is off).
+    const still = reducedMotion.matches || document.body.dataset.animationsCharts === 'off';
+    const grow = flow.walk && !still ? ease((p - 0.04) / 0.26) : 1;
+    const pop = flow.walk && !still ? Math.min(1, Math.max(0, (p - 0.22) / 0.16)) : 1;
+    const ghost = 0.13;
+    ctx.globalAlpha = appear * (flow.walk ? ghost : 1);
     ctx.lineWidth = Math.max(1.5, 2.5 * scale);
     ctx.strokeStyle = c.muted;
     for (const e of flow.edges) {
@@ -454,12 +551,21 @@
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    ctx.globalAlpha = appear;
+    if (flow.walk) drawWalkFlow(flow, c, (pt) => ({ x: ox + pt.x * scale, y: oy + pt.y * scale }), scale, seconds, grow, still);
     const pulse = 0.5 + 0.5 * Math.sin(p * Math.PI * 6);
+    // A box popping up: a little past its size, then settling (an ease-out with overshoot).
+    const overshoot = (t) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
     for (const n of flow.nodes) {
-      const x = ox + n.x * scale;
-      const y = oy + n.y * scale;
-      const w = n.width * scale;
-      const h = n.height * scale;
+      const reached = !flow.walk || n.kind === 'start' || n.state !== 'same';
+      const popping = flow.walk && n.state === 'changed' && pop < 1;
+      ctx.globalAlpha = appear * (reached ? (popping ? pop : 1) : ghost);
+      if (ctx.globalAlpha <= 0.001) continue;
+      const k = popping ? 0.55 + 0.45 * overshoot(pop) : 1;
+      const w = n.width * scale * k;
+      const h = n.height * scale * k;
+      const x = ox + (n.x + n.width / 2) * scale - w / 2;
+      const y = oy + (n.y + n.height / 2) * scale - h / 2;
       const color = n.state === 'added' ? c.add : n.state === 'changed' ? c.changed : c.border;
       if (n.kind === 'start' || n.kind === 'end') {
         ctx.beginPath();

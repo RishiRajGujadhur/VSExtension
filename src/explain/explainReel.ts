@@ -32,7 +32,7 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
         state: current.has(n.id) ? 'changed' : done.has(n.id) ? 'added' : 'same',
         label: n.kind === 'start' ? chart.name : n.kind === 'end' ? '' : (n.lines[0] ?? '').trim(),
       })),
-      edges: chart.edges.map((edge) => ({ points: edge.points, back: edge.back })),
+      edges: chart.edges.map((edge) => ({ points: edge.points, back: edge.back, from: edge.from, to: edge.to })),
       newPaths: 0,
       gonePaths: 0,
       paths: chart.paths.length,

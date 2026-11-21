@@ -94,6 +94,8 @@ test('Explain this code as a video: a scene per step on the flowchart, this step
     // Each step lights its own boxes; the ones before stay green.
     assert.ok(s.flow.nodes.some((n) => n.state === 'changed'), `step ${i + 1} lights a box`);
   }
+  // The lines know the boxes they join, so the player can send the flow along them into each step.
+  assert.ok(steps.every((s) => s.flow.edges.every((edge) => typeof edge.from === "number" && typeof edge.to === "number")));
   // Steps in the same box light the same box; by the last step the ones before are green.
   assert.ok(steps[steps.length - 1].flow.nodes.some((n) => n.state === 'added'), 'the last step keeps the steps so far');
   // Lines that are not a whole function have no flowchart to walk.
