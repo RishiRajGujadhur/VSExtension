@@ -22,7 +22,7 @@ function gitLines(cwd: string, args: string[]): string[] {
 }
 
 /** Revisions worth comparing against: HEAD, the branch point, recent commits and branches. */
-async function pickRef(root: string, last?: { ref: string; label: string }): Promise<{ ref: string; label: string } | undefined> {
+export async function pickRef(root: string, last?: { ref: string; label: string }, title = 'Compare the dependency graph with…'): Promise<{ ref: string; label: string } | undefined> {
   type Item = vscode.QuickPickItem & { ref?: string; custom?: boolean };
   const items: Item[] = [];
   // Comparing with the same revision again is the common case while working on a branch.
@@ -55,7 +55,7 @@ async function pickRef(root: string, last?: { ref: string; label: string }): Pro
     items.push(...branches.map((b) => ({ label: `$(git-branch) ${b}`, ref: b })));
   }
   items.push({ label: '$(edit) Enter a revision…', custom: true });
-  const picked = await vscode.window.showQuickPick(items, { title: 'Compare the dependency graph with…', matchOnDescription: true });
+  const picked = await vscode.window.showQuickPick(items, { title, matchOnDescription: true });
   if (picked?.custom) {
     const ref = await vscode.window.showInputBox({ title: 'Git revision', placeHolder: 'v1.2.0, origin/main, a1b2c3d…' });
     return ref ? { ref, label: ref } : undefined;

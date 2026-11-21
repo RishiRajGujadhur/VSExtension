@@ -48,6 +48,15 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - Above the paths: removed boxes, and which paths are new or gone. Click a row to go to its box.
 - It compares with your last commit (HEAD) and follows your edits as you type, saved or not. Works for TypeScript, JavaScript, C# and T-SQL.
 
+## Git reel
+
+![A Git reel of a change: the code with lines added and removed beside the function's flowchart, its new boxes in green](docs/images/git-reel.gif)
+
+- Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
+- It plays a short video of your changes: an overview, then each changed function with its code and flowchart (new boxes green, changed ones amber), then a summary.
+- Switch between 16:9 and 9:16, pick a theme, and edit any caption. Your captions are kept when you refresh.
+- **Export MP4** or **Export WebM** saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis: no AI, nothing uploaded.
+
 ## Find usages
 
 ![Find usages, grouped into definitions, calls, imports and exports](docs/images/semantic-usages.gif)

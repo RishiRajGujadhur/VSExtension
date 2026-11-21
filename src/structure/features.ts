@@ -121,6 +121,13 @@ export const features: Feature[] = [
     commands: ['tsStructure.dependencyGraphDiff', 'tsStructure.report.compareRevision'],
   },
   {
+    id: 'gitReel',
+    core: true,
+    title: 'Git reel',
+    description: 'A short video of your changes: what changed in each function, with its flowchart, ready to share.',
+    commands: ['tsStructure.gitReel'],
+  },
+  {
     id: 'argumentFlow',
     title: 'Arguments passed in',
     description: 'Where a parameter’s values come from and where they go.',

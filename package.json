@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Chart animations adapted from robot-components (MIT).",
-  "version": "0.81.2",
+  "version": "0.82.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -904,6 +904,12 @@
         "icon": "$(git-commit)"
       },
       {
+        "command": "tsStructure.gitReel",
+        "title": "Git reel",
+        "category": "Code X-Ray",
+        "icon": "$(device-camera-video)"
+      },
+      {
         "command": "tsStructure.explainValue",
         "title": "Why this value",
         "category": "Code X-Ray",
@@ -1718,6 +1724,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "tsStructure.gitReel",
+          "when": "config.tsStructure.features.gitReel"
+        },
         {
           "command": "tsImpact.runTest",
           "when": "false"
@@ -2804,6 +2814,11 @@
       ],
       "scm/title": [
         {
+          "command": "tsStructure.gitReel",
+          "when": "config.tsStructure.features.gitReel && scmProvider == git",
+          "group": "navigation@9"
+        },
+        {
           "command": "tsStructure.dependencyGraphDiff",
           "when": "config.tsStructure.features.graphDiff && scmProvider == git",
           "group": "1_tsStructure@1"
@@ -3081,10 +3096,16 @@
             "order": 16,
             "markdownDescription": "**Dependency Graph Diff**: How imports changed since a Git revision. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           },
+          "tsStructure.features.gitReel": {
+            "type": "boolean",
+            "default": true,
+            "order": 17,
+            "markdownDescription": "**Git reel**: A short video of your changes: what changed in each function, with its flowchart, ready to share. On by default; turn off to hide its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
+          },
           "tsStructure.features.argumentFlow": {
             "type": "boolean",
             "default": false,
-            "order": 17,
+            "order": 18,
             "markdownDescription": "**Argument Propagation Explorer**: Where a parameter’s values come from and where they go. Optional, off by default: turn on to add its commands and menus. **Code X-Ray: Choose Features…** changes several at once."
           }
         }

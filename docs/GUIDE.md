@@ -266,6 +266,17 @@ The **ⓘ** button in the results view explains the analysis on screen. Rows tha
 ![Mutations in cart.ts, starting with what a mutation is](images/mutation-tracking.gif)
 ![Side effects of addToCart with CodeLenses](images/side-effects.gif)
 
+### Git reel
+
+**Git reel** (Command Palette, or the camera button in the Source Control title bar) turns your changes into a short video to share in a pull request or a chat. Pick what to compare with (your last commit, where the branch started, a recent commit or branch, or any revision), and it opens in its own tab:
+
+- **Scenes**: an **overview** (the branch and what it is compared with, a title from the branch name or the latest commit, additions, deletions and files), then one scene per changed **function** with its diff beside its **flowchart** (new boxes green, changed ones dashed amber; in a big function the view glides in on the changes), or per **file** for code outside functions and for other languages, then **other files** when there are more changes than scenes, and a **summary**.
+- **Captions** come from the analysis, such as *applyCoupon(): 2 new boxes, 1 box changed · 3 new paths, 2 paths gone*, or *New file plan.ts (+466 lines)*. Edit any of them in the list under the timeline (it is marked **Edited**, **Reset** brings the generated one back); edited captions are kept for that change, even after **Refresh**.
+- **Player**: Play (Space), drag or click the timeline, ← and → to move a second (Shift for five), Home and End; **16:9** for pull requests and slides, **9:16** for phones (its own layout, with bigger type); themes **Midnight**, **Graphite** and **Paper**.
+- **Export MP4** (when your editor can make MP4) or **Export WebM** records the reel as it plays, in real time, so keep its tab in view until it is saved. It goes to `.codexray/reels/` in the repository by default, and the first time you can add `.codexray/` to `.gitignore`.
+- What it leaves out: lock files, build output, minified and generated files, source maps, binaries and `.env` and key files. Values that look like secrets (passwords, tokens, API keys, private keys) are masked in the code it shows. The biggest changes get scenes (functions first), at most eight; the reel lasts at most a minute.
+- Everything comes from Git and Code X-Ray's own analysis on your machine: the same change gives the same reel, and nothing is sent anywhere. TypeScript, JavaScript, C# and T-SQL functions get flowcharts; other files show their diff.
+
 ### Types, modules and tests
 
 - **Family tree** and **Override reach**: supertypes, subtypes and overrides, and what a change to a member reaches.

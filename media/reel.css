@@ -1,0 +1,58 @@
+/* The Git reel player (media/reel.js). */
+:root { color-scheme: light dark; }
+body { margin: 0; padding: 0; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size, 13px); }
+button { font: inherit; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, .25)); }
+header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-focusBorder, #7c6cf2); flex: none; }
+#title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#base { padding: 1px 8px; border-radius: 4px; font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; background: var(--vscode-badge-background, rgba(128, 128, 128, .25)); color: var(--vscode-badge-foreground, inherit); white-space: nowrap; }
+.spacer { flex: 1; }
+.segmented { display: inline-flex; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .35)); border-radius: 6px; overflow: hidden; }
+.segmented button { padding: 3px 10px; border: 0; background: transparent; color: var(--vscode-foreground); cursor: pointer; }
+.segmented button[aria-pressed="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+select { padding: 3px 6px; border: 1px solid var(--vscode-dropdown-border, rgba(128, 128, 128, .35)); border-radius: 4px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--vscode-icon-foreground, var(--vscode-foreground)); cursor: pointer; }
+.icon-button:hover { background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, .31)); }
+
+#stage { display: flex; justify-content: center; padding: 14px; }
+#screen { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .5); }
+body[data-aspect="9:16"] #screen { max-height: 72vh; width: auto; }
+body[data-aspect="16:9"] #screen { max-height: 62vh; width: auto; }
+#empty { padding: 40px 20px; text-align: center; color: var(--vscode-descriptionForeground); }
+body:not(.has-plan) #transport, body:not(.has-plan) #scenes, body:not(.has-plan) #stage { display: none; }
+
+#transport { padding: 0 14px 10px; }
+.times { display: flex; justify-content: space-between; color: var(--vscode-descriptionForeground); font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; margin-bottom: 4px; }
+#timeline { position: relative; display: flex; gap: 2px; height: 30px; border-radius: 6px; overflow: hidden; cursor: pointer; user-select: none; touch-action: none; }
+.segment { flex-basis: 0; min-width: 0; padding: 0 6px; border: 0; color: var(--vscode-foreground); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; opacity: .75; transition: opacity 120ms ease; }
+.segment.current, .segment:hover { opacity: 1; }
+.segment.kind-overview { background: color-mix(in srgb, #7c6cf2 30%, transparent); }
+.segment.kind-diff { background: color-mix(in srgb, #3fb950 26%, transparent); }
+.segment.kind-files { background: color-mix(in srgb, #4ea1ff 26%, transparent); }
+.segment.kind-summary { background: color-mix(in srgb, #d6a03a 30%, transparent); }
+#playhead { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--vscode-foreground); border-radius: 2px; pointer-events: none; box-shadow: 0 0 6px rgba(255, 255, 255, .5); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.controls button:not(.icon-button) { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid var(--vscode-button-border, transparent); border-radius: 6px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
+.controls button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.controls button:hover:not(:disabled) { filter: brightness(1.12); }
+#exports { display: inline-flex; gap: 8px; margin-left: auto; }
+#status { color: var(--vscode-descriptionForeground); }
+.muted { color: var(--vscode-descriptionForeground); }
+body.recording .controls button, body.recording #timeline, body.recording header button, body.recording select, body.recording textarea { pointer-events: none; opacity: .5; }
+
+#scenes { padding: 4px 14px 20px; }
+#scenes h2 { margin: 8px 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--vscode-descriptionForeground); }
+#sceneList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.scene { padding: 8px 10px; border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .3)); border-radius: 8px; background: var(--vscode-editorWidget-background, transparent); transition: border-color 140ms ease; }
+.scene.current { border-color: var(--vscode-focusBorder); }
+.scene-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.scene-go { padding: 0; border: 0; background: none; color: var(--vscode-foreground); font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.scene-go:hover { text-decoration: underline; }
+.badge { flex: none; padding: 0 6px; border-radius: 8px; font-size: 10px; font-weight: 600; border: 1px solid currentColor; }
+.badge.heuristic { color: var(--vscode-charts-green, #3fb950); }
+.badge.user { color: var(--vscode-charts-purple, #b180d7); }
+.seconds { margin-left: auto; color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; font-size: 11px; }
+.link { padding: 0; border: 0; background: none; color: var(--vscode-textLink-foreground); cursor: pointer; font-size: 11px; }
+.link[hidden] { display: none; }
+textarea.caption { box-sizing: border-box; width: 100%; resize: vertical; padding: 5px 7px; border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, .35)); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; }
+textarea.caption:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }

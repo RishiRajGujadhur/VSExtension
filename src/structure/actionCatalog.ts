@@ -239,6 +239,8 @@ export const actionCatalog: CatalogAction[] = [
 
   a('analyze', 'Tests', 'tsImpact.analyze', 'Test Impact', 'Tests that cover this code',
     'Finds the tests that depend on the symbol or file at the cursor, directly or through imports.', 'which tests run'),
+  a('analyze', 'Tests', 'tsStructure.gitReel', 'Git Reel', 'Your changes as a video',
+    'A short video of the changes since a commit or branch: each changed function with its flowchart and what changed in it, captions you can edit, in 16:9 or 9:16, saved as WebM.', 'video share pull request demo diff changes'),
   a('analyze', 'Tests', 'tsImpact.analyzeChanged', 'Test Impact of Changed Files', 'Tests for uncommitted changes',
     'Finds the tests that depend on every file changed since the last commit.', 'git diff tests'),
 

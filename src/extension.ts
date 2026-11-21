@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ReelPanel } from './reel/reelPanel';
 import { otherLanguageInFront } from './ui/otherLanguages';
 import { showLastRefactoring } from './ui/applyRefactor';
 import { rememberRewriteUses } from './ui/intentionProvider';
@@ -117,6 +118,14 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   );
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
+  // The Git reel: the changes since a revision, as a short video.
+  const reel = new ReelPanel(context.extensionUri, context.workspaceState);
+  context.subscriptions.push(
+    registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
+    vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),
+    // For tests: records the open reel to a file.
+    vscode.commands.registerCommand('tsStructure.gitReel.exportTo', (file: string, format: 'webm' | 'mp4') => reel.exportTo(file, format)),
+  );
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);
   registerLastSubjects(context);

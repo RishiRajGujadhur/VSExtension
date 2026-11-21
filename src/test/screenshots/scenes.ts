@@ -276,6 +276,35 @@ export const scenes: Scene[] = [
   },
   // C#: what a person does in a C# file, with real key presses.
   {
+    // Git reel: applyCoupon and shipping edited, then the reel of the changes since the last commit, playing.
+    name: 'git-reel',
+    async run({ open, delay, cdp }) {
+      await open('src/pricing.ts', 'const coupon = findCoupon');
+      const editor = vscode.window.activeTextEditor!;
+      const text = editor.document.getText();
+      const at = (s: string) => editor.document.positionAt(text.indexOf(s));
+      await editor.edit((b) => {
+        b.insert(at('  const coupon = findCoupon'), '  if (amount <= 0) {\n    return 0;\n  }\n');
+        b.replace(new vscode.Range(at('return amount * (1 - coupon'), at('return amount * (1 - coupon').translate(0, 'return amount * (1 - coupon.percentOff / 100);'.length)), 'return Math.round(amount * (100 - coupon.percentOff)) / 100;');
+      });
+      await editor.document.save();
+      await delay(400);
+      await vscode.commands.executeCommand('tsStructure.gitReel', 'HEAD');
+      await delay(1500);
+      // Seek to the applyCoupon scene's flowchart, by pressing → in the player.
+      for (let i = 0; i < 8; i++) {
+        await press(cdp, 'ArrowRight', 'ArrowRight', 39);
+        await delay(60);
+      }
+      await press(cdp, ' ', 'Space', 32);
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      execFileSync('git', ['checkout', '--', '.'], { cwd: root() });
+    },
+    settle: 3500,
+  },
+  {
     // Highlighted code: the Actions view shows only the actions that work with it. A name first, then code.
     name: 'actions-for-selection',
     async run({ open, delay }) {

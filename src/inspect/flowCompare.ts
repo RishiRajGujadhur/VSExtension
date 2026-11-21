@@ -95,8 +95,11 @@ export function compareCharts(before: Chart | undefined, after: Chart, against =
   left.splice(0, left.length, ...left.filter((old) => !taken.has(old.id)));
   const removed = left.map((n) => ({ kind: n.kind, text: n.text || n.lines.join('\n'), line: n.location ? n.location.line + 1 : undefined }));
 
-  // A path is the same path when it goes through the same boxes (by kind and code) and ends the same way.
-  const signature = (chart: Chart, p: Chart['paths'][number]) => `${p.nodes.filter((id) => ownBox(chart.nodes[id])).map((id) => keyOf(chart.nodes[id])).join('\u0001')}\u0002${p.ending}`;
+  // A path is the same path when it goes through the same boxes and ends the same way (returns, throws). A box whose
+  // code changed is still the same box: it changes what the path does, not which path it is.
+  const alias = new Map<number, string>(changed.map((c) => [c.id, keyOf(paired.get(c.id)!)]));
+  const keyIn = (chart: Chart, id: number) => (chart === after && alias.has(id) ? alias.get(id)! : keyOf(chart.nodes[id]));
+  const signature = (chart: Chart, p: Chart['paths'][number]) => `${p.nodes.filter((id) => ownBox(chart.nodes[id])).map((id) => keyIn(chart, id)).join('\u0001')}\u0002${p.ending.split(' ')[0]}`;
   const counts = new Map<string, number>();
   for (const p of before.paths) counts.set(signature(before, p), (counts.get(signature(before, p)) ?? 0) + 1);
   const newPaths: number[] = [];

@@ -42,6 +42,7 @@ export async function run(): Promise<void> {
     await cardEditsFlow();
     await compareWithCommitFlow();
     await selectionActionsFlow();
+    await gitReelFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -628,6 +629,38 @@ async function selectionActionsFlow(): Promise<void> {
   editor.selection = new vscode.Selection(0, 0, 0, 0);
   assert.equal(await vscode.commands.executeCommand<Fit>('tsStructure.actions.selection'), undefined);
   console.log(`actions for the selection ok: ${code.commands.length} for code, ${name.commands.length} for a name`);
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+/** Git reel: the changes since the last commit as a plan the player draws, in its own tab. */
+async function gitReelFlow(): Promise<void> {
+  const file = path.join(sample, 'src', 'grade.ts');
+  fs.writeFileSync(file, "export function grade(score: number) {\n  if (score > 90) return 'A';\n  if (score > 75) return 'B';\n  return 'C';\n}\n");
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+  type Plan = { meta: { title: string; files: number }; scenes: { kind: string; symbol?: string; caption: string; flow?: { nodes: { state: string }[] } }[] };
+  const plan = await vscode.commands.executeCommand<Plan>('tsStructure.gitReel', 'HEAD');
+  assert.ok(plan, 'a reel plan');
+  assert.equal(plan.meta.title, 'Uncommitted changes');
+  const scene = plan.scenes.find((s) => s.symbol === 'grade');
+  assert.ok(scene, plan.scenes.map((s) => s.caption).join(' | '));
+  assert.equal(scene.caption, 'grade(): 2 new boxes · 2 new paths, 1 path gone');
+  assert.equal(scene.flow?.nodes.filter((n) => n.state === 'added').length, 2);
+  for (let i = 0; i < 40 && !vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label.startsWith('Git reel')); i++) await new Promise((r) => setTimeout(r, 100));
+  assert.ok(vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label === 'Git reel: Uncommitted changes'), 'the Git reel tab');
+  console.log(`git reel ok: ${plan.scenes.length} scenes, ${scene.caption}`);
+  // Recorded by the editor's own engine: a WebM file, and an MP4 one where the engine can make it.
+  for (const format of ['webm', 'mp4'] as const) {
+    const out = path.join(os.tmpdir(), `reel-test.${format}`);
+    const size = await vscode.commands.executeCommand<number>('tsStructure.gitReel.exportTo', out, format);
+    if (!size) {
+      console.log(`git reel ${format}: not supported by this editor`);
+      continue;
+    }
+    const head = fs.readFileSync(out).subarray(0, 12);
+    const valid = format === 'webm' ? head.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) : head.subarray(4, 8).toString() === 'ftyp';
+    assert.ok(valid, `${format} header ${head.toString('hex')}`);
+    console.log(`git reel ${format} ok: ${(size / 1024).toFixed(0)} KB`);
+  }
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
