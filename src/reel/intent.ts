@@ -381,3 +381,37 @@ export function keyLabel(intent: Intent | undefined): string {
   };
   return `Key change: ${words[intent.kind]}`;
 }
+
+/** The words of a name that name a thing, not an action: "handleAddToCart" → "cart", "OrderSummary" → "order summary". */
+export function nounsOf(name: string): string | undefined {
+  const all = words(name).map((w) => w.toLowerCase());
+  const kept = all.filter((w) => !LEADING.has(w) && !NAME_VERBS[w] && !FILLER.has(w) && !PREPOSITIONS.has(w) && !/^(list|view|panel|page|component|card|table|grid|section|container|screen|widget)$/.test(w));
+  return kept.join(' ') || undefined;
+}
+
+/**
+ * Plain descriptions of what features do, for the code model to compare code with. "other" ones are there so that
+ * code about checks, errors or formatting is not taken for a feature.
+ */
+export const FEATURE_PROTOTYPES: { kind: IntentKind | 'other'; text: string }[] = [
+  { kind: 'add', text: 'add an item to the cart, list or collection, create a new record' },
+  { kind: 'remove', text: 'remove or delete an item from the cart or list' },
+  { kind: 'update', text: 'update, edit or change an existing item, its quantity or its details' },
+  { kind: 'show', text: 'show or display items on the screen, render a list, a page or a view' },
+  { kind: 'fetch', text: 'load or fetch data from the server, an api or the database' },
+  { kind: 'save', text: 'save or store data to disk, local storage or the database' },
+  { kind: 'send', text: 'send a message, an email or a notification' },
+  { kind: 'calculate', text: 'calculate a total, price, tax, discount, sum or amount' },
+  { kind: 'sort', text: 'sort or order a list' },
+  { kind: 'filter', text: 'filter or search a list for matching items' },
+  { kind: 'clear', text: 'clear, reset or empty everything' },
+  { kind: 'toggle', text: 'turn something on or off, show or hide a panel' },
+  { kind: 'auth', text: 'sign in, log in, log out, check the password or permissions' },
+  { kind: 'navigate', text: 'go to another page, route or screen' },
+  { kind: 'other', text: 'check that the input is valid and report errors' },
+  { kind: 'other', text: 'handle errors and exceptions, retry when something fails' },
+  { kind: 'other', text: 'format text, convert or parse values, build strings' },
+  { kind: 'other', text: 'read settings and configuration, set up options' },
+  { kind: 'other', text: 'log messages for debugging' },
+  { kind: 'other', text: 'test that the code works, assert and expect results' },
+];

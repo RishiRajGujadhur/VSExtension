@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
-  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: adds 26 MB to the download, 40 MB installed; can be turned off). Chart animations adapted from robot-components (MIT).",
-  "version": "0.88.0",
+  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: adds 26 MB to the download, 40 MB installed; can be turned off), and an optional code model for them, downloaded only if you agree (all-MiniLM-L6-v2, Apache-2.0: 23 MB, not bundled). Chart animations adapted from robot-components (MIT).",
+  "version": "0.89.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -910,6 +910,16 @@
         "icon": "$(device-camera-video)"
       },
       {
+        "command": "tsStructure.gitReel.downloadCodeModel",
+        "title": "Git reel: download the code model",
+        "category": "Code X-Ray"
+      },
+      {
+        "command": "tsStructure.gitReel.removeCodeModel",
+        "title": "Git reel: remove the code model",
+        "category": "Code X-Ray"
+      },
+      {
         "command": "tsStructure.explainValue",
         "title": "Why this value",
         "category": "Code X-Ray",
@@ -1726,6 +1736,14 @@
       "commandPalette": [
         {
           "command": "tsStructure.gitReel",
+          "when": "config.tsStructure.features.gitReel"
+        },
+        {
+          "command": "tsStructure.gitReel.downloadCodeModel",
+          "when": "config.tsStructure.features.gitReel"
+        },
+        {
+          "command": "tsStructure.gitReel.removeCodeModel",
           "when": "config.tsStructure.features.gitReel"
         },
         {
@@ -3285,6 +3303,22 @@
             "default": "Jasper",
             "order": 2,
             "markdownDescription": "Git reel: the voice that reads the captions when the voice-over is on. The natural voices run on your computer (the first reading of a reel takes about as long as the reel; clips are kept after that); **System voice** uses your computer's own voice; **Off** turns the voice-over off. The player's voice picker changes it for one reel."
+          },
+          "tsStructure.reel.codeModel": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "on",
+              "off"
+            ],
+            "enumDescriptions": [
+              "Offer the download once a session, the first time a Git reel opens.",
+              "Download it without asking (once) and use it.",
+              "Never download or use it: Git reels use the rules alone."
+            ],
+            "default": "ask",
+            "order": 3,
+            "markdownDescription": "Git reel: the **code model**, a small sentence-embedding model (all-MiniLM-L6-v2 by sentence-transformers, int8 ONNX export by Xenova, Apache-2.0) that helps pick each file's key change (the part closest to what the change is about) and name what a function is for when the rules cannot tell. It is **not bundled**: it is a one-time **23.2 MB download from Hugging Face** (two files, pinned to one version and checked against their hashes), kept in the extension's storage, and run on your computer only: your code is never sent. **Remove it** with *Git reel: remove the code model*."
           }
         }
       },

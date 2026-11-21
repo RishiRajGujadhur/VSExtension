@@ -12,6 +12,8 @@ import { listVoices, speak, VoiceClip } from './voice';
 import { KittenNarrator } from './kitten';
 import { DEFAULT_KITTEN_VOICE } from './kittenModel';
 import { speakable } from './describe';
+import { CodeModel } from './codeModel';
+import { CODE_MODEL } from './codeModelText';
 
 const lastRefKey = 'tsStructure.reel.lastRevision';
 const captionsKey = 'tsStructure.reel.captions';
@@ -50,12 +52,86 @@ export class ReelPanel {
     const saved = state.get<{ on: boolean; name?: string }>(voiceKey);
     if (saved) this.voice = { ...this.voice, on: saved.on, name: saved.name };
     this.kitten = new KittenNarrator(path.join(extensionUri.fsPath, 'dist', 'kitten'), path.join(extensionUri.fsPath, 'dist', 'kittenWorker.js'));
+    this.codeModel = new CodeModel(path.join(storage, 'code-model'), path.join(extensionUri.fsPath, 'dist', 'codeModelWorker.js'), path.join(extensionUri.fsPath, 'dist', 'kitten', 'ort'));
   }
   /** The bundled Kitten voices, started on first use and stopped with the extension. */
   private readonly kitten: KittenNarrator;
+  /** The code model: downloaded only when you agree to it, then run on this computer. */
+  readonly codeModel: CodeModel;
+  /** Asked once per session whether to download the code model. */
+  private offered = false;
 
   dispose(): void {
     this.kitten.dispose();
+    this.codeModel.dispose();
+  }
+
+  /** The Code model setting: "ask" (the default), "on" or "off". */
+  private codeModelSetting(): 'ask' | 'on' | 'off' {
+    const value = vscode.workspace.getConfiguration('tsStructure.reel').get<string>('codeModel', 'ask');
+    return value === 'on' || value === 'off' ? value : 'ask';
+  }
+
+  /** The model for a plan, when it is turned on and downloaded. */
+  private understanding(): ((texts: string[]) => Promise<Float32Array[]>) | undefined {
+    if (this.codeModelSetting() === 'off' || !this.codeModel.runnable) return undefined;
+    return (texts) => this.codeModel.embed(texts);
+  }
+
+  /**
+   * Downloads the code model, with its progress shown and a way to cancel; true when it is ready. Only ever started
+   * by you: from the prompt, the command, or the setting turned on.
+   */
+  async downloadCodeModel(): Promise<boolean> {
+    if (this.codeModel.downloaded) return true;
+    try {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Downloading the code model (${CODE_MODEL.megabytes} MB, from Hugging Face)`, cancellable: true },
+        async (progress, token) => {
+          let shown = 0;
+          await this.codeModel.download((received, total) => {
+            const percent = Math.floor((100 * received) / total);
+            if (percent > shown) {
+              progress.report({ increment: percent - shown, message: `${percent}%` });
+              shown = percent;
+            }
+          }, () => token.isCancellationRequested);
+        },
+      );
+    } catch (error) {
+      void showProblem(`The code model could not be downloaded: ${error instanceof Error ? error.message : String(error)}`, [], 'info');
+      return false;
+    }
+    if (!this.codeModel.downloaded) return false;
+    void vscode.window.showInformationMessage('The code model is ready: Git reels now use it to pick each file\'s key change and name what code is for. It runs on your computer.');
+    if (this.panel) await this.build();
+    return true;
+  }
+
+  /** Removes the downloaded code model; Git reels go back to the rules alone. */
+  async removeCodeModel(): Promise<void> {
+    this.codeModel.remove();
+    void vscode.window.showInformationMessage('The code model was removed. Git reels use Code X-Ray\'s rules alone.');
+    if (this.panel) await this.build();
+  }
+
+  /** After a reel is shown: offers the code model once a session, when the setting asks and it is not there yet. */
+  private async offerCodeModel(): Promise<void> {
+    const setting = this.codeModelSetting();
+    if (this.codeModel.downloaded || setting === 'off' || this.offered) return;
+    this.offered = true;
+    if (setting === 'on') {
+      await this.downloadCodeModel();
+      return;
+    }
+    const choice = await vscode.window.showInformationMessage(
+      `Git reel can explain changes better with a small code model: a one-time ${CODE_MODEL.megabytes} MB download from Hugging Face (all-MiniLM-L6-v2, Apache-2.0). It runs on your computer: your code is never sent.`,
+      'Download',
+      'Not Now',
+      "Don't Ask Again",
+    );
+    if (choice === 'Download') await this.downloadCodeModel();
+    else if (choice === "Don't Ask Again") await vscode.workspace.getConfiguration('tsStructure.reel').update('codeModel', 'off', vscode.ConfigurationTarget.Global);
   }
 
   /** Asks what to compare with (unless given), builds the plan and shows the player. Returns the plan, for tests. */
@@ -199,7 +275,7 @@ export class ReelPanel {
     if (!request) return undefined;
     void this.panel?.webview.postMessage({ type: 'busy', text: 'Reading the changes…' });
     try {
-      const fresh = await buildReelPlan(request);
+      const fresh = await buildReelPlan({ ...request, understand: this.understanding() });
       if (request !== this.request) return undefined;
       this.generated = Object.fromEntries(fresh.scenes.map((s) => [s.id, s.caption]));
       // Captions written by hand for this change come back.
@@ -214,6 +290,7 @@ export class ReelPanel {
       }
       if (this.panel) this.panel.title = `Git reel: ${this.plan.meta.title}`;
       this.post();
+      void this.offerCodeModel();
       return this.plan;
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);

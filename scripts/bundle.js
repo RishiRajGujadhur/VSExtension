@@ -65,16 +65,19 @@ async function bundleKitten() {
   // An ES module: the folder says so, as the package did.
   fs.writeFileSync(path.join(home, 'phonemizer', 'package.json'), '{ "type": "module" }\n');
   for (const file of ['phonemize.mjs', 'GPL-3.0.txt', 'ESPEAK-NG-NOTICE.md']) copy(path.join(root, 'media', 'kitten', file), path.join(home, file));
-  await esbuild.build({
-    entryPoints: [path.join(root, 'src', 'reel', 'kittenWorker.ts')],
-    outfile: path.join(root, 'dist', 'kittenWorker.js'),
-    bundle: true,
-    platform: 'node',
-    format: 'cjs',
-    target: 'node20',
-    minify: production,
-    logLevel: 'warning',
-  });
+  // The voices' worker, and the code model's (the model itself is downloaded on use; it runs on the same runtime).
+  for (const name of ['kittenWorker', 'codeModelWorker']) {
+    await esbuild.build({
+      entryPoints: [path.join(root, 'src', 'reel', `${name}.ts`)],
+      outfile: path.join(root, 'dist', `${name}.js`),
+      bundle: true,
+      platform: 'node',
+      format: 'cjs',
+      target: 'node20',
+      minify: production,
+      logLevel: 'warning',
+    });
+  }
 }
 
 module.exports = { bundle };

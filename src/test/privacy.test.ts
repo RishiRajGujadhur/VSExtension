@@ -5,6 +5,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { phonemizerEnvironment } from '../reel/kitten';
+import { allowedHost } from '../reel/codeModel';
+import { CODE_MODEL, fileMatches, fileUrl } from '../reel/codeModelText';
 
 const root = path.resolve(__dirname, '../..');
 const bundled = fs.existsSync(path.join(root, 'dist', 'kitten', 'model', 'voices.npz'));
@@ -36,8 +38,20 @@ test('Privacy: the phonemizer gets only what it needs from the environment, neve
   assert.deepEqual(env, { ELECTRON_RUN_AS_NODE: '1', PATH: '/bin', TEMP: '/tmp' });
 });
 
+test('Privacy: the code model is downloaded from Hugging Face only, pinned, checked, and sends nothing of yours', () => {
+  assert.ok(allowedHost('huggingface.co') && allowedHost('cdn-lfs.huggingface.co') && allowedHost('cas-bridge.xethub.hf.co'));
+  assert.ok(!allowedHost('example.com') && !allowedHost('huggingface.co.example.com') && !allowedHost('evilhf.co'));
+  for (const file of CODE_MODEL.files) assert.match(fileUrl(file), /^https:\/\/huggingface\.co\/Xenova\/all-MiniLM-L6-v2\/resolve\/[0-9a-f]{40}\//);
+  // Only the download module touches the network, only in its download, with no cookie, token or name of yours.
+  const source = fs.readFileSync(path.join(root, 'src', 'reel', 'codeModel.ts'), 'utf8');
+  assert.equal((source.match(/https\.get\(/g) ?? []).length, 1);
+  assert.doesNotMatch(source, /Authorization|Cookie|process\.env|os\.userInfo|hostname\(\)/);
+  assert.ok(!fileMatches(CODE_MODEL.files[1], Buffer.from('not the vocabulary')));
+});
+
 test('Privacy: nothing the extension ships calls the network, and its pages cannot', () => {
-  // The extension's own code: no network modules, no fetch, no sockets (analyses only name them as text).
+  // The extension's own code: no network modules, no fetch, no sockets (analyses only name them as text). The one
+  // exception is the code model's download (above), which you start yourself.
   const offenders: string[] = [];
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -51,7 +65,7 @@ test('Privacy: nothing the extension ships calls the network, and its pages cann
   };
   walk(path.join(root, 'src'));
   walk(path.join(root, 'media'));
-  assert.deepEqual(offenders.filter((f) => !f.startsWith(path.join('src', 'test'))), []);
+  assert.deepEqual(offenders.filter((f) => !f.startsWith(path.join('src', 'test'))), [path.join('src', 'reel', 'codeModel.ts')]);
   // Every webview page: no connections, no remote scripts, styles or images.
   const page = fs.readFileSync(path.join(root, 'src', 'ui', 'webviewPage.ts'), 'utf8');
   assert.match(page, /default-src 'none'/);

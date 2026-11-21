@@ -2,7 +2,7 @@
 
 See inside your TypeScript, JavaScript and React code. Put the cursor on something and ask where a value comes from, what a function can do, or what breaks if you change it.
 
-Every answer comes from the TypeScript compiler on your machine. It works offline, uses no AI, and nothing leaves your computer.
+Every answer comes from the TypeScript compiler on your machine. It works offline, uses no AI, and nothing leaves your computer. (Git reels can also use a small code model that runs on your computer, downloaded only if you agree: see [Size and privacy](#size-and-privacy).)
 
 ## Every action at the cursor
 
@@ -56,7 +56,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - It plays a short video of your changes in a player like YouTube's (chapters, captions, full screen): an overview, then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
 - Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, bundled and run on your computer: eight voices, or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
 - Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
-- **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis: no AI, nothing uploaded.
+- **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis, nothing uploaded. With the optional **code model** (offered the first time, a one-time 23.2 MB download from Hugging Face, run on your computer), the key change in each file is the part closest to what the change is about, and functions the rules cannot place get named (*applyCoupon* → *Works out coupon*).
 
 ## Find usages
 
@@ -131,7 +131,8 @@ The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 
 Everything runs on your computer: no code, caption or recording is sent anywhere, and the extension makes no network
 requests of its own (a test runs the voice-over with every network route blocked). The only things that go online are
-links you click, such as a documentation page, which open in your browser. What each part adds:
+links you click, such as a documentation page, which open in your browser, and the Git reel's **code model**, if you
+agree to download it (below). What each part adds:
 
 | Feature | Bundled component | Installed | Download |
 |---|---|---|---|
@@ -147,6 +148,18 @@ links you click, such as a documentation page, which open in your browser. What 
 The Git reel natural voices are the last four rows: 39.5 MB installed, 26.2 MB of the download. Turn them off with
 **Natural voices** in the Git reel settings (`tsStructure.reel.naturalVoices`); the voice-over then uses your
 computer's own voice.
+
+Not bundled, downloaded only if you agree:
+
+| Feature | Component | On disk | Download |
+|---|---|---|---|
+| Git reel code model (key changes, what code is for) | all-MiniLM-L6-v2, int8 ONNX by Xenova (Apache-2.0) | 23.2 MB | 23.2 MB |
+
+The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model** setting
+(`tsStructure.reel.codeModel`: ask, on, off) and the commands *Git reel: download the code model* and *Git reel: remove
+the code model* control it. The download is two files from huggingface.co, pinned to one version and checked against
+their hashes before they are kept; no code, name or token of yours is sent with it. The model then runs offline, in a
+background thread, on the runtime already bundled for the voices.
 
 ## Credits
 

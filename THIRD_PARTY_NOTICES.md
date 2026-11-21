@@ -120,6 +120,13 @@ The model `kitten_tts_nano_v0_8.onnx`, its voices `voices.npz` and `config.json`
 https://github.com/microsoft/onnxruntime, onnxruntime-web 1.24.3. MIT License, Copyright (c) Microsoft Corporation.
 Its WebAssembly build is bundled in `dist/kitten/ort`, with the license text in `dist/kitten/ort/LICENSE`.
 
+## all-MiniLM-L6-v2 (the Git reel code model, downloaded on use)
+
+https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2 (Apache-2.0, by the sentence-transformers team) in the
+int8 ONNX export https://huggingface.co/Xenova/all-MiniLM-L6-v2 (revision 751bff37182d3f1213fa05d7196b954e230abad9):
+`onnx/model_quantized.onnx` and `vocab.txt`. Not bundled: downloaded, unchanged, only when you agree to it, and run on
+the bundled ONNX Runtime Web. Code X-Ray's tokenizer (`src/reel/codeModelText.ts`) follows BERT's WordPiece tokenizer.
+
 ## phonemizer.js and eSpeak NG
 
 https://github.com/xenova/phonemizer.js (phonemizer 1.2.1, Apache-2.0) and https://github.com/espeak-ng/espeak-ng

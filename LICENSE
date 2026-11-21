@@ -47,3 +47,8 @@ Total: about 70.9 MB installed, a 32.0 MB download. The Git reel natural voices
 only on your computer and can be turned off with the setting
 tsStructure.reel.naturalVoices. eSpeak NG (GPL-3.0) runs as a separate program,
 dist/kitten/phonemize.mjs, with the GPL text and a source notice next to it.
+
+Not bundled: the Git reel code model, all-MiniLM-L6-v2 (Apache-2.0, by the
+sentence-transformers team; int8 ONNX export by Xenova). 23.2 MB, downloaded
+from Hugging Face only if you agree, into the extension's storage; turned off
+with the setting tsStructure.reel.codeModel.

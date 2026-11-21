@@ -27,6 +27,8 @@ export const names: Record<string, string> = {
   'tsStructure.controlFlow': 'Flowchart',
   'tsStructure.controlFlowCompare': 'Flowchart vs last commit',
   'tsStructure.gitReel': 'Git reel',
+  'tsStructure.gitReel.downloadCodeModel': 'Git reel: download the code model',
+  'tsStructure.gitReel.removeCodeModel': 'Git reel: remove the code model',
   'tsStructure.dependenceGraph': 'What depends on what',
   'tsStructure.exceptionFlow': 'Error paths',
   'tsStructure.promiseRejections': 'Promise rejections',

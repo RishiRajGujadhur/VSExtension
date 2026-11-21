@@ -124,6 +124,10 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     { dispose: () => reel.dispose() },
     vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.reel') && reel.settingsChanged()),
+    registerCommand('tsStructure.gitReel.downloadCodeModel', () => reel.downloadCodeModel()),
+    registerCommand('tsStructure.gitReel.removeCodeModel', () => reel.removeCodeModel()),
+    // For tests: whether the code model is downloaded.
+    vscode.commands.registerCommand('tsStructure.gitReel.codeModelInfo', () => ({ downloaded: reel.codeModel.downloaded })),
     vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),
     // For tests: records the open reel to a file.
     vscode.commands.registerCommand('tsStructure.gitReel.exportTo', (file: string, format: 'webm' | 'mp4') => reel.exportTo(file, format)),

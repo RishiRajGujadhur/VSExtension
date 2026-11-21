@@ -9,8 +9,9 @@ import { csharpFlowChart } from '../csharp/flow';
 import { tsqlFlowChart } from '../tsql/flow';
 import { AnalysisError } from '../analysis/types';
 import { describeFileChange, describeFunctionChange, differingSpan, isTestFile } from './describe';
-import { featureIntent, intentLabel, intentsOf, keyLabel as keyLabelOf } from './intent';
+import { FEATURE_PROTOTYPES, featureIntent, intentLabel, intentPhrase, intentsOf, keyLabel as keyLabelOf, nounsOf } from './intent';
 import { dedent, keyChange } from './keyChange';
+import { codeAsWords, cosine } from './codeModelText';
 
 /**
  * A Git reel: a short video of a change, as a plan the player draws. The video is a pure function of this plan, so it
@@ -97,6 +98,11 @@ export interface ReelRequest {
   baseLabel: string;
   /** At most this many function or file scenes; the rest are listed on one card. */
   maxScenes?: number;
+  /**
+   * The code model, when it is downloaded and turned on: texts in, unit embeddings out (run on this computer). It
+   * helps pick each file's key change and name what a function is for; without it, the rules decide alone.
+   */
+  understand?: (texts: string[]) => Promise<Float32Array[]>;
 }
 
 /** One scene per file, its key change: this many files at most. */
@@ -386,8 +392,10 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
   const kept = all.filter((f) => !skipReason(f));
   const skipped = all.length - kept.length;
 
-  type Candidate = Extract<ReelScene, { kind: 'diff' }> & { weight: number };
+  // `model`: what the code model reads (the change as words) and, for a function, the caption with a feature named.
+  type Candidate = Extract<ReelScene, { kind: 'diff' }> & { weight: number; model?: { text: string; name?: string; withFeature?: (phrase: string) => string } };
   const candidates: Candidate[] = [];
+  const perFile: Candidate[][] = [];
   const fileRows: Extract<ReelScene, { kind: 'files' }>['files'] = [];
   for (const file of kept) {
     fileRows.push({ file: file.path, added: file.added, removed: file.removed, status: file.status });
@@ -461,6 +469,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
             lines: shown, key: { focus: keyed.focus, label: keyLabel }, ...(feature ? { feature: intentLabel(feature) } : {}),
             caption, captionSource: 'heuristic', seconds: secondsFor(caption, shown.length),
             weight: 20 + keyed.score * 4 + (feature?.score ?? 0) + Math.min(added + removed, 30) / 3,
+            model: { text: codeAsWords(symbol, [...keyAdded, ...keyRemoved]), name: symbol, withFeature: (phrase) => featureCaption(symbol, phrase, sentences, !!comparison.isNew) },
           });
           continue;
         } catch {
@@ -483,24 +492,38 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
         lines: shown, key: { focus: keyed.focus, label: keyLabel }, ...(feature ? { feature: intentLabel(feature) } : {}),
         caption, captionSource: 'heuristic', seconds: secondsFor(caption, shown.length),
         weight: keyed.score * 4 + (feature?.score ?? 0) / 2 + Math.min(added + removed, 30) / 3,
+        model: { text: codeAsWords(testFile ? undefined : base.replace(/\.[^.]+$/, ''), [...keyAdded, ...keyRemoved]), name: testFile ? undefined : base.replace(/\.[^.]+$/, '') },
       });
     }
-    // The file's key change: its strongest piece. A file's whole change is summed up by it.
-    const best = fileCandidates.sort((a, b) => b.weight - a.weight)[0];
+    perFile.push(fileCandidates);
+  }
+
+  const head = branch === 'HEAD' ? 'detached HEAD' : branch;
+  // On a working branch its name says what it is about; on main, the latest commit does.
+  const subject = () => git(repo, ['log', '-1', '--format=%s']).trim();
+  const title = ref === 'HEAD' ? 'Uncommitted changes' : /^(main|master|develop|trunk|detached HEAD)$/.test(head) ? subject() || head : titleFromBranch(head);
+  // With the code model (downloaded when you agreed to it): the changes closest to what the change is about weigh
+  // more, and a function the rules could not place gets its feature named. Without it, the rules alone.
+  if (request.understand) {
+    try {
+      await understandCandidates(perFile.flat(), title === 'Uncommitted changes' ? undefined : title, request.understand);
+    } catch {
+      // The model failed: the rules' choice stands.
+    }
+  }
+  // Each file's key change: its strongest piece. A file's whole change is summed up by it.
+  for (const list of perFile) {
+    const best = list.sort((a, b) => b.weight - a.weight)[0];
     if (best) candidates.push(best);
   }
 
   // The files whose key changes matter most get a scene each, in the order of the files; the rest are listed on one card.
   const chosen = new Set([...candidates].sort((a, b) => b.weight - a.weight).slice(0, maxScenes));
   const chosenList = candidates.filter((c) => chosen.has(c));
-  const diffScenes = chosenList.map(({ weight: _weight, ...scene }) => scene);
+  const diffScenes = chosenList.map(({ weight: _weight, model: _model, ...scene }) => scene);
   const others = candidates.filter((c) => !chosen.has(c));
   const additions = kept.reduce((n, f) => n + f.added, 0);
   const deletions = kept.reduce((n, f) => n + f.removed, 0);
-  const head = branch === 'HEAD' ? 'detached HEAD' : branch;
-  // On a working branch its name says what it is about; on main, the latest commit does.
-  const subject = () => git(repo, ['log', '-1', '--format=%s']).trim();
-  const title = ref === 'HEAD' ? 'Uncommitted changes' : /^(main|master|develop|trunk|detached HEAD)$/.test(head) ? subject() || head : titleFromBranch(head);
   const scenes: ReelScene[] = [];
   const overview = `${title.replace(/\.$/, '')}. Here is what it changes, and what the new code does.`;
   scenes.push({ kind: 'overview', id: 'overview', caption: overview, captionSource: 'heuristic', seconds: secondsFor(overview) + 1 });
@@ -554,6 +577,48 @@ function focusComparison(chart: ControlFlowChart, comparison: FlowComparison, sh
  * "addToCart adds an item to the cart. It now stops early when …": what the function is for first, when the intent
  * model is sure of it, then what the key change does.
  */
+interface Understood {
+  weight: number;
+  caption: string;
+  seconds: number;
+  lines: DiffLine[];
+  feature?: string;
+  model?: { text: string; name?: string; withFeature?: (phrase: string) => string };
+}
+
+/** How close a change must be to a description of a feature, and ahead of the next one, for the model to name it. */
+export const MODEL_FEATURE_MIN = 0.25;
+export const MODEL_FEATURE_MARGIN = 0.05;
+
+/**
+ * What the code model adds: each change weighs more the closer it is to what the change is about (its title), so a
+ * file's key change is the part that matters to the change; and a function the rules could not place gets the
+ * feature it is closest to ("calculate a total…" → "Works out discount"), when the model is clear about it.
+ */
+export async function understandCandidates(candidates: Understood[], title: string | undefined, understand: (texts: string[]) => Promise<Float32Array[]>): Promise<void> {
+  const read = candidates.filter((c) => c.model?.text);
+  if (!read.length) return;
+  const texts = [...(title ? [title] : []), ...FEATURE_PROTOTYPES.map((p) => p.text), ...read.map((c) => c.model!.text)];
+  const vectors = await understand(texts);
+  const t = title ? 1 : 0;
+  const prototypes = vectors.slice(t, t + FEATURE_PROTOTYPES.length);
+  const own = vectors.slice(t + FEATURE_PROTOTYPES.length);
+  read.forEach((c, i) => {
+    if (title) c.weight += Math.max(0, cosine(vectors[0], own[i]) - 0.15) * 25;
+    if (c.feature || !c.model!.name) return;
+    const ranked = prototypes.map((p, j) => ({ kind: FEATURE_PROTOTYPES[j].kind, score: cosine(p, own[i]) })).sort((a, b) => b.score - a.score);
+    const [best, next] = ranked;
+    if (best.kind === 'other' || best.score < MODEL_FEATURE_MIN || best.score - next.score < MODEL_FEATURE_MARGIN) return;
+    const object = nounsOf(c.model!.name);
+    const phrase = intentPhrase(best.kind, object);
+    c.feature = intentLabel({ kind: best.kind, phrase, score: best.score, evidence: ['the code model'] });
+    if (object && c.model!.withFeature) {
+      c.caption = c.model!.withFeature(phrase);
+      c.seconds = secondsFor(c.caption, c.lines.length);
+    }
+  });
+}
+
 export function featureCaption(symbol: string, feature: string | undefined, sentences: string[], isNew: boolean): string {
   if (!feature || isNew || !sentences.length) return sentences.join(' ');
   const [first, ...rest] = sentences;

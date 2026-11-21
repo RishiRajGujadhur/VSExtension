@@ -25,6 +25,8 @@ export async function run(): Promise<void> {
   for (const feature of features) {
     await vscode.workspace.getConfiguration('tsStructure.features').update(feature.id, true, vscode.ConfigurationTarget.Global);
   }
+  // The code model is never downloaded by the tests (the unit tests run it from assets/code-model): no prompt.
+  await vscode.workspace.getConfiguration('tsStructure.reel').update('codeModel', 'off', vscode.ConfigurationTarget.Global);
   try {
     await testImpact();
     // Before the refactorings, which edit the sample files.
@@ -644,6 +646,9 @@ async function gitReelFlow(): Promise<void> {
   type Plan = { meta: { title: string; files: number }; scenes: { kind: string; symbol?: string; caption: string; flow?: { nodes: { state: string }[] } }[] };
   const plan = await vscode.commands.executeCommand<Plan>('tsStructure.gitReel', 'HEAD');
   assert.ok(plan, 'a reel plan');
+  // The code model is not there until you agree to download it (the tests turned its offer off).
+  const model = await vscode.commands.executeCommand<{ downloaded: boolean }>('tsStructure.gitReel.codeModelInfo');
+  assert.equal(model?.downloaded, false, 'the code model is not downloaded unasked');
   assert.equal(plan.meta.title, 'Uncommitted changes');
   const scene = plan.scenes.find((s) => s.symbol === 'grade');
   assert.ok(scene, plan.scenes.map((s) => s.caption).join(' | '));
