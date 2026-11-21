@@ -6,7 +6,7 @@ import ts = require('typescript');
  * they do ("fs.writeFileSync(f, d)" → "writes a file"). Deterministic and offline: the same code always reads the same.
  */
 
-const ACRONYMS = new Set(['api', 'url', 'uri', 'id', 'ids', 'json', 'html', 'css', 'xml', 'sql', 'http', 'https', 'ui', 'io', 'db', 'pdf', 'csv', 'svg', 'png', 'jwt', 'ast', 'cfg', 'dom', 'cpu', 'gpu', 'os', 'ip', 'tcp', 'udp', 'cli', 'sdk', 'vs']);
+const ACRONYMS = new Set(['api', 'url', 'uri', 'id', 'ids', 'json', 'html', 'css', 'xml', 'sql', 'http', 'https', 'ui', 'io', 'db', 'pdf', 'csv', 'svg', 'png', 'jwt', 'ast', 'dom', 'cpu', 'gpu', 'os', 'ip', 'tcp', 'udp', 'cli', 'sdk', 'vs']);
 
 /** "validateSettingsExport" → ["validate", "settings", "export"]; "parseURLQuery" → ["parse", "URL", "query"]. */
 export function words(name: string): string[] {
@@ -16,13 +16,29 @@ export function words(name: string): string[] {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .split(/[\s_\-.$]+/)
     .filter(Boolean)
-    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase().replace(/^IDS$/, 'IDs') : /^[A-Z]{2,}$/.test(w) ? w : w.toLowerCase()));
+    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase().replace(/^IDS$/, 'IDs') : /^[A-Z]{2,}$/.test(w) ? w : w.toLowerCase()))
+    .map((w) => SHORT_FORMS[w] ?? w);
 }
+
+/** Short forms in names, read in full: "btn" → "button", "msg" → "message", "cfg" → "config". */
+const SHORT_FORMS: Record<string, string> = {
+  op: 'operation', ops: 'operations', e: 'error', ex: 'error', exc: 'error', ev: 'event', i: 'index', k: 'key', v: 'value', d: 'item', s: 'item', x: 'item', p: 'item',
+  btn: 'button', msg: 'message', msgs: 'messages', cfg: 'config', conf: 'config', err: 'error', errs: 'errors', idx: 'index', val: 'value', vals: 'values',
+  arr: 'list', obj: 'object', num: 'number', str: 'text', ctx: 'context', req: 'request', res: 'response', evt: 'event', el: 'element', els: 'elements',
+  opts: 'options', opt: 'option', args: 'arguments', arg: 'argument', prev: 'previous', cur: 'current', curr: 'current', dir: 'folder', dirs: 'folders',
+  src: 'source', dest: 'destination', dst: 'destination', tmp: 'temporary', temp: 'temporary', auth: 'sign-in', repo: 'repository', repos: 'repositories',
+  pkg: 'package', lib: 'library', fn: 'function', fns: 'functions', cb: 'callback', ms: 'milliseconds', sec: 'seconds', len: 'length', qty: 'quantity',
+  img: 'image', imgs: 'images', doc: 'document', docs: 'documents', info: 'details', min: 'minimum', max: 'maximum', addr: 'address', pwd: 'password',
+  usr: 'user', ref: 'reference', refs: 'references', param: 'parameter', params: 'parameters', attr: 'attribute', attrs: 'attributes', prop: 'property', props: 'properties',
+  util: 'helper', utils: 'helpers', calc: 'calculation', stats: 'statistics', nav: 'navigation',
+};
 
 /** A name as a noun phrase: "settingsValidation" → "the settings validation"; "items" → "the items". */
 const NO_ARTICLE = new Set(['all', 'each', 'every', 'this', 'these', 'those', 'it', 'them', 'everything', 'nothing', 'something', 'anything', 'others', 'rest']);
 export function noun(name: string, article = true): string {
-  const w = words(name.replace(/^this\./, ''));
+  const all = words(name.replace(/^this\./, ''));
+  // "offsetOf" → "the offset": a trailing "of" or "for" is no part of the thing.
+  const w = all.length > 1 && /^(of|for|from|by|to|in|on|at)$/.test(all[all.length - 1]) ? all.slice(0, -1) : all;
   if (!w.length) return 'it';
   // "x", "id", "all": no "the".
   const bare = w.length === 1 && (w[0].length <= 2 || NO_ARTICLE.has(w[0]));
@@ -41,7 +57,7 @@ export function third(verb: string): string {
 
 /** Leading words that are verbs, and how a name starting with them reads. */
 const VERBS = new Set(
-  'audit approve archive assign authenticate authorize backup bump calibrate capture cleanup clone compile compress confirm crop debounce decrypt deploy deselect disconnect dismiss drop edit encrypt escape estimate evaluate fix flush fold freeze grant hydrate increment decrement indent index inject inspect interpolate invalidate layout lint migrate minify monitor optimize order paste persist plan poll populate predict preload probe profile prune queue rank rate reconcile redirect redraw reduce refetch reindex relaunch remind repair repeat reorder replay rerun respond restart resume revert review rewind roll score serve settle share shuffle sign simulate snooze solve suspend tally throttle tokenize truncate tune undo unfold unload unsubscribe upgrade get set load save read write create make build add remove delete update validate check parse format render handle fetch send open close start stop init initialize reset compute calculate find search sort filter map convert apply register track log emit notify show hide toggle select pick copy move rename merge split clear run execute process normalize resolve ensure wait schedule watch listen subscribe export import record play pause draw paint measure compare diff describe explain wrap unwrap encode decode serialize deserialize download upload refresh sync retry cache collect count group list mark merge print publish push pull query request reply report restore scan scroll seek setup store submit summarize test throw transform trim try verify view visit walk warn accept allow attach bind block build call cancel charge choose clean click commit configure connect delete detect disable dispose enable enter exit expand extract fail fill fit focus generate guard hash highlight hook ignore insert install invoke join keep launch lock match merge mount mutate navigate observe offer pack pad patch pin place post prepare preview prompt read rebuild receive refactor reject release reload replace resize retry return reveal rotate route sample sanitize scale schedule shift skip slice snap sort spawn speak stage stream strip style swap tag tick trace translate trigger unlock unpin unwatch use wake zoom'.split(' '),
+  'redo audit approve archive assign authenticate authorize backup bump calibrate capture cleanup clone compile compress confirm crop debounce decrypt deploy deselect disconnect dismiss drop edit encrypt escape estimate evaluate fix flush fold freeze grant hydrate increment decrement indent index inject inspect interpolate invalidate layout lint migrate minify monitor optimize order paste persist plan poll populate predict preload probe profile prune queue rank rate reconcile redirect redraw reduce refetch reindex relaunch remind repair repeat reorder replay rerun respond restart resume revert review rewind roll score serve settle share shuffle sign simulate snooze solve suspend tally throttle tokenize truncate tune undo unfold unload unsubscribe upgrade get set load save read write create make build add remove delete update validate check parse format render handle fetch send open close start stop init initialize reset compute calculate find search sort filter map convert apply register track log emit notify show hide toggle select pick copy move rename merge split clear run execute process normalize resolve ensure wait schedule watch listen subscribe export import record play pause draw paint measure compare diff describe explain wrap unwrap encode decode serialize deserialize download upload refresh sync retry cache collect count group list mark merge print publish push pull query request reply report restore scan scroll seek setup store submit summarize test throw transform trim try verify view visit walk warn accept allow attach bind block build call cancel charge choose clean click commit configure connect delete detect disable dispose enable enter exit expand extract fail fill fit focus generate guard hash highlight hook ignore insert install invoke join keep launch lock match merge mount mutate navigate observe offer pack pad patch pin place post prepare preview prompt read rebuild receive refactor reject release reload replace resize retry return reveal rotate route sample sanitize scale schedule shift skip slice snap sort spawn speak stage stream strip style swap tag tick trace translate trigger unlock unpin unwatch use wake zoom'.split(' '),
 );
 
 /**
@@ -120,7 +136,12 @@ function exprWords(e: ts.Expression): string {
     if (op) return simple(e.left) && simple(e.right) ? `${exprWords(e.left)} ${op} ${exprWords(e.right)}` : 'a calculated value';
     if (e.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken || e.operatorToken.kind === ts.SyntaxKind.BarBarToken) return `${exprWords(e.left)}, or else ${exprWords(e.right)}`;
   }
-  if (ts.isConditionalExpression(e)) return `${exprWords(e.whenTrue)} or ${exprWords(e.whenFalse)}, depending on whether ${conditionOf(e.condition) ?? 'a check passes'}`;
+  if (ts.isConditionalExpression(e)) {
+    // "scene ? scene.seconds : 0" is just the scene's seconds: a fallback of nothing is not worth saying.
+    const fallback = e.whenFalse.getText().trim();
+    if (/^(0|''|""|null|undefined|\[\]|false)$/.test(fallback)) return exprWords(e.whenTrue);
+    return `${exprWords(e.whenTrue)} or ${exprWords(e.whenFalse)}, depending on whether ${conditionOf(e.condition) ?? 'a check passes'}`;
+  }
   if (ts.isBinaryExpression(e) || ts.isPrefixUnaryExpression(e)) return conditionOf(e) ?? looseWords(e.getText());
   return looseWords(e.getText());
 }
@@ -171,7 +192,14 @@ function conditionOf(e: ts.Expression): string | undefined {
   if (ts.isBinaryExpression(e)) {
     const op = e.operatorToken.kind;
     if (op === ts.SyntaxKind.AmpersandAmpersandToken) return `${conditionOf(e.left) ?? exprWords(e.left)} and ${conditionOf(e.right) ?? exprWords(e.right)}`;
-    if (op === ts.SyntaxKind.BarBarToken) return `${conditionOf(e.left) ?? exprWords(e.left)} or ${conditionOf(e.right) ?? exprWords(e.right)}`;
+    if (op === ts.SyntaxKind.BarBarToken) {
+      const a = conditionOf(e.left) ?? exprWords(e.left);
+      const b = conditionOf(e.right) ?? exprWords(e.right);
+      // "the op is an undo or the op is a redo" → "the op is an undo or a redo".
+      const same = /^(.+? (?:is|are)(?: not)?) (.+)$/.exec(a);
+      if (same && b.startsWith(`${same[1]} `)) return `${a} or ${b.slice(same[1].length + 1)}`;
+      return `${a} or ${b}`;
+    }
     if (op === ts.SyntaxKind.InstanceOfKeyword) return `${exprWords(e.left)} is a ${ts.isIdentifier(e.right) ? words(e.right.text).join(' ') : 'kind of object'}`;
     if (op === ts.SyntaxKind.InKeyword) return `${exprWords(e.right)} has ${ts.isStringLiteral(e.left) ? words(e.left.text).join(' ') : exprWords(e.left)}`;
     const left = e.left;
@@ -195,21 +223,24 @@ function conditionOf(e: ts.Expression): string | undefined {
       if (op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken) return `there are no ${things}`;
       if (op === ts.SyntaxKind.GreaterThanToken || op === ts.SyntaxKind.ExclamationEqualsEqualsToken) return `there are ${things}`;
     }
+    // A kind, type or status compared with a name: "op.kind === 'undo'" → "the op is an undo".
+    const kindOf = kindComparison(left, right, op);
+    if (kindOf) return kindOf;
     switch (op) {
       case ts.SyntaxKind.EqualsEqualsEqualsToken:
       case ts.SyntaxKind.EqualsEqualsToken:
-        return `${l} is ${r}`;
+        return `${l} ${be(l)} ${r}`;
       case ts.SyntaxKind.ExclamationEqualsEqualsToken:
       case ts.SyntaxKind.ExclamationEqualsToken:
-        return `${l} is not ${r}`;
+        return `${l} ${be(l)} not ${r}`;
       case ts.SyntaxKind.GreaterThanToken:
-        return `${l} is more than ${r}`;
+        return `${l} ${be(l)} more than ${r}`;
       case ts.SyntaxKind.GreaterThanEqualsToken:
-        return `${l} is at least ${r}`;
+        return `${l} ${be(l)} at least ${r}`;
       case ts.SyntaxKind.LessThanToken:
-        return `${l} is less than ${r}`;
+        return `${l} ${be(l)} less than ${r}`;
       case ts.SyntaxKind.LessThanEqualsToken:
-        return `${l} is at most ${r}`;
+        return `${l} ${be(l)} at most ${r}`;
     }
   }
   return undefined;
@@ -234,9 +265,41 @@ function emptiness(owner: ts.Expression, empty: boolean): string {
   return `${things} is ${empty ? '' : 'not '}empty`;
 }
 
+/** "is" or "are", by whether the words name many things ("the items", "the fields") or one. */
+export function be(subject: string): string {
+  return isPlural(subject) ? 'are' : 'is';
+}
+function isPlural(subject: string): boolean {
+  // "the number of fields" is one number.
+  if (/^(the )?(number|count|size|length|list|set|group|kind|type) of /.test(subject.trim())) return false;
+  const last = subject.trim().split(/\s+/).pop() ?? '';
+  if (/'s$/.test(subject) || /'$/.test(last)) return false;
+  return /[^s']s$/.test(last) && !/^(this|is|was|has|its|status|class|address|process|access|alias|canvas|series|news|bus|gas|plus|minus|less|across|always)$/i.test(last);
+}
+
+/**
+ * A kind, type, mode or status compared with a name: "op.kind === 'undo'" → "the op is an undo", "!==" → "is not",
+ * "user.role === 'admin'" → "the user is an admin". Undefined for other comparisons.
+ */
+function kindComparison(left: ts.Expression, right: ts.Expression, op: ts.SyntaxKind): string | undefined {
+  const equal = op === ts.SyntaxKind.EqualsEqualsEqualsToken || op === ts.SyntaxKind.EqualsEqualsToken;
+  const unequal = op === ts.SyntaxKind.ExclamationEqualsEqualsToken || op === ts.SyntaxKind.ExclamationEqualsToken;
+  if ((!equal && !unequal) || !ts.isPropertyAccessExpression(left) || !ts.isStringLiteral(right)) return undefined;
+  if (!/^(kind|type|mode|status|state|role|variant|category|action|tag)$/.test(left.name.text)) return undefined;
+  const owner = exprWords(left.expression);
+  const value = words(right.text).join(' ');
+  if (!value) return undefined;
+  const article = /^[aeiou]/i.test(value) ? 'an' : 'a';
+  return `${owner} ${be(owner)}${unequal ? ' not' : ''} ${article} ${value}`;
+}
+
 const negate = (clause: string) =>
   clause
-    .replace(/^(.*?) (is|has|contains|starts with|ends with|matches|exists)\b ?/, (_, s, v) => `${s} ${v === 'is' ? 'is not' : v === 'has' ? 'does not have' : v === 'exists' ? 'does not exist' : `does not ${v.replace(/s( with)?$/, '$1').replace(/es$/, '')}`} `)
+    .replace(/^(.*?) (is|are|has|contains|starts with|ends with|matches|exists)\b ?/, (_, s: string, v: string) => {
+      const many = isPlural(s);
+      const not = v === 'is' ? 'is not' : v === 'are' ? 'are not' : v === 'has' ? (many ? 'do not have' : 'does not have') : v === 'exists' ? (many ? 'do not exist' : 'does not exist') : `${many ? 'do' : 'does'} not ${v.replace(/s( with)?$/, '$1').replace(/es$/, '')}`;
+      return `${s} ${not} `;
+    })
     .replace(/^it can /, 'it cannot ')
     .trim();
 
@@ -363,6 +426,9 @@ export function callPhrase(code: string): string | undefined {
   const args = call.arguments.map((a) => exprWords(a));
   for (const [pattern, phrase] of KNOWN) if (pattern.test(name)) return typeof phrase === 'string' ? phrase : phrase(args);
   const method = name.split('.').pop()!;
+  // React state setters, by what the state becomes: "setFeature(undefined)" → "clears the feature".
+  const setter = /^set([A-Z]\w*)$/.exec(method);
+  if (setter && call.arguments.length === 1) return settingPhrase(setter[1], call.arguments[0].getText());
   const phrase = verbPhrase(method, true);
   // "saves the user": the first argument as the object, when the name has none.
   if (words(method).length === 1 && args[0] && !phrase.includes(' the ')) return `${phrase} ${args[0]}`;
@@ -392,9 +458,81 @@ export function exitPhrase(code: string, kind: string): string {
     const message = /["'`]([^"'`]{1,60})["'`]/.exec(body)?.[1];
     return message ? `fails with "${message}"` : 'fails with an error';
   }
-  const value = body.replace(/^return\b\s*/, '');
-  if (!value) return 'stops';
+  const value = body.replace(/^return\b\s*/, '').trim();
+  // Answers read as answers: "return true" → "answers yes"; nothing returned is a stop.
+  if (!value || /^(null|undefined|void 0)$/.test(value)) return 'stops';
+  if (value === 'true') return 'answers yes';
+  if (value === 'false') return 'answers no';
+  if (/^\[\s*\]$/.test(value)) return 'returns an empty list';
+  // A returned screen: what it shows, by its first tag that means something ("<Button" → "shows a button").
+  if (/^\(?\s*</.test(value)) {
+    for (const m of code.matchAll(/<([A-Za-z][\w.]*)/g)) {
+      const tag = m[1];
+      if (/^(div|span|section|main|Fragment|React\.Fragment|>)$/.test(tag)) continue;
+      const w = /^[A-Z]/.test(tag) ? words(tag.split('.').pop() ?? tag).join(' ') : ({ button: 'button', input: 'input', form: 'form', table: 'table', ul: 'list', ol: 'list', img: 'image', a: 'link', h1: 'heading', h2: 'heading', h3: 'heading', p: 'paragraph', select: 'list to choose from', textarea: 'text box', dialog: 'dialog' } as Record<string, string>)[tag];
+      if (w) return `shows ${/^[aeiou]/.test(w) ? 'an' : 'a'} ${w}`;
+    }
+    return 'shows the result on screen';
+  }
   return `returns ${valueWords(value)}`;
+}
+
+/**
+ * What a declaration does: "const [open, setOpen] = useState(false)" → "keeps track of whether it is open";
+ * "const label = isUndo ? undoEdit() : redoEdit()" → "undoes or redoes the edit"; "const x = a ? b : c" → "picks the x
+ * depending on whether …"; "const data = await load()" → "loads the data". Undefined when it is not a declaration.
+ */
+export function declarationPhrase(line: string): string | undefined {
+  const source = ts.createSourceFile('x.tsx', line.trim(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const statement = source.statements[0];
+  if (!statement || !ts.isVariableStatement(statement)) return undefined;
+  const d = statement.declarationList.declarations[0];
+  let init = d?.initializer;
+  if (!d || !init) return undefined;
+  while (ts.isAwaitExpression(init) || ts.isParenthesizedExpression(init)) init = init.expression;
+  // React state: what it keeps track of.
+  if (ts.isCallExpression(init) && /^(useState|useReducer|ref|signal|createSignal)$/.test(calleeName(init) ?? '') && ts.isArrayBindingPattern(d.name)) {
+    const first = d.name.elements[0];
+    const name = first && ts.isBindingElement(first) && ts.isIdentifier(first.name) ? first.name.text : '';
+    if (!name) return 'keeps some state';
+    const flag = flagWords((first as ts.BindingElement).name as ts.Identifier);
+    return flag ? `keeps track of whether it is ${flag}` : `keeps track of ${noun(name)}`;
+  }
+  if (ts.isConditionalExpression(init)) {
+    const branch = (e: ts.Expression) => {
+      while (ts.isAwaitExpression(e) || ts.isParenthesizedExpression(e)) e = e.expression;
+      return ts.isCallExpression(e) ? callPhrase(e.getText(source)) : undefined;
+    };
+    const a = branch(init.whenTrue);
+    const b = branch(init.whenFalse);
+    if (a && b) {
+      // "undoes the file edit" + "redoes the file edit" → "undoes or redoes the file edit".
+      const [va, ...ra] = a.split(' ');
+      const [vb, ...rb] = b.split(' ');
+      return ra.join(' ') === rb.join(' ') ? `${va} or ${vb} ${ra.join(' ')}`.trim() : `${a}, or ${b}`;
+    }
+    const name = ts.isIdentifier(d.name) ? d.name.text : 'it';
+    return `picks ${noun(name)} depending on whether ${conditionOf(init.condition) ?? 'a check passes'}`;
+  }
+  if (ts.isCallExpression(init) || ts.isNewExpression(init)) return callPhrase(init.getText(source));
+  return undefined;
+}
+
+/**
+ * Setting something, said by what it becomes: nothing → "clears the X", true or false → "turns the X on" or "off" (or
+ * "marks it as loading" for a state), an empty list → "empties the X", a toggle → "switches the X", else "updates the X".
+ */
+export function settingPhrase(name: string, value: string): string {
+  const v = value.trim().replace(/;$/, '');
+  const thing = noun(name);
+  const state = words(name).join(' ');
+  const isState = /^(is|has) /.test(state) || /(ing|ed|able|ible|visible|open|ready|valid|busy|done|active|dirty)$/.test(state);
+  if (/^(null|undefined|''|""|``)$/.test(v)) return `clears ${thing}`;
+  if (/^\[\s*\]$/.test(v)) return `empties ${thing}`;
+  if (v === 'true') return isState ? `marks it as ${state.replace(/^is /, '')}` : `turns ${thing} on`;
+  if (v === 'false') return isState ? `marks it as no longer ${state.replace(/^is /, '')}` : `turns ${thing} off`;
+  if (/^\(?\s*\w+\s*\)?\s*=>\s*!/.test(v) || /^!\s*[\w.]+$/.test(v)) return `switches ${thing}`;
+  return `updates ${thing}`;
 }
 
 /** First letter up. */

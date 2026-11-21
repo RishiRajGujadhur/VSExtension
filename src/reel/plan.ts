@@ -8,7 +8,7 @@ import { isFunctionWithBody } from '../structure/util';
 import { csharpFlowChart } from '../csharp/flow';
 import { tsqlFlowChart } from '../tsql/flow';
 import { AnalysisError } from '../analysis/types';
-import { describeFileChange, describeFunctionChange, differingSpan } from './describe';
+import { describeFileChange, describeFunctionChange, differingSpan, isTestFile } from './describe';
 
 /**
  * A Git reel: a short video of a change, as a plan the player draws. The video is a pure function of this plan, so it
@@ -369,7 +369,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
   const kept = all.filter((f) => !skipReason(f));
   const skipped = all.length - kept.length;
 
-  type Candidate = Extract<ReelScene, { kind: 'diff' }> & { weight: number; follow?: Extract<ReelScene, { kind: 'flow' }> };
+  type Candidate = Extract<ReelScene, { kind: 'diff' }> & { weight: number };
   const candidates: Candidate[] = [];
   const fileRows: Extract<ReelScene, { kind: 'files' }>['files'] = [];
   for (const file of kept) {
@@ -388,7 +388,8 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
     const language = languageOf(file.path);
     // Changed lines grouped by the function they are in; lines outside any function stay with the file.
     const groups = new Map<number | 'file', Hunk[]>();
-    const offsetOf = language ? functionOffsetsFor(language, full, now) : () => undefined;
+    // A test file is one scene, told by its tests, not by its helper functions.
+    const offsetOf = language && !isTestFile(file.path) ? functionOffsetsFor(language, full, now) : () => undefined;
     for (const hunk of hunks) {
       const changed = hunk.lines.find((l) => l.kind === 'add') ?? hunk.lines.find((l) => l.kind === 'ctx' && l.line && l.line >= hunk.newStart) ?? hunk.lines[0];
       const line = changed.kind === 'del' ? hunk.newStart : changed.line ?? hunk.newStart;
@@ -422,18 +423,14 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
           // Past the limit of paths listed, comparing them says nothing: only the boxes count then.
           const comparison = chart.truncated || old.chart?.truncated ? { ...compared, newPaths: [], gonePaths: [] } : compared;
           const symbol = chart.name.replace(/\(\)$/, '');
-          // What the code change does, in sentences; the flowchart scene after it gives the counts.
+          // What the code change does, in sentences.
           const sentences = describeFunctionChange(symbol, chart, comparison, 4, lines);
           const caption = sentences.join(' ');
-          const flow = snapshot(chart, comparison);
-          const changedBoxes = comparison.added.length + comparison.changed.length;
           const line = firstChangedLine(lines);
-          const flowScene: Extract<ReelScene, { kind: 'flow' }> | undefined =
-            flow && changedBoxes ? { kind: 'flow', id: `${file.path}#${symbol}#flow`, file: file.path, symbol, flow, line, caption: `Here is how ${symbol} runs now: the new steps are green, and the ones that changed are amber.`, captionSource: 'heuristic', seconds: 5 } : undefined;
           candidates.push({
             kind: 'diff', id: `${file.path}#${symbol}`, file: file.path, symbol, added, removed, isNew: comparison.isNew, line,
             lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)),
-            weight: 40 + Math.min(added + removed, 80) + comparison.added.length * 3 + comparison.changed.length * 2, follow: flowScene,
+            weight: 40 + Math.min(added + removed, 80) + comparison.added.length * 3 + comparison.changed.length * 2,
           });
           continue;
         } catch {
@@ -441,9 +438,11 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
         }
       }
       const isNew = file.status === 'added' || file.status === 'untracked';
-      const sentences = describeFileChange(file.path, lines.filter((l) => l.kind === 'add').map((l) => l.text), lines.filter((l) => l.kind === 'del').map((l) => l.text), isNew, now);
-      // The caption shows the file's name; the voice leaves it out (speakable) and says "this file".
-      const caption = `${base} — ${sentences.join(' ')}`;
+      const testFile = isTestFile(file.path);
+      const sentences = describeFileChange(file.path, lines.filter((l) => l.kind === 'add').map((l) => l.text), lines.filter((l) => l.kind === 'del').map((l) => l.text), isNew, now, 3, testFile ? testsAround(now, list) : []);
+      // The caption shows the file's name (the voice leaves it out and says "this file"); a test file is "This test
+      // file" in both.
+      const caption = testFile ? sentences.join(' ') : `${base} — ${sentences.join(' ')}`;
       candidates.push({ kind: 'diff', id: `${file.path}#${key === 'file' ? 'file' : key}`, file: file.path, added, removed, line: firstChangedLine(lines), lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)), weight: Math.min(added + removed, 60) });
     }
   }
@@ -452,8 +451,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
   // the rest are listed on one card.
   const chosen = new Set([...candidates].sort((a, b) => b.weight - a.weight).slice(0, maxScenes));
   const chosenList = candidates.filter((c) => chosen.has(c));
-  const diffScenes = chosenList.map(({ weight: _weight, follow: _follow, ...scene }) => scene);
-  const flowScenes = chosenList.map((c) => c.follow).filter((f): f is Extract<ReelScene, { kind: 'flow' }> => !!f);
+  const diffScenes = chosenList.map(({ weight: _weight, ...scene }) => scene);
   const others = candidates.filter((c) => !chosen.has(c));
   const additions = kept.reduce((n, f) => n + f.added, 0);
   const deletions = kept.reduce((n, f) => n + f.removed, 0);
@@ -464,18 +462,11 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
   const scenes: ReelScene[] = [];
   const overview = `${title.replace(/\.$/, '')}. Here is what it changes, and what the new code does.`;
   scenes.push({ kind: 'overview', id: 'overview', caption: overview, captionSource: 'heuristic', seconds: secondsFor(overview) + 1 });
-  // Each function's code, then its flowchart.
-  for (const scene of diffScenes) {
-    scenes.push(scene);
-    const flowScene = flowScenes.find((f) => f.id === `${scene.id}#flow`);
-    if (flowScene) scenes.push(flowScene);
-  }
+  scenes.push(...diffScenes);
   if (others.length || fileRows.length > new Set(diffScenes.map((s) => s.file)).size) {
     const caption = 'It also touches these files.';
     scenes.push({ kind: 'files', id: 'files', files: fileRows.slice(0, 14), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(fileRows.length, 14)) });
   }
-  const flows = flowScenes;
-  void flows;
   // What each change does, its first sentence, as the summary's points.
   const points = diffScenes.map((d) => d.caption.split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/)[0]).slice(0, 5);
   const summary = points.length ? `To sum up: ${points.slice(0, 2).map((p) => p.replace(/^[\w@./-]+\.[A-Za-z]{1,6}\s+—\s+/, '')).join(' ')}` : 'That is the whole change.';
@@ -496,6 +487,24 @@ export function fitDuration(scenes: ReelScene[], max: number): void {
 }
 
 /** The first added or removed line, for opening the code at the change. */
+/** The names of the tests the changed lines are in: the nearest `test('…')` or `it('…')` above each hunk's change. */
+function testsAround(text: string, hunks: Hunk[]): string[] {
+  const lines = text.split('\n');
+  const names: string[] = [];
+  for (const hunk of hunks) {
+    const changed = hunk.lines.find((l) => l.kind === 'add' || l.kind === 'del');
+    const at = changed?.kind === 'add' ? changed.line ?? hunk.newStart : hunk.newStart;
+    for (let i = Math.min(lines.length - 1, at - 1); i >= 0; i--) {
+      const m = /\b(?:it|test)\(\s*(['"`])(.+?)\1/.exec(lines[i]);
+      if (m) {
+        if (!names.includes(m[2])) names.push(m[2]);
+        break;
+      }
+    }
+  }
+  return names;
+}
+
 function firstChangedLine(lines: DiffLine[]): number | undefined {
   return lines.find((l) => l.kind === 'add')?.line ?? lines.find((l) => l.kind === 'del')?.line;
 }

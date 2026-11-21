@@ -34,14 +34,12 @@ test('Git reel: overview, a scene per changed function with its flowchart, other
   assert.equal(plan.meta.skipped, 2);
   assert.equal(plan.meta.files, 3);
   // The function's code, then its flowchart on its own.
-  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', 'diff', 'flow', 'diff', 'diff', 'summary']);
+  // No flowchart scenes: each change is its code and what it does.
+  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', 'diff', 'diff', 'diff', 'summary']);
   const fn = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.symbol === 'total')!;
   // What it does, in words; no counts.
   assert.equal(fn.caption, 'total now returns 0 early when there are no items.');
   assert.equal(fn.line, 2);
-  const flow = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow')!;
-  assert.equal(flow.caption, 'Here is how total runs now: the new steps are green, and the ones that changed are amber.');
-  assert.equal(flow.flow.nodes.filter((n) => n.state === 'added').length, 2);
   assert.deepEqual(fn.lines.filter((l) => l.kind === 'add').map((l) => l.text), ['  if (!items.length) return 0;']);
   // The secret is masked in the code shown.
   const config = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.file === 'config.ts')!;

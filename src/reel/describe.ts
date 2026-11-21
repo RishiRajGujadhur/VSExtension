@@ -2,7 +2,7 @@ import * as path from 'path';
 import ts = require('typescript');
 import { ControlFlowChart } from '../inspect/controlFlowChart';
 import { FlowComparison } from '../inspect/flowCompare';
-import { callPhrase, conditionWords, exitPhrase, listWords, loopPhrase, noun, valueWords, verbPhrase, words } from './words';
+import { callPhrase, conditionWords, declarationPhrase, exitPhrase, listWords, loopPhrase, noun, settingPhrase, valueWords, verbPhrase, words } from './words';
 
 /**
  * What a change does, in plain sentences, for the Git reel's captions and voice-over: "applyCoupon now returns 0
@@ -45,7 +45,7 @@ export function describeFunctionChange(name: string, chart: ControlFlowChart, co
     const exit = exits.find((e) => e.label !== 'no') ?? exits[0];
     if (exit) {
       const what = exitPhrase(textOf(exit.to), nodes[exit.to].kind);
-      phrases.push({ mode: 'now', weight: 10, text: exit.label === 'no' ? `checks whether ${cond}, and otherwise ${what}` : `${what} early when ${cond}` });
+      phrases.push({ mode: 'now', weight: what === 'stops' ? 8 : 10, text: exit.label === 'no' ? `checks whether ${cond}, and otherwise ${what}` : `${what} early when ${cond}` });
       used.add(id).add(exit.to);
       continue;
     }
@@ -67,15 +67,32 @@ export function describeFunctionChange(name: string, chart: ControlFlowChart, co
     if (n.kind === 'loop') phrases.push({ mode: 'now', weight: 8, text: loopPhrase(code) });
     else if (n.kind === 'switch') phrases.push({ mode: 'now', weight: 8, text: `chooses what to do based on ${valueWords(stripIf(code.replace(/^switch\s*/, '')))}` });
     else if (n.kind === 'return' || n.kind === 'throw') phrases.push({ mode: 'now', weight: 6, text: exitPhrase(code, n.kind) });
-    else if (n.kind === 'catch') phrases.push({ mode: 'now', weight: 7, text: 'catches errors and handles them' });
+    else if (n.kind === 'catch') {
+      // What it does with the error, from the first step after the catch.
+      const next = chart.edges.find((e) => e.from === id)?.to;
+      const after = next !== undefined ? actionsIn(nodes[next].text || nodes[next].lines.join('\n'))[0] : undefined;
+      const reports = !!after && /^(shows|logs|reports|sends|updates|sets|clears) /.test(after);
+      phrases.push({ mode: 'now', weight: 7, text: reports ? `${after} if something goes wrong` : 'carries on safely if something goes wrong' });
+      if (next !== undefined && reports) used.add(next);
+    }
     else if (n.kind === 'finally') phrases.push({ mode: 'now', weight: 5, text: 'always tidies up at the end' });
     else for (const action of actionsIn(n.text || n.lines.join('\n')).slice(0, 2)) phrases.push({ mode: 'now', weight: 6, text: action });
   }
 
   // Code changed in place: from the diff's own lines (exact), else from the boxes.
-  for (const [before, after] of changedPairs(diff).slice(0, 3)) {
+  const pairs = changedPairs(diff);
+  for (const [before, after] of pairs.slice(0, 3)) {
     const phrase = describeLineChange(before, after);
     if (phrase) phrases.push({ mode: 'now', weight: 7, text: phrase });
+  }
+  // A one-line step rewritten too much for the diff to pair its lines: the step before and after, side by side.
+  if (!pairs.length) {
+    for (const c of comparison.changed.slice(0, 3)) {
+      const now = (nodes[c.id].text || '').trim();
+      if (c.before.includes('\n') || now.includes('\n')) continue;
+      const phrase = describeLineChange(c.before, now);
+      if (phrase) phrases.push({ mode: 'now', weight: 7, text: phrase });
+    }
   }
   if (comparison.changed.length) {
     const source = diff.length
@@ -132,7 +149,9 @@ function toSentences(name: string, phrases: Phrase[]): string[] {
     const subject = i === 0 ? name : 'It';
     if (p.mode === 'is') return `${p.text}.`;
     if (p.mode === 'no longer') return `${subject}${i === 0 ? '' : ' also'} no longer ${p.text}.`;
-    return `${subject} ${i === 0 ? 'now' : 'also'} ${p.text}.`;
+    if (i === 0) return `${subject} now ${p.text}.`;
+    // "It also …", then "And it …", so three sentences in a row do not all start the same way.
+    return i === 1 ? `It also ${p.text}.` : `And it ${p.text}.`;
   });
 }
 
@@ -157,7 +176,18 @@ function describeLineChange(before: string, after: string): string | undefined {
     const was = conditionWords(cb);
     return now === was ? undefined : `checks whether ${now}, instead of whether ${was}`;
   }
-  if (/^return\b/.test(a) && /^return\b/.test(b)) return `${exitPhrase(a, 'return')} instead of ${valueWords(b.replace(/^return\s*/, '')) || 'nothing'}`;
+  if (/^return\b/.test(a) && /^return\b/.test(b)) {
+    // What the returned value gains: rounding, a fallback, a call it goes through.
+    if (/Math\.(round|floor|ceil|trunc)\(/.test(a) && !/Math\.(round|floor|ceil|trunc)\(/.test(b)) return 'rounds what it returns';
+    if (/\?\?|\|\|/.test(a) && !/\?\?|\|\|/.test(b)) return 'falls back to a default when there is no value';
+    const now = exitPhrase(a, 'return');
+    const was = valueWords(b.replace(/^return\s*/, '')) || 'nothing';
+    if (now.replace(/^returns /, '') === was) {
+      const gained = callPhrase(a.replace(/^return\s*/, ''));
+      return gained && gained !== callPhrase(b.replace(/^return\s*/, '')) ? `${gained} before returning` : undefined;
+    }
+    return `${now} instead of ${was}`;
+  }
   const [from, to] = differingSpan(b, a);
   const literal = /^(-?\d[\d_.]*|"[^"]*"|'[^']*'|`[^`]*`|true|false|null|undefined)$/;
   const subject = /^(?:const|let|var)?\s*([\w$.]+)\s*[-+*/]?=(?!=)/.exec(a)?.[1] ?? /^\s*["']?([\w$]+)["']?\s*:/.exec(a)?.[1];
@@ -170,7 +200,7 @@ function describeLineChange(before: string, after: string): string | undefined {
 }
 
 /** Calls that say little about what code does: list and text helpers. */
-const VAGUE = /^(adds to the list|turns each one into something else|keeps only some of them|goes through each one|joins them together|splits it up|tidies the text|replaces part of it|looks for one|waits for it|keeps it within limits|rounds the number|goes through the object|finds part of the page|changes how it looks|removes from the list)$/;
+const VAGUE = /^(adds to the list|turns each one into something else|keeps only some of them|goes through each one|joins them together|splits it up|tidies the text|replaces part of it|looks for one|waits for it|keeps it within limits|rounds the number|goes through the object|finds part of the page|changes how it looks|removes from the list|creates a new (set|map|array|object|date|reg exp|promise|URL))$/;
 
 /** What lines of code do, one phrase per line that does something: calls, settings of values. */
 function actionsIn(code: string): string[] {
@@ -178,13 +208,48 @@ function actionsIn(code: string): string[] {
   for (const raw of code.split('\n')) {
     const line = oneLine(raw).replace(/;$/, '');
     if (!line || isComment(line) || /^[})\]]/.test(line) || /^(import|export\s+\{)/.test(line)) continue;
+    // Something put on screen: "<Button" → "shows a button".
+    const shown = jsxShown(line);
+    if (shown) {
+      out.push(shown);
+      continue;
+    }
+    // Reacting to the user: "onClick={…}" → "reacts to clicks".
+    const handler = /\bon([A-Z]\w*)\s*=\s*\{/.exec(line);
+    if (handler) {
+      out.push(`reacts to ${eventWords(handler[1])}`);
+      continue;
+    }
+    // Counting: "count++", "total += price".
+    const step = /^([\w$.]+)\s*(\+\+|--|\+=|-=)\s*(.*)$/.exec(line);
+    if (step) {
+      const [, name, operator, by] = step;
+      if (operator === '++' || (operator === '+=' && by.trim() === '1')) out.push(`counts up ${noun(name)}`);
+      else if (operator === '--' || (operator === '-=' && by.trim() === '1')) out.push(`counts down ${noun(name)}`);
+      else out.push(`${operator === '+=' ? 'adds' : 'takes'} ${valueWords(by)} ${operator === '+=' ? 'to' : 'from'} ${noun(name)}`);
+      continue;
+    }
+    // A declaration: state kept, a choice made, a value loaded.
+    if (/^(?:const|let|var)\s/.test(line)) {
+      const declared = declarationPhrase(line);
+      if (declared) {
+        if (!VAGUE.test(declared)) out.push(declared);
+        continue;
+      }
+    }
     const call = callPhrase(line);
     if (call) {
       if (!VAGUE.test(call)) out.push(call);
       continue;
     }
-    const set = /^([\w$.]+)\s*=\s*(.+)$/.exec(line);
+    const set = /^([\w$.]+)\s*=(?!=)\s*(.+)$/.exec(line);
     if (!set) continue;
+    // Settings by what they become: cleared, emptied, turned on or off.
+    const becomes = settingPhrase(set[1].split('.').pop() ?? set[1], set[2]);
+    if (!/^updates /.test(becomes)) {
+      out.push(becomes);
+      continue;
+    }
     const prop = set[1].split('.').pop() ?? '';
     if (/^(className|style|hidden|disabled|tabIndex|title|id|width|height|left|top)$/.test(prop) || /\.style\./.test(set[1]) || /\.dataset\./.test(set[1])) continue;
     if (/^(textContent|innerText|innerHTML)$/.test(prop)) {
@@ -196,6 +261,32 @@ function actionsIn(code: string): string[] {
     if (!/^(a calculated value|an object|an empty object|a list|an empty list|a text|a function|a result|a new \w+)$/.test(value)) out.push(`sets ${noun(set[1])} to ${value}`);
   }
   return [...new Set(out)];
+}
+
+/** What a JSX line puts on screen: "<Button …" → "shows a button", "<input" → "shows an input"; else undefined. */
+function jsxShown(line: string): string | undefined {
+  const m = /^<([A-Za-z][\w.]*)[\s>/]/.exec(line) ?? /^return\s*\(?\s*<([A-Za-z][\w.]*)/.exec(line);
+  if (!m) return undefined;
+  const tag = m[1];
+  const html: Record<string, string> = {
+    div: '', span: '', p: 'a paragraph', a: 'a link', button: 'a button', input: 'an input', select: 'a list to choose from', textarea: 'a text box', img: 'an image',
+    ul: 'a list', ol: 'a list', li: '', table: 'a table', form: 'a form', label: 'a label', h1: 'a heading', h2: 'a heading', h3: 'a heading', svg: 'a drawing',
+    canvas: 'a drawing', video: 'a video', dialog: 'a dialog', nav: 'a menu', header: 'a header', footer: 'a footer', section: '', main: '', strong: '', em: '', i: '', br: '', hr: 'a divider', option: '',
+  };
+  if (tag in html) return html[tag] ? `shows ${html[tag]}` : undefined;
+  if (!/^[A-Z]/.test(tag)) return undefined;
+  const w = words(tag.split('.').pop() ?? tag).join(' ');
+  return `shows ${/^[aeiou]/.test(w) ? 'an' : 'a'} ${w}`;
+}
+
+/** An event by name as what the user does: "Click" → "clicks", "KeyDown" → "key presses". */
+function eventWords(event: string): string {
+  const w = words(event).join(' ');
+  const special: Record<string, string> = {
+    'key down': 'key presses', 'key up': 'key presses', 'mouse enter': 'the pointer coming over it', 'mouse leave': 'the pointer leaving it', 'pointer down': 'presses',
+    submit: 'the form being sent', change: 'changes', input: 'typing', blur: 'losing the focus', focus: 'getting the focus', 'double click': 'double clicks', 'context menu': 'right clicks',
+  };
+  return special[w] ?? `${w}s`.replace(/ss$/, 's').replace(/chs$/, 'ches');
 }
 
 /** Functions declared in lines: `function sizeOf(` or `const sizeOf = (…) =>`. */
@@ -255,18 +346,54 @@ export function differingSpan(before: string, after: string): [string, string] {
  * Sentences for a file's changes outside any function: a new file by what it holds (its functions, components,
  * tests, styles or settings); a changed one by its imports, exports, settings and styles. `text` is the file now.
  */
-export function describeFileChange(file: string, added: string[], removed: string[], isNew: boolean, text = added.join('\n'), max = 3): string[] {
+export function describeFileChange(file: string, added: string[], removed: string[], isNew: boolean, text = added.join('\n'), max = 3, changedTests: string[] = []): string[] {
   const ext = path.extname(file).toLowerCase();
   const base = path.basename(file).toLowerCase();
+  if (isTestFile(file)) return describeTestFile(added, removed, isNew, text, changedTests).slice(0, max);
   const out = isNew ? describeNewFile(file, ext, base, text) : describeEditedFile(ext, base, added, removed);
   return (out.length ? out : [isNew ? 'This file is new.' : 'This file is updated.']).slice(0, max);
 }
 
-function describeNewFile(file: string, ext: string, base: string, text: string): string[] {
-  if (/\.(test|spec)\.[jt]sx?$/.test(base) || /(^|\/)__tests__\//.test(file)) {
-    const titles = [...text.matchAll(/\b(?:it|test)\(\s*(['"`])(.+?)\1/g)].map((m) => m[2]).slice(0, 2);
-    return [titles.length ? `This new test file checks ${listWords(titles.map((t) => `"${t}"`))}.` : 'This new test file checks the code next to it.'];
+/** A test or spec file: `cart.test.ts`, `cart.spec.js`, anything under `__tests__/` or `test/`, `CartTests.cs`. */
+export function isTestFile(file: string): boolean {
+  const name = file.replace(/\\/g, '/');
+  return /\.(test|spec)\.[cm]?[jt]sx?$/.test(name) || /(^|\/)(__tests__|tests?)\//.test(name) || /Tests?\.cs$/.test(name);
+}
+
+const testTitles = (lines: string) => [...lines.matchAll(/\b(?:it|test)\(\s*(['"`])(.+?)\1/g)].map((m) => m[2]);
+
+/**
+ * A test's name as what it checks: "rejects an empty cart" → "that it rejects an empty cart", "should save" → "that it
+ * saves"; a name that is not a phrase like that stays in quotes.
+ */
+export function testClaim(title: string): string {
+  const t = title.trim().replace(/\.$/, '');
+  const should = /^should (not )?(\w+)(.*)$/i.exec(t);
+  if (should) return `that it ${should[1] ? `does not ${should[2]}` : third(should[2])}${should[3]}`;
+  const first = t.split(/\s+/)[0] ?? '';
+  // "rejects …", "returns …", "handles …": a verb, so a claim about the code.
+  if (/^[a-z]+(s|es)$/.test(first) && !/^(this|is|was|has|its|as|us|yes|news|always)$/.test(first)) return `that it ${t}`;
+  return `"${t}"`;
+}
+const third = (verb: string) => (/(s|sh|ch|x|z|o)$/.test(verb) ? `${verb}es` : /[^aeiou]y$/.test(verb) ? `${verb.slice(0, -1)}ies` : `${verb}s`);
+
+/** Sentences for a test file: "This test file …", by the tests it adds, drops and changes. */
+function describeTestFile(added: string[], removed: string[], isNew: boolean, text: string, changedTests: string[]): string[] {
+  if (isNew) {
+    const titles = testTitles(text).slice(0, 2);
+    return [titles.length ? `This test file is new: it checks ${listWords(titles.map(testClaim))}.` : 'This test file is new.'];
   }
+  const fresh = testTitles(added.join('\n'));
+  const gone = testTitles(removed.join('\n')).filter((t) => !fresh.includes(t));
+  const changed = changedTests.filter((t) => !fresh.includes(t) && !gone.includes(t));
+  const out: string[] = [];
+  if (fresh.length) out.push(`This test file now also checks ${listWords(fresh.slice(0, 2).map(testClaim))}.`);
+  if (changed.length) out.push(`${out.length ? 'It' : 'This test file'} changes how it checks ${listWords(changed.slice(0, 2).map(testClaim))}.`);
+  if (gone.length) out.push(`${out.length ? 'It' : 'This test file'} no longer checks ${listWords(gone.slice(0, 2).map(testClaim))}.`);
+  return out.length ? out : ['This test file is updated.'];
+}
+
+function describeNewFile(file: string, ext: string, base: string, text: string): string[] {
   if (['.css', '.scss', '.less'].includes(ext)) return [`This new stylesheet styles ${listWords(selectorsIn(text).slice(0, 3)) || 'the page'}.`];
   if (ext === '.json') {
     const keys = topKeys(text).slice(0, 3);

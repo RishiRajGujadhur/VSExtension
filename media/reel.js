@@ -517,11 +517,46 @@
     const font = captionFont(L);
     const width = W * (L.tall ? 0.86 : 0.74);
     const out = [];
-    for (const sentence of sentencesOf(caption)) {
-      const lines = wrap(sentence, width, font);
+    for (const clause of clausesOf(caption)) {
+      const lines = wrap(clause, width, font);
       for (let i = 0; i < lines.length; i += 2) out.push(lines.slice(i, i + 2));
     }
     return out.length ? out : [[String(caption)]];
+  }
+  /**
+   * A caption cut where a reader pauses: after ". ", ", ", ": ", "; ", "? ", "! " and around " — ", each part its own
+   * caption, as subtitles are. Punctuation inside quotes or numbers ("0.8", "a, b" in quotes) does not cut.
+   */
+  function clausesOf(caption) {
+    const textOf = String(caption);
+    const parts = [];
+    let current = '';
+    let quote = '';
+    for (let i = 0; i < textOf.length; i++) {
+      const ch = textOf[i];
+      current += ch;
+      if (quote) {
+        if (ch === quote) quote = '';
+        continue;
+      }
+      if (ch === '"' || ch === '“') {
+        quote = ch === '“' ? '”' : '"';
+        continue;
+      }
+      const next = textOf[i + 1];
+      const dash = ch === ' ' && textOf[i + 1] === '—';
+      if (dash || (/[.,:;!?]/.test(ch) && (next === ' ' || next === undefined))) {
+        if (dash) current = current.trimEnd();
+        if (current.trim()) parts.push(current.trim());
+        current = '';
+        if (dash) {
+          // The dash starts nothing on its own: it goes with neither part.
+          i += 1;
+        }
+      }
+    }
+    if (current.trim()) parts.push(current.trim());
+    return parts.length ? parts : [textOf];
   }
   /** The caption chunk on screen at a point of the scene: each gets time by its length, like a subtitle. */
   function subtitleAt(s, p, L, W) {
