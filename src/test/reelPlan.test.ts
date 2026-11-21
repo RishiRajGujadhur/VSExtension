@@ -36,15 +36,18 @@ test('Git reel: overview, a scene per changed function with its flowchart, other
   // The function's code, then its flowchart on its own.
   assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', 'diff', 'flow', 'diff', 'diff', 'summary']);
   const fn = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.symbol === 'total')!;
-  assert.equal(fn.caption, 'total(): Returns 0 early when !items.length. 3 new paths; 2 paths no longer taken.');
+  // What it does, in words; no counts.
+  assert.equal(fn.caption, 'total now returns 0 early when there are no items.');
   assert.equal(fn.line, 2);
   const flow = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow')!;
-  assert.equal(flow.caption, 'total(): 2 new boxes · 3 new paths, 2 paths gone');
+  assert.equal(flow.caption, 'Here is how total runs now: the new steps are green, and the ones that changed are amber.');
   assert.equal(flow.flow.nodes.filter((n) => n.state === 'added').length, 2);
   assert.deepEqual(fn.lines.filter((l) => l.kind === 'add').map((l) => l.text), ['  if (!items.length) return 0;']);
   // The secret is masked in the code shown.
   const config = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.file === 'config.ts')!;
-  assert.equal(config.caption, 'config.ts: Adds a new file, config.ts, with 2 lines. Exports apiKey.');
+  // The caption shows the file's name; the voice says neither it nor any number.
+  assert.equal(config.caption, 'config.ts — This new file adds the API key setting.');
+  assert.ok(plan.scenes.every((sc) => !/\b\d+ (files?|lines?|boxes|paths?|changes?)\b/.test(sc.caption)), plan.scenes.map((sc) => sc.caption).join(' | '));
   assert.match(config.lines[0].text, /apiKey = "••••"/);
   assert.ok(plan.scenes.reduce((n, s) => n + s.seconds, 0) <= 90);
   // The same change gives the same plan.

@@ -43,6 +43,16 @@
   /** @type {MediaStreamAudioDestinationNode | undefined} */
   let recordDest;
   let cancelled = false;
+  /** Captions on the video (the CC button): in the preview and burned into the export. On unless turned off. */
+  let captionsOn = saved.captions !== false;
+  const player = document.getElementById('player');
+  const bigPlay = document.getElementById('bigPlay');
+  const chapterLabel = document.getElementById('chapter');
+  const hoverTip = document.getElementById('hoverTip');
+  const ccButton = document.getElementById('cc');
+  const settingsButton = document.getElementById('settings');
+  const settingsMenu = document.getElementById('settingsMenu');
+  const fullscreenButton = document.getElementById('fullscreen');
   const progressBar = document.getElementById('progressBar');
   const cancelButton = document.getElementById('cancel');
 
@@ -81,7 +91,7 @@
     return undefined;
   }
   const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
-  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   // ---------------------------------------------------------------------------------------------------------------
   // Drawing helpers
@@ -254,8 +264,7 @@
   function drawDiff(s, p, c, W, H, L) {
     const head = `${s.file}${s.symbol ? `  ·  ${s.symbol}()` : ''}`;
     text(fit(head, W - 2 * L.m, `600 ${L.body}px ${codeFont}`), L.m, L.top + 20, `600 ${L.body}px ${codeFont}`, c.text, 'left', 'middle');
-    const badges = `+${s.added}  −${s.removed}${s.isNew ? '  ·  new' : ''}`;
-    text(badges, L.m, L.top + 20 + L.body + 14, `${L.small}px ${codeFont}`, c.muted, 'left', 'middle');
+    text(s.isNew ? 'New' : 'Changed', L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, s.isNew ? c.add : c.muted, 'left', 'middle');
     const areaTop = L.top + 20 + L.body * 2 + 30;
     const areaBottom = H - L.captionH - 40;
     drawLines(s.lines, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L);
@@ -450,10 +459,8 @@
       ctx.font = `${L.small - 2}px ${uiFont}`;
       lx += 40 + ctx.measureText(label).width + 28;
     };
-    if (added) legend(c.add, `${added} new`);
-    if (changed) legend(c.changed, `${changed} changed`, true);
-    const paths = [flow.newPaths ? `${flow.newPaths} new path${flow.newPaths === 1 ? '' : 's'}` : '', flow.gonePaths ? `${flow.gonePaths} gone` : ''].filter(Boolean).join(' · ') || `${flow.paths}${flow.truncated ? '+' : ''} path${flow.paths === 1 ? '' : 's'}`;
-    text(paths, box.x + box.w - 24, ly, `${L.small - 2}px ${uiFont}`, c.muted, 'right', 'middle');
+    if (added) legend(c.add, 'new');
+    if (changed) legend(c.changed, 'changed', true);
   }
 
   function drawFiles(s, p, c, W, H, L) {
@@ -473,17 +480,10 @@
       text(tag, L.m + 14, y + rowH / 2, `700 ${L.small}px ${codeFont}`, color, 'center', 'middle');
       const barW = L.tall ? 220 : 300;
       text(fit(f.file, W - 2 * L.m - barW - 200, `${L.small}px ${codeFont}`), L.m + 46, y + rowH / 2, `${L.small}px ${codeFont}`, c.text, 'left', 'middle');
-      const bx = W - L.m - barW;
-      const addW = (barW * f.added) / most;
-      const delW = (barW * f.removed) / most;
-      ctx.fillStyle = c.add;
-      ctx.fillRect(bx, y + rowH / 2 - 6, addW * a, 12);
-      ctx.fillStyle = c.del;
-      ctx.fillRect(bx + addW * a, y + rowH / 2 - 6, delW * a, 12);
-      text(`+${f.added} −${f.removed}`, bx - 20, y + rowH / 2, `${L.small - 4}px ${codeFont}`, c.muted, 'right', 'middle');
+      void most;
     });
     ctx.globalAlpha = 1;
-    if (s.files.length > rows.length) text(`and ${s.files.length - rows.length} more`, L.m + 46, top + rows.length * rowH + 20, `${L.small - 2}px ${uiFont}`, c.muted, 'left', 'middle');
+    if (s.files.length > rows.length) text('and others', L.m + 46, top + rows.length * rowH + 20, `${L.small - 2}px ${uiFont}`, c.muted, 'left', 'middle');
   }
 
   function drawSummary(s, p, c, W, H, L) {
@@ -511,6 +511,31 @@
     const parts = String(caption).split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/).filter(Boolean);
     return parts.length ? parts : [String(caption)];
   }
+  /** A caption cut into what fits on screen at once: two lines at most, at a sentence's end where possible. */
+  const captionFont = (L) => `500 ${L.tall ? 44 : 40}px Roboto, "YouTube Noto", "Segoe UI", Arial, sans-serif`;
+  function chunksOf(caption, L, W) {
+    const font = captionFont(L);
+    const width = W * (L.tall ? 0.86 : 0.74);
+    const out = [];
+    for (const sentence of sentencesOf(caption)) {
+      const lines = wrap(sentence, width, font);
+      for (let i = 0; i < lines.length; i += 2) out.push(lines.slice(i, i + 2));
+    }
+    return out.length ? out : [[String(caption)]];
+  }
+  /** The caption chunk on screen at a point of the scene: each gets time by its length, like a subtitle. */
+  function subtitleAt(s, p, L, W) {
+    const parts = chunksOf(s.caption, L, W);
+    const weights = parts.map((x) => x.join(' ').length + 10);
+    const sum = weights.reduce((a, b) => a + b, 0);
+    let at = 0;
+    for (let i = 0; i < parts.length; i++) {
+      const share = weights[i] / sum;
+      if (p < at + share || i === parts.length - 1) return { lines: parts[i], index: i, local: (p - at) / share };
+      at += share;
+    }
+    return { lines: parts[0], index: 0, local: p };
+  }
   /** The sentence on screen at a point of the scene: each gets time by its length, like a subtitle. */
   function subtitle(s, p) {
     const parts = sentencesOf(s.caption);
@@ -526,25 +551,36 @@
     return { text: parts[0], index: 0, count: 1, local: p };
   }
 
-  /** The caption under each scene, one sentence at a time, with the dot of its kind. */
+  /**
+   * The caption, as YouTube draws its own: white text on a dark box behind each line, centred near the bottom, two
+   * lines at a time. Off with the CC button (and then not in the export either).
+   */
   function drawCaption(s, p, c, W, H, L) {
-    const sub = subtitle(s, p);
-    // Each sentence fades in; the first with the scene.
-    const a = sub.index === 0 ? ease(p * 5 - 0.3) : ease(sub.local * 8);
-    if (a <= 0) return;
-    ctx.globalAlpha = a;
-    const font = `${L.body}px ${uiFont}`;
-    const lines = wrap(sub.text, W - 2 * L.m - 110 - (sub.count > 1 ? 80 : 0), font).slice(0, L.tall ? 4 : 2);
-    const h = Math.max(90, lines.length * (L.body + 14) + 44);
-    const y = H - L.m - h;
-    panel(L.m, y, W - 2 * L.m, h, c, c.panel);
-    ctx.fillStyle = s.captionSource === 'user' ? c.accent : c.add;
-    ctx.beginPath();
-    ctx.arc(L.m + 40, y + h / 2, 9, 0, Math.PI * 2);
-    ctx.fill();
-    lines.forEach((line, i) => text(line, L.m + 72, y + h / 2 + (i - (lines.length - 1) / 2) * (L.body + 14), font, c.text, 'left', 'middle'));
-    if (sub.count > 1) text(`${sub.index + 1}/${sub.count}`, W - L.m - 28, y + h / 2, `${L.small - 4}px ${codeFont}`, c.muted, 'right', 'middle');
-    ctx.globalAlpha = 1;
+    if (!captionsOn || !s.caption) return;
+    const sub = subtitleAt(s, p, L, W);
+    const font = captionFont(L);
+    const size = L.tall ? 44 : 40;
+    const lineH = Math.round(size * 1.32);
+    const padX = Math.round(size * 0.32);
+    // Above the player's controls while they show (in the preview only; an export has none).
+    const chrome = player.querySelector('.chrome');
+    const controlsShown = !recording && chrome && !(player.classList.contains('playing') && player.classList.contains('idle'));
+    const lift = controlsShown && canvas.clientWidth ? chrome.offsetHeight * (canvas.width / canvas.clientWidth) : 0;
+    const bottom = H - Math.max(L.tall ? 150 : 56, lift + 24);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, sub.index === 0 ? ease(p * 6) : 1);
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    sub.lines.forEach((line, i) => {
+      const y = bottom - (sub.lines.length - i) * lineH;
+      const w = ctx.measureText(line).width + padX * 2;
+      ctx.fillStyle = 'rgba(8, 8, 8, 0.75)';
+      ctx.fillRect(W / 2 - w / 2, y, w, lineH);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(line, W / 2, y + lineH / 2 + 1);
+    });
+    ctx.restore();
   }
 
   /** One frame: the scene at this time with its chip, frame count and caption, faded in and out at its edges. */
@@ -565,8 +601,9 @@
     const fadeOut = Math.min(1, (s.seconds - at.local) / 0.3);
     const totalFrames = Math.round(total() * FPS);
     ctx.globalAlpha = 1;
-    chip(`Scene ${index + 1} • ${fit(sceneName(s), L.tall ? 520 : 700, `600 ${L.small - 2}px ${uiFont}`)}`, L.m, L.m - 10, c, `600 ${L.small - 2}px ${uiFont}`);
-    text(`Frame ${String(Math.min(totalFrames, Math.round(time * FPS))).padStart(3, '0')} / ${totalFrames}`, W - L.m, L.m + 13, `600 ${L.small - 4}px ${codeFont}`, c.muted, 'right', 'middle');
+    void index;
+    chip(fit(sceneName(s), L.tall ? 640 : 900, `600 ${L.small - 2}px ${uiFont}`), L.m, L.m - 10, c, `600 ${L.small - 2}px ${uiFont}`);
+    void totalFrames;
     ctx.save();
     ctx.globalAlpha = Math.min(fadeIn, fadeOut);
     const lift = (1 - ease(fadeIn)) * 24;
@@ -580,21 +617,31 @@
     ctx.globalAlpha = Math.min(fadeIn, fadeOut);
     drawCaption(s, p, c, W, H, L);
     ctx.globalAlpha = 1;
-    // The progress line along the bottom edge.
-    ctx.fillStyle = c.accent;
-    ctx.fillRect(0, H - 6, (W * time) / Math.max(0.001, total()), 6);
+
   }
 
   // ---------------------------------------------------------------------------------------------------------------
   // Player
 
   function render() {
-    draw(t);
+    // Paused at the very start, the first scene shows as a poster rather than the blank frame it fades in from.
+    const first = scenes()[0];
+    draw(!playing && !recording && t === 0 && first ? Math.min(1.5, first.seconds * 0.4) : t);
     const length = total();
     playhead.style.left = `${(100 * t) / Math.max(0.001, length)}%`;
     timeLabel.textContent = fmt(t);
-    frameLabel.textContent = `${fmt(length)} (${Math.round(length * FPS)} frames)`;
+    frameLabel.textContent = fmt(length);
     const at = plan && sceneAt(t);
+    // Each chapter of the bar fills as the reel passes it, as on YouTube.
+    let start = 0;
+    timeline.querySelectorAll('.segment').forEach((seg, i) => {
+      const scene = scenes()[i];
+      const fill = seg.firstElementChild;
+      if (scene && fill) fill.style.width = `${Math.max(0, Math.min(1, (t - start) / scene.seconds)) * 100}%`;
+      start += scene ? scene.seconds : 0;
+    });
+    if (at) chapterLabel.textContent = `• ${sceneName(at.scene)}`;
+    bigPlay.hidden = playing || recording;
     sceneList.querySelectorAll('.scene').forEach((row) => row.classList.toggle('current', !!at && row.dataset.id === at.scene.id));
     timeline.querySelectorAll('.segment').forEach((seg, i) => seg.classList.toggle('current', !!at && at.index === i));
   }
@@ -614,8 +661,13 @@
     playing = on;
     if (on) startAudio(t);
     else stopAudio();
-    playButton.replaceChildren(icon(on ? 'debug-pause' : 'play'), on ? ' Pause' : ' Play');
+    playButton.replaceChildren(icon(on ? 'debug-pause' : 'play'));
     playButton.setAttribute('aria-pressed', String(on));
+    playButton.setAttribute('aria-label', on ? 'Pause' : 'Play');
+    playButton.title = on ? 'Pause (k)' : 'Play (k)';
+    player.classList.toggle('playing', on);
+    bigPlay.hidden = on;
+    wake();
     if (on) {
       last = performance.now();
       requestAnimationFrame(loop);
@@ -697,16 +749,13 @@
     timeline.querySelectorAll('.segment').forEach((s) => s.remove());
     const length = total();
     scenes().forEach((s, i) => {
-      const seg = document.createElement('button');
-      seg.type = 'button';
-      seg.className = `segment kind-${s.kind}`;
+      const seg = document.createElement('span');
+      seg.className = 'segment';
       seg.style.flexGrow = String(s.seconds / length);
-      seg.textContent = `${i + 1}. ${sceneName(s)}`;
-      seg.title = `${s.caption} (${s.seconds}s)`;
-      seg.addEventListener('click', (e) => {
-        const r = timeline.getBoundingClientRect();
-        seek(((e.clientX - r.left) / r.width) * length);
-      });
+      seg.dataset.name = `${i + 1}. ${sceneName(s)}`;
+      const fill = document.createElement('span');
+      fill.className = 'fill';
+      seg.append(fill);
       timeline.insertBefore(seg, playhead);
     });
   }
@@ -930,6 +979,89 @@
     render();
   });
   playButton.addEventListener('click', () => setPlaying(!playing));
+  bigPlay.addEventListener('click', () => setPlaying(true));
+  canvas.addEventListener('click', () => {
+    if (!settingsMenu.hidden) settingsMenu.hidden = true;
+    else setPlaying(!playing);
+  });
+  canvas.addEventListener('dblclick', () => toggleFullscreen());
+  function setCaptions(on) {
+    captionsOn = on;
+    vscode.setState({ ...vscode.getState(), captions: on });
+    ccButton.setAttribute('aria-pressed', String(on));
+    ccButton.classList.toggle('on', on);
+    render();
+  }
+  ccButton.addEventListener('click', () => setCaptions(!captionsOn));
+  setCaptions(captionsOn);
+  settingsButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsMenu.hidden = !settingsMenu.hidden;
+    settingsButton.setAttribute('aria-expanded', String(!settingsMenu.hidden));
+  });
+  document.addEventListener('click', (e) => {
+    if (!settingsMenu.hidden && !settingsMenu.contains(e.target) && e.target !== settingsButton) {
+      settingsMenu.hidden = true;
+      settingsButton.setAttribute('aria-expanded', 'false');
+    }
+  });
+  // Full screen: the browser's own where the editor allows it; otherwise the player fills the panel and the editor
+  // group fills the window.
+  let pseudoFull = false;
+  async function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (pseudoFull) {
+      pseudoFull = false;
+      document.body.classList.remove('pseudo-full');
+      vscode.postMessage({ type: 'maximize', on: false });
+      showFullscreen();
+      return;
+    }
+    try {
+      if (!document.fullscreenEnabled) throw new Error('not allowed');
+      await player.requestFullscreen();
+    } catch {
+      pseudoFull = true;
+      document.body.classList.add('pseudo-full');
+      vscode.postMessage({ type: 'maximize', on: true });
+    }
+    showFullscreen();
+  }
+  function showFullscreen() {
+    const on = !!document.fullscreenElement || pseudoFull;
+    fullscreenButton.replaceChildren(icon(on ? 'screen-normal' : 'screen-full'));
+    fullscreenButton.title = on ? 'Exit full screen (f)' : 'Full screen (f)';
+    fullscreenButton.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+  }
+  document.addEventListener('fullscreenchange', showFullscreen);
+  fullscreenButton.addEventListener('click', () => toggleFullscreen());
+  // While playing, the controls and the pointer hide after a moment without movement.
+  let idleTimer;
+  function wake() {
+    if (player.classList.contains('idle')) {
+      player.classList.remove('idle');
+      if (!playing) render();
+    }
+    clearTimeout(idleTimer);
+    if (playing) idleTimer = setTimeout(() => settingsMenu.hidden && player.classList.add('idle'), 2500);
+  }
+  player.addEventListener('pointermove', wake);
+  player.addEventListener('pointerleave', () => playing && player.classList.add('idle'));
+  // Hovering the bar names the chapter and the time there.
+  timeline.addEventListener('pointermove', (e) => {
+    const r = timeline.getBoundingClientRect();
+    const at = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * total();
+    const scene = plan && sceneAt(at);
+    hoverTip.hidden = false;
+    hoverTip.textContent = `${scene ? sceneName(scene.scene) : ''}  ${fmt(at)}`;
+    hoverTip.style.left = `${Math.max(60, Math.min(r.width - 60, e.clientX - r.left))}px`;
+  });
+  timeline.addEventListener('pointerleave', () => {
+    hoverTip.hidden = true;
+  });
   cancelButton.addEventListener('click', () => {
     cancelled = true;
   });
@@ -960,6 +1092,7 @@
     voiceToggle.replaceChildren(icon(voice.on ? 'unmute' : 'mute'));
     voiceToggle.title = voice.on ? 'Voice-over on: each caption is read by your computer’s voice (click to turn off)' : 'Voice-over: read the captions with your computer’s voice';
     voiceSelect.hidden = !voice.on || voice.voices.length < 2;
+    document.getElementById('voiceRow').hidden = voiceSelect.hidden;
     voiceSelect.replaceChildren(...voice.voices.map((v) => new Option(v.replace(/^Microsoft\s+|\s+Desktop$/g, ''), v, false, v === voice.name)));
   }
   document.getElementById('restart').addEventListener('click', () => seek(0));
@@ -985,6 +1118,12 @@
     } else if (e.key === 'ArrowRight') seek(t + (e.shiftKey ? 5 : 1));
     else if (e.key === 'ArrowLeft') seek(t - (e.shiftKey ? 5 : 1));
     else if (e.key === 'Home') seek(0);
+    else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    else if (e.key === 'c' || e.key === 'C') setCaptions(!captionsOn);
+    else if (e.key === 'j' || e.key === 'J') seek(t - 10);
+    else if (e.key === 'l' || e.key === 'L') seek(t + 10);
+    else if (e.key === 'Escape' && pseudoFull) toggleFullscreen();
+    else if (e.key === 'm' || e.key === 'M') document.getElementById('voiceToggle').click();
     else if (e.key === 'e' || e.key === 'E') {
       // The first format this editor can make.
       const format = formats.find((f) => f.supported);

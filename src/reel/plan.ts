@@ -424,12 +424,12 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
           const symbol = chart.name.replace(/\(\)$/, '');
           // What the code change does, in sentences; the flowchart scene after it gives the counts.
           const sentences = describeFunctionChange(symbol, chart, comparison, 4, lines);
-          const caption = sentences.length ? `${symbol}(): ${sentences.join(' ')}` : flowCaption(symbol, comparison, added, removed);
+          const caption = sentences.join(' ');
           const flow = snapshot(chart, comparison);
           const changedBoxes = comparison.added.length + comparison.changed.length;
           const line = firstChangedLine(lines);
           const flowScene: Extract<ReelScene, { kind: 'flow' }> | undefined =
-            flow && changedBoxes ? { kind: 'flow', id: `${file.path}#${symbol}#flow`, file: file.path, symbol, flow, line, caption: flowCaption(symbol, comparison, added, removed), captionSource: 'heuristic', seconds: 5 } : undefined;
+            flow && changedBoxes ? { kind: 'flow', id: `${file.path}#${symbol}#flow`, file: file.path, symbol, flow, line, caption: `Here is how ${symbol} runs now: the new steps are green, and the ones that changed are amber.`, captionSource: 'heuristic', seconds: 5 } : undefined;
           candidates.push({
             kind: 'diff', id: `${file.path}#${symbol}`, file: file.path, symbol, added, removed, isNew: comparison.isNew, line,
             lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)),
@@ -441,8 +441,9 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
         }
       }
       const isNew = file.status === 'added' || file.status === 'untracked';
-      const sentences = describeFileChange(file.path, lines.filter((l) => l.kind === 'add').map((l) => l.text), lines.filter((l) => l.kind === 'del').map((l) => l.text), isNew);
-      const caption = `${base}: ${sentences.join(' ')}`;
+      const sentences = describeFileChange(file.path, lines.filter((l) => l.kind === 'add').map((l) => l.text), lines.filter((l) => l.kind === 'del').map((l) => l.text), isNew, now);
+      // The caption shows the file's name; the voice leaves it out (speakable) and says "this file".
+      const caption = `${base} — ${sentences.join(' ')}`;
       candidates.push({ kind: 'diff', id: `${file.path}#${key === 'file' ? 'file' : key}`, file: file.path, added, removed, line: firstChangedLine(lines), lines: trimLines(lines), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(lines.length, MAX_LINES)), weight: Math.min(added + removed, 60) });
     }
   }
@@ -461,7 +462,7 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
   const subject = () => git(repo, ['log', '-1', '--format=%s']).trim();
   const title = ref === 'HEAD' ? 'Uncommitted changes' : /^(main|master|develop|trunk|detached HEAD)$/.test(head) ? subject() || head : titleFromBranch(head);
   const scenes: ReelScene[] = [];
-  const overview = `${head} → ${request.baseLabel}: ${plural(kept.length, 'file')} changed (+${additions} / −${deletions})${skipped ? `, ${skipped} left out` : ''}.`;
+  const overview = `${title.replace(/\.$/, '')}. Here is what it changes, and what the new code does.`;
   scenes.push({ kind: 'overview', id: 'overview', caption: overview, captionSource: 'heuristic', seconds: secondsFor(overview) + 1 });
   // Each function's code, then its flowchart.
   for (const scene of diffScenes) {
@@ -470,17 +471,14 @@ export async function buildReelPlan(request: ReelRequest): Promise<ReelPlan> {
     if (flowScene) scenes.push(flowScene);
   }
   if (others.length || fileRows.length > new Set(diffScenes.map((s) => s.file)).size) {
-    const caption = others.length ? `${plural(others.length, 'other change')} in ${plural(new Set(others.map((o) => o.file)).size, 'file')}` : 'Every file changed';
+    const caption = 'It also touches these files.';
     scenes.push({ kind: 'files', id: 'files', files: fileRows.slice(0, 14), caption, captionSource: 'heuristic', seconds: secondsFor(caption, Math.min(fileRows.length, 14)) });
   }
   const flows = flowScenes;
-  const points = [
-    `${plural(kept.length, 'file')}, +${additions} / −${deletions} lines`,
-    flows.length ? `${plural(flows.length, 'function')} with a new flow: ${flows.reduce((n, s) => n + (s.flow?.newPaths ?? 0), 0)} new paths, ${flows.reduce((n, s) => n + (s.flow?.gonePaths ?? 0), 0)} gone` : '',
-    diffScenes.filter((s) => s.isNew).length ? `New: ${diffScenes.filter((s) => s.isNew).map((s) => `${s.symbol}()`).slice(0, 3).join(', ')}` : '',
-    skipped ? `${plural(skipped, 'file')} left out (lock files, build output, secrets, binaries)` : '',
-  ].filter(Boolean);
-  const summary = `In short: ${points[0]}.`;
+  void flows;
+  // What each change does, its first sentence, as the summary's points.
+  const points = diffScenes.map((d) => d.caption.split(/(?<=[.!?])\s+(?=[A-Z0-9"'(`])/)[0]).slice(0, 5);
+  const summary = points.length ? `To sum up: ${points.slice(0, 2).map((p) => p.replace(/^[\w@./-]+\.[A-Za-z]{1,6}\s+—\s+/, '')).join(' ')}` : 'That is the whole change.';
   scenes.push({ kind: 'summary', id: 'summary', points, caption: summary, captionSource: 'heuristic', seconds: secondsFor(summary, points.length * 2) });
   fitDuration(scenes, MAX_SECONDS);
   return { version: 1, meta: { title, base: request.baseLabel, head, additions, deletions, files: kept.length, skipped }, scenes };

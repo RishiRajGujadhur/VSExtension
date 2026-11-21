@@ -133,6 +133,13 @@ export class ReelPanel {
         void this.state.update(this.key(skippedKey), [...skipped]);
       } else if (message.type === 'voice') {
         await this.setVoice(message.on === true, message.voice);
+      } else if (message.type === 'maximize') {
+        // Full screen inside the editor: Zen Mode, which hides the rest of the editor and (by default) fills the
+        // screen; the player fills the panel.
+        await vscode.commands.executeCommand('workbench.action.toggleZenMode');
+        // Zen Mode narrows the editor to a centred column by default: the reel takes the whole width instead (for
+        // this time only; the setting is left as it is, and leaving Zen Mode restores the layout).
+        if (message.on && vscode.workspace.getConfiguration('zenMode').get('centerLayout', true)) await vscode.commands.executeCommand('workbench.action.toggleCenteredLayout');
       } else if (message.type === 'copy' && typeof message.text === 'string') {
         await vscode.env.clipboard.writeText(message.text);
         void vscode.window.setStatusBarMessage('Copied the reel as Markdown: paste it into a pull request', 5000);
@@ -312,28 +319,48 @@ function page(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   <span id="title">Git reel</span>
   <span id="base"></span>
   <span class="spacer"></span>
-  <span class="segmented" role="group" aria-label="Shape">
-    <button type="button" data-aspect="16:9" aria-pressed="true" title="Landscape, for pull requests and slides">16:9</button>
-    <button type="button" data-aspect="9:16" aria-pressed="false" title="Portrait, for phones and stories">9:16</button>
-  </span>
-  <select id="theme" aria-label="Theme" title="Theme">
-    <option value="midnight">Midnight</option>
-    <option value="graphite">Graphite</option>
-    <option value="paper">Paper</option>
-  </select>
-  <button type="button" id="voiceToggle" class="icon-button" aria-pressed="false" title="Voice-over"><i class="codicon codicon-mute" aria-hidden="true"></i></button>
-  <select id="voiceSelect" aria-label="Voice" title="Voice" hidden></select>
   ${iconButton('copyMarkdown', 'markdown', 'Copy as Markdown: what each change does, for a pull request description')}
   ${iconButton('refresh', 'refresh', 'Read the changes again (captions you wrote are kept)')}
 </header>
 <p id="empty">Reading the changes…</p>
-<div id="stage"><canvas id="screen" width="1920" height="1080" role="img" aria-label="The reel"></canvas></div>
-<section id="transport" aria-label="Playback">
-  <div class="times"><span id="time">00:00.0</span><span id="frames"></span></div>
-  <div id="timeline" role="slider" aria-label="Scenes: click or drag to move through the reel"><span id="playhead"></span></div>
+<div id="stage">
+  <div id="player" class="player" tabindex="0" aria-label="Git reel player: Space plays, F goes full screen, C turns captions on or off">
+    <canvas id="screen" width="1920" height="1080" role="img" aria-label="The reel"></canvas>
+    <button type="button" id="bigPlay" class="big-play" aria-label="Play"><i class="codicon codicon-play" aria-hidden="true"></i></button>
+    <div class="chrome">
+      <div id="timeline" role="slider" aria-label="Chapters: click or drag to move through the reel" tabindex="-1"><span id="playhead"></span><span id="hoverTip" hidden></span></div>
+      <div class="bar">
+        <button type="button" id="play" class="yt" aria-pressed="false" title="Play (k)" aria-label="Play"><i class="codicon codicon-play" aria-hidden="true"></i></button>
+        <button type="button" id="restart" class="yt" title="Back to the start (Home)" aria-label="Back to the start"><i class="codicon codicon-debug-restart" aria-hidden="true"></i></button>
+        <button type="button" id="voiceToggle" class="yt" aria-pressed="false" title="Voice-over (v)"><i class="codicon codicon-mute" aria-hidden="true"></i></button>
+        <span class="time"><span id="time">0:00</span> / <span id="frames">0:00</span></span>
+        <span id="chapter" class="chapter"></span>
+        <span class="spacer"></span>
+        <button type="button" id="cc" class="yt cc" aria-pressed="true" title="Captions (c)" aria-label="Captions">CC</button>
+        <button type="button" id="settings" class="yt" aria-haspopup="menu" aria-expanded="false" title="Settings" aria-label="Settings"><i class="codicon codicon-settings-gear" aria-hidden="true"></i></button>
+        <button type="button" id="fullscreen" class="yt" title="Full screen (f)" aria-label="Full screen"><i class="codicon codicon-screen-full" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    <div id="settingsMenu" class="yt-menu" role="menu" hidden>
+      <label class="row">Theme
+        <select id="theme" aria-label="Theme">
+          <option value="midnight">Midnight</option>
+          <option value="graphite">Graphite</option>
+          <option value="paper">Paper</option>
+        </select>
+      </label>
+      <div class="row">Shape
+        <span class="segmented" role="group" aria-label="Shape">
+          <button type="button" data-aspect="16:9" aria-pressed="true" title="Landscape, for pull requests and slides">16:9</button>
+          <button type="button" data-aspect="9:16" aria-pressed="false" title="Portrait, for phones and stories">9:16</button>
+        </span>
+      </div>
+      <label class="row" id="voiceRow">Voice <select id="voiceSelect" aria-label="Voice" hidden></select></label>
+    </div>
+  </div>
+</div>
+<section id="transport" aria-label="Export">
   <div class="controls">
-    <button type="button" id="play" class="primary" aria-pressed="false"><i class="codicon codicon-play" aria-hidden="true"></i> Play</button>
-    <button type="button" id="restart" class="icon-button" title="Back to the start (Home)" aria-label="Back to the start"><i class="codicon codicon-debug-restart" aria-hidden="true"></i></button>
     <span id="status" role="status" aria-live="polite"></span>
     <span class="progress" hidden><span id="progressBar"></span></span>
     <button type="button" id="cancel" hidden>Cancel</button>

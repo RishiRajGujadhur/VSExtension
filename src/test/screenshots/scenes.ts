@@ -305,6 +305,27 @@ export const scenes: Scene[] = [
     settle: 3500,
   },
   {
+    // Not for the docs: full screen in VS Code (the F key, a real key press), to see which way it goes.
+    name: 'git-reel-fullscreen-check',
+    still: true,
+    async run({ open, delay, cdp }) {
+      await open('src/pricing.ts', 'const coupon = findCoupon');
+      const editor = vscode.window.activeTextEditor!;
+      const text = editor.document.getText();
+      await editor.edit((b) => b.insert(editor.document.positionAt(text.indexOf('  const coupon = findCoupon')), '  if (amount <= 0) {\n    return 0;\n  }\n'));
+      await editor.document.save();
+      await vscode.commands.executeCommand('tsStructure.gitReel', 'HEAD');
+      await delay(2000);
+      await press(cdp, 'f', 'KeyF', 70);
+      await delay(1500);
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      execFileSync('git', ['checkout', '--', '.'], { cwd: root() });
+    },
+    settle: 800,
+  },
+  {
     // Not for the docs: the voice-over end to end. The reel with the voice on, exported with the E key (a real key
     // press, so the page may start its sound), written to the temp folder for checking.
     name: 'git-reel-voice-check',

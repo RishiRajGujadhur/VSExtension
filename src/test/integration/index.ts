@@ -643,8 +643,9 @@ async function gitReelFlow(): Promise<void> {
   assert.equal(plan.meta.title, 'Uncommitted changes');
   const scene = plan.scenes.find((s) => s.symbol === 'grade');
   assert.ok(scene, plan.scenes.map((s) => s.caption).join(' | '));
-  assert.equal(scene.caption, "grade(): Adds a check, score > 75; otherwise returns 'C'. 2 new paths; 1 path no longer taken.");
-  assert.equal(plan.scenes.find((s) => s.kind === 'flow')?.caption, 'grade(): 2 new boxes · 2 new paths, 1 path gone');
+  // What the change does, in words, with no counts.
+  assert.equal(scene.caption, 'grade now checks whether the score is more than 75, and otherwise returns "C".');
+  assert.equal(plan.scenes.find((s) => s.kind === 'flow')?.caption, 'Here is how grade runs now: the new steps are green, and the ones that changed are amber.');
   assert.equal(plan.scenes.find((s) => s.kind === 'flow')?.flow?.nodes.filter((n) => n.state === 'added').length, 2);
   for (let i = 0; i < 40 && !vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label.startsWith('Git reel')); i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label === 'Git reel: Uncommitted changes'), 'the Git reel tab');
