@@ -16,7 +16,9 @@ export function explanationHtml(e: CodeExplanation, withModel: boolean): string 
   const video = e.walk
     ? `<a class="video" href="command:tsStructure.explainCode.video" title="A video of these steps on the function's flowchart, with the voice-over, in the Git reel's player"><i class="codicon codicon-device-camera-video" aria-hidden="true"></i>Generate video</a>`
     : '';
-  return `<header><h1>What ${subject.replace(/^the /, 'the ')} does</h1>${video}</header>
+  // "What the function poll() does", "What these lines in poll() do".
+  const heading = /^the highlighted lines/.test(e.subject) ? `What ${subject.replace(/^the highlighted lines/, "these lines")} do` : `What ${subject} does`;
+  return `<header><h1>${heading}</h1>${video}</header>
 ${e.summary ? `<p class="summary">${escape(e.summary)}</p>` : ''}
 ${purpose}
 ${steps}

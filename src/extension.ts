@@ -142,6 +142,7 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
     vscode.commands.registerCommand('tsStructure.gitReel.lastSound', () => reel.lastSound),
     vscode.commands.registerCommand('tsStructure.gitReel.voiceInfo', () => reel.voiceInfo),
     vscode.commands.registerCommand('tsStructure.gitReel.focus', () => reel.focus()),
+    vscode.commands.registerCommand('tsStructure.gitReel.fullscreen', () => reel.toggleFullscreen()),
     vscode.commands.registerCommand('tsStructure.gitReel.voice', async (on: boolean) => {
       await reel.setVoice(on);
       return reel.current;

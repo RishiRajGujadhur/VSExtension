@@ -692,6 +692,10 @@ async function gitReelFlow(): Promise<void> {
   for (let i = 0; i < 40 && !vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label.startsWith('Git reel')); i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label === 'Git reel: Uncommitted changes'), 'the Git reel tab');
   console.log(`git reel ok: ${plan.scenes.length} scenes, ${scene.caption}`);
+  // Full screen fills the editor area (its group maximized), never VS Code's own window; F again comes back.
+  assert.equal(await vscode.commands.executeCommand<boolean>('tsStructure.gitReel.fullscreen'), true, 'full screen on');
+  assert.equal(await vscode.commands.executeCommand<boolean>('tsStructure.gitReel.fullscreen'), false, 'full screen off');
+  console.log('git reel full screen ok: the editor group, not the window');
   // Recorded by the editor's own engine: a WebM file, and an MP4 one where the engine can make it.
   for (const format of ['webm', 'mp4'] as const) {
     const out = path.join(os.tmpdir(), `reel-test.${format}`);

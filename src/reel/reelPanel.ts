@@ -194,6 +194,29 @@ export class ReelPanel {
     }
     return this.build();
   }
+  /** Whether the player's full screen has maximized its editor group, to undo it once. */
+  private maximized = false;
+  private async setMaximized(on: boolean): Promise<void> {
+    if (on === this.maximized) return;
+    this.maximized = on;
+    try {
+      await vscode.commands.executeCommand('workbench.action.toggleMaximizeEditorGroup');
+    } catch {
+      // An editor without it: the player still fills its panel.
+    }
+  }
+  /** For tests: whether the player's full screen is on. */
+  get isMaximized(): boolean {
+    return this.maximized;
+  }
+  /** For tests: full screen on or off, as the F key does; resolves with whether it is on. */
+  async toggleFullscreen(): Promise<boolean> {
+    const before = this.maximized;
+    void this.panel?.webview.postMessage({ type: 'fullscreen' });
+    for (let waited = 0; waited < 3000 && this.maximized === before; waited += 50) await new Promise((r) => setTimeout(r, 50));
+    return this.maximized;
+  }
+
   /** A plan given to the player rather than read from Git. */
   private fixedPlan: ReelPlan | undefined;
 
@@ -274,12 +297,9 @@ export class ReelPanel {
       } else if (message.type === 'voice') {
         await this.setVoice(message.on === true, message.voice);
       } else if (message.type === 'maximize') {
-        // Full screen inside the editor: Zen Mode, which hides the rest of the editor and (by default) fills the
-        // screen; the player fills the panel.
-        await vscode.commands.executeCommand('workbench.action.toggleZenMode');
-        // Zen Mode narrows the editor to a centred column by default: the reel takes the whole width instead (for
-        // this time only; the setting is left as it is, and leaving Zen Mode restores the layout).
-        if (message.on && vscode.workspace.getConfiguration('zenMode').get('centerLayout', true)) await vscode.commands.executeCommand('workbench.action.toggleCenteredLayout');
+        // Full screen inside VS Code's window, never the screen: the reel's editor group takes the whole editor area
+        // (the other groups fold away), and the player fills the panel. VS Code itself stays as it was.
+        await this.setMaximized(!!message.on);
       } else if (message.type === 'copy' && typeof message.text === 'string') {
         await vscode.env.clipboard.writeText(message.text);
         void vscode.window.setStatusBarMessage('Copied the reel as Markdown: paste it into a pull request', 5000);
@@ -307,6 +327,8 @@ export class ReelPanel {
     this.panel.onDidDispose(() => {
       this.panel = undefined;
       this.plan = undefined;
+      // Closed while full screen: the editor groups come back as they were.
+      void this.setMaximized(false);
     });
   }
 

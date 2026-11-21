@@ -403,6 +403,8 @@ const KNOWN: [RegExp, string | ((args: string[]) => string)][] = [
   [/(?:^|\.)(dispose|close|destroy)$/, 'cleans up'],
   [/(?:^|\.)(focus)$/, 'moves the focus'],
   [/(?:^|\.)(scrollIntoView|scrollTo)$/, 'scrolls to it'],
+  [/(?:^|\.)(delay|sleep|wait|pause|timeout)$/, 'waits a moment'],
+  [/(?:^|\.)abort$/, 'cancels the request'],
   [/(?:^|\.)(querySelector|querySelectorAll|getElementById)$/, 'finds part of the page'],
   [/(?:^|\.)(append|appendChild|prepend|insertBefore)$/, 'adds it to the page'],
   [/(?:^|\.)(remove|removeChild)$/, 'takes it off the page'],
@@ -429,6 +431,10 @@ export function callPhrase(code: string): string | undefined {
   // React state setters, by what the state becomes: "setFeature(undefined)" → "clears the feature".
   const setter = /^set([A-Z]\w*)$/.exec(method);
   if (setter && call.arguments.length === 1) return settingPhrase(setter[1], call.arguments[0].getText());
+  // "queue.flush()" → "flushes the queue": a verb on its own, done to the object it is called on.
+  const receiver = ts.isPropertyAccessExpression(call.expression) ? call.expression.expression : undefined;
+  const verb = words(method);
+  if (receiver && verb.length === 1 && VERBS.has(verb[0].toLowerCase()) && !call.arguments.length && receiver.kind !== ts.SyntaxKind.ThisKeyword) return `${third(verb[0].toLowerCase())} ${exprWords(receiver)}`;
   const phrase = verbPhrase(method, true);
   // "saves the user": the first argument as the object, when the name has none.
   if (words(method).length === 1 && args[0] && !phrase.includes(' the ')) return `${phrase} ${args[0]}`;

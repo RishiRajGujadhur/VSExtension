@@ -122,6 +122,13 @@ export function editActionsAt(fileName: string, text: string, line: number, char
     add('editor.action.rename', 'Rename', 'edit');
     if (!ts.isParameter(declaration) || !ts.isConstructorDeclaration(declaration.parent)) add('tsStructure.safeDelete', 'Delete safely', 'trash');
     if (functionLike(declaration)) add('tsStructure.changeSignature', 'Change signature', 'symbol-parameter');
+    // A function or method: explained in plain words, the whole of it selected first.
+    if (functionLike(declaration) || ts.isGetAccessor(declaration) || ts.isSetAccessor(declaration)) {
+      const whole = ts.isVariableDeclaration(declaration) ? declaration.parent.parent : declaration;
+      const start = file.getLineAndCharacterOfPosition(whole.getStart(file));
+      const end = file.getLineAndCharacterOfPosition(whole.end);
+      actions.push({ command: 'tsStructure.explainCode', label: 'Explain this code', icon: 'lightbulb-sparkle', line: start.line, character: start.character, endLine: end.line, endCharacter: end.character });
+    }
     if (ts.isVariableDeclaration(declaration) && declaration.initializer && !functionLike(declaration)) {
       add('editor.action.codeAction', 'Inline', 'fold-up', [{ kind: 'refactor.inline', apply: 'ifSingle' }]);
     }
@@ -171,6 +178,9 @@ export function grouped(edits: EditAction[]): EditAction[] {
   const ownMove = moves.find((e) => e.command === 'tsStructure.moveMembers');
   const duplicates = new Set(moves.filter((e) => e !== ownMove && ownMove && /^move to file$/i.test(e.label)));
   // The Edit row: renames and signature first, then the rest; "More edits…" always last.
-  const order = (e: EditAction) => (e.command === 'editor.action.rename' ? 0 : e.command === 'tsStructure.changeSignature' ? 1 : e.command === 'editor.action.refactor' ? 9 : 5);
-  return out.filter((e) => !duplicates.has(e)).sort((a, b) => (a.group === b.group ? order(a) - order(b) : 0));
+  const order = (e: EditAction) => (e.command === 'tsStructure.explainCode' ? -1 : e.command === 'editor.action.rename' ? 0 : e.command === 'tsStructure.changeSignature' ? 1 : e.command === 'editor.action.refactor' ? 9 : 5);
+  // Row by row (Edit, File, then Delete apart), each in its own order: a comparator that left rows unsorted against
+  // each other could not move an edit past one of another row.
+  const rank = { edit: 0, file: 1, danger: 2 } as const;
+  return out.filter((e) => !duplicates.has(e)).sort((a, b) => rank[a.group ?? 'edit'] - rank[b.group ?? 'edit'] || order(a) - order(b));
 }

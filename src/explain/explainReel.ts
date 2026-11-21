@@ -39,6 +39,8 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
       truncated: chart.truncated,
     };
     for (const id of current) done.add(id);
+    // Where the step's code is, for the scene's Open button (locations count lines from 0, scenes from 1).
+    const located = [...current].map((id) => chart.nodes[id]?.location).find((l) => l);
     scenes.push({
       kind: 'flow',
       id: `step-${i + 1}`,
@@ -47,6 +49,7 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
       symbol: name,
       flow,
       legend: `Step ${i + 1}: the box in amber, with the steps so far in green`,
+      ...(located ? { line: located.line + 1 } : {}),
       caption: step,
       captionSource: 'heuristic',
       seconds: secondsFor(step) + 1,

@@ -888,7 +888,7 @@
       open: n.location ? () => open(n) : undefined,
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
       // Edits that fit the box's code (Extract…, Rename…), asked for when the card opens.
-      actions: n.location && !isTerminal(n) ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, group: edit.group, underMove: edit.underMove, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
+      actions: n.location && n.kind !== 'end' ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, group: edit.group, underMove: edit.underMove, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
       note: [n.unreachable ? 'Unreachable: nothing leads here.' : '', changes && changes.added.includes(n.id) ? `New since ${changes.against}.` : '', changedBefore(n.id) ? `Changed since ${changes.against}. Before: ${changedBefore(n.id).before}` : ''].filter(Boolean).join(' '),
       facts: [],
       keys: [],
@@ -1014,7 +1014,7 @@
   const open = (n) => n.location && vscode.postMessage({ type: 'open', location: n.location });
   /** Edits for each box, by id, for this chart; asked for once per box. */
   const boxEdits = new Map();
-  const askEdits = (n) => { if (n.location && !isTerminal(n) && !boxEdits.has(n.id)) { boxEdits.set(n.id, []); vscode.postMessage({ type: 'edits', id: n.id, location: n.location }); } };
+  const askEdits = (n) => { if (n.location && n.kind !== 'end' && !boxEdits.has(n.id)) { boxEdits.set(n.id, []); vscode.postMessage({ type: 'edits', id: n.id, location: n.location }); } };
 
   // Keyboard: Tab moves from box to box in reading order; arrows follow the flow (down to what comes next, up to what came before,
   // left and right along the row), Enter opens, F animates, Shift+F10 opens the menu.

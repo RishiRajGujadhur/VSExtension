@@ -1362,6 +1362,9 @@
       const format = formats.find((f) => f.id === message.format && f.supported);
       if (format) record(format);
       else vscode.postMessage({ type: 'save', ext: message.format, data: '' });
+    } else if (message.type === 'fullscreen') {
+      // For tests: the same as the F key.
+      void toggleFullscreen();
     } else if (message.type === 'busy') {
       status.textContent = message.text || '';
     } else if (message.type === 'saved') {

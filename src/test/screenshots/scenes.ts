@@ -318,6 +318,8 @@ export const scenes: Scene[] = [
       await delay(2000);
       await press(cdp, 'f', 'KeyF', 70);
       await delay(1500);
+      // Saved for checking: the reel fills the editor area, and VS Code's own window is unchanged.
+      await cdp.capture(path.join(require('os').tmpdir(), 'git-reel-fullscreen-check.png'));
     },
     async cleanup() {
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');

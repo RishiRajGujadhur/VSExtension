@@ -4,7 +4,7 @@ import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
 
 /** The commands a chart's hover card may run; anything else sent back by a page is ignored. */
-const allowed = new Set(['editor.action.rename', 'tsStructure.safeDelete', 'tsStructure.changeSignature', 'tsStructure.moveMembers', 'editor.action.codeAction', 'editor.action.refactor', codeActionCommand()]);
+const allowed = new Set(['tsStructure.explainCode', 'editor.action.rename', 'tsStructure.safeDelete', 'tsStructure.changeSignature', 'tsStructure.moveMembers', 'editor.action.codeAction', 'editor.action.refactor', codeActionCommand()]);
 
 /** Stands for "apply the code action with this id", for edits that come from the editor's own code actions. */
 function codeActionCommand(): string {
@@ -44,7 +44,7 @@ export async function editsFor(document: vscode.TextDocument, line: number, char
     return [];
   }
   // Ask where Extract would apply (the expression), or else on the declaration's name.
-  const spot = ours.find((a) => a.endLine !== undefined) ?? ours[0];
+  const spot = ours.find((a) => a.endLine !== undefined && a.command !== 'tsStructure.explainCode') ?? ours[0];
   if (!spot) return ours;
   const range = new vscode.Range(spot.line, spot.character, spot.endLine ?? spot.line, spot.endCharacter ?? spot.character);
   let actions: vscode.CodeAction[] = [];

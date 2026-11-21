@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { editActionsAt } from '../structure/editActions';
+import { editActionsAt, grouped } from '../structure/editActions';
 import { ActiveFeature } from '../ui/activeFeature';
 
 const code = [
@@ -17,7 +17,7 @@ const code = [
 const labels = (line: number, character = 0) => editActionsAt('/p/orders.ts', code, line, character).map((a) => a.label);
 
 test('edit actions: a function box offers rename, safe delete, change signature and move, with the cursor on its name', () => {
-  assert.deepEqual(labels(0), ['Rename', 'Delete safely', 'Change signature', 'Move to a file']);
+  assert.deepEqual(labels(0), ['Rename', 'Delete safely', 'Change signature', 'Explain this code', 'Move to a file']);
   const rename = editActionsAt('/p/orders.ts', code, 0, 0)[0];
   assert.equal(rename.character, code.indexOf('placeOrder'));
   // An arrow function in a variable is a function too.
@@ -27,7 +27,7 @@ test('edit actions: a function box offers rename, safe delete, change signature 
 
 test('edit actions: a variable can be inlined; a method is not moved to another file; a class is', () => {
   assert.deepEqual(labels(1, 8), ['Rename', 'Delete safely', 'Inline']);
-  assert.deepEqual(labels(6, 2), ['Rename', 'Delete safely', 'Change signature']);
+  assert.deepEqual(labels(6, 2), ['Rename', 'Delete safely', 'Change signature', 'Explain this code']);
   assert.ok(labels(5).includes('Move to a file'));
 });
 
@@ -121,4 +121,14 @@ test('card edits: Edit and File rows, Delete apart, one Move button with the oth
   assert.deepEqual(by('danger'), ['Delete safely']);
   // The editor's "Move to file" repeats ours and goes; "Move to a new file" waits under Move's ▾.
   assert.deepEqual(out.filter((x) => x.underMove).map((x) => x.label), ['Move to a new file']);
+});
+
+test('edit actions: a function or method card explains it, the whole of it selected first, the first button', () => {
+  const explain = editActionsAt('/p/orders.ts', code, 8, 0).find((a) => a.command === 'tsStructure.explainCode')!;
+  // The arrow function's whole statement: from "const handler" to its end.
+  assert.deepEqual([explain.line, explain.character, explain.endLine, explain.endCharacter], [8, 0, 8, 'const handler = (e: Event) => e;'.length]);
+  assert.equal(grouped(editActionsAt('/p/orders.ts', code, 0, 0))[0].label, 'Explain this code');
+  // A class or a variable is not a function: nothing to explain step by step.
+  assert.ok(!labels(5).includes('Explain this code'));
+  assert.ok(!labels(1, 8).includes('Explain this code'));
 });
