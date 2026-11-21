@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { hashText, normalizePath } from '../analysis/paths';
 import { AnalysisError } from '../analysis/types';
 import { csharpUsagesByName } from './nameSearch';
+import { csharpSources, onWorkspace } from './workspace';
+import { csharpCallGraphByName, csharpFamilyTree } from './charts';
 import { Report, ReportLocation, ReportNode, plural } from '../structure/report';
 import { CallDirection, callGraphControls } from '../navigate/callGraph';
 import { classifyCSharpUsage } from './usageKind';
@@ -126,7 +128,8 @@ const maxPerLevel = 25;
 export async function csharpCallGraphReport(document: vscode.TextDocument, position: vscode.Position, options: { depth: number; direction: CallDirection }): Promise<Report> {
   const items = await vscode.commands.executeCommand<vscode.CallHierarchyItem[]>('vscode.prepareCallHierarchy', document.uri, position);
   const root = items?.[0];
-  if (!root) throw new NoLanguageServer('call hierarchy here: put the cursor on a method');
+  // No language server answered: callers and calls by name, from the bundled parser.
+  if (!root) return onWorkspace((sources, file, offset) => csharpCallGraphByName(sources, file, offset, options))(document, position);
   const sources = new Sources();
   let omitted = 0;
   const node = async (item: vscode.CallHierarchyItem, ranges: vscode.Range[], children: ReportNode[] | undefined): Promise<ReportNode> => ({
@@ -192,7 +195,8 @@ const typeWord = (kind: vscode.SymbolKind) => (kind === vscode.SymbolKind.Interf
 export async function csharpHierarchyReport(document: vscode.TextDocument, position: vscode.Position): Promise<Report> {
   const items = await vscode.commands.executeCommand<vscode.TypeHierarchyItem[]>('vscode.prepareTypeHierarchy', document.uri, position);
   const target = items?.[0];
-  if (!target) throw new NoLanguageServer('type hierarchy here: put the cursor on a class or interface');
+  // No language server answered: the family tree by name, from the bundled parser.
+  if (!target) return onWorkspace(csharpFamilyTree)(document, position);
   const sources = new Sources();
   const levels = 4;
   async function walk(item: vscode.TypeHierarchyItem, up: boolean, level: number, seen: Set<string>): Promise<ReportNode[]> {
@@ -249,16 +253,8 @@ export async function csharpHierarchyReport(document: vscode.TextDocument, posit
 /** Find usages by name, with the bundled parser, in the workspace's C# files: for when no language server answers. */
 async function usagesByName(document: vscode.TextDocument, position: vscode.Position, name: string): Promise<Report> {
   if (!/^@?[A-Za-z_]\w*$/.test(name)) throw new AnalysisError('Put the cursor on a name: a class, method, property, field, variable or parameter.');
-  const uris = await vscode.workspace.findFiles('**/*.cs', '{**/bin/**,**/obj/**,**/node_modules/**,**/.git/**}', 4000);
-  const open = new Map(vscode.workspace.textDocuments.filter((d) => d.uri.scheme === 'file').map((d) => [normalizePath(d.uri.fsPath), d]));
+  const files = await csharpSources(document);
   const here = normalizePath(document.uri.fsPath);
-  const files: { file: string; text: string }[] = [{ file: here, text: document.getText() }];
-  for (const uri of uris) {
-    const file = normalizePath(uri.fsPath);
-    if (file === here) continue;
-    const text = open.get(file)?.getText() ?? Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
-    files.push({ file, text });
-  }
   const usages = await csharpUsagesByName(files, name.replace(/^@/, ''), { file: here, offset: document.offsetAt(position) });
   if (!usages.length) throw new AnalysisError(`No ${name} found in the workspace's C# files.`);
   const hashes = Object.fromEntries(files.filter((f) => usages.some((u) => u.location.file === f.file)).map((f) => [f.file, hashText(f.text)]));

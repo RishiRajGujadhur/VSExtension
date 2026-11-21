@@ -1,4 +1,6 @@
 import ts = require('typescript');
+import { csharpArguments, csharpDataFlow, csharpErrorPaths, csharpOverrideReach, csharpTaskErrors, csharpVariableChanges, csharpWhoImports } from '../csharp/charts';
+import { onWorkspace } from '../csharp/workspace';
 import { NoLanguageServer, csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
 import { tsqlCallGraphReport, tsqlUsagesReport } from '../tsql/workspace';
 import { bundleWeightReport } from '../navigate/bundleWeight';
@@ -305,12 +307,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
    */
   const editorCommand = (id: string, title: string, compute: Compute, others: OtherLanguages = {}) =>
     registerCommand(id, () => {
-      const active = vscode.window.activeTextEditor;
-      const other = active && others[active.document.languageId];
-      if (active && other) {
-        const word = active.document.getWordRangeAtPosition(active.selection.active, /@?[\w#$]+/);
-        return runAnalysis(view, `${title}${word ? ` of ${active.document.getText(word)}` : ''}`, () => startingAtCursorIn(() => other(active.document, active.selection.active)));
-      }
+      const inOther = runInOtherLanguage(view, title, others);
+      if (inOther) return inOther;
       const editor = sourceEditor();
       if (editor) {
         const target = editorTarget(projects, editor);
@@ -576,9 +574,9 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     // A graph's levels or other options, then the analysis again with them.
     registerCommand('tsStructure.report.changeControls', (id?: string, value?: unknown) => changeControls(view, id, value)),
     registerCommand('tsStructure.clearReport', () => view.clear()),
-    editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset, { byDirection: vscode.workspace.getConfiguration('tsStructure').get('dataFlow.groupByDirection', true) })),
+    editorCommand('tsStructure.dataFlow', 'Data Flow', (t) => dataFlowReport(t.project(), t.fileName, t.offset, { byDirection: vscode.workspace.getConfiguration('tsStructure').get('dataFlow.groupByDirection', true) }), { csharp: onWorkspace(csharpDataFlow) }),
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
-    editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpVariableChanges) }),
     editorCommand('tsStructure.raceConditions', 'Race Conditions', (t) => raceReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.explainValue', 'Explain Value Path', (t) => explainValueReport(t.project(), t.fileName, t.offset)),
     editorCommand('tsStructure.valueTimeline', 'Value timeline', (t) => valueTimelineReport(t.project(), t.fileName, t.offset)),
@@ -589,7 +587,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return withNote(mutationReport(program, t.fileName, t.offset, files), note);
     }),
     editorCommand('tsStructure.nullability', 'Nullability', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.promiseRejections', 'Promise rejections', (t) => rejectionReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.promiseRejections', 'Promise rejections', (t) => rejectionReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpTaskErrors) }),
     // The whole project still decides what is used; the scope only limits which exports are reported.
     scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: fineScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),
     // From the Explorer: only the dead exports in the folders picked, with the whole project still deciding what is used.
@@ -612,6 +610,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return withNote(patternsReport(files, t.folder), note);
     }),
     registerCommand('tsStructure.whoImports', (uri?: vscode.Uri) => {
+      const inOther = uri ? undefined : runInOtherLanguage(view, 'Finding importers', { csharp: onWorkspace((sources, file) => csharpWhoImports(sources, file)) });
+      if (inOther) return inOther;
       const file = uri?.fsPath ?? sourceEditor()?.document.uri.fsPath;
       if (!file) return;
       const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file))?.uri.fsPath;
@@ -625,7 +625,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return runAnalysis(view, `Weighing what ${path.basename(file)} pulls in`, () => bundleWeightReport(projects.analysisProject(file, folder).program(), normalizePath(file), folder));
     }),
     scopedCommand('tsStructure.findImportCycles', 'Finding import cycles', { id: 'cycles', kinds: projectScopes }, (t, scope) => cyclesReport(t.project().program(), t.folder, scopeFilter(scope.spec))),
-    editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.exceptionFlow', 'Exception flow', (t) => exceptionFlowReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpErrorPaths) }),
     scopedCommand('tsStructure.auditTypeAssertions', 'Auditing type assertions', { id: 'assertionAudit', kinds: fineScopes }, (t, scope) => {
       const program = t.project().program();
       const ignoreTests = vscode.workspace.getConfiguration('tsStructure', vscode.Uri.file(t.fileName)).get('typeAssertion.ignoreTestFiles', false);
@@ -698,7 +698,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     }),
     editorCommand('tsStructure.reexportChain', 'Tracing re-exports', (t) => reexportChainReport(t.project(), t.fileName, t.offset, t.folder)),
     editorCommand('tsStructure.typeHierarchy', 'Building hierarchy', (t) => hierarchyReport(t.project(), t.fileName, t.offset, t.folder), { csharp: csharpHierarchyReport }),
-    editorCommand('tsStructure.overrideImpact', 'Override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder)),
+    editorCommand('tsStructure.overrideImpact', 'Override impact', (t) => overrideImpactReport(t.project(), t.fileName, t.offset, t.folder), { csharp: onWorkspace(csharpOverrideReach) }),
     registerCommand('tsStructure.report.swapDependency', (node: ReportNode) => {
       const { from, to } = (node?.action ?? {}) as { from?: string; to?: string };
       if (from && to) {
@@ -774,6 +774,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       return runAnalysis(view, 'Finding dependency paths', () => dependencyPathReport(program ?? projects.analysisProject(from, folder).program(), from, target, folder));
     }),
     registerCommand('tsStructure.argumentFlow', () => {
+      const inOther = runInOtherLanguage(view, 'Tracing argument propagation', { csharp: onWorkspace(csharpArguments) });
+      if (inOther) return inOther;
       const editor = sourceEditor();
       if (!editor) {
         return;
@@ -877,4 +879,16 @@ async function startingAtCursorIn(compute: () => Report | Promise<Report>): Prom
     }
     throw error;
   }
+}
+
+/**
+ * In a C# or T-SQL file with a version of the analysis for it: runs that version and returns its promise; otherwise
+ * undefined, and the TypeScript version runs.
+ */
+function runInOtherLanguage(view: StructureView, title: string, others: OtherLanguages): Promise<Report | undefined> | undefined {
+  const active = vscode.window.activeTextEditor;
+  const other = active && others[active.document.languageId];
+  if (!active || !other) return undefined;
+  const word = active.document.getWordRangeAtPosition(active.selection.active, /@?[\w#$]+/);
+  return runAnalysis(view, `${title}${word ? ` of ${active.document.getText(word)}` : ''}`, () => startingAtCursorIn(() => other(active.document, active.selection.active)));
 }

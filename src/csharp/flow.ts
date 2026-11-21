@@ -13,7 +13,7 @@ import { parseCSharp } from './parser';
  */
 
 /** Things that have code of their own to chart: methods, constructors, accessors, local functions and lambdas. */
-const functionTypes = new Set([
+export const functionTypes = new Set([
   'method_declaration',
   'constructor_declaration',
   'destructor_declaration',
@@ -69,7 +69,7 @@ export function csharpFunctionAt(root: SyntaxNode, offset: number): SyntaxNode |
 }
 
 /** A readable name: `Cart.Price`, `get Total`, `lambda`. */
-function functionName(fn: SyntaxNode): string {
+export function functionName(fn: SyntaxNode): string {
   const name = fn.childForFieldName('name')?.text;
   const owner = (() => {
     for (let p = fn.parent; p; p = p.parent) if (['class_declaration', 'struct_declaration', 'record_declaration', 'interface_declaration'].includes(p.type)) return p.childForFieldName('name')?.text;

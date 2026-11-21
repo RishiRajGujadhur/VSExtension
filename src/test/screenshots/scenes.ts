@@ -319,6 +319,54 @@ export const scenes: Scene[] = [
     settle: 2500,
   },
   {
+    name: 'csharp-chart-dataflow',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'amount *= 0.9m');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, '8', 'Digit8', 56);
+    },
+    settle: 5000,
+  },
+  {
+    name: 'csharp-chart-errors',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'var amount = cart.Price()');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, 'x', 'KeyX', 88);
+      await delay(3000);
+      await vscode.commands.executeCommand('tsStructure.report.showDiagram');
+    },
+    settle: 4000,
+  },
+  {
+    name: 'csharp-chart-callers',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'var amount = cart.Price()');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, 'C', 'KeyC', 67, { shift: true });
+    },
+    settle: 5000,
+  },
+  {
+    name: 'csharp-chart-family',
+    async run({ open, delay, cdp }) {
+      await open('csharp/OrderService.cs', 'class Cart : IPriced');
+      await delay(1500);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, 'h', 'KeyH', 72);
+      await delay(3000);
+      await vscode.commands.executeCommand('tsStructure.report.showDiagram');
+    },
+    settle: 4000,
+  },
+  {
     name: 'csharp-inspections',
     async run({ open, delay }) {
       await open('csharp/OrderService.cs', 'throw ex;');

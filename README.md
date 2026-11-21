@@ -61,6 +61,10 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 ![The flowchart of a C# method, with its paths listed beside it](docs/images/csharp-flowchart.gif)
 
 - **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart any C# method, constructor, property accessor or lambda, with every path listed and impossible ones flagged.
+- **Charts** work in C# files too: Data flow and its chart, Error paths, Promise rejections (tasks not awaited, `async void`), Changes to this variable, Arguments passed in, Family tree, Override reach and Who imports this, from the same shortcuts and the Charts tab.
+
+![The data flow chart of a C# variable: where its values come from and where they go](docs/images/csharp-chart-dataflow.gif)
+
 - **Inspections** underline C# slips as you type: empty `catch`, `throw ex`, `async void`, assigning or comparing a value with itself, identical `if`/`else` branches and more.
 - These two need nothing else installed: a C# parser ships with Code X-Ray.
 - **Find usages** uses the C# extension's language server when it is installed, and otherwise finds the name in the workspace's `.cs` files (it says so). **Callers and calls** and **Family tree** need the **C# extension** (or C# Dev Kit).

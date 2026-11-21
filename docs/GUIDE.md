@@ -354,6 +354,19 @@ Find usages, Callers and calls and Family tree work in C# files too. They ask th
 
 With no C# extension, or before it has loaded the solution, Find usages finds the name instead: every identifier with that name in the workspace's `.cs` files, from the bundled parser, filed the same way (declarations as definitions), with a note that same-named symbols elsewhere are included. Callers and calls and Family tree say they need the C# extension, with a button to install it.
 
+The charts work in C# files as well, from the bundled parser (names matched as text across the workspace's `.cs` files, so same-named symbols elsewhere can be included; each report says so):
+
+- **Data flow** and **Data flow chart**: a local or parameter within its method, a field or property across the class; flows in (declaration, assignments, updates, the parameter) and flows out (passed to a call, returned, into another variable, deciding a branch).
+- **Error paths**: what the method throws and whether a catch around it handles it or it escapes, what its calls into the workspace can throw, and each catch clause (handles it, swallows it, throws again).
+- **Promise rejections**: awaited tasks and where their errors go, tasks not awaited (their errors are lost), and `async void`.
+- **Changes to this variable**: every write, by method.
+- **Arguments passed in**: the value each call (or `new`) passes to the parameter at the cursor, named arguments and defaults included, across files.
+- **Family tree** and **Callers and calls**: from the C# extension when it answers, otherwise by name: base types and interfaces, subtypes, members; callers and callees a few levels each way, library calls marked.
+- **Override reach**: what the member overrides or implements, its overrides (and `new` members hiding it) in subtypes, and its call sites.
+- **Who imports this**: the files using the file's namespace (a `using` or the same namespace) and naming its types.
+
+Why this import… (a chain of imports between two files) and React state are TypeScript and JavaScript only.
+
 In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (Data flow, Null checks…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.
 
 Two more work with nothing else installed, from a C# parser (tree-sitter's C# grammar, as WebAssembly) that ships with Code X-Ray:

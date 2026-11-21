@@ -17,15 +17,30 @@ export interface OtherLanguage {
   name: string;
   /** The commands that work in its files, in the order they are offered. */
   commands: string[];
-  /** Commands that need the language's own extension (a language server), marked so in the list. */
-  needsServer?: string[];
+  /** Commands whose answers are exact with the language's own extension (a language server), marked so in the list. */
+  exactWithServer?: string[];
 }
 
 export const otherLanguages: Record<string, OtherLanguage> = {
   csharp: {
     name: 'C#',
-    commands: ['tsStructure.controlFlow', 'tsStructure.dependenceGraph', 'tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.typeHierarchy'],
-    needsServer: ['tsStructure.callGraph', 'tsStructure.typeHierarchy'],
+    commands: [
+      'tsStructure.controlFlow',
+      'tsStructure.dependenceGraph',
+      'tsStructure.dataFlow',
+      'tsStructure.dataFlowDiagram',
+      'tsStructure.semanticUsages',
+      'tsStructure.semanticUsagesInFile',
+      'tsStructure.callGraph',
+      'tsStructure.exceptionFlow',
+      'tsStructure.promiseRejections',
+      'tsStructure.mutationTrackingVariable',
+      'tsStructure.argumentFlow',
+      'tsStructure.typeHierarchy',
+      'tsStructure.overrideImpact',
+      'tsStructure.whoImports',
+    ],
+    exactWithServer: ['tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.typeHierarchy'],
   },
   sql: {
     name: 'T-SQL',
@@ -66,7 +81,7 @@ export async function otherLanguageActions(language: OtherLanguage): Promise<voi
   picker.placeholder = `What Code X-Ray can do here (inspections show in the Problems panel as you type)`;
   picker.items = usable(language).map((command) => ({
     label: `$(${commandIcons[command] ?? 'symbol-misc'}) ${nameOf(command)}`,
-    description: language.needsServer?.includes(command) ? `needs the ${language.name} extension` : undefined,
+    description: language.exactWithServer?.includes(command) ? `more exact with the ${language.name} extension` : undefined,
     command,
   }));
   const picked = await awaitPick(picker, (p) => p.selectedItems[0] ?? p.activeItems[0]);
