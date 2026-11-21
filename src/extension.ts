@@ -119,12 +119,18 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   const controlFlow = new ControlFlowPanel(context.extensionUri, projects);
   controlFlow.register(context);
   // The Git reel: the changes since a revision, as a short video.
-  const reel = new ReelPanel(context.extensionUri, context.workspaceState);
+  const reel = new ReelPanel(context.extensionUri, context.workspaceState, context.globalStorageUri.fsPath);
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),
     // For tests: records the open reel to a file.
     vscode.commands.registerCommand('tsStructure.gitReel.exportTo', (file: string, format: 'webm' | 'mp4') => reel.exportTo(file, format)),
+    vscode.commands.registerCommand('tsStructure.gitReel.expectExport', (file: string) => reel.expectExport(file)),
+    vscode.commands.registerCommand('tsStructure.gitReel.lastSound', () => reel.lastSound),
+    vscode.commands.registerCommand('tsStructure.gitReel.voice', async (on: boolean) => {
+      await reel.setVoice(on);
+      return reel.current;
+    }),
   );
   // The Actions view at the top of the sidebar: search, Analyze and Edit tabs, Most Used and categories.
   const actionsView = new ActionsView(context.extensionUri, context.globalState, context.extension.packageJSON.contributes?.keybindings ?? []);

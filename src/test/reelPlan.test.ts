@@ -33,16 +33,20 @@ test('Git reel: overview, a scene per changed function with its flowchart, other
   // The lock file and .env are left out.
   assert.equal(plan.meta.skipped, 2);
   assert.equal(plan.meta.files, 3);
-  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', 'diff', 'diff', 'diff', 'summary']);
+  // The function's code, then its flowchart on its own.
+  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', 'diff', 'flow', 'diff', 'diff', 'summary']);
   const fn = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.symbol === 'total')!;
-  assert.equal(fn.caption, 'total(): 2 new boxes · 3 new paths, 2 paths gone');
-  assert.equal(fn.flow?.nodes.filter((n) => n.state === 'added').length, 2);
+  assert.equal(fn.caption, 'total(): Returns 0 early when !items.length. 3 new paths; 2 paths no longer taken.');
+  assert.equal(fn.line, 2);
+  const flow = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow')!;
+  assert.equal(flow.caption, 'total(): 2 new boxes · 3 new paths, 2 paths gone');
+  assert.equal(flow.flow.nodes.filter((n) => n.state === 'added').length, 2);
   assert.deepEqual(fn.lines.filter((l) => l.kind === 'add').map((l) => l.text), ['  if (!items.length) return 0;']);
   // The secret is masked in the code shown.
   const config = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'diff' }> => s.kind === 'diff' && s.file === 'config.ts')!;
-  assert.equal(config.caption, 'New file config.ts (+2 lines)');
+  assert.equal(config.caption, 'config.ts: Adds a new file, config.ts, with 2 lines. Exports apiKey.');
   assert.match(config.lines[0].text, /apiKey = "••••"/);
-  assert.ok(plan.scenes.reduce((n, s) => n + s.seconds, 0) <= 60);
+  assert.ok(plan.scenes.reduce((n, s) => n + s.seconds, 0) <= 90);
   // The same change gives the same plan.
   assert.deepEqual(await buildReelPlan({ repo: dir, ref: 'HEAD', baseLabel: 'the last commit' }), plan);
 });

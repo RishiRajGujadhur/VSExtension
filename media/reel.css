@@ -56,3 +56,16 @@ body.recording .controls button, body.recording #timeline, body.recording header
 .link[hidden] { display: none; }
 textarea.caption { box-sizing: border-box; width: 100%; resize: vertical; padding: 5px 7px; border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, .35)); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; }
 textarea.caption:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+
+/* Voice, scenes switched off, export progress. */
+#voiceToggle.on { color: var(--vscode-focusBorder); background: color-mix(in srgb, var(--vscode-focusBorder) 18%, transparent); }
+.scene.skipped { opacity: .5; }
+.scene.skipped textarea { text-decoration: line-through; }
+.scene-head input[type="checkbox"] { margin: 0; flex: none; }
+.progress { display: inline-block; width: 140px; height: 6px; border-radius: 3px; overflow: hidden; background: var(--vscode-progressBar-background, rgba(128, 128, 128, .25)); background: color-mix(in srgb, var(--vscode-foreground) 15%, transparent); }
+.progress[hidden] { display: none; }
+#progressBar { display: block; height: 100%; width: 0; background: var(--vscode-progressBar-background, #0e70c0); transition: width 120ms linear; }
+body.recording #cancel { pointer-events: auto; opacity: 1; }
+
+/* Hidden means hidden, whatever the button styles say. */
+[hidden] { display: none !important; }

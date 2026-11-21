@@ -305,6 +305,34 @@ export const scenes: Scene[] = [
     settle: 3500,
   },
   {
+    // Not for the docs: the voice-over end to end. The reel with the voice on, exported with the E key (a real key
+    // press, so the page may start its sound), written to the temp folder for checking.
+    name: 'git-reel-voice-check',
+    still: true,
+    async run({ open, delay, cdp }) {
+      await open('src/pricing.ts', 'const coupon = findCoupon');
+      const editor = vscode.window.activeTextEditor!;
+      const text = editor.document.getText();
+      await editor.edit((b) => b.insert(editor.document.positionAt(text.indexOf('  const coupon = findCoupon')), '  if (amount <= 0) {\n    return 0;\n  }\n'));
+      await editor.document.save();
+      await vscode.commands.executeCommand('tsStructure.gitReel', 'HEAD');
+      await delay(1500);
+      await vscode.commands.executeCommand('tsStructure.gitReel.voice', true);
+      await delay(1500);
+      const done = vscode.commands.executeCommand<number>('tsStructure.gitReel.expectExport', path.join(require('os').tmpdir(), 'reel-voice-e2e.webm'));
+      await press(cdp, 'e', 'KeyE', 69);
+      const size = await done;
+      const sound = await vscode.commands.executeCommand('tsStructure.gitReel.lastSound');
+      fs.writeFileSync(path.join(require('os').tmpdir(), 'reel-voice-e2e.txt'), `size ${size} ${JSON.stringify(sound)}`);
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('tsStructure.gitReel.voice', false);
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      execFileSync('git', ['checkout', '--', '.'], { cwd: root() });
+    },
+    settle: 500,
+  },
+  {
     // Highlighted code: the Actions view shows only the actions that work with it. A name first, then code.
     name: 'actions-for-selection',
     async run({ open, delay }) {

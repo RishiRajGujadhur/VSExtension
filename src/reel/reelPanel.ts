@@ -8,9 +8,13 @@ import { iconButton, webviewPage, webviewRoots } from '../ui/webviewPage';
 import { followAnimations } from '../ui/animationSettings';
 import { remedies, showProblem, unexpectedRemedies } from '../ui/problems';
 import { AnalysisError } from '../analysis/types';
+import { listVoices, speak } from './voice';
+import { speakable } from './describe';
 
 const lastRefKey = 'tsStructure.reel.lastRevision';
 const captionsKey = 'tsStructure.reel.captions';
+const skippedKey = 'tsStructure.reel.skipped';
+const voiceKey = 'tsStructure.reel.voice';
 
 /** "Branch point with main" → "main"; HEAD → "the last commit". */
 export function baseLabelOf(choice: { ref: string; label: string }): string {
@@ -30,11 +34,20 @@ export class ReelPanel {
   private request: ReelRequest | undefined;
   private plan: ReelPlan | undefined;
   private generated: Record<string, string> = {};
+  /** Each scene's length without a voice: with one, a scene lasts at least as long as its clip. */
+  private baseSeconds: Record<string, number> = {};
+  /** The voice-over: on or off, which voice, and the clips by scene. */
+  private voice: { on: boolean; name?: string; voices: string[]; clips: Record<string, string> } = { on: false, voices: [], clips: {} };
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly state: vscode.Memento,
-  ) {}
+    /** Where recorded voice clips are kept. */
+    private readonly storage: string,
+  ) {
+    const saved = state.get<{ on: boolean; name?: string }>(voiceKey);
+    if (saved) this.voice = { ...this.voice, on: saved.on, name: saved.name };
+  }
 
   /** Asks what to compare with (unless given), builds the plan and shows the player. Returns the plan, for tests. */
   async open(refArg?: string): Promise<ReelPlan | undefined> {
@@ -63,11 +76,29 @@ export class ReelPanel {
   exportTo(file: string, format: 'webm' | 'mp4'): Promise<number> {
     return new Promise((resolve, reject) => {
       if (!this.panel) return reject(new Error('No Git reel is open.'));
-      this.pendingExport = { file, resolve };
+      this.pendingExport = { file, resolve, reject };
       void this.panel.webview.postMessage({ type: 'record', format });
     });
   }
-  private pendingExport: { file: string; resolve: (size: number) => void } | undefined;
+  /** For tests: the next export (started in the page, say with its E key) is written to this file. */
+  expectExport(file: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.pendingExport = { file, resolve, reject };
+    });
+  }
+  /** For tests: what the page said about the sound of the last export. */
+  lastSound: unknown;
+  private pendingExport: { file: string; resolve: (size: number) => void; reject: (error: Error) => void } | undefined;
+
+  /** Turns the voice-over on (recording every caption) or off, with a voice by name if given. */
+  async setVoice(on: boolean, name?: string): Promise<void> {
+    this.voice.on = on;
+    if (name !== undefined) this.voice.name = name || undefined;
+    void this.state.update(voiceKey, { on: this.voice.on, name: this.voice.name });
+    if (this.voice.on) await this.voiceOver(undefined, false);
+    else this.applyVoiceTiming();
+    this.post();
+  }
 
   /** For tests: the plan on show. */
   get current(): ReelPlan | undefined {
@@ -85,7 +116,7 @@ export class ReelPanel {
     this.ready = false;
     this.panel.webview.html = page(this.panel.webview, this.extensionUri);
     followAnimations(this.panel);
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; id?: string; caption?: string | null; data?: string; ext?: string }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; id?: string; caption?: string | null; data?: string; ext?: string; skip?: boolean; on?: boolean; voice?: string; text?: string; file?: string; line?: number; error?: string; sound?: unknown }) => {
       if (message.type === 'ready') {
         this.ready = true;
         this.post();
@@ -93,12 +124,33 @@ export class ReelPanel {
         await this.build();
       } else if (message.type === 'caption' && message.id) {
         this.rememberCaption(message.id, message.caption ?? undefined);
+        // A new caption, a new clip for its scene.
+        if (this.voice.on) await this.voiceOver([message.id]);
+      } else if (message.type === 'skip' && message.id) {
+        const skipped = new Set(this.state.get<string[]>(this.key(skippedKey)) ?? []);
+        if (message.skip) skipped.add(message.id);
+        else skipped.delete(message.id);
+        void this.state.update(this.key(skippedKey), [...skipped]);
+      } else if (message.type === 'voice') {
+        await this.setVoice(message.on === true, message.voice);
+      } else if (message.type === 'copy' && typeof message.text === 'string') {
+        await vscode.env.clipboard.writeText(message.text);
+        void vscode.window.setStatusBarMessage('Copied the reel as Markdown: paste it into a pull request', 5000);
+      } else if (message.type === 'open' && message.file && this.request) {
+        // The scene's code, at its first changed line.
+        const line = Math.max(0, (message.line ?? 1) - 1);
+        await vscode.window.showTextDocument(vscode.Uri.file(path.join(this.request.repo, message.file)), { selection: new vscode.Range(line, 0, line, 0), viewColumn: vscode.ViewColumn.Beside });
       } else if (message.type === 'save' && (message.ext === 'webm' || message.ext === 'mp4')) {
         const video = Buffer.from(message.data ?? '', 'base64');
+        this.lastSound = message.sound;
         const pending = this.pendingExport;
         this.pendingExport = undefined;
-        // Nothing recorded: this editor cannot make that format.
-        if (!video.length) pending?.resolve(0);
+        // Nothing recorded: this editor cannot make that format, or the recording failed (the page said why).
+        if (!video.length) {
+          if (pending && message.error) pending.reject(new Error(message.error));
+          else pending?.resolve(0);
+          if (!pending && message.error) void showProblem(`The Git reel could not be exported: ${message.error}`, [], 'info');
+        }
         else if (pending) {
           fs.writeFileSync(pending.file, video);
           pending.resolve(video.length);
@@ -123,6 +175,9 @@ export class ReelPanel {
       const written = this.state.get<Record<string, string>>(this.captionKey()) ?? {};
       const earlier: ReelPlan = { ...fresh, scenes: fresh.scenes.filter((s) => written[s.id] !== undefined).map((s) => ({ ...s, caption: written[s.id], captionSource: 'user' })) };
       this.plan = keepUserCaptions(fresh, earlier);
+      this.baseSeconds = Object.fromEntries(this.plan.scenes.map((s) => [s.id, s.seconds]));
+      this.voice.clips = {};
+      if (this.voice.on) await this.voiceOver(undefined, false);
       if (this.plan.scenes.length <= 2 && !this.plan.meta.files) {
         void showProblem(`No changes since ${request.baseLabel}: the reel has nothing to show.`, [], 'info');
       }
@@ -138,7 +193,51 @@ export class ReelPanel {
   }
 
   private captionKey(): string {
-    return `${captionsKey}:${this.request?.repo}:${this.request?.ref}`;
+    return this.key(captionsKey);
+  }
+  /** A memento key for this change: the repository and what it is compared with. */
+  private key(prefix: string): string {
+    return `${prefix}:${this.request?.repo}:${this.request?.ref}`;
+  }
+
+  /**
+   * Records the voice-over of the scenes (all, or those given) with the system voice and fits each scene to its clip.
+   * Says so, and turns the voice off, when this computer has no voice to use.
+   */
+  private async voiceOver(ids?: string[], post = true): Promise<void> {
+    if (!this.plan) return;
+    if (!this.voice.voices.length) this.voice.voices = await listVoices();
+    if (!this.voice.voices.length) {
+      this.voice.on = false;
+      void showProblem(process.platform === 'linux' ? 'The voice-over needs espeak-ng (or espeak): install it, then turn the voice on again.' : 'No system voice was found for the voice-over.', [], 'info');
+      if (post) this.post();
+      return;
+    }
+    const scenes = this.plan.scenes.filter((s) => !ids || ids.includes(s.id));
+    void this.panel?.webview.postMessage({ type: 'busy', text: `Recording the voice-over (${scenes.length} scene${scenes.length === 1 ? '' : 's'})…` });
+    try {
+      const clips = await speak(scenes.map((s) => ({ id: s.id, text: speakable(s.caption) })), this.voice.name ?? this.voice.voices[0], path.join(this.storage, 'reel-voice'));
+      for (const id of ids ?? this.plan.scenes.map((s) => s.id)) delete this.voice.clips[id];
+      for (const clip of clips) this.voice.clips[clip.id] = clip.wav.toString('base64');
+      this.clipSeconds = { ...this.clipSeconds, ...Object.fromEntries(clips.map((c) => [c.id, c.seconds])) };
+      this.applyVoiceTiming();
+    } catch (error) {
+      this.voice.on = false;
+      void showProblem(`The voice-over could not be recorded: ${error instanceof Error ? error.message : String(error)}`, [], 'info');
+    }
+    void this.panel?.webview.postMessage({ type: 'busy', text: '' });
+    if (post) this.post();
+  }
+  private clipSeconds: Record<string, number> = {};
+
+  /** With the voice on, each scene lasts at least as long as its clip and a breath; off, as it was built. */
+  private applyVoiceTiming(): void {
+    if (!this.plan) return;
+    for (const s of this.plan.scenes) {
+      const base = this.baseSeconds[s.id] ?? s.seconds;
+      const clip = this.voice.on ? this.clipSeconds[s.id] ?? 0 : 0;
+      s.seconds = Math.round(Math.max(base, clip ? clip + 0.9 : 0) * 10) / 10;
+    }
   }
 
   private rememberCaption(id: string, caption: string | undefined): void {
@@ -155,7 +254,13 @@ export class ReelPanel {
 
   private post(): void {
     if (!this.panel || !this.ready || !this.plan) return;
-    void this.panel.webview.postMessage({ type: 'plan', plan: this.plan, generated: this.generated });
+    void this.panel.webview.postMessage({
+      type: 'plan',
+      plan: this.plan,
+      generated: this.generated,
+      skipped: this.state.get<string[]>(this.key(skippedKey)) ?? [],
+      voice: { on: this.voice.on, name: this.voice.name ?? this.voice.voices[0], voices: this.voice.voices, clips: this.voice.on ? this.voice.clips : {} },
+    });
   }
 
   /** Saves a recorded video, by default under .codexray/reels in the repository, and offers to keep that out of Git. */
@@ -216,6 +321,9 @@ function page(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     <option value="graphite">Graphite</option>
     <option value="paper">Paper</option>
   </select>
+  <button type="button" id="voiceToggle" class="icon-button" aria-pressed="false" title="Voice-over"><i class="codicon codicon-mute" aria-hidden="true"></i></button>
+  <select id="voiceSelect" aria-label="Voice" title="Voice" hidden></select>
+  ${iconButton('copyMarkdown', 'markdown', 'Copy as Markdown: what each change does, for a pull request description')}
   ${iconButton('refresh', 'refresh', 'Read the changes again (captions you wrote are kept)')}
 </header>
 <p id="empty">Reading the changes…</p>
@@ -227,6 +335,8 @@ function page(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     <button type="button" id="play" class="primary" aria-pressed="false"><i class="codicon codicon-play" aria-hidden="true"></i> Play</button>
     <button type="button" id="restart" class="icon-button" title="Back to the start (Home)" aria-label="Back to the start"><i class="codicon codicon-debug-restart" aria-hidden="true"></i></button>
     <span id="status" role="status" aria-live="polite"></span>
+    <span class="progress" hidden><span id="progressBar"></span></span>
+    <button type="button" id="cancel" hidden>Cancel</button>
     <span id="exports"></span>
   </div>
 </section>

@@ -643,8 +643,9 @@ async function gitReelFlow(): Promise<void> {
   assert.equal(plan.meta.title, 'Uncommitted changes');
   const scene = plan.scenes.find((s) => s.symbol === 'grade');
   assert.ok(scene, plan.scenes.map((s) => s.caption).join(' | '));
-  assert.equal(scene.caption, 'grade(): 2 new boxes · 2 new paths, 1 path gone');
-  assert.equal(scene.flow?.nodes.filter((n) => n.state === 'added').length, 2);
+  assert.equal(scene.caption, "grade(): Adds a check, score > 75; otherwise returns 'C'. 2 new paths; 1 path no longer taken.");
+  assert.equal(plan.scenes.find((s) => s.kind === 'flow')?.caption, 'grade(): 2 new boxes · 2 new paths, 1 path gone');
+  assert.equal(plan.scenes.find((s) => s.kind === 'flow')?.flow?.nodes.filter((n) => n.state === 'added').length, 2);
   for (let i = 0; i < 40 && !vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label.startsWith('Git reel')); i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.label === 'Git reel: Uncommitted changes'), 'the Git reel tab');
   console.log(`git reel ok: ${plan.scenes.length} scenes, ${scene.caption}`);
@@ -660,6 +661,24 @@ async function gitReelFlow(): Promise<void> {
     const valid = format === 'webm' ? head.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) : head.subarray(4, 8).toString() === 'ftyp';
     assert.ok(valid, `${format} header ${head.toString('hex')}`);
     console.log(`git reel ${format} ok: ${(size / 1024).toFixed(0)} KB`);
+  }
+  // With the voice on: each scene at least as long as its clip, and the sound in the video.
+  const voiced = await vscode.commands.executeCommand<{ scenes: { seconds: number }[] }>('tsStructure.gitReel.voice', true);
+  if (process.platform === 'win32') {
+    assert.ok(voiced && voiced.scenes.length === plan.scenes.length && voiced.scenes.every((s) => s.seconds >= 3), 'scenes timed to the voice');
+    await new Promise((r) => setTimeout(r, 1500));
+    for (const format of ['webm', 'mp4'] as const) {
+      const out = path.join(os.tmpdir(), `reel-voice.${format}`);
+      const size = await vscode.commands.executeCommand<number>('tsStructure.gitReel.exportTo', out, format);
+      if (!size) continue;
+      // Started from code, with no click in the page, the browser keeps the sound off: the video is made all the same
+      // (the recorder scene checks the voice itself, started with a key press).
+      const bytes = fs.readFileSync(out);
+      const hasAudio = format === 'webm' ? bytes.includes(Buffer.from('A_OPUS')) : bytes.includes(Buffer.from('mp4a'));
+      assert.ok(size > 10_000, `${format} recorded with the voice on`);
+      console.log(`git reel ${format} with the voice on ok: ${(size / 1024).toFixed(0)} KB, sound ${hasAudio ? 'in' : 'held back without a click'}`);
+    }
+    await vscode.commands.executeCommand('tsStructure.gitReel.voice', false);
   }
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
