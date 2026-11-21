@@ -289,3 +289,16 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
 .xr-fade { animation: xr-fade-in 200ms ease-out; }
 @keyframes xr-fade-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .xr-fade { animation: none; } }
+
+/* Highlighted code: what it is and how many actions work with it, above the buttons (only those are shown). */
+.selection-banner { display: flex; align-items: flex-start; gap: 6px; margin: 4px 0 6px; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 45%, transparent);
+  background: color-mix(in srgb, var(--vscode-focusBorder, #007fd4) 10%, transparent); animation: xr-banner-in 160ms ease-out; }
+.selection-banner > .codicon { margin-top: 1px; color: var(--vscode-focusBorder, #007fd4); }
+.selection-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.selection-words strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selection-count { color: var(--vscode-descriptionForeground); font-size: 11px; }
+.selection-banner .link { flex: none; }
+.tab.no-fit { opacity: .45; }
+@keyframes xr-banner-in { from { opacity: 0; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .selection-banner { animation: none; } }

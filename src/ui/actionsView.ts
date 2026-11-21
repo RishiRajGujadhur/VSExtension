@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
+import { SelectionFit, otherLanguageSelectionFit, selectionFit } from '../structure/selectionFit';
+import { otherLanguages } from './otherLanguages';
+import { intentionsAtCursor } from './intentionProvider';
+import { parse } from './codeActions';
 import { followAnimations } from './animationSettings';
 import { ActionLayout, actionCatalog, actionId, actionTabs, changeLayout, LayoutChange, mostUsed, normalizeLayout, sectionIds } from '../structure/actionCatalog';
 import { graphCategories, newActions } from '../structure/actionCatalog';
-import { fittingAt } from './analysisActions';
+import { fittingAt, fittingSymbol } from './analysisActions';
 import { languageSelector } from './refactorCommands';
 import { pickGraph, runEntry } from './graphSwitch';
 import { featureOf } from '../structure/features';
@@ -75,6 +79,11 @@ export class ActionsView implements vscode.WebviewViewProvider {
         this.sendTab();
       }),
       vscode.commands.registerCommand('tsStructure.openGraph', () => pickGraph()),
+      // For tests: what the view shows for the code highlighted in the editor.
+      vscode.commands.registerCommand('tsStructure.actions.selection', () => {
+        const editor = vscode.window.activeTextEditor;
+        return editor && !editor.selection.isEmpty ? fitForSelection(editor) : undefined;
+      }),
       // The graphs that fit the symbol at the cursor, shown at the top of the Graphs tab.
       vscode.window.onDidChangeTextEditorSelection(() => this.cursorSoon()),
       vscode.window.onDidChangeActiveTextEditor(() => this.cursorSoon()),
@@ -111,11 +120,13 @@ export class ActionsView implements vscode.WebviewViewProvider {
     const editor = vscode.window.activeTextEditor;
     const source = !!editor && vscode.languages.match(languageSelector, editor.document) > 0;
     const fits = source ? fittingAt(editor!.document, editor!.document.offsetAt(editor!.selection.active)) : [];
+    // Highlighted code: only the actions that work with it are shown.
+    const selection = editor && !editor.selection.isEmpty ? fitForSelection(editor) : undefined;
     // Only when it changed: moving the cursor around one function sends nothing.
-    const sent = JSON.stringify([fits, source]);
+    const sent = JSON.stringify([fits, source, selection]);
     if (sent === this.lastCursor) return;
     this.lastCursor = sent;
-    void this.view.webview.postMessage({ type: 'cursor', fits, hasEditor: source });
+    void this.view.webview.postMessage({ type: 'cursor', fits, hasEditor: source, selection });
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -233,4 +244,26 @@ const footer = [
   { command: 'tsStructure.openSettings', label: 'Settings', icon: 'settings-gear' },
 ];
 
-
+/**
+ * What the highlighted code in the editor can be the subject of, with the actions that work with it (only those whose
+ * feature is on): from the TypeScript syntax in TypeScript and JavaScript, from the language's list in C# and T-SQL.
+ */
+function fitForSelection(editor: vscode.TextEditor): SelectionFit | undefined {
+  const { document, selection } = editor;
+  const [start, end] = [document.offsetAt(selection.start), document.offsetAt(selection.end)];
+  const enabled = (command: string) => {
+    const feature = featureOf(command);
+    return !feature || isFeatureEnabled(feature.id);
+  };
+  const other = otherLanguages[document.languageId];
+  if (other) {
+    const fit = otherLanguageSelectionFit(document.getText(), start, end, other.commands);
+    return fit && { ...fit, commands: fit.commands.filter(enabled) };
+  }
+  if (vscode.languages.match(languageSelector, document) === 0) return undefined;
+  const fit = selectionFit(parse(document), start, end, fittingSymbol);
+  if (!fit) return undefined;
+  // Rewrites that apply where the cursor is in the highlight, such as "Replace 'if else' with '?:'".
+  const rewrites = intentionsAtCursor(editor).length ? ['tsStructure.showRewrites', 'tsStructure.chooseIntentions'] : [];
+  return { ...fit, commands: [...fit.commands, ...rewrites].filter(enabled) };
+}

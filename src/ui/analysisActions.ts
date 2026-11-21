@@ -34,6 +34,7 @@ const analyses: readonly CursorAnalysis[] = [
   { command: 'tsStructure.sliceBackward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },
   { command: 'tsStructure.sliceForward', feature: 'dataFlow', kinds: ['variable', 'parameter'] },
   { command: 'tsStructure.controlFlow', feature: 'dataFlow', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show the control flow of ${qualified(s)}()` },
+  { command: 'tsStructure.controlFlowCompare', feature: 'dataFlow', kinds: ['function', 'member'], accepts: notProperty },
   { command: 'tsStructure.dependenceGraph', feature: 'dataFlow', kinds: ['function', 'member'], accepts: notProperty },
   { command: 'tsStructure.callGraph', feature: 'usages', kinds: ['function', 'member'], accepts: notProperty, lightbulb: (s) => `Show the call graph of ${qualified(s)}()` },
   // Components (capitalized) and hooks (use…) only.
@@ -61,7 +62,12 @@ export function suggestedAt(document: vscode.TextDocument, offset: number): stri
 /** Every analysis (lightbulb or not) that fits the declaration at the offset, such as the graphs for the cursor. */
 export function fittingAt(document: vscode.TextDocument, offset: number): string[] {
   const symbol = symbolAt(parse(document), offset);
-  return symbol ? analyses.filter((a) => isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async)).map((a) => a.command) : [];
+  return symbol ? fittingSymbol(symbol) : [];
+}
+
+/** Every analysis that fits a declaration, as with the cursor on its name. */
+export function fittingSymbol(symbol: FileSymbol): string[] {
+  return analyses.filter((a) => isFeatureEnabled(a.feature) && fits(a, symbol) && (a.command !== 'tsStructure.promiseRejections' || symbol.async)).map((a) => a.command);
 }
 
 /** Lightbulb entries that run an analysis on the declaration under the cursor, such as "Show data flow of 'total'". */

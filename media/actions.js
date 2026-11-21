@@ -56,6 +56,12 @@
   // The graphs that fit the symbol at the cursor, and whether a TypeScript or JavaScript editor is open.
   let cursorFits = [];
   let hasEditor = true;
+  // Highlighted code in the editor: what it is and the actions that work with it. While there is some, every tab
+  // shows only those, until Show all; a new highlight filters again.
+  let selectionFit;
+  let showAllForSelection = false;
+  const filtering = () => !!selectionFit && !showAllForSelection;
+  const fitsSelection = (a) => selectionFit.commands.includes(a.command);
 
   const save = (patch) => vscode.setState(Object.assign(saved, patch));
   const send = (change) => vscode.postMessage({ type: 'layout', change });
@@ -354,8 +360,10 @@
       button.setAttribute('aria-controls', 'list');
       button.tabIndex = t.id === tab ? 0 : -1;
       button.append(icon(t.icon), make('span', 'tab-label', t.label));
-      const count = data.actions.filter((a) => a.tab === t.id && !(data.layout.hidden || []).includes(a.id)).length;
-      button.title = `${t.label}: ${count} action${count === 1 ? '' : 's'}`;
+      const inTab = data.actions.filter((a) => a.tab === t.id && !(data.layout.hidden || []).includes(a.id));
+      const count = filtering() ? inTab.filter(fitsSelection).length : inTab.length;
+      button.title = `${t.label}: ${count} action${count === 1 ? '' : 's'}${filtering() ? ' for the highlighted code' : ''}`;
+      button.classList.toggle('no-fit', filtering() && count === 0);
       // A dot on the tab that has the action whose result is on screen.
       if (data.active && data.actions.some((a) => a.tab === t.id && a.command === data.active)) {
         const dot = make('span', 'tab-dot');
@@ -383,6 +391,38 @@
     return words.every((w) => hitsOf(text, w).length > 0);
   };
 
+  /**
+   * Above the buttons while code is highlighted: what it is and how many actions work with it (here and on the other
+   * tabs), with Show all; after Show all, a way back to only those.
+   */
+  function selectionBanner(here) {
+    const banner = make('div', 'selection-banner');
+    banner.setAttribute('role', 'status');
+    const words = make('span', 'selection-words');
+    if (filtering()) {
+      const elsewhere = data.tabs
+        .filter((t) => t.id !== tab)
+        .map((t) => [t.label, data.actions.filter((a) => a.tab === t.id && !isHidden(a) && fitsSelection(a)).length])
+        .filter(([, n]) => n)
+        .map(([label, n]) => `${n} in ${label}`);
+      words.append(make('strong', '', `Highlighted: ${selectionFit.subject}`), make('span', 'selection-count', `${here} action${here === 1 ? '' : 's'} here${elsewhere.length ? `, ${elsewhere.join(', ')}` : ''}`));
+    } else {
+      words.append(make('strong', '', 'Showing every action'), make('span', 'selection-count', `for ${selectionFit.subject} too`));
+    }
+    const toggle = make('button', 'link small', filtering() ? 'Show all' : 'Only these');
+    toggle.type = 'button';
+    toggle.title = filtering() ? 'Show every action, not only those that work with the highlighted code' : 'Show only the actions that work with the highlighted code';
+    toggle.addEventListener('click', () => {
+      showAllForSelection = !showAllForSelection;
+      focusAfterRender = undefined;
+      renderTabs();
+      render();
+    });
+    banner.prepend(icon('selection'));
+    banner.append(words, toggle);
+    list.append(banner);
+  }
+
   function render() {
     hideTip();
     list.textContent = '';
@@ -408,12 +448,15 @@
       return;
     }
     found.textContent = '';
+    const only = filtering() ? fitsSelection : () => true;
     const inTab = data.actions.filter((a) => a.tab === tab);
-    const visible = inTab.filter((a) => !isHidden(a));
-    const pinned = data.layout.pinned.map(byCommand).filter((a) => a && a.tab === tab && !isHidden(a));
-    const top = data.layout.hideMostUsed ? [] : (data.mostUsed[tab] || []).map(byCommand).filter((a) => a && a.tab === tab);
+    const visible = inTab.filter((a) => !isHidden(a) && only(a));
+    const pinned = data.layout.pinned.map(byCommand).filter((a) => a && a.tab === tab && !isHidden(a) && only(a));
+    const top = data.layout.hideMostUsed ? [] : (data.mostUsed[tab] || []).map(byCommand).filter((a) => a && a.tab === tab && only(a));
     const context = { words: [] };
-    if (tab === 'graphs') {
+    if (selectionFit) selectionBanner(visible.length);
+    if (filtering() && !visible.length) list.append(make('p', 'none', 'Nothing on this tab works with the highlighted code.'));
+    if (tab === 'graphs' && !filtering()) {
       // Graphs need something to start from: say so when no source file is open, else offer those that fit the cursor.
       const fitting = visible.filter((a) => cursorFits.includes(a.command));
       section('cursor', 'For the cursor', fitting, { ...context, icon: 'target' });
@@ -424,7 +467,7 @@
     for (const category of [...new Set(visible.map((a) => a.category))]) {
       section(`category:${category}`, category, visible.filter((a) => a.category === category && !shown.has(a)), context);
     }
-    const hidden = inTab.filter(isHidden);
+    const hidden = filtering() ? [] : inTab.filter(isHidden);
     if (hidden.length) {
       const all = make('button', 'link small', 'Show all');
       all.type = 'button';
@@ -709,7 +752,13 @@
     if (event.data.type === 'cursor') {
       cursorFits = event.data.fits || [];
       hasEditor = event.data.hasEditor !== false;
-      if (data && tab === 'graphs') render();
+      const before = JSON.stringify(selectionFit || null);
+      selectionFit = event.data.selection;
+      const changed = before !== JSON.stringify(selectionFit || null);
+      // A new highlight filters again, even after Show all.
+      if (changed && selectionFit) showAllForSelection = false;
+      if (data && changed) renderTabs();
+      if (data && (changed || tab === 'graphs')) render();
       return;
     }
     if (event.data.type === 'tab') {

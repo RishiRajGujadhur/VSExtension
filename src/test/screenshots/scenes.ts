@@ -276,6 +276,27 @@ export const scenes: Scene[] = [
   },
   // C#: what a person does in a C# file, with real key presses.
   {
+    // Highlighted code: the Actions view shows only the actions that work with it. A name first, then code.
+    name: 'actions-for-selection',
+    async run({ open, delay }) {
+      await open('src/pricing.ts', 'const coupon = findCoupon');
+      await vscode.commands.executeCommand('tsStructure.actions.focus');
+      await delay(1200);
+      const editor = vscode.window.activeTextEditor!;
+      await vscode.window.showTextDocument(editor.document, editor.viewColumn);
+      const text = editor.document.getText();
+      const range = (from: string, to: string) => {
+        const start = text.indexOf(from);
+        return new vscode.Selection(editor.document.positionAt(start), editor.document.positionAt(text.indexOf(to, start) + to.length));
+      };
+      editor.selection = range('coupon = findCoupon', 'coupon');
+      await delay(1800);
+      editor.selection = range('const coupon = findCoupon', 'return amount;\n  }');
+    },
+    cleanup: () => Promise.resolve(vscode.commands.executeCommand('workbench.action.closeAllEditors')).then(() => undefined),
+    settle: 1800,
+  },
+  {
     // Flowchart vs last commit: applyCoupon edited (a new guard, a changed return), then compared with the commit.
     name: 'flowchart-vs-commit',
     async run({ open, delay, cdp }) {

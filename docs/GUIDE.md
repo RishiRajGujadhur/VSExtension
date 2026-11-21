@@ -21,6 +21,18 @@ See inside your TypeScript, JavaScript and React code. Put the cursor on somethi
 2. Right-click: **Find usages**, **Find usages in this file**, **Data flow** and **Analyze or refactor this…** are at the top of the menu. Everything else is under **Code X-Ray**.
 3. Or open **Code X-Ray** in the Activity Bar: the **Actions** view at the top lists every analysis and edit in **Analyze** and **Edit** tabs, and every chart in the **Charts** tab (the Graph Explorer), with a search box, your **Pinned** and **Most used** actions first and the rest by category. Results open in the **Analysis** view below it.
 
+**Actions for the highlighted code**
+
+Highlight code in the editor and the Actions view shows only the actions that work with it, on every tab, under a banner that says what is highlighted (*Highlighted: code in applyCoupon()*) and how many actions fit here and on the other tabs:
+
+- **A name** (one word): the analyses of what it names, the same as with the cursor on it (Data flow, Find usages, Changes to this variable…), the edits of its declaration (Change signature, Delete safely, Move to a file) and Affected tests.
+- **Code inside a function**: the charts of that function (Flowchart, Flowchart vs last commit, What depends on what, Error paths, Side effects, and the async ones in an async function), the tools that take the highlighted range (Déjà vu finds its copies, Inspect code checks only it, Search by shape starts from it), **Introduce parameter** when it is exactly one expression, and the quick rewrites that apply there.
+- **A whole function** (from its first to its last line): its charts and analyses, as on its name.
+- **Whole declarations** at the top of a file: Move to a file, the range tools, and Ghost exports when they export something.
+- In C# and T-SQL: names get the name analyses of the language, code its flowchart family.
+
+**Show all** in the banner brings back every action while the code stays highlighted; a new highlight narrows the list again. Tabs with nothing for the highlight are dimmed. Search ignores the highlight.
+
 **Arranging the Actions view**
 
 - Hover an action, or move to it with the keyboard, to see its full shortcut (for example `Ctrl+Alt+S` then `1`) and its tools: **ⓘ** explains what it does, how often you used it and its shortcut; the pin keeps it at the top.

@@ -13,6 +13,14 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - Press `Ctrl+Alt+S`, then a letter, to run one directly (`D` data flow, `U` usages, `1` flowchart). `Ctrl+Alt+S K` shows them all.
 - Not sure which one you need? Run **Ask the rubber duck…** and pick a question.
 
+## Actions for the highlighted code
+
+![Highlighting code narrows the Code X-Ray view to the actions that work with it](docs/images/actions-for-selection.gif)
+
+- Highlight code in the editor. The **Code X-Ray** view then shows only the buttons that work with it, on every tab.
+- Highlight a name to get its analyses (data flow, usages, changes). Highlight lines inside a function to get its charts (flowchart, what depends on what, error paths) and tools that take a range (find copies, inspect, search by shape). Highlight whole declarations to move them to another file.
+- The banner above the buttons says what is highlighted and how many actions fit on each tab. **Show all** brings back the rest.
+
 ## Data flow
 
 ![Data flow for a parameter: where its values come from and where they go](docs/images/data-flow.gif)

@@ -41,6 +41,7 @@ export async function run(): Promise<void> {
     await customInspectionFlow();
     await cardEditsFlow();
     await compareWithCommitFlow();
+    await selectionActionsFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -601,6 +602,32 @@ async function compareWithCommitFlow(): Promise<void> {
   assert.equal(shown.changes.against, 'the last commit');
   console.log('flowchart vs last commit ok');
   await vscode.commands.executeCommand('workbench.action.files.revert');
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+/** The Actions view with code highlighted: only the actions that work with it. */
+async function selectionActionsFlow(): Promise<void> {
+  const file = path.join(sample, 'src', 'grade.ts');
+  const document = await vscode.workspace.openTextDocument(file);
+  const editor = await vscode.window.showTextDocument(document);
+  const text = document.getText();
+  const select = (from: string, to = from) => {
+    const start = text.indexOf(from);
+    editor.selection = new vscode.Selection(document.positionAt(start), document.positionAt(text.indexOf(to, start) + to.length));
+  };
+  type Fit = { subject: string; commands: string[] } | undefined;
+  select("if (score > 90) return 'A';");
+  const code = await vscode.commands.executeCommand<Fit>('tsStructure.actions.selection');
+  assert.equal(code?.subject, 'code in grade()');
+  assert.ok(code.commands.includes('tsStructure.controlFlow') && code.commands.includes('tsStructure.findDuplicates'), code.commands.join(', '));
+  assert.ok(!code.commands.includes('tsStructure.dataFlow') && !code.commands.includes('tsImpact.analyze'), code.commands.join(', '));
+  select('score', 'score');
+  const name = await vscode.commands.executeCommand<Fit>('tsStructure.actions.selection');
+  assert.equal(name?.subject, 'the name score');
+  assert.ok(name.commands.includes('tsStructure.dataFlow') && !name.commands.includes('tsStructure.controlFlow'), name.commands.join(', '));
+  editor.selection = new vscode.Selection(0, 0, 0, 0);
+  assert.equal(await vscode.commands.executeCommand<Fit>('tsStructure.actions.selection'), undefined);
+  console.log(`actions for the selection ok: ${code.commands.length} for code, ${name.commands.length} for a name`);
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
