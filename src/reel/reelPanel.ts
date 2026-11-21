@@ -164,6 +164,7 @@ export class ReelPanel {
     if (!choice) return undefined;
     void this.state.update(lastRefKey, choice);
     this.request = { repo, ref: choice.ref, baseLabel: baseLabelOf(choice) };
+    this.fixedPlan = undefined;
     // No changes: no player opens at all.
     let changed = true;
     try {
@@ -178,6 +179,23 @@ export class ReelPanel {
     this.reveal();
     return this.build();
   }
+
+  /**
+   * Plays a plan made elsewhere (an explanation video) in the same player, with the voice-over on unless it is off
+   * in the settings. `folder` is where its video is saved by default; `id` keeps its edited captions apart.
+   */
+  async openPlan(plan: ReelPlan, folder: string, id: string): Promise<ReelPlan | undefined> {
+    this.fixedPlan = plan;
+    this.request = { repo: folder, ref: `explain:${id}`, baseLabel: 'the explanation' };
+    this.reveal();
+    if (!this.narrationOff() && !this.voice.on) {
+      await this.loadVoices();
+      this.voice.on = true;
+    }
+    return this.build();
+  }
+  /** A plan given to the player rather than read from Git. */
+  private fixedPlan: ReelPlan | undefined;
 
   /** For tests: records the reel and writes it to a file, without the save dialog. Resolves with the file's size. */
   exportTo(file: string, format: 'webm' | 'mp4'): Promise<number> {
@@ -295,12 +313,13 @@ export class ReelPanel {
   private async build(): Promise<ReelPlan | undefined> {
     const request = this.request;
     if (!request) return undefined;
-    void this.panel?.webview.postMessage({ type: 'busy', text: 'Reading the changes…' });
+    void this.panel?.webview.postMessage({ type: 'busy', text: this.fixedPlan ? 'Preparing the video…' : 'Reading the changes…' });
     try {
-      const fresh = await buildReelPlan({ ...request, understand: this.understanding() });
+      const fixed = this.fixedPlan;
+      const fresh: ReelPlan = fixed ? JSON.parse(JSON.stringify(fixed)) : await buildReelPlan({ ...request, understand: this.understanding() });
       if (request !== this.request) return undefined;
       // Nothing changed (or only files a reel leaves out, such as lock files): no video, just a word saying so.
-      if (!fresh.meta.files) {
+      if (!fixed && !fresh.meta.files) {
         this.panel?.dispose();
         void showProblem(`No changes since ${request.baseLabel}, so there is no reel to show.`, [], 'info');
         return fresh;
@@ -313,9 +332,9 @@ export class ReelPanel {
       this.baseSeconds = Object.fromEntries(this.plan.scenes.map((s) => [s.id, s.seconds]));
       this.voice.clips = {};
       if (this.voice.on) await this.voiceOver(undefined, false);
-      if (this.panel) this.panel.title = `Git reel: ${this.plan.meta.title}`;
+      if (this.panel) this.panel.title = fixed ? `Video: ${this.plan.meta.title}` : `Git reel: ${this.plan.meta.title}`;
       this.post();
-      void this.offerCodeModel();
+      if (!fixed) void this.offerCodeModel();
       return this.plan;
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);

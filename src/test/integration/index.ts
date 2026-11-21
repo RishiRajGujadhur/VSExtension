@@ -652,9 +652,23 @@ async function explainCodeFlow(): Promise<void> {
   assert.equal(e?.subject, 'the function addToCart()', JSON.stringify(e));
   assert.deepEqual(e?.purpose, { text: 'Adds item to cart', by: 'rules' });
   assert.ok(e!.steps.length >= 1, JSON.stringify(e));
-  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Explain: '));
+  const tab = await tabLabelled((label) => label.startsWith('Explain: '));
   assert.ok(tab, `the explanation opens beside the editor: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
   console.log(`explain this code ok: ${e!.purpose!.text}; ${e!.steps.join(' ')}`);
+  // As a video, in the Git reel's player: a scene per step on the flowchart. The voice-over is tested with the reel.
+  const reelSettings = vscode.workspace.getConfiguration('tsStructure.reel');
+  await reelSettings.update('narrationVoice', 'Off', vscode.ConfigurationTarget.Global);
+  try {
+    type VideoPlan = { meta: { title: string }; scenes: { kind: string; chapter?: string; caption: string }[] };
+    const video = await vscode.commands.executeCommand<VideoPlan>('tsStructure.explainCode.video');
+    assert.equal(video?.meta.title, 'What addToCart() does');
+    assert.deepEqual(video!.scenes.filter((s) => s.kind === 'flow').map((s) => s.caption), e!.steps);
+    const player = await tabLabelled((label) => label === 'Video: What addToCart() does');
+    assert.ok(player, `the video opens in the reel's player: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
+    console.log(`explain this code video ok: ${video!.scenes.map((s) => s.chapter ?? s.kind).join(', ')}`);
+  } finally {
+    await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
+  }
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
@@ -874,5 +888,14 @@ async function tsql(): Promise<void> {
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await vscode.workspace.fs.delete(vscode.Uri.joinPath(root, 'db'), { recursive: true });
+  }
+}
+
+/** A tab whose label matches, waited for: VS Code lists a new tab (and its title) a moment after it opens. */
+async function tabLabelled(match: (label: string) => boolean, ms = 5000): Promise<vscode.Tab | undefined> {
+  for (let waited = 0; ; waited += 100) {
+    const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => match(t.label));
+    if (tab || waited >= ms) return tab;
+    await new Promise((r) => setTimeout(r, 100));
   }
 }

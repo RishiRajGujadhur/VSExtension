@@ -22,6 +22,7 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.controlFlowCompare': 'git-commit',
   'tsStructure.gitReel': 'device-camera-video',
   'tsStructure.explainCode': 'lightbulb-sparkle',
+  'tsStructure.explainCode.video': 'play-circle',
   'tsStructure.callGraph': 'call-outgoing',
   'tsStructure.dependenceGraph': 'graph',
   'tsStructure.reactState': 'symbol-event',

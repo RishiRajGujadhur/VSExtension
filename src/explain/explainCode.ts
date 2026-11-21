@@ -4,7 +4,8 @@ import { standaloneCharts } from '../inspect/controlFlowChart';
 import { csharpFlowChart } from '../csharp/flow';
 import { tsqlFlowChart } from '../tsql/flow';
 import { isFunctionWithBody } from '../structure/util';
-import { explainFunctionSteps, explainLines } from '../reel/describe';
+import { explainFunctionWalk, explainLines } from '../reel/describe';
+import type { ControlFlowChart } from '../inspect/controlFlowChart';
 import { FEATURE_PROTOTYPES, featureIntent, intentLabel, intentPhrase, intentsOf, nounsOf } from '../reel/intent';
 import { codeAsWords, cosine } from '../reel/codeModelText';
 import { MODEL_FEATURE_MARGIN, MODEL_FEATURE_MIN } from '../reel/plan';
@@ -24,6 +25,14 @@ export interface CodeExplanation {
   purpose?: { text: string; by: 'rules' | 'model' };
   /** What it does, step by step. */
   steps: string[];
+  /** For a whole function: its flowchart and the boxes each step is about, for the explanation video. */
+  walk?: { name: string; chart: ControlFlowChart; nodes: number[][] };
+}
+
+/** The explanation of a function from its flowchart: the steps, and the boxes each one lights up. */
+function fromChart(subject: string, name: string, chart: ControlFlowChart, summary?: string): CodeExplanation {
+  const walk = explainFunctionWalk(chart);
+  return { subject, summary, steps: walk.map((w) => w.text), walk: { name, chart, nodes: walk.map((w) => w.nodes) } };
 }
 
 type Understand = (texts: string[]) => Promise<Float32Array[]>;
@@ -38,7 +47,7 @@ export async function explainCode(file: string, text: string, start: number, end
       const at = start + (selected.length - selected.trimStart().length);
       const chart = ext === '.cs' ? await csharpFlowChart(text, file, at) : tsqlFlowChart(text, file, at);
       const name = chart.name.replace(/\(\)$/, '');
-      return withPurpose({ subject: `${name}()`, steps: explainFunctionSteps(chart) }, name, file, lines, understand);
+      return withPurpose(fromChart(`${name}()`, name, chart), name, file, lines, understand);
     } catch {
       return withPurpose({ subject: 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
     }
@@ -52,7 +61,7 @@ export async function explainCode(file: string, text: string, start: number, end
     const anchor = fn.name?.getStart(source) ?? (ts.isVariableDeclaration(fn.parent) ? fn.parent.name.getStart(source) : fn.getStart(source));
     const chart = standaloneCharts(file, text)(anchor);
     const body = text.slice(fn.getStart(source), fn.end).split('\n');
-    return withPurpose({ subject: `the function ${name}()`, summary: signatureSentence(fn, name, source), steps: explainFunctionSteps(chart) }, name, file, body, understand);
+    return withPurpose(fromChart(`the function ${name}()`, name, chart, signatureSentence(fn, name, source)), name, file, body, understand);
   }
   return withPurpose({ subject: name ? `the highlighted lines in ${name}()` : 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
 }

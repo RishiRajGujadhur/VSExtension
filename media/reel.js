@@ -221,7 +221,7 @@
   }
 
   const kindName = { overview: 'Overview', diff: 'Change', flow: 'Flowchart', files: 'Other files', summary: 'Summary' };
-  const sceneName = (s) => (s.kind === 'diff' ? (s.symbol ? `${s.symbol}()` : s.file.split('/').pop()) : s.kind === 'flow' ? `${s.symbol}() flowchart` : kindName[s.kind]);
+  const sceneName = (s) => s.chapter || (s.kind === 'diff' ? (s.symbol ? `${s.symbol}()` : s.file.split('/').pop()) : s.kind === 'flow' ? `${s.symbol}() flowchart` : kindName[s.kind]);
 
   /** Where things go: 16:9 puts code and flowchart side by side, 9:16 stacks them and uses bigger type. */
   function layout(W, H) {
@@ -241,14 +241,14 @@
     const font = `700 ${L.title + 16}px ${uiFont}`;
     const lines = wrap(plan.meta.title, W - 2 * L.m - 80, font).slice(0, 3);
     const top = cy - ((lines.length - 1) * (L.title + 26)) / 2;
-    chip(`${plan.meta.head} → ${plan.meta.base}`, W / 2, top - 150, c, `600 ${L.small}px ${codeFont}`, 'center');
+    chip(plan.meta.chip || `${plan.meta.head} → ${plan.meta.base}`, W / 2, top - 150, c, `600 ${L.small}px ${codeFont}`, 'center');
     lines.forEach((line, i) => {
       const lift = (1 - ease(p * 4 - i * 0.1)) * 30;
       ctx.globalAlpha = ease(p * 4 - i * 0.1);
       text(line, W / 2, top + i * (L.title + 26) + lift, font, c.text, 'center', 'middle');
     });
     ctx.globalAlpha = ease(p * 3 - 0.5);
-    text('The key changes, file by file', W / 2, top + lines.length * (L.title + 26) + 40, `${L.small}px ${uiFont}`, c.muted, 'center', 'middle');
+    text(fit(plan.meta.subtitle || 'The key changes, file by file', W - 2 * L.m, `${L.small}px ${uiFont}`), W / 2, top + lines.length * (L.title + 26) + 40, `${L.small}px ${uiFont}`, c.muted, 'center', 'middle');
     ctx.globalAlpha = 1;
   }
 
@@ -301,7 +301,7 @@
   /** A function's flowchart on its own: the whole chart first, then the view glides to the boxes that changed. */
   function drawFlowScene(s, p, c, W, H, L) {
     text(fit(`${s.file}  ·  ${s.symbol}()`, W - 2 * L.m, `600 ${L.body}px ${codeFont}`), L.m, L.top + 20, `600 ${L.body}px ${codeFont}`, c.text, 'left', 'middle');
-    text('Flowchart: new boxes green, changed boxes amber', L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, c.muted, 'left', 'middle');
+    text(fit(s.legend || 'Flowchart: new boxes green, changed boxes amber', W - 2 * L.m, `${L.small}px ${uiFont}`), L.m, L.top + 20 + L.body + 14, `${L.small}px ${uiFont}`, c.muted, 'left', 'middle');
     const areaTop = L.top + 20 + L.body * 2 + 30;
     const areaBottom = H - L.captionH - 40;
     drawFlow(s.flow, p, c, { x: L.m, y: areaTop, w: W - 2 * L.m, h: areaBottom - areaTop }, L);
@@ -394,7 +394,8 @@
     const innerH = box.h - 2 * pad - legendH;
     // The whole chart first; in a big chart the view then glides in on the boxes that changed, so they can be read.
     const whole = { x: 0, y: 0, w: flow.width, h: flow.height };
-    const changedNodes = flow.nodes.filter((n) => n.state !== 'same');
+    // A walk through a function (an explanation video): the view is on this step's boxes only.
+    const changedNodes = flow.nodes.filter((n) => (flow.walk ? n.state === 'changed' : n.state !== 'same'));
     let focus = whole;
     if (changedNodes.length) {
       const x0 = Math.min(...changedNodes.map((n) => n.x)) - 120;
@@ -433,7 +434,8 @@
       const cy = a.y + (b.y - a.y) * f;
       target = { x: cx - vw / 2, y: cy - vh / 2, w: vw, h: vh };
     }
-    const zoomIn = fitScale(target) > fitScale(whole) * 1.15 ? ease((p - 0.1) / 0.22) : 0;
+    // A walk is already close in, step after step: no glide from the whole chart each time.
+    const zoomIn = fitScale(target) > fitScale(whole) * 1.15 ? (flow.walk ? 1 : ease((p - 0.1) / 0.22)) : 0;
     const view = { x: whole.x + (target.x - whole.x) * zoomIn, y: whole.y + (target.y - whole.y) * zoomIn, w: whole.w + (target.w - whole.w) * zoomIn, h: whole.h + (target.h - whole.h) * zoomIn };
     const scale = fitScale(view);
     const ox = box.x + pad + innerW / 2 - (view.x + view.w / 2) * scale;
@@ -514,6 +516,11 @@
       ctx.font = `${L.small - 2}px ${uiFont}`;
       lx += 40 + ctx.measureText(label).width + 28;
     };
+    if (flow.walk) {
+      if (changed) legend(c.changed, 'this step', true);
+      if (added) legend(c.add, 'steps so far');
+      return;
+    }
     if (added) legend(c.add, 'new');
     if (changed) legend(c.changed, 'changed', true);
   }
@@ -1238,7 +1245,7 @@
       empty.hidden = true;
       document.body.classList.add('has-plan');
       titleEl.textContent = plan.meta.title;
-      baseEl.textContent = `${plan.meta.head} → ${plan.meta.base}`;
+      baseEl.textContent = plan.meta.chip || `${plan.meta.head} → ${plan.meta.base}`;
       t = Math.min(t, total());
       buildTimeline();
       buildSceneList();

@@ -5,6 +5,9 @@ import * as path from 'path';
 import { explainCode } from '../explain/explainCode';
 import { CodeModel } from '../reel/codeModel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
+import { explanationReel } from '../explain/explainReel';
+import { explanationHtml } from '../explain/explainHtml';
+import type { ReelScene } from '../reel/plan';
 
 const root = path.resolve(__dirname, '../..');
 const modelDir = path.join(root, 'assets', 'code-model');
@@ -74,4 +77,33 @@ test('Explain this code: the code model names what the rules cannot', { skip: !r
   } finally {
     model.dispose();
   }
+});
+
+test('Explain this code as a video: a scene per step on the flowchart, this step amber, the steps so far green', async () => {
+  const e = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
+  const plan = explanationReel(e, 'src/workspace.ts')!;
+  assert.deepEqual(plan.scenes.map((s) => s.kind), ['overview', ...e.steps.map(() => 'flow'), 'summary']);
+  assert.equal(plan.meta.title, 'What currentConfig() does');
+  assert.equal(plan.meta.chip, 'workspace.ts');
+  assert.match(plan.scenes[0].caption, /^currentConfig is an async function .* Let's walk through it, step by step\.$/);
+  const steps = plan.scenes.filter((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow');
+  assert.deepEqual(steps.map((s) => s.caption), e.steps);
+  assert.deepEqual(steps.map((s) => s.chapter), e.steps.map((_, i) => `Step ${i + 1}`));
+  for (const [i, s] of steps.entries()) {
+    assert.ok(s.flow.walk);
+    // Each step lights its own boxes; the ones before stay green.
+    assert.ok(s.flow.nodes.some((n) => n.state === 'changed'), `step ${i + 1} lights a box`);
+  }
+  // Steps in the same box light the same box; by the last step the ones before are green.
+  assert.ok(steps[steps.length - 1].flow.nodes.some((n) => n.state === 'added'), 'the last step keeps the steps so far');
+  // Lines that are not a whole function have no flowchart to walk.
+  assert.equal(explanationReel(await explainCode('workspace.ts', code, ...range('    const config = saved', 'fixtures\') };')), 'x.ts'), undefined);
+});
+
+test('Explain this code: the page offers the video only for a whole function, as a command link', async () => {
+  const fn = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
+  assert.match(explanationHtml(fn, false), /href="command:tsStructure\.explainCode\.video"[^>]*>.*Generate video/);
+  const lines = await explainCode('workspace.ts', code, ...range('    const config = saved', 'fixtures\') };'));
+  assert.doesNotMatch(explanationHtml(lines, false), /Generate video/);
+  assert.match(explanationHtml(fn, false), /Nothing was sent anywhere/);
 });

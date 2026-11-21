@@ -3,7 +3,12 @@ import { CodeExplanation, explainCode } from '../explain/explainCode';
 import type { ReelPanel } from '../reel/reelPanel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
 import { webviewPage, webviewRoots } from './webviewPage';
+import { explanationHtml } from '../explain/explainHtml';
 import { showProblem } from './problems';
+import * as path from 'path';
+import { explanationReel } from '../explain/explainReel';
+import type { ReelPlan } from '../reel/plan';
+import { gitRoot } from '../navigate/graphDiff';
 
 /**
  * "Explain this code": the highlighted code (or the function at the cursor) explained in plain sentences, beside the
@@ -34,8 +39,32 @@ export class ExplainCodeView {
     const understand = await this.understanding();
     const explanation = await explainCode(document.fileName, document.getText(), document.offsetAt(range.start), document.offsetAt(range.end), understand);
     this.last = explanation;
+    this.lastFile = document.fileName;
     this.show(explanation, !!understand);
     return explanation;
+  }
+  private lastFile: string | undefined;
+
+  /**
+   * The explanation as a video in the Git reel's player: a scene per step on the function's flowchart, with the
+   * voice-over. Made on this computer from the explanation shown.
+   */
+  async video(): Promise<ReelPlan | undefined> {
+    const e = this.last;
+    const file = this.lastFile;
+    if (!e?.walk || !file) {
+      void showProblem('A video can be made of a whole function: highlight one, choose Explain this code, then Generate video.', [], 'info');
+      return undefined;
+    }
+    let folder = path.dirname(file);
+    try {
+      folder = gitRoot(folder);
+    } catch {
+      // Not in a repository: the video is saved next to the file.
+    }
+    const plan = explanationReel(e, path.relative(folder, file).replace(/\\/g, '/'));
+    if (!plan) return undefined;
+    return this.reel.openPlan(plan, folder, `${file}#${e.walk.name}`);
   }
 
   /**
@@ -66,7 +95,7 @@ export class ExplainCodeView {
   private show(explanation: CodeExplanation, withModel: boolean): void {
     const title = `Explain: ${explanation.subject.replace(/^the (function|highlighted lines in) /, '')}`;
     if (!this.panel) {
-      this.panel = vscode.window.createWebviewPanel('tsStructure.explainCode', title, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: false, localResourceRoots: webviewRoots(this.extensionUri) });
+      this.panel = vscode.window.createWebviewPanel('tsStructure.explainCode', title, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: false, enableCommandUris: ['tsStructure.explainCode.video'], localResourceRoots: webviewRoots(this.extensionUri) });
       this.panel.onDidDispose(() => (this.panel = undefined));
     } else this.panel.reveal(vscode.ViewColumn.Beside, true);
     this.panel.title = title;
@@ -74,21 +103,3 @@ export class ExplainCodeView {
   }
 }
 
-const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-/** The explanation as the page shows it. */
-export function explanationHtml(e: CodeExplanation, withModel: boolean): string {
-  const subject = e.subject.replace(/(\w+\(\))/, '<code>$1</code>');
-  const purpose = e.purpose
-    ? `<div class="purpose"><i class="codicon codicon-lightbulb" aria-hidden="true"></i><span>${escape(e.purpose.text)}</span><small>${e.purpose.by === 'model' ? 'named by the code model' : "by Code X-Ray's rules"}</small></div>`
-    : '';
-  const steps = e.steps.length ? `<ol>${e.steps.map((s) => `<li>${escape(s)}</li>`).join('')}</ol>` : '<p class="empty">Nothing here to put in words: highlight a whole function, or lines that call, set, check or return something.</p>';
-  const privacy = withModel
-    ? 'Explained on your computer by Code X-Ray\'s rules and the downloaded code model. Nothing was sent anywhere.'
-    : 'Explained on your computer by Code X-Ray\'s rules. Nothing was sent anywhere.';
-  return `<h1>What ${subject.replace(/^the /, 'the ')} does</h1>
-${e.summary ? `<p class="summary">${escape(e.summary)}</p>` : ''}
-${purpose}
-${steps}
-<p class="privacy"><i class="codicon codicon-shield" aria-hidden="true"></i><span>${privacy}</span></p>`;
-}

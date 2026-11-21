@@ -31,6 +31,10 @@ export interface ReelPlan {
     files: number;
     /** Files left out: lock files, build output, binaries, secrets. */
     skipped: number;
+    /** The chip above the title, in place of "branch → base" (an explanation video names its file). */
+    chip?: string;
+    /** The line under the title, in place of "The key changes, file by file". */
+    subtitle?: string;
   };
   scenes: ReelScene[];
 }
@@ -43,6 +47,8 @@ interface SceneBase {
   caption: string;
   captionSource: CaptionSource;
   seconds: number;
+  /** The chapter name in the player, in place of the scene's own ("Step 3"). */
+  chapter?: string;
 }
 
 export interface DiffLine {
@@ -65,6 +71,11 @@ export interface FlowSnapshot {
   paths: number;
   /** More paths than were listed. */
   truncated?: boolean;
+  /**
+   * A walk through the function, a step at a time (an explanation video): the boxes of this step are "changed", the
+   * steps before it "added", and the view stays on this step's boxes.
+   */
+  walk?: boolean;
 }
 
 export type ReelScene =
@@ -85,7 +96,7 @@ export type ReelScene =
       feature?: string;
     })
   /** A function's flowchart on its own, after its code: zoomed to the boxes that changed. */
-  | (SceneBase & { kind: 'flow'; file: string; symbol: string; flow: FlowSnapshot; line?: number })
+  | (SceneBase & { kind: 'flow'; file: string; symbol: string; flow: FlowSnapshot; line?: number; /** The line under the heading, in place of what the colors mean. */ legend?: string })
   | (SceneBase & { kind: 'files'; files: { file: string; added: number; removed: number; status: string }[] })
   | (SceneBase & { kind: 'summary'; points: string[] });
 
@@ -369,7 +380,7 @@ export function flowCaption(symbol: string, comparison: FlowComparison, added: n
 }
 
 /** Seconds a scene stays: long enough to read its caption, plus time for its code. */
-function secondsFor(caption: string, lines = 0): number {
+export function secondsFor(caption: string, lines = 0): number {
   // Time to read it unhurried (about 15 characters a second), and to look at the code.
   return Math.round(Math.min(16, Math.max(4, 2.5 + caption.length / 15 + lines * 0.3)) * 10) / 10;
 }

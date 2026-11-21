@@ -28,6 +28,7 @@ export const names: Record<string, string> = {
   'tsStructure.controlFlowCompare': 'Flowchart vs last commit',
   'tsStructure.gitReel': 'Git reel',
   'tsStructure.explainCode': 'Explain this code',
+  'tsStructure.explainCode.video': 'Explain this code as a video',
   'tsStructure.gitReel.downloadCodeModel': 'Git reel: download the code model',
   'tsStructure.gitReel.removeCodeModel': 'Git reel: remove the code model',
   'tsStructure.dependenceGraph': 'What depends on what',

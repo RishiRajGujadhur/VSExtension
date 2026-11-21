@@ -60,7 +60,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 ## Explain this code
 
-Highlight code and choose **Explain this code** (Actions view, right-click menu or Command Palette): what it is, what it is for, and what it does step by step, in plain sentences, beside the editor. It is worked out on your computer; with the optional code model downloaded it also names what a function is for when the rules cannot tell. Before any download you are told what it sends (a file request that shows Hugging Face your IP address) and that none of your code is sent.
+Highlight code and choose **Explain this code** (Actions view, right-click menu or Command Palette): what it is, what it is for, and what it does step by step, in plain sentences, beside the editor. It is worked out on your computer; with the optional code model downloaded it also names what a function is for when the rules cannot tell. Before any download you are told what it sends (a file request that shows Hugging Face your IP address) and that none of your code is sent. **Generate video** plays the explanation in the Git reel's player: a scene per step on the function's flowchart, read aloud by the voice-over, ready to export.
 
 ## Find usages
 

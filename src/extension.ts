@@ -129,6 +129,7 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
     vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration('tsStructure.reel') && reel.settingsChanged()),
     registerCommand('tsStructure.gitReel.downloadCodeModel', () => reel.confirmAndDownloadCodeModel()),
     registerCommand('tsStructure.explainCode', () => explain.run()),
+    registerCommand('tsStructure.explainCode.video', () => explain.video()),
     // For tests: the last explanation shown.
     vscode.commands.registerCommand('tsStructure.explainCode.last', () => explain.last),
     registerCommand('tsStructure.gitReel.removeCodeModel', () => reel.removeCodeModel()),

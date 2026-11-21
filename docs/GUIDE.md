@@ -293,6 +293,8 @@ Highlight some code and choose **Explain this code** (the first action under *Hi
 
 Highlight most of a function (or its first line) to explain the function; highlight a few lines to explain just those. It works in TypeScript, JavaScript, C# and T-SQL.
 
+**Generate video** (the button beside the heading, for a whole function) turns the explanation into a video in the Git reel's player: the function's name and what it is, then **one scene per step on its flowchart**, the step's box in amber and the steps so far in green, the view staying on the step, each step a chapter (*Step 1*, *Step 2*…), then what it is for. The voice-over reads each step (the Git reel's voices and settings; it turns on unless the **Narration voice** setting is *Off*), with the same captions, full screen, themes, 16:9 or 9:16, caption editing and **Export MP4** or **WebM** (saved under `.codexray/reels/` in the repository). It is made on your computer from the explanation shown: nothing is sent.
+
 **Privacy.** The explanation is worked out on your computer and nothing is sent. If the code model is not downloaded, you are asked first, in a dialog that says exactly what a download sends: a request to huggingface.co for the model's two files, which shows Hugging Face your IP address and names the client *code-x-ray*, and none of your code, file names, account details, tokens or settings. **Explain Without It** explains with the rules alone (and is not asked again until VS Code restarts); the **Code model** setting *off* never asks. *Git reel: download the code model* asks the same way before it downloads.
 
 ### Types, modules and tests

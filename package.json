@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: adds 26 MB to the download, 40 MB installed; can be turned off), and an optional code model for them, downloaded only if you agree (all-MiniLM-L6-v2, Apache-2.0: 23 MB, not bundled). Chart animations adapted from robot-components (MIT).",
-  "version": "0.90.0",
+  "version": "0.91.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -908,6 +908,12 @@
         "title": "Explain this code",
         "category": "Code X-Ray",
         "icon": "$(lightbulb-sparkle)"
+      },
+      {
+        "command": "tsStructure.explainCode.video",
+        "title": "Explain this code as a video",
+        "category": "Code X-Ray",
+        "icon": "$(play-circle)"
       },
       {
         "command": "tsStructure.gitReel",
@@ -2360,6 +2366,10 @@
         {
           "command": "tsStructure.report.showAsCard",
           "when": "tsStructure.hasReport"
+        },
+        {
+          "command": "tsStructure.explainCode.video",
+          "when": "activeWebviewPanelId == tsStructure.explainCode"
         }
       ],
       "view/title": [

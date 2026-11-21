@@ -598,24 +598,36 @@ function explainActions(code: string): string[] {
  * said twice.
  */
 export function explainFunctionSteps(chart: ControlFlowChart, max = 10): string[] {
+  return explainFunctionWalk(chart, max).map((s) => s.text);
+}
+
+/** The steps with the flowchart boxes each one is about: for the explanation video, which lights them up in turn. */
+export function explainFunctionWalk(chart: ControlFlowChart, max = 10): { text: string; nodes: number[] }[] {
   const nodes = chart.nodes;
   const textOf = (id: number) => oneLine(nodes[id].text || nodes[id].lines.join(' '));
   const used = new Set<number>();
-  const steps: string[] = [];
+  const steps: { text: string; nodes: number[] }[] = [];
   const said = new Set<string>();
+  // A catch box belongs to the step after it, the first of the fallback.
+  let pending: number[] = [];
   // After the first catch, what runs is the fallback: its first step says so, the rest go on "then it …".
   let fallback: 'none' | 'next' | 'in' = 'none';
-  const say = (phrase: string | undefined, condition?: string) => {
+  const say = (ids: number[], phrase: string | undefined, condition?: string) => {
     if (!phrase || !readable(phrase)) return;
     const key = phrase.toLowerCase();
-    if (said.has(key)) return;
+    if (said.has(key)) {
+      // Said already: these boxes go with the step that said it.
+      steps.find((s) => s.text.toLowerCase().endsWith(` ${key}.`))?.nodes.push(...ids);
+      return;
+    }
     said.add(key);
     let lead = condition ? `If ${condition}, it` : 'It';
     if (!condition && fallback === 'next') {
       lead = 'If something goes wrong, it';
       fallback = 'in';
     } else if (!condition && fallback === 'in') lead = 'Then it';
-    steps.push(`${lead} ${phrase}.`);
+    steps.push({ text: `${lead} ${phrase}.`, nodes: [...pending, ...ids] });
+    pending = [];
   };
   for (const n of nodes) {
     if (used.has(n.id) || n.kind === 'start' || n.kind === 'end' || n.unreachable) continue;
@@ -624,16 +636,17 @@ export function explainFunctionSteps(chart: ControlFlowChart, max = 10): string[
       const cond = conditionWords(stripIf(code));
       const exit = chart.edges.find((e) => e.from === n.id && e.label !== 'no' && ['return', 'throw'].includes(nodes[e.to].kind));
       if (exit && readable(cond)) {
-        say(exitPhrase(textOf(exit.to), nodes[exit.to].kind), cond);
+        say([n.id, exit.to], exitPhrase(textOf(exit.to), nodes[exit.to].kind), cond);
         used.add(exit.to);
-      } else say(`checks whether ${cond}`);
-    } else if (n.kind === 'switch') say(`chooses what to do based on ${valueWords(stripIf(code.replace(/^switch\s*/, '')))}`);
-    else if (n.kind === 'loop') say(loopPhrase(code));
-    else if (n.kind === 'return' || n.kind === 'throw') say(exitPhrase(code, n.kind));
+      } else say([n.id], `checks whether ${cond}`);
+    } else if (n.kind === 'switch') say([n.id], `chooses what to do based on ${valueWords(stripIf(code.replace(/^switch\s*/, '')))}`);
+    else if (n.kind === 'loop') say([n.id], loopPhrase(code));
+    else if (n.kind === 'return' || n.kind === 'throw') say([n.id], exitPhrase(code, n.kind));
     else if (n.kind === 'catch') {
       if (fallback === 'none') fallback = 'next';
-    } else if (n.kind === 'finally') say('always tidies up at the end');
-    else for (const a of explainActions(n.text || n.lines.join('\n')).slice(0, 3)) say(a);
+      pending.push(n.id);
+    } else if (n.kind === 'finally') say([n.id], 'always tidies up at the end');
+    else for (const a of explainActions(n.text || n.lines.join('\n')).slice(0, 3)) say([n.id], a);
     if (steps.length >= max) break;
   }
   return steps;
