@@ -1174,6 +1174,24 @@
           anchorButton.setAttribute('aria-expanded', 'false');
           return list;
         };
+        // The list floats over the window, not inside the card (which scrolls and would cut it off): under its button,
+        // above it when there is no room below, moved left to stay in the window, and never taller or wider than it.
+        const placeDrop = (anchorButton, list) => {
+          const r = anchorButton.getBoundingClientRect();
+          list.style.left = '0px';
+          list.style.top = '0px';
+          const w = list.offsetWidth;
+          const h = list.offsetHeight;
+          const below = r.bottom + 3;
+          const top = below + h <= window.innerHeight - 6 ? below : Math.max(6, r.top - 3 - h);
+          list.style.left = `${Math.max(6, Math.min(r.left, window.innerWidth - w - 6))}px`;
+          list.style.top = `${top}px`;
+        };
+        // Scrolling the card would leave an open list behind: it closes.
+        target.onscroll = () => {
+          bar.querySelectorAll('.card-drop').forEach((d) => (d.hidden = true));
+          bar.querySelectorAll('[aria-expanded]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+        };
         const toggle = (anchorButton, list) => (e) => {
           e.stopPropagation();
           const open = list.hidden;
@@ -1181,6 +1199,7 @@
           bar.querySelectorAll('[aria-expanded]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
           list.hidden = !open;
           anchorButton.setAttribute('aria-expanded', String(open));
+          if (open) placeDrop(anchorButton, list);
           // Opened from the keyboard: into the list. A mouse click leaves focus where it is, so the card stays open.
           if (open && e.detail === 0) list.querySelector('button')?.focus({ preventScroll: true });
         };
