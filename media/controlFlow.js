@@ -7,6 +7,12 @@
   const scene = document.getElementById('scene');
   const list = document.getElementById('paths');
   const pinsBar = document.getElementById('pins');
+  // Compare with the last commit: what changed in the function since then (from the extension), and the list of it.
+  const changesBox = document.getElementById('changes');
+  const compareButton = document.getElementById('compare');
+  let changes;
+  const changedBefore = (id) => changes && changes.changed.find((c) => c.id === id);
+  const diffClass = (n) => (!changes ? '' : changes.added.includes(n.id) ? ' diff-added' : changedBefore(n.id) ? ' diff-changed' : '');
   const summary = document.getElementById('pathSummary');
   const caption = document.getElementById('caption');
   const empty = document.getElementById('empty');
@@ -167,7 +173,7 @@
     const nodes = el('g', { class: 'nodes' }, scene);
     // Drawn top to bottom, left to right, so Tab reads the chart in order.
     for (const n of [...chart.nodes].sort((a, b) => a.y - b.y || a.x - b.x)) {
-      const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: 0, role: 'button', 'aria-haspopup': 'menu' }, nodes);
+      const g = el('g', { class: `node ${n.kind}${n.unreachable ? ' unreachable' : ''}${n.location ? ' located' : ''}${diffClass(n)}`, transform: `translate(${n.x},${n.y})`, 'data-node': n.id, tabindex: 0, role: 'button', 'aria-haspopup': 'menu' }, nodes);
       g.setAttribute('aria-label', spoken(n));
       g.setAttribute('aria-description', spokenPlace(n));
       if (spot && spotKind(n) === spot) g.classList.add('lit');
@@ -471,6 +477,66 @@
     typeBar.querySelector(`.kind-${key || ''}`)?.focus();
   }
 
+  /**
+   * What changed since the last commit, above the paths: a line of counts, the new and changed boxes (each goes to
+   * its box), the removed boxes and the paths that are gone. Hidden when not comparing.
+   */
+  function renderChanges() {
+    changesBox.textContent = '';
+    changesBox.hidden = !changes || !chart;
+    if (changesBox.hidden) return;
+    const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+    const head = document.createElement('div');
+    head.className = 'changes-head';
+    const icon = document.createElement('i');
+    icon.className = 'codicon codicon-git-commit';
+    icon.setAttribute('aria-hidden', 'true');
+    const nothing = !changes.added.length && !changes.changed.length && !changes.removed.length && !changes.newPaths.length && !changes.gonePaths.length;
+    const counts = changes.isNew
+      ? `New since ${changes.against}`
+      : nothing
+        ? `No change since ${changes.against}`
+        : `Since ${changes.against}: ${[
+          changes.added.length ? `${plural(changes.added.length, 'new box', 'new boxes')}` : '',
+          changes.changed.length ? `${changes.changed.length} changed` : '',
+          changes.removed.length ? `${changes.removed.length} removed` : '',
+        ].filter(Boolean).join(', ') || 'same boxes'} · ${[
+          changes.newPaths.length ? `${plural(changes.newPaths.length, 'new path')}` : '',
+          changes.gonePaths.length ? `${plural(changes.gonePaths.length, 'path')} gone` : '',
+        ].filter(Boolean).join(', ') || 'same paths'}`;
+    head.append(icon, ` ${counts}${changes.byPosition ? ' (matched by line)' : ''}`);
+    changesBox.append(head);
+    if (changes.isNew) return;
+    const section = (label, rows) => {
+      if (!rows.length) return;
+      const details = document.createElement('details');
+      details.open = rows.length <= 6;
+      const summaryLine = document.createElement('summary');
+      summaryLine.textContent = `${label} (${rows.length})`;
+      details.append(summaryLine, ...rows);
+      changesBox.append(details);
+    };
+    const row = (cls, text, title, go) => {
+      const r = document.createElement(go ? 'button' : 'div');
+      r.className = `change-row ${cls}`;
+      r.textContent = text;
+      r.title = title;
+      if (go) {
+        r.type = 'button';
+        r.addEventListener('click', go);
+      }
+      return r;
+    };
+    const goTo = (n) => () => { focus(n); centerOn(n); };
+    const firstLine = (text) => (text || '').split('\n')[0].trim();
+    section('New and changed boxes', [
+      ...changes.added.map((id) => chart.nodes[id]).filter(Boolean).map((n) => row('added', `+ ${firstLine(n.text)}`, `New${lineOf(n) ? `, line ${lineOf(n)}` : ''}: click to go to it`, goTo(n))),
+      ...changes.changed.map((c) => chart.nodes[c.id] && row('changed', `~ ${firstLine(chart.nodes[c.id].text)}`, `Changed${lineOf(chart.nodes[c.id]) ? `, line ${lineOf(chart.nodes[c.id])}` : ''}. Before:\n${c.before}`, goTo(chart.nodes[c.id]))).filter(Boolean),
+    ]);
+    section('Removed boxes', changes.removed.map((r) => row('removed', `− ${firstLine(r.text)}`, `${r.line ? `Was on line ${r.line}:\n` : ''}${r.text}`)));
+    section('Paths gone', changes.gonePaths.map((p) => row('removed', `${p.ending}`, p.steps.length ? p.steps.join(' → ') : 'no branches')));
+  }
+
   function renderList() {
     list.textContent = '';
     if (!chart) return;
@@ -478,6 +544,7 @@
     const possible = chart.paths.filter((p) => p.feasible).length;
     const unreachable = chart.nodes.filter((n) => n.unreachable).length;
     summary.textContent = `Complexity ${complexity()} · ${possible} possible path${possible === 1 ? '' : 's'}${chart.paths.length > possible ? `, ${chart.paths.length - possible} impossible` : ''}${chart.truncated ? ' (first ' + chart.paths.length + ' shown)' : ''}${unreachable ? `, ${unreachable} unreachable box${unreachable === 1 ? '' : 'es'}` : ''}`;
+    renderChanges();
     pinsBar.textContent = '';
     if (slice) {
       const others = slice.nodes.filter((id) => id !== slice.at);
@@ -508,6 +575,14 @@
       const title = document.createElement('div');
       title.className = 'path-title';
       title.textContent = `${n + 1}. ${p.ending}`;
+      if (changes && changes.newPaths.includes(i)) {
+        const badge = document.createElement('span');
+        badge.className = 'diff-badge';
+        badge.textContent = 'new';
+        badge.title = `This path is new since ${changes.against}`;
+        title.append(' ', badge);
+        item.classList.add('diff-new');
+      }
       item.appendChild(title);
       const lines = [...new Set(p.nodes.map((id) => lineOf(chart.nodes[id])).filter(Boolean))];
       item.title = `${lines.length} line${lines.length === 1 ? '' : 's'}: ${lines.join(', ')}${p.feasible ? '' : `\nImpossible: ${p.reason}`}`;
@@ -814,7 +889,7 @@
       copy: (text) => vscode.postMessage({ type: 'copy', text }),
       // Edits that fit the box's code (Extract…, Rename…), asked for when the card opens.
       actions: n.location && !isTerminal(n) ? (boxEdits.get(n.id) || []).map((edit) => ({ icon: edit.icon, label: edit.label, group: edit.group, underMove: edit.underMove, run: () => { card.hide(); vscode.postMessage({ type: 'edit', location: n.location, edit }); } })) : [],
-      note: n.unreachable ? 'Unreachable: nothing leads here.' : '',
+      note: [n.unreachable ? 'Unreachable: nothing leads here.' : '', changes && changes.added.includes(n.id) ? `New since ${changes.against}.` : '', changedBefore(n.id) ? `Changed since ${changes.against}. Before: ${changedBefore(n.id).before}` : ''].filter(Boolean).join(' '),
       facts: [],
       keys: [],
     };
@@ -1118,6 +1193,7 @@
       { icon: 'list-tree', label: panel.hidden ? 'Show path list' : 'Hide path list', keys: 'P', run: () => togglePanel(panel.hidden) },
       { icon: 'map', label: map.hidden ? 'Show minimap' : 'Hide minimap', keys: 'M', run: () => toggleMinimap() },
       { icon: 'references', label: showDeps ? 'Hide what depends on what' : 'Show what depends on what', keys: 'D', run: () => toggleDependences() },
+      { icon: 'git-commit', label: changes ? 'Stop comparing with the last commit' : 'Compare with the last commit', keys: 'V', run: () => vscode.postMessage({ type: 'compare' }) },
       ...(showDeps
         ? [
             { icon: showData ? 'check' : 'blank', label: 'Data arcs (where values come from)', run: () => { showData = !showData; state.depsData = showData; saveState(); render(); renderTypeBar(); } },
@@ -1273,7 +1349,7 @@
     if (!nodeOf(e.target) && !e.target.closest('.edge')) fit(true);
   });
   // The minimap can be hidden (M); the choice is kept.
-  const toggleMinimap = kit.minimapPreference(map, prefs, saveState);
+  const toggleMinimap = kit.mapDock({ map, mapSvg: document.getElementById('minimap'), viewport: vp, prefs, saveState, zoom: ['zoomOut', 'zoomLevel', 'zoomIn'].map((id) => document.getElementById(id)), above: document.getElementById('info') });
   document.getElementById('fit').addEventListener('click', () => fit(true));
   document.getElementById('toCursor').addEventListener('click', toCursor);
   document.getElementById('togglePaths').addEventListener('click', () => togglePanel(panel.hidden));
@@ -1307,6 +1383,7 @@
     else if (e.key === 'p' || e.key === 'P') togglePanel(panel.hidden);
     else if (e.key === 'm' || e.key === 'M') toggleMinimap();
     else if (e.key === 'd' || e.key === 'D') toggleDependences();
+    else if (e.key === 'v' || e.key === 'V') vscode.postMessage({ type: 'compare' });
     else if (e.key === 'g' || e.key === 'G') vscode.postMessage({ type: 'otherGraphs' });
     else if (e.key === 'Escape' && spot) {
       setSpot(undefined);
@@ -1341,6 +1418,9 @@
       preview = -1;
       if (message.analyses) analyses = message.analyses;
       kit.renderControls(document.getElementById('graphControls'), message.controls, (id, value) => vscode.postMessage({ type: 'control', id, value }));
+      changes = message.changes;
+      compareButton.setAttribute('aria-pressed', String(!!message.comparing));
+      compareButton.classList.toggle('on', !!message.comparing);
       const same = chart && message.chart && chart.name === message.chart.name && chart.file === message.chart.file;
       chart = message.chart;
       tooBig = kit.limitAnimations(chart ? chart.nodes.length : 0, prefs, grid);
@@ -1416,6 +1496,7 @@
   });
   kit.attachFlowLines(document.getElementById('flowLines'), () => view);
   document.getElementById('deps').addEventListener('click', () => toggleDependences());
+  compareButton.addEventListener('click', () => vscode.postMessage({ type: 'compare' }));
   document.getElementById('otherGraphs').addEventListener('click', () => vscode.postMessage({ type: 'otherGraphs' }));
   document.getElementById('deps').setAttribute('aria-pressed', String(showDeps));
   kit.bindToggles(prefs, grid, saveState, stopFlow);

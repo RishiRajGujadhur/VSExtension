@@ -136,6 +136,31 @@ export function controlFlowChart(project: VirtualProject, fileName: string, offs
   return chartOf(cfg, fn.getSourceFile(), (node) => callTargets(node, checker).map((c) => ({ key: c.key, name: c.name, expanded: expanded.has(c.key) })), code);
 }
 
+/**
+ * Charts of the functions in one TypeScript or JavaScript text on its own, without the project: for an older version
+ * of a file (the last commit). The file is parsed once; calls are not followed into other files.
+ */
+export function standaloneCharts(fileName: string, text: string): (offset: number, code?: CodeOptions) => ControlFlowChart {
+  const options: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true, types: [], jsx: ts.JsxEmit.Preserve };
+  const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+  const host = ts.createCompilerHost(options);
+  const program = ts.createProgram({
+    rootNames: [fileName],
+    options,
+    host: { ...host, getSourceFile: (name) => (normalizePath(name) === normalizePath(fileName) ? sourceFile : undefined), fileExists: (name) => normalizePath(name) === normalizePath(fileName), readFile: () => undefined },
+  });
+  const checker = program.getTypeChecker();
+  return (offset, code = {}) => {
+    const fn = functionAtOffset(sourceFile, offset, checker);
+    return chartOf(buildCfg(fn), sourceFile, () => [], code);
+  };
+}
+
+function scriptKindOf(fileName: string): ts.ScriptKind {
+  const extension = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
+  return extension === '.tsx' ? ts.ScriptKind.TSX : extension === '.jsx' ? ts.ScriptKind.JSX : extension === '.js' || extension === '.mjs' || extension === '.cjs' ? ts.ScriptKind.JS : ts.ScriptKind.TS;
+}
+
 /** Where a chart's boxes are in the code, and their code as written: TypeScript nodes, or a parser's facts (C#). */
 export interface ChartSource {
   file: string;

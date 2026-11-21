@@ -29,6 +29,16 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 - Every decision, loop and return becomes a box. The **Paths** list shows each route through the function.
 - Click a path to light it up, Shift+click another to compare them, or click a branch label to keep only the paths through it.
 - Save the chart as Mermaid, SVG or PNG.
+- Zoom, the minimap and undo/redo for moving around sit in the bottom-left corner. Click the map button (or press `M`) to open the minimap. `Ctrl+Z` takes you back to where you were.
+
+## Flowchart vs last commit
+
+![A flowchart with the boxes changed since the last commit outlined, and the changes listed above the paths](docs/images/flowchart-vs-commit.gif)
+
+- Put the cursor in a function and press `Ctrl+Alt+S Shift+1`, or click the commit button in the flowchart's toolbar (`V`).
+- New boxes are outlined green and changed ones dashed amber. Hover a changed box to see its code before.
+- Above the paths: removed boxes, and which paths are new or gone. Click a row to go to its box.
+- It compares with your last commit (HEAD) and follows your edits as you type, saved or not. Works for TypeScript, JavaScript, C# and T-SQL.
 
 ## Find usages
 

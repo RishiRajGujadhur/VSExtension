@@ -38,6 +38,7 @@ const groups: { title: string; actions: Action[] }[] = [
       { command: 'tsStructure.mutationTracking', label: 'Mutation tracking', detail: 'Functions in this file that mutate shared state' },
       { command: 'tsStructure.mutationTrackingVariable', label: 'Mutation tracking for this variable', detail: 'Every change to the variable at the cursor, and whether it runs after an await' },
       { command: 'tsStructure.controlFlow', label: 'Control flow graph', detail: 'Every decision, loop and return of this function as a flowchart, with its paths' },
+      { command: 'tsStructure.controlFlowCompare', label: 'Flowchart vs last commit', detail: 'What changed in this function since the last commit: new, changed and removed boxes, new and gone paths' },
       { command: 'tsStructure.dependenceGraph', label: 'Program dependence graph', detail: 'Where each value of this function comes from, and which decisions control each statement' },
       { command: 'tsStructure.callGraph', label: 'Call graph', detail: 'Who calls this function and what it calls, a few levels each way' },
       { command: 'tsStructure.reactState', label: 'React state graph', detail: 'Props, state, effects and memos of this component, and what each one triggers' },

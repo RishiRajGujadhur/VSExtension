@@ -25,6 +25,7 @@ export const names: Record<string, string> = {
   'tsStructure.raceConditions': 'Race conditions',
   // Flow and errors
   'tsStructure.controlFlow': 'Flowchart',
+  'tsStructure.controlFlowCompare': 'Flowchart vs last commit',
   'tsStructure.dependenceGraph': 'What depends on what',
   'tsStructure.exceptionFlow': 'Error paths',
   'tsStructure.promiseRejections': 'Promise rejections',

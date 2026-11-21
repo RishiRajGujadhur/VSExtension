@@ -22,6 +22,21 @@ export function gitRoot(cwd: string): string {
   return normalizePath(git(cwd, ['rev-parse', '--show-toplevel']).toString().trim());
 }
 
+/**
+ * One file as it was at `ref` (HEAD: the last commit), or undefined when the file was not in that commit. Throws an
+ * AnalysisError when the file is not in a git repository at all.
+ */
+export function fileAtRef(fileName: string, ref = 'HEAD'): { text: string | undefined; repoRoot: string } {
+  const repoRoot = gitRoot(path.dirname(fileName));
+  const relative = path.relative(repoRoot, fileName).replace(/\\/g, '/');
+  try {
+    const text = execFileSync('git', ['show', `${ref}:${relative}`], { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }).toString('utf8');
+    return { text, repoRoot };
+  } catch {
+    return { text: undefined, repoRoot };
+  }
+}
+
 /** Source files under `directory` as they were at `ref`, read in one `git cat-file --batch` call. */
 export function filesAtRef(repoRoot: string, ref: string, directory: string): Map<string, string> {
   const relativeDir = path.relative(repoRoot, directory).replace(/\\/g, '/');

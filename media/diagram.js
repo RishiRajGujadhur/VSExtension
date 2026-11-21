@@ -1010,7 +1010,7 @@
   });
   zoomLevel.addEventListener('click', () => window.chartKit.zoomPresets(menu, zoomLevel, view.k, (k) => zoom(k / view.k), () => fit(true)));
   // The minimap can be hidden (M); the choice is kept with the other viewer preferences.
-  const toggleMinimap = window.chartKit.minimapPreference(map, prefs, saveState);
+  const toggleMinimap = window.chartKit.mapDock({ map, mapSvg: document.getElementById('minimap'), viewport: vp, prefs, saveState, zoom: ['zoomOut', 'zoomLevel', 'zoomIn'].map((id) => document.getElementById(id)) });
   window.addEventListener('keydown', (e) => {
     if (e.target === searchBox || e.ctrlKey || e.metaKey || e.altKey || menu.isOpen) return;
     if (e.key === 'm' || e.key === 'M') toggleMinimap();

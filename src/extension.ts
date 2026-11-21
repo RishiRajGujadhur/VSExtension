@@ -140,10 +140,16 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
       return controlFlow.current;
     }),
     // The chart on show, without drawing it again: for tests, and for a chart drawn in the background (C#).
-    vscode.commands.registerCommand('tsStructure.controlFlow.current', () => ({ current: controlFlow.current })),
+    vscode.commands.registerCommand('tsStructure.controlFlow.current', () => ({ current: controlFlow.current, changes: controlFlow.comparison })),
     registerCommand('tsStructure.controlFlow', () => {
       const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.show(editor);
+      return controlFlow.current;
+    }),
+    // The flowchart compared with the last commit: what changed in the function, and which paths are new or gone.
+    registerCommand('tsStructure.controlFlowCompare', () => {
+      const editor = otherLanguageEditor() ?? sourceEditor();
+      if (editor) controlFlow.showComparison(editor);
       return controlFlow.current;
     }),
     // The Program Dependence Graph: the control flow chart with its data and control dependences drawn on it.

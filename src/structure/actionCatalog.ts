@@ -69,6 +69,9 @@ const graphFacts: Record<string, { startsFrom: string; levels?: string }> = {
     'startsFrom': 'a function',
     'levels': 'calls expanded inside it'
   },
+  'tsStructure.controlFlowCompare': {
+    'startsFrom': 'a function'
+  },
   'tsStructure.callGraph': {
     'startsFrom': 'a function',
     'levels': 'callers and callees'
@@ -114,6 +117,8 @@ const graphFacts: Record<string, { startsFrom: string; levels?: string }> = {
 const graphCatalog: CatalogAction[] = [
   g('How it runs', 'tsStructure.controlFlow', 'Control Flow Graph', 'Every path through a function',
     'The function at the cursor as a flowchart, with the Path Explorer to list, compare and filter its paths.', 'cfg paths', true),
+  g('How it runs', 'tsStructure.controlFlowCompare', 'Control Flow Diff', 'Changes since the last commit',
+    'The flowchart of the function at the cursor with the boxes changed since the last commit marked, the removed ones listed, and the new and gone paths.', 'git diff compare before after changes'),
   g('How it runs', 'tsStructure.callGraph', 'Call Graph', 'Callers and callees, levels deep',
     'Who calls the function at the cursor and what it calls, a few levels each way, as a butterfly chart.', 'callers callees butterfly', true),
   g('How it runs', 'tsStructure.exceptionFlow', 'Exception Flow Graph', 'Where errors go',
@@ -178,6 +183,8 @@ export const actionCatalog: CatalogAction[] = [
 
   a('analyze', 'Flow and errors', 'tsStructure.controlFlow', 'Control Flow Graph', 'A function as a flowchart',
     'Draws the function at the cursor as a flowchart, with a Path Explorer that lists, compares and filters every path and flags the impossible ones.', 'paths branches flowchart cfg'),
+  a('analyze', 'Flow and errors', 'tsStructure.controlFlowCompare', 'Flowchart vs Last Commit', 'What changed in this function',
+    'Draws the function at the cursor as a flowchart and marks what changed since the last commit: new and changed boxes on the chart, removed boxes and gone paths listed beside it.', 'git diff compare before after changes review'),
   a('analyze', 'Flow and errors', 'tsStructure.dependenceGraph', 'Program Dependence Graph', 'Data and control dependences',
     'The control flow chart with its dependences drawn on it: purple arcs from where each variable is set to where that value is read, orange arcs from each decision to the code it controls.', 'pdg data control dependence slice why'),
   a('analyze', 'Flow and errors', 'tsStructure.exceptionFlow', 'Exception Flow', 'Errors thrown, caught or lost',

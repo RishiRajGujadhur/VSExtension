@@ -276,6 +276,29 @@ export const scenes: Scene[] = [
   },
   // C#: what a person does in a C# file, with real key presses.
   {
+    // Flowchart vs last commit: applyCoupon edited (a new guard, a changed return), then compared with the commit.
+    name: 'flowchart-vs-commit',
+    async run({ open, delay, cdp }) {
+      await open('src/pricing.ts', 'const coupon = findCoupon');
+      const editor = vscode.window.activeTextEditor!;
+      const text = editor.document.getText();
+      const at = (s: string) => editor.document.positionAt(text.indexOf(s));
+      await editor.edit((b) => {
+        b.insert(at('  const coupon = findCoupon'), '  if (amount <= 0) {\n    return 0;\n  }\n');
+        b.replace(new vscode.Range(at('return amount * (1 - coupon'), at('return amount * (1 - coupon').translate(0, 'return amount * (1 - coupon.percentOff / 100);'.length)), 'return Math.round(amount * (100 - coupon.percentOff)) / 100;');
+      });
+      await delay(900);
+      await press(cdp, 's', 'KeyS', 83, { ctrl: true, alt: true });
+      await delay(150);
+      await press(cdp, '!', 'Digit1', 49, { shift: true });
+    },
+    async cleanup() {
+      await vscode.commands.executeCommand('workbench.action.files.revert');
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    },
+    settle: 4000,
+  },
+  {
     name: 'csharp-flowchart',
     async run({ open, delay, cdp }) {
       await open('csharp/OrderService.cs', 'var amount = cart.Price()');

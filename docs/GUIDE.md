@@ -76,6 +76,7 @@ Every analysis has a shortcut: `Ctrl+Alt+S` (`Cmd+Ctrl+S` on macOS), then a lett
 | `4` | Tests for my changes | `5` | Next inspection problem |
 | `6` | Changes to this variable | `7` | Race conditions |
 | `1` | Flowchart | `0` | Why this value |
+| `Shift+1` | Flowchart vs last commit | | |
 | `8` | Data flow chart | `9` | Draw the results as a chart |
 | `Escape` | Stop | | |
 
@@ -145,7 +146,7 @@ Finding your way around a large function:
 
 - **Start and end are circles**: start is a filled circle with a play mark and the function's name beside it, end a ring around a dot. Each box shows the line it starts on, and an icon for its kind: **?** for a decision, a loop arrow, a return arrow, an error mark for a throw. Yes and no labels carry a ✓ and ✕ as well as their color.
 - **Right-click** a box to open its code, animate the paths through it, keep only the paths through it, zoom to it, expand or fold its calls, see what affects it or what it affects, run Data Flow, Find Usages or another analysis there, or copy its code. Right-click a branch label to filter by it or go to either end, a path in the list to pick, compare or copy it (as text or Mermaid), and the background to fit, expand or fold every call, go to unreachable code, or export.
-- A **minimap** appears when the function is bigger than the window, with the picked path lit up; click or drag in it to move.
+- **The map dock**, in the bottom-left corner: zoom out, the zoom level (click it for 50%–200% or Fit) and zoom in; the **map** button, which opens the minimap in a card above it (`M`; the choice is kept), with the picked path lit up, where a click or drag moves the view; and **undo** and **redo** for moving around (`Ctrl+Z`, `Ctrl+Y`), which glide back to where the view was before the last drag, zoom or jump. A burst of wheel zooming counts as one move.
 - **Find** (`Ctrl+F`) outlines the boxes whose code matches and fades the rest; `Enter` goes to the next match.
 - **Hover cards** open under their box, so the boxes beside it stay clickable. Double-click the code on a card to open it in the editor. The pin keeps one card open (pinning another box replaces it); drag it by its header to move it.
 - **Hover cards**: rest the pointer on a box, or focus it, for a card with its kind, file and line, its whole code with syntax colors, how many paths pass through it, what it reads and sets, which boxes it controls, and when it runs (*switch (user.role) → case 'member'*), with the keys that act on it. Pin the card to keep it open; `Escape` closes it. The bar under the chart shows the same box in one line, and hovering a path in the list previews its route.
@@ -159,13 +160,24 @@ Both charts:
 - **Search the right-click menu**: the menu opens with a search field at the top. Type to filter its actions (every word counts, in any order: *dep sho* finds **What it depends on**), use the arrow keys to move, `Enter` to run the first match, `Escape` to clear the search and then to close. Shortcuts are listed on the right, the actions you used last come first under **Recent**, and a line at the bottom says where you are (*Line 16 · control.ts · 2 paths through*).
 
 - You can't lose the chart: dragging, zooming and scrolling always keep part of it in the window. Double-click the background, or press `0`, to fit it again; the chart refits when you resize the tab, until you move it yourself.
-- Click the zoom level for 50%, 75%, 100%, 150%, 200% or Fit. Fit and moving to a box glide there (at once when your system asks for reduced motion).
-- Click the background and use the arrow keys to pan (`Shift` for bigger steps); `M` hides or shows the minimap, and the choice is kept.
+- Zoom, the minimap and undo/redo sit in the map dock at the bottom left. Click the zoom level for 50%, 75%, 100%, 150%, 200% or Fit. Fit and moving to a box glide there (at once when your system asks for reduced motion).
+- Click the background and use the arrow keys to pan (`Shift` for bigger steps); `M` opens or closes the minimap card, and the choice is kept; `Ctrl+Z` and `Ctrl+Y` undo and redo moves.
 - Right-click a box for **Copy text** or **Copy location** (`file:line:column`).
 
 ![The right-click menu of a decision with the search field at the top, shortcuts on the right and the box's line, file and paths at the bottom](images/graph-menu-search.png)
 
 The chart has the same animated grid as the data flow chart, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
+
+#### Flowchart vs last commit
+
+**Flowchart vs last commit** (`Ctrl+Alt+S Shift+1`), or the commit button in the Flowchart's toolbar (`V`), compares the function on screen with the same function in your last commit (`HEAD`):
+
+- **New boxes** are outlined green, **changed boxes** dashed amber; a changed box's hover card shows its code before.
+- Above the paths, a line counts what changed (*Since the last commit: 2 new boxes, 1 changed · 3 new paths, 2 paths gone*), followed by the new and changed boxes (click one to go to it), the **removed boxes** with the line they were on, and the **paths gone**. Paths that are new carry a **new** badge in the list.
+- The comparison follows your edits as you type, saved or not, until you turn it off with the same button.
+- The function is found in the old version by its name, wherever it moved in the file; methods that share a name are told apart by their order. A function that is not in the last commit, or a file that is new, shows as new.
+- Boxes are matched by their kind and code (spacing ignored); a box left over on each side with code alike enough is the same box changed. A path is the same path when it passes the same boxes and ends the same way. Calls expanded in place (ƒ+) are left out of the comparison.
+- It works for TypeScript, JavaScript, C# and T-SQL, and needs the file in a git repository.
 
 Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
 

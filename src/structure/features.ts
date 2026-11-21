@@ -40,7 +40,7 @@ export const features: Feature[] = [
     core: true,
     title: 'Data flow and changes',
     description: 'Data Flow Path Explorer and Mutation Tracking.',
-    commands: ['tsStructure.dataFlow', 'tsStructure.valueTimeline', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph'],
+    commands: ['tsStructure.dataFlow', 'tsStructure.valueTimeline', 'tsStructure.mutationTracking', 'tsStructure.mutationTrackingProject', 'tsStructure.report.traceValue', 'tsStructure.report.dataFlowHere', 'tsStructure.detectPatterns', 'tsStructure.mutationTrackingVariable', 'tsStructure.raceConditions', 'tsStructure.report.flowByDirection', 'tsStructure.report.flowByFunction', 'tsStructure.report.mutationsHere', 'tsStructure.report.racesHere', 'tsStructure.dataFlowDiagram', 'tsStructure.controlFlow', 'tsStructure.controlFlowCompare', 'tsStructure.explainValue', 'tsStructure.sliceBackward', 'tsStructure.sliceForward', 'tsStructure.dependenceGraph'],
   },
   {
     id: 'sideEffects',

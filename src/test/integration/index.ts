@@ -40,6 +40,7 @@ export async function run(): Promise<void> {
     await reportActionsFlow();
     await customInspectionFlow();
     await cardEditsFlow();
+    await compareWithCommitFlow();
   } finally {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     try {
@@ -572,6 +573,37 @@ async function revert(uris: vscode.Uri[]): Promise<void> {
  * C#: Find usages, Callers and calls and the family tree are built from the C# language server's answers. Here stand-in
  * providers give those answers (as the C# extension would), so the reports can be checked without it.
  */
+/** Flowchart vs last commit: a function committed, then edited without saving, compared in the chart. */
+async function compareWithCommitFlow(): Promise<void> {
+  const { execFileSync } = await import('child_process');
+  const file = path.join(sample, 'src', 'grade.ts');
+  fs.writeFileSync(file, "export function grade(score: number) {\n  if (score > 90) return 'A';\n  return 'B';\n}\n");
+  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=test', '-c', 'user.email=test@example.com', ...args], { cwd: sample, stdio: 'pipe' });
+  git('init', '-q');
+  git('add', '-A');
+  git('commit', '-q', '-m', 'sample');
+  const document = await vscode.workspace.openTextDocument(file);
+  const editor = await vscode.window.showTextDocument(document);
+  await editor.edit((b) => b.insert(new vscode.Position(2, 0), "  if (score > 50) return 'C';\n"));
+  editor.selection = new vscode.Selection(0, 18, 0, 18);
+  type Shown = { current?: { name: string; nodes: { text: string }[] }; changes?: { added: number[]; changed: unknown[]; newPaths: number[]; gonePaths: unknown[]; against: string } };
+  await vscode.commands.executeCommand('tsStructure.controlFlowCompare');
+  let shown: Shown | undefined;
+  for (let i = 0; i < 40 && !shown?.changes; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    shown = await vscode.commands.executeCommand<Shown>('tsStructure.controlFlow.current');
+  }
+  assert.equal(shown?.current?.name, 'grade');
+  assert.ok(shown?.changes, 'the comparison with the last commit');
+  const nodes = shown.current!.nodes;
+  assert.deepEqual(shown.changes.added.map((id) => nodes[id].text).sort(), ["return 'C';", 'score > 50']);
+  assert.deepEqual([shown.changes.changed.length, shown.changes.newPaths.length, shown.changes.gonePaths.length], [0, 2, 1]);
+  assert.equal(shown.changes.against, 'the last commit');
+  console.log('flowchart vs last commit ok');
+  await vscode.commands.executeCommand('workbench.action.files.revert');
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
 async function csharpThroughLanguageServer(): Promise<void> {
   const code = [
     'namespace Shop {',

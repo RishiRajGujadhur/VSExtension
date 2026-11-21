@@ -19,6 +19,7 @@ export const commandIcons: Record<string, string> = {
   'tsStructure.mutationTrackingVariable': 'symbol-variable',
   'tsStructure.raceConditions': 'watch',
   'tsStructure.controlFlow': 'git-branch',
+  'tsStructure.controlFlowCompare': 'git-commit',
   'tsStructure.callGraph': 'call-outgoing',
   'tsStructure.dependenceGraph': 'graph',
   'tsStructure.reactState': 'symbol-event',

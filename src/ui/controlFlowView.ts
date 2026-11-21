@@ -16,6 +16,9 @@ import { graphOption, ReportControl, setGraphOption } from '../structure/graphOp
 import { ReportLocation } from '../structure/report';
 import { activeFeature } from './activeFeature';
 import { editsFor, runEdit } from './editActionsUi';
+import { compareCharts, findSameFunction, FlowComparison } from '../inspect/flowCompare';
+import { standaloneCharts } from '../inspect/controlFlowChart';
+import { fileAtRef } from '../navigate/graphDiff';
 
 /**
  * The Control Flow view: a function's flowchart in an editor tab, with its paths listed beside it. It redraws as
@@ -39,6 +42,14 @@ export class ControlFlowPanel {
   private expanded = new Set<string>();
   /** Boxes whose code was unfolded with their chip. */
   private unfolded = new Set<string>();
+  /**
+   * Compare with the last commit: on, the chart marks what changed in the function since then, and lists what is gone.
+   * It stays on as the code is edited, so the marks follow the edits.
+   */
+  private comparing = false;
+  /** The file as it was in the last commit, read once per file while comparing; undefined text when it is new. */
+  private committed: { file: string; text: string | undefined } | undefined;
+  private changes: FlowComparison | undefined;
   /** The slice on screen, sent after each chart until the code is edited. */
   private slice: { nodes: number[]; at: number; direction: 'backward' | 'forward'; name: string; line: number } | undefined;
 
@@ -197,6 +208,8 @@ export class ControlFlowPanel {
           preserveFocus: true,
         });
         this.showSlice(editor, message.direction);
+      } else if (message.type === 'compare') {
+        this.setComparing(!this.comparing);
       } else if (message.type === 'error' && message.text) {
         void vscode.window.showWarningMessage(message.text);
       }
@@ -231,7 +244,7 @@ export class ControlFlowPanel {
       this.source = undefined;
       this.cursorId = undefined;
       target.anchor = chart.anchor;
-      this.post();
+      void this.publish();
     } catch (error) {
       if (fromCommand) {
         const message = error instanceof AnalysisError ? error.message : `Control Flow failed: ${String(error)}`;
@@ -263,7 +276,7 @@ export class ControlFlowPanel {
       this.cursorId = undefined;
       // Follow the function itself from now on, not the cursor position it was found from.
       this.target.anchor = this.chart.anchor;
-      this.post();
+      void this.publish();
       return true;
     } catch (error) {
       if (fromCommand) {
@@ -274,15 +287,80 @@ export class ControlFlowPanel {
     }
   }
 
+  /** Opens the view on the function at the cursor, compared with the last commit. */
+  showComparison(editor: vscode.TextEditor): void {
+    this.comparing = true;
+    this.committed = undefined;
+    this.show(editor);
+  }
+
+  /** Turns Compare with the last commit on or off, and draws the chart again with or without its marks. */
+  private setComparing(on: boolean): void {
+    this.comparing = on;
+    this.committed = undefined;
+    if (!on) this.changes = undefined;
+    void this.publish();
+  }
+
+  /** Sends the chart, after comparing it with the last commit when that is on. */
+  private async publish(): Promise<void> {
+    const chart = this.chart;
+    if (this.comparing && chart && this.target) {
+      try {
+        const changes = await this.compareWithCommit(this.target.uri, chart);
+        // Another chart was drawn meanwhile: it sends its own.
+        if (this.chart !== chart) return;
+        this.changes = changes;
+      } catch (error) {
+        if (this.chart !== chart) return;
+        this.comparing = false;
+        this.changes = undefined;
+        const why = error instanceof Error ? error.message : String(error);
+        void showProblem(error instanceof AnalysisError ? `Compare with last commit needs the file in a git repository with at least one commit. ${why}` : `Compare with last commit failed: ${why}`, error instanceof AnalysisError ? [] : unexpectedRemedies('Compare with last commit', error));
+      }
+    } else this.changes = undefined;
+    this.post();
+  }
+
+  /** The chart on screen against the same function in the last commit. */
+  private async compareWithCommit(uri: vscode.Uri, chart: ControlFlowChart): Promise<FlowComparison> {
+    const file = uri.fsPath;
+    if (this.committed?.file !== file) this.committed = { file, text: fileAtRef(file).text };
+    const before = this.committed.text;
+    if (before === undefined) return { ...compareCharts(undefined, chart), against: 'the last commit (the file is new since then)' };
+    const now = (await vscode.workspace.openTextDocument(uri)).getText();
+    const normalized = normalizePath(file);
+    let chartAt: (text: string, offset: number) => Promise<ControlFlowChart>;
+    if (isTsqlFile(uri)) chartAt = async (text, offset) => tsqlFlowChart(text, normalized, offset);
+    else if (isOtherLanguage(uri)) chartAt = (text, offset) => csharpFlowChart(text, normalized, offset);
+    else {
+      // Each text is parsed once, however many places in it are tried.
+      const parsed = new Map<string, ReturnType<typeof standaloneCharts>>();
+      chartAt = async (text, offset) => {
+        let charts = parsed.get(text);
+        if (!charts) parsed.set(text, (charts = standaloneCharts(file, text)));
+        return charts(offset);
+      };
+    }
+    const found = await findSameFunction({ text: now, chart }, before, chartAt);
+    const result = compareCharts(found.chart, chart);
+    return found.chart ? { ...result, byPosition: found.byPosition } : { ...result, against: 'the last commit (the function is new since then)' };
+  }
+
   private post(): void {
     if (!this.panel || !this.ready) return;
     this.panel.title = this.chart ? `Flowchart: ${this.chart.name}()` : 'Flowchart';
-    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl(), codeControl()] });
+    void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl(), codeControl()], changes: this.changes, comparing: this.comparing });
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
     if (this.pendingDeps && this.chart) {
       this.pendingDeps = false;
       void this.panel.webview.postMessage({ type: 'deps', on: true });
     }
+  }
+
+  /** For tests: what the chart on screen marks as changed since the last commit, when comparing. */
+  get comparison(): FlowComparison | undefined {
+    return this.changes;
   }
 
   /** For tests: the chart on screen. */
@@ -342,6 +420,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates every path through it (Escape stops it)', 'aria-pressed="true"')}
   </span>
   ${button('otherGraphs', 'graph-scatter', 'Other Graphs of This Function: draw it another way (G)')}
+  ${button('compare', 'git-commit', 'Compare with Last Commit: mark what changed in this function since the last commit, and list what is gone (V)', 'aria-pressed="false"')}
   ${button('deps', 'references', 'Dependences: the program dependence graph, where each value comes from and what controls each box (D)', 'aria-pressed="false"')}
   ${button('togglePaths', 'list-tree', 'Paths: every way through the function (P)', 'aria-pressed="true" aria-controls="explorer"')}
   ${button('legendButton', 'question', 'Legend: what the shapes, colors and keys mean', 'aria-expanded="false" aria-controls="legend"')}
@@ -367,6 +446,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     <label><input type="checkbox" id="showImpossible"> Show impossible paths</label>
     <button id="clearPins" title="Remove every branch filter and the selected path (Escape)">Clear</button>
   </div>
+  <div id="changes" role="region" aria-label="Changes since the last commit" hidden></div>
   <div id="pins" aria-label="Branches the paths must take"></div>
   <div id="comparison" role="status" hidden></div>
   <ul id="paths" role="tree" aria-label="Paths through the function, grouped by how they end"></ul>

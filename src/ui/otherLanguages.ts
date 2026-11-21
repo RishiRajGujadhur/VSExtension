@@ -26,6 +26,7 @@ export const otherLanguages: Record<string, OtherLanguage> = {
     name: 'C#',
     commands: [
       'tsStructure.controlFlow',
+      'tsStructure.controlFlowCompare',
       'tsStructure.dependenceGraph',
       'tsStructure.dataFlow',
       'tsStructure.dataFlowDiagram',
@@ -44,7 +45,7 @@ export const otherLanguages: Record<string, OtherLanguage> = {
   },
   sql: {
     name: 'T-SQL',
-    commands: ['tsStructure.controlFlow', 'tsStructure.dependenceGraph', 'tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph'],
+    commands: ['tsStructure.controlFlow', 'tsStructure.controlFlowCompare', 'tsStructure.dependenceGraph', 'tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph'],
   },
 };
 

@@ -546,7 +546,9 @@
       // Every box in view (the padding around them doesn't count): no minimap needed.
       const p = bounds.pad || 0;
       const fits = vx <= bounds.x + p + 1 && vy <= bounds.y + p + 1 && vx + vw >= bounds.x + bounds.w - p - 1 && vy + vh >= bounds.y + bounds.h - p - 1;
-      map.classList.toggle('off', fits || off);
+      const docked = !!map.closest('.map-card');
+      map.classList.toggle('off', docked ? off : fits || off);
+      if (docked) map.closest('.map-card').hidden = off;
     }
     let dragging = false;
     const moveTo = (e) => {
@@ -668,6 +670,34 @@
     let fitted = false;
     let frame = 0;
     let drag;
+    // Where the view has been, for undo and redo: a snapshot before each move (a drag, a burst of wheel zooming,
+    // Fit, a glide), not one per frame.
+    const back = [];
+    const forward = [];
+    const listeners = new Set();
+    let burst = 0;
+    const same = (a, b) => a && b && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.k - b.k) < 0.001;
+    // Only moves the person makes count: Fit when the chart opens, or when a panel resizes it, is not one.
+    let touched = false;
+    for (const type of ['pointerdown', 'keydown', 'wheel']) window.addEventListener(type, () => { touched = true; }, { capture: true, passive: true });
+    function remember(force) {
+      if (!touched) return;
+      const now = Date.now();
+      if (!force && now - burst < 500) {
+        burst = now;
+        return;
+      }
+      burst = now;
+      const view = { ...getView() };
+      if (same(back[back.length - 1], view)) return;
+      back.push(view);
+      if (back.length > 50) back.shift();
+      forward.length = 0;
+      notify();
+    }
+    function notify() {
+      for (const listener of listeners) listener(getView(), { canUndo: back.length > 0, canRedo: forward.length > 0 });
+    }
     // The chart's place on the page, measured when the pointer comes in (and after a resize), not on every move.
     let rect;
     const size = () => ({ width: svg.clientWidth || 800, height: svg.clientHeight || 600 });
@@ -686,12 +716,14 @@
         zoomLabel.setAttribute('aria-label', `Zoom ${percent}%, reset to 100%`);
       }
       onApply(view);
+      notify();
     }
     function applySoon() {
       if (!frame) frame = requestAnimationFrame(() => { frame = 0; apply(); });
     }
     /** Moves the view there: smoothly when the person asked, at once when a chart first opens. */
     function moveTo(to, atOnce) {
+      if (!atOnce) remember(true);
       if (atOnce) {
         setView(to);
         apply();
@@ -706,6 +738,7 @@
       fitted = true;
     }
     function zoom(factor, cx, cy) {
+      remember();
       fitted = false;
       const view = getView();
       const k = Math.min(3, Math.max(minZoom, view.k * factor));
@@ -715,6 +748,7 @@
       applySoon();
     }
     function panBy(dx, dy, atOnce) {
+      remember();
       fitted = false;
       const view = getView();
       setView({ k: view.k, x: view.x + dx, y: view.y + dy });
@@ -726,6 +760,7 @@
       beforeInteract();
       if (e.button !== 0 || !canDrag(e.target)) return;
       const view = getView();
+      remember(true);
       drag = { x: e.clientX - view.x, y: e.clientY - view.y, startX: e.clientX, startY: e.clientY };
       svg.setPointerCapture(e.pointerId);
       svg.classList.add('dragging');
@@ -772,8 +807,21 @@
     });
     refitOnResize(svg, () => fitted, () => fit(true));
 
+    /** Back to where the view was before the last move, or forward again. */
+    function step(from, to) {
+      const target = from.pop();
+      if (!target) return;
+      to.push({ ...getView() });
+      fitted = false;
+      glide(getView(), target, (v) => { setView(v); apply(); });
+      notify();
+    }
     return {
       apply, applySoon, moveTo, fit, zoom, panBy,
+      undo: () => step(back, forward),
+      redo: () => step(forward, back),
+      /** Called with the view and whether undo and redo can go anywhere, on every change. */
+      onChange(listener) { listeners.add(listener); listener(getView(), { canUndo: back.length > 0, canRedo: forward.length > 0 }); },
       get fitted() { return fitted; },
       set fitted(value) { fitted = value; },
     };
@@ -804,14 +852,93 @@
     });
   }
 
-  /** Shows or hides the minimap as last chosen (M toggles it); returns the toggle. The choice is kept with the chart's preferences. */
-  function minimapPreference(map, prefs, saveState) {
-    map.hidden = prefs.minimap === false;
-    return () => {
-      map.hidden = !map.hidden;
-      prefs.minimap = !map.hidden;
+
+  /**
+   * The map dock, in the style of a whiteboard app: in the bottom-left corner, the zoom controls (`zoom`: the page's
+   * zoom out, level and zoom in buttons, moved here from the toolbar), a map button that opens the minimap in a card
+   * above it, and undo and redo for moving around the chart. The minimap starts closed; M (or the button) opens it,
+   * and the choice is kept with the chart's preferences. `above`: a bar along the bottom the dock sits on top of.
+   * Returns the toggle, for the M key and the background menu.
+   */
+  function mapDock({ map, mapSvg, viewport, prefs, saveState, zoom = [], above }) {
+    const button = (label, icon, title) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dock-button';
+      b.title = title;
+      b.setAttribute('aria-label', title);
+      if (icon) {
+        const i = document.createElement('i');
+        i.className = `codicon codicon-${icon}`;
+        i.setAttribute('aria-hidden', 'true');
+        b.append(i);
+      }
+      if (label) b.append(label);
+      return b;
+    };
+    const dock = document.createElement('div');
+    dock.className = 'map-dock';
+    const card = document.createElement('div');
+    card.className = 'map-card';
+    card.hidden = true;
+    mapSvg.parentNode.insertBefore(dock, mapSvg);
+    card.append(mapSvg);
+    const bar = document.createElement('div');
+    bar.className = 'map-bar';
+    const zoomGroup = document.createElement('div');
+    zoomGroup.className = 'dock-group';
+    for (const control of zoom) {
+      control.classList.add('dock-button');
+      if (control.id === 'zoomLevel') control.classList.add('dock-zoom');
+    }
+    const toggle = button('', 'map', 'Minimap (M)');
+    toggle.classList.add('dock-map');
+    zoomGroup.append(...zoom);
+    const mapGroup = document.createElement('div');
+    mapGroup.className = 'dock-group';
+    mapGroup.append(toggle);
+    const historyGroup = document.createElement('div');
+    historyGroup.className = 'dock-group';
+    const undo = button('', 'discard', 'Undo the last move (Ctrl+Z)');
+    const redo = button('', 'redo', 'Redo (Ctrl+Y)');
+    historyGroup.append(undo, redo);
+    bar.append(...(zoom.length ? [zoomGroup] : []), mapGroup, historyGroup);
+    dock.append(card, bar);
+    // On top of the bar along the bottom (the box details), however tall it wraps.
+    if (above && typeof ResizeObserver === 'function') {
+      const lift = () => { dock.style.bottom = `${(above.offsetParent ? above.offsetHeight : 0) + 12}px`; };
+      new ResizeObserver(lift).observe(above);
+      lift();
+    }
+
+    const show = (on) => {
+      map.hidden = !on;
+      card.hidden = !on;
+      toggle.setAttribute('aria-pressed', String(on));
+      toggle.classList.toggle('on', on);
+      if (on) map.update();
+    };
+    show(prefs.minimap === true);
+    const flip = () => {
+      prefs.minimap = card.hidden;
+      show(prefs.minimap);
       saveState();
     };
+    toggle.addEventListener('click', flip);
+    undo.addEventListener('click', () => viewport.undo());
+    redo.addEventListener('click', () => viewport.redo());
+    viewport.onChange((view, history) => {
+      undo.disabled = !history.canUndo;
+      redo.disabled = !history.canRedo;
+    });
+    // Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z) move back and forward, outside text fields.
+    window.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); viewport.undo(); }
+      else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); viewport.redo(); }
+    });
+    return flip;
   }
 
   /** Calls `refit` when the chart area changes size while the chart is still as Fit left it. */
@@ -1364,5 +1491,5 @@
 
   window.chartKit = { el, toast, renderControls, hoverCard, highlightCode, drawFlows, attachFlowLines, redrawFlows, exportSvg, bindToggles,
     limitAnimations,
-    ANIMATION_LIMIT, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize, viewport, backgroundGrid, minimapPreference };
+    ANIMATION_LIMIT, glyph, icon, ringPaths, menu, minimap, toPng, clampView, glide, zoomPresets, panKey, refitOnResize, viewport, backgroundGrid, mapDock };
 })();
