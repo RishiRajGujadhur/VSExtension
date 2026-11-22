@@ -105,7 +105,7 @@ export const credits: Credit[] = [
   },
   {
     name: 'all-MiniLM-L6-v2',
-    usedFor: 'The code model: helps pick each file\'s key change and name what code is for.',
+    usedFor: 'The code model: picks each file\'s key change in a Git reel, names what code is for, and (when you turn it on) tags Data flow boxes and finds them by meaning.',
     author: 'The sentence-transformers team; the ONNX export by Xenova',
     license: 'Apache-2.0',
     url: 'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2',

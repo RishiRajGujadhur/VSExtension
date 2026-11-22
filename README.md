@@ -156,14 +156,14 @@ No voice model is bundled: the extension ships only the engine that runs one (th
 |  | Kitten TTS Nano 0.8, full precision (Apache-2.0) | 60.0 MB | 60.0 MB |
 |  | Kitten TTS Micro 0.8 (Apache-2.0) | 44.7 MB | 44.7 MB |
 |  | Kitten TTS Mini 0.8 (Apache-2.0) | 81.5 MB | 81.5 MB |
-| Git reel code model (key changes, what code is for) | all-MiniLM-L6-v2, int8 ONNX by Xenova (Apache-2.0) | 23.2 MB | 23.2 MB |
+| Code model (Git reel key changes; Data flow tags and Find by meaning, when turned on) | all-MiniLM-L6-v2, int8 ONNX by Xenova (Apache-2.0) | 23.2 MB | 23.2 MB |
 
 **Voice models.** The first time a video needs the voice-over, you choose a model: **Kitten Nano** is recommended
 (the smallest download and the quickest to speak); the others are larger, more natural and slower. Or your computer's
 own voice, with nothing to download. The choice is the **Voice model** setting (`tsStructure.reel.voiceModel`), and
 *Git reel: choose the voice model* and *Git reel: remove downloaded voice models* change it or free the space.
 
-**The code model.** The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model**
+**The code model.** Data flow uses it only when you turn it on (the wand button on a Data flow chart): each box gets a tag for what it is for, and Find also finds boxes by meaning. The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model**
 setting (`tsStructure.reel.codeModel`: ask, on, off) and the commands *Git reel: download the code model* and *Git
 reel: remove the code model* control it.
 

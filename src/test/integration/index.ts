@@ -389,6 +389,24 @@ async function analysisCommandsFlow(): Promise<void> {
   const diagramTab = active();
   assert.ok(diagramTab?.input instanceof vscode.TabInputWebview && diagramTab.input.viewType.endsWith('tsStructure.diagram'), `tabs: ${vscode.window.tabGroups.all.map((g) => g.tabs.map((t) => t.label).join(', ')).join(' | ')}`);
   assert.match(diagramTab.label, /^Data flow: subtotal/);
+  // The code model is offered on a Data flow chart, off until turned on: no tags, no Find by meaning.
+  type Meaning = { available: boolean; on: boolean; purposes: Record<string, { label: string; by: string }> };
+  const meaning = () => vscode.commands.executeCommand<Meaning>('tsStructure.diagram.meaningInfo');
+  assert.deepEqual(await meaning(), { available: true, on: false, purposes: {} });
+  assert.deepEqual(await vscode.commands.executeCommand('tsStructure.diagram.findByMeaning', 'where is it saved'), []);
+  // Turned on (the model is in the test storage, as if downloaded): the boxes get their tags.
+  await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', true, vscode.ConfigurationTarget.Global);
+  try {
+    let state = await meaning();
+    for (let i = 0; i < 100 && !(state?.on && Object.keys(state.purposes).length); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      state = await meaning();
+    }
+    assert.ok(state?.on, `the code model is on: ${JSON.stringify(state)}`);
+    console.log(`data flow code model ok: ${Object.entries(state!.purposes).map(([k, p]) => `${k.split('/').pop()} → ${p.label} (${p.by})`).join('; ') || 'no box tagged'}`);
+  } finally {
+    await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', undefined, vscode.ConfigurationTarget.Global);
+  }
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
   await vscode.window.showTextDocument(document);
   console.log('data flow diagram ok');
@@ -682,9 +700,11 @@ async function gitReelFlow(): Promise<void> {
   type Plan = { meta: { title: string; files: number }; scenes: { kind: string; symbol?: string; caption: string; flow?: { nodes: { state: string }[] } }[] };
   const plan = await vscode.commands.executeCommand<Plan>('tsStructure.gitReel', 'HEAD');
   assert.ok(plan, 'a reel plan');
-  // The code model is not there until you agree to download it (the tests turned its offer off).
+  // The code model is off for the reel here (the tests turned its offer off), whether or not it is on this computer
+  // (the test storage has it, for the Data flow test).
   const model = await vscode.commands.executeCommand<{ downloaded: boolean }>('tsStructure.gitReel.codeModelInfo');
-  assert.equal(model?.downloaded, false, 'the code model is not downloaded unasked');
+  assert.equal(typeof model?.downloaded, 'boolean');
+  assert.equal(vscode.workspace.getConfiguration('tsStructure.reel').get('codeModel'), 'off');
   assert.equal(plan.meta.title, 'Uncommitted changes');
   const scene = plan.scenes.find((s) => s.symbol === 'grade');
   assert.ok(scene, plan.scenes.map((s) => s.caption).join(' | '));

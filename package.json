@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: a voice model you choose, downloaded on first use, 28 to 82 MB; or your computer's own voice), and an optional code model for them, downloaded only if you agree (all-MiniLM-L6-v2, Apache-2.0: 23 MB, not bundled). Chart animations adapted from robot-components (MIT).",
-  "version": "0.96.0",
+  "version": "0.97.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -3284,6 +3284,11 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Prepare the project of the file you are editing in the background, a moment after you stop typing, so the first analysis starts at once. Turn off on very large projects if the editor feels slow right after opening a file."
+          },
+          "tsStructure.dataFlow.codeModel": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "**Data flow: code model**: off by default. On, the Data flow chart uses the code model (all-MiniLM-L6-v2, Apache-2.0, the one the Git reel can use): each box gets a tag for what it is for (*Checks disk*, *Network*, *Module*, *Config*, *Logged*…), from the code it calls or as the model reads it, and **Find** also finds boxes by meaning (*where is it saved* finds a file write). The model is a one-time 23.2 MB download from Hugging Face, made only when you turn this on and agree (the request shows Hugging Face your IP address and sends none of your code); it then runs on your computer. The wand button on a Data flow chart turns it on or off."
           }
         }
       },

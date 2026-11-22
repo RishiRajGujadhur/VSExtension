@@ -21,6 +21,11 @@ fs.rmSync(voiceModels, { recursive: true, force: true });
 const model = require('../test-fixtures/voice-model.cjs').testVoiceModel();
 if (model) fs.cpSync(model.dir, path.join(voiceModels, model.id), { recursive: true });
 else console.warn('No assets/kitten: the voice-over tests use the system voice (run node scripts/fetch-kitten.js).');
+// The code model, as if downloaded, for the Data flow test that turns it on (assets/code-model, git-ignored).
+const codeModel = path.join(root, 'assets', 'code-model');
+const codeModelHere = path.join(userData, 'User', 'globalStorage', 'rishigujadhur.ts-test-impact', 'code-model');
+fs.rmSync(codeModelHere, { recursive: true, force: true });
+if (fs.existsSync(path.join(codeModel, 'model_quantized.onnx'))) fs.cpSync(codeModel, codeModelHere, { recursive: true });
 const result = spawnSync(
   executable,
   [

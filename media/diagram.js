@@ -247,7 +247,11 @@
       saveState();
     }, 300);
   }
-  const isMatch = (n) => !!query && `${n.label} ${n.description || ''}`.toLowerCase().includes(query);
+  // With the code model on (Data flow only): what each box is for, and the boxes whose code means what was typed.
+  let meaning = { available: false, on: false, purposes: {} };
+  let meaningKeys = new Set();
+  const byMeaning = (n) => !!query && meaning.on && meaningKeys.has(n.key);
+  const isMatch = (n) => !!query && (`${n.label} ${n.description || ''}`.toLowerCase().includes(query) || byMeaning(n));
   const allNodes = () => (diagram ? [diagram.center, ...(() => { const out = []; forEach([...diagram.left, ...diagram.right], (n) => out.push(n)); return out; })()] : []);
 
   // Tidy tree: each leaf takes the next row, each parent sits between its first and last child.
@@ -415,6 +419,19 @@
         const pill = el('g', { class: `badge-pill color-${node.badge.color}`, transform: `translate(${node.w - width - (node.duplicates ? 34 : 10)},${-7})`, 'aria-hidden': 'true' }, g);
         el('rect', { width, height: 14, rx: 7 }, pill);
         el('text', { x: width / 2, y: 10, 'text-anchor': 'middle' }, pill).textContent = text;
+      }
+      const purpose = meaning.on && node !== center ? meaning.purposes[node.key] : undefined;
+      if (purpose) {
+        // What the box is for, on its bottom edge: an icon and a word ("Checks disk", "Network"), by a rule or the model.
+        const text = purpose.label;
+        const width = text.length * 5.6 + 26;
+        const pill = el('g', { class: `purpose-pill by-${purpose.by}`, transform: `translate(12,${H - 7})`, 'aria-hidden': 'true' }, g);
+        el('title', {}, pill).textContent = `${purpose.label}: ${purpose.by === 'model' ? 'what the code model reads this box as' : 'from the code it calls'}`;
+        el('rect', { width, height: 14, rx: 7 }, pill);
+        const glyph = iconChar(purpose.icon);
+        if (glyph) el('text', { x: 9, y: 11, 'text-anchor': 'middle', class: 'purpose-icon' }, pill).textContent = glyph;
+        el('text', { x: 17, y: 10 }, pill).textContent = text;
+        g.setAttribute('aria-label', `${g.getAttribute('aria-label')}. ${purpose.label}`);
       }
       if (node.location) {
         // Right-click offers the analyses the results view offers on a row.
@@ -770,8 +787,47 @@
     // Only drawn boxes count: in the one-branch view, matches in other branches are mentioned, not jumped to.
     const count = shownNodes.filter(isMatch).length;
     const elsewhere = allNodes().filter(isMatch).length - count;
-    searchCount.textContent = query ? (count ? `${count} found` : 'No boxes match') + (elsewhere ? `, ${elsewhere} in other branches` : '') : '';
+    const meant = shownNodes.filter((n) => byMeaning(n) && !`${n.label} ${n.description || ''}`.toLowerCase().includes(query)).length;
+    searchCount.textContent = query ? (count ? `${count} found${meant ? ` (${meant} by meaning)` : ''}` : 'No boxes match') + (elsewhere ? `, ${elsewhere} in other branches` : '') : '';
   }
+
+  // Find by meaning: a moment after typing stops, the extension says which boxes mean what was typed.
+  let meaningTimer;
+  function askMeaning(text) {
+    clearTimeout(meaningTimer);
+    if (!meaning.on || text.trim().length < 3) {
+      meaningKeys = new Set();
+      return;
+    }
+    meaningTimer = setTimeout(() => vscode.postMessage({ type: 'meaningFind', text: text.trim() }), 250);
+  }
+
+  /** A codicon as a character, from the icon font's own stylesheet, to draw inside the chart. */
+  const iconChars = new Map();
+  function iconChar(name) {
+    if (iconChars.has(name)) return iconChars.get(name);
+    const i = document.createElement('i');
+    i.className = `codicon codicon-${name}`;
+    i.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+    document.body.append(i);
+    const content = getComputedStyle(i, '::before').content;
+    i.remove();
+    const ch = content && content !== 'none' && content !== 'normal' ? content.replace(/^["']|["']$/g, '') : '';
+    iconChars.set(name, ch);
+    return ch;
+  }
+
+  // The Code model button (Data flow only): on, the boxes say what they are for and Find also finds by meaning.
+  const meaningButton = document.getElementById('meaning');
+  function showMeaning() {
+    meaningButton.hidden = !meaning.available;
+    meaningButton.setAttribute('aria-pressed', String(meaning.on));
+    meaningButton.title = meaning.on
+      ? 'Code Model: on. Boxes say what they are for, and Find also finds boxes by meaning (all-MiniLM-L6-v2, on your computer). Click to turn it off.'
+      : 'Code Model: off. Turn it on to see what each box is for and find boxes by meaning (all-MiniLM-L6-v2, a 23 MB download the first time, run on your computer).';
+    searchBox.placeholder = meaning.on ? 'Find a box, by text or meaning (Ctrl+F)' : 'Find a box (Ctrl+F)';
+  }
+  meaningButton.addEventListener('click', () => vscode.postMessage({ type: 'toggleMeaning' }));
 
   function nextMatch(step) {
     const found = shownNodes.filter(isMatch);
@@ -784,7 +840,10 @@
     if (node.el) node.el.classList.add('current');
   }
 
-  searchBox.addEventListener('input', () => search(searchBox.value));
+  searchBox.addEventListener('input', () => {
+    search(searchBox.value);
+    askMeaning(searchBox.value);
+  });
   searchBox.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); nextMatch(e.shiftKey ? -1 : 1); }
     if (e.key === 'Escape') { searchBox.value = ''; search(''); svg.focus(); }
@@ -1069,7 +1128,25 @@
       if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);
       return;
     }
+    if (event.data.type === 'meaning') {
+      meaning = { available: !!event.data.available, on: !!event.data.on, purposes: event.data.purposes || {} };
+      showMeaning();
+      if (event.data.error) searchCount.textContent = `Code model: ${event.data.error}`;
+      if (diagram) {
+        render();
+        if (query) askMeaning(searchBox.value);
+      }
+      return;
+    }
+    if (event.data.type === 'meaningFound') {
+      // Only for what is still in the box: an older answer is dropped.
+      if (event.data.text !== searchBox.value.trim()) return;
+      meaningKeys = new Set(event.data.keys || []);
+      search(searchBox.value);
+      return;
+    }
     if (event.data.type !== 'diagram') return;
+    meaningKeys = new Set();
     // Another chart (not the same one run again) fades in.
     const freshChart = !!event.data.diagram && (!diagram || diagram.title !== event.data.diagram.title);
     diagram = event.data.diagram;

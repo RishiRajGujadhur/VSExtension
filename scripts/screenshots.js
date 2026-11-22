@@ -27,6 +27,9 @@ git('-c', 'user.name=demo', '-c', 'user.email=demo@example.com', 'commit', '-q',
 
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-structure-shots-'));
 fs.mkdirSync(path.join(userData, 'User'), { recursive: true });
+// The code model, as if downloaded, for the scenes that turn it on (assets/code-model, git-ignored).
+const codeModel = path.join(root, 'assets', 'code-model');
+if (fs.existsSync(path.join(codeModel, 'model_quantized.onnx'))) fs.cpSync(codeModel, path.join(userData, 'User', 'globalStorage', 'rishigujadhur.ts-test-impact', 'code-model'), { recursive: true });
 fs.writeFileSync(
   path.join(userData, 'User', 'settings.json'),
   JSON.stringify(

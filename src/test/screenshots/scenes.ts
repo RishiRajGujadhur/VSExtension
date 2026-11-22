@@ -380,6 +380,45 @@ export const scenes: Scene[] = [
     settle: 1800,
   },
   {
+    // Not for the docs: a Data flow chart with the code model on (boxes tagged by what they are for, and Find by
+    // meaning), saved to the temp folder for checking.
+    name: 'data-flow-code-model-check',
+    still: true,
+    async run({ open, delay, cdp }) {
+      await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', true, vscode.ConfigurationTarget.Global);
+      // A value that goes to disk, the network, the log and a helper of its own.
+      const file = path.join(root(), 'src', 'cartStore.ts');
+      fs.writeFileSync(file, [
+        "import * as fs from 'fs';",
+        'declare function apiCall(origin: string, path: string, body: unknown): Promise<void>;',
+        'declare function launchBrowser(path: string): void;',
+        'export async function saveCart(items: string[], origin: string) {',
+        '  const cart = JSON.stringify({ items, at: Date.now() });',
+        "  fs.writeFileSync('cart.json', cart);",
+        "  await apiCall(origin, '/carts', cart);",
+        '  console.log(`saved ${cart.length} bytes`);',
+        '  launchBrowser(cart);',
+        '}',
+        '',
+      ].join('\n'));
+      await open('src/cartStore.ts', 'cart = JSON');
+      await vscode.commands.executeCommand('tsStructure.dataFlowDiagram');
+      await delay(4000);
+      const found = { saved: await vscode.commands.executeCommand<string[]>('tsStructure.diagram.findByMeaning', 'where is it saved'), server: await vscode.commands.executeCommand<string[]>('tsStructure.diagram.findByMeaning', 'sent to the server') };
+      const info = await vscode.commands.executeCommand<{ purposes: Record<string, { label: string; by: string }> }>('tsStructure.diagram.meaningInfo');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const tmp = require('os').tmpdir();
+      fs.writeFileSync(path.join(tmp, 'data-flow-code-model-check.json'), JSON.stringify({ purposes: info?.purposes, found }, null, 2));
+      await cdp.capture(path.join(tmp, 'data-flow-code-model-check.png'));
+    },
+    async cleanup() {
+      await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', undefined, vscode.ConfigurationTarget.Global);
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      fs.rmSync(path.join(root(), 'src', 'cartStore.ts'), { force: true });
+    },
+    settle: 500,
+  },
+  {
     // Flowchart vs last commit: applyCoupon edited (a new guard, a changed return), then compared with the commit.
     name: 'flowchart-vs-commit',
     async run({ open, delay, cdp }) {

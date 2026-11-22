@@ -137,6 +137,15 @@ The functions that write the value sit under **Flows in** and those that read it
 
 ![The data flow of payment as a chart, with the hover card of placeOrder showing its code, where it is and the way to the subject](images/data-flow-diagram.png)
 
+#### The code model in Data flow (optional)
+
+Off by default. The **wand** button on a Data flow chart (or **Data flow: code model** in Code X-Ray Settings, `tsStructure.dataFlow.codeModel`) turns on the code model, all-MiniLM-L6-v2, the same one the Git reel can use. If it is not on your computer yet, a dialog first says what downloading it sends (a request for two files, which shows Hugging Face your IP address; none of your code) and downloads it (23.2 MB, once) only if you agree. With it on:
+
+- **What each box is for**: a pill on the box's bottom edge, with an icon: *Checks disk*, *File*, *Network*, *Module*, *Config*, *Stored*, *Logged*, *Shown*, *Error*, *Sent*, *Process*, *Time*, *Input*. Known APIs are tagged by rule (solid pill); boxes the rules cannot place, such as your own helpers, are tagged by the model (dashed pill) when it is clearly closer to one purpose than the others; a box that says nothing about what for (a plain read) gets no tag rather than a guess.
+- **Find by meaning**: Find also finds boxes by what they mean, not only by their words: *where is it saved* finds a file write or a storage call, *sent to the server* an API call, *loaded from a module* a `require`. The count says how many were found by meaning. A word that only looks alike does not match (Find's plain text search covers words).
+
+Everything is worked out on your computer; turning it off removes the tags and the meaning matches. Other charts are not affected.
+
 ### Flowchart and path list
 
 **Flowchart** (`Ctrl+Alt+S 1`) draws the function at the cursor as a flowchart beside the code: statements in the editor font, decisions as hexagons with **yes** and **no** edges, switch cases (including fall-through), loops with their way back, returns and throws, and code nothing reaches drawn dashed. Put the cursor on a call to draw the called function instead.
