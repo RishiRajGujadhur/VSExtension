@@ -124,9 +124,9 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   // Explain this code: the highlighted code in plain sentences, with the code model when it is downloaded.
   const explain = new ExplainCodeView(context.extensionUri, reel);
   // Data flow may use the same code model, when you turn it on there.
-  context.subscriptions.push(diagram.useCodeModel(reel));
+  context.subscriptions.push(diagram.useCodeModel(reel), controlFlow.useCodeModel(reel));
   // For tests: the Data flow chart's code model state, and Find by meaning.
-  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.diagram.meaningInfo', () => diagram.meaningState), vscode.commands.registerCommand('tsStructure.diagram.findByMeaning', (text: string) => diagram.findByMeaning(text)));
+  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.diagram.meaningInfo', () => diagram.meaningState), vscode.commands.registerCommand('tsStructure.diagram.findByMeaning', (text: string) => diagram.findByMeaning(text)), vscode.commands.registerCommand('tsStructure.controlFlow.meaningInfo', () => controlFlow.meaningState));
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     { dispose: () => reel.dispose() },

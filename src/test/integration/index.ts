@@ -395,7 +395,7 @@ async function analysisCommandsFlow(): Promise<void> {
   assert.deepEqual(await meaning(), { available: true, on: false, purposes: {} });
   assert.deepEqual(await vscode.commands.executeCommand('tsStructure.diagram.findByMeaning', 'where is it saved'), []);
   // Turned on (the model is in the test storage, as if downloaded): the boxes get their tags.
-  await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', true, vscode.ConfigurationTarget.Global);
+  await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', true, vscode.ConfigurationTarget.Global);
   try {
     let state = await meaning();
     for (let i = 0; i < 100 && !(state?.on && Object.keys(state.purposes).length); i++) {
@@ -405,7 +405,7 @@ async function analysisCommandsFlow(): Promise<void> {
     assert.ok(state?.on, `the code model is on: ${JSON.stringify(state)}`);
     console.log(`data flow code model ok: ${Object.entries(state!.purposes).map(([k, p]) => `${k.split('/').pop()} → ${p.label} (${p.by})`).join('; ') || 'no box tagged'}`);
   } finally {
-    await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', undefined, vscode.ConfigurationTarget.Global);
+    await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', undefined, vscode.ConfigurationTarget.Global);
   }
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
   await vscode.window.showTextDocument(document);
@@ -421,6 +421,22 @@ async function analysisCommandsFlow(): Promise<void> {
   const flowTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.label.startsWith('Flowchart: '));
   assert.ok(flowTab, 'the Control Flow tab opens');
   console.log(`control flow ok: ${chart.name}, ${chart.nodes.length} boxes, ${chart.paths.length} paths`);
+  // The flowchart offers the code model too (the wand button), on with the setting: its boxes get their tags.
+  type FlowMeaning = { available: boolean; on: boolean; purposes: Record<string, { label: string }> };
+  const flowMeaning = () => vscode.commands.executeCommand<FlowMeaning>('tsStructure.controlFlow.meaningInfo');
+  assert.equal((await flowMeaning())?.available, true);
+  await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', true, vscode.ConfigurationTarget.Global);
+  try {
+    let state = await flowMeaning();
+    for (let i = 0; i < 100 && !state?.on; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      state = await flowMeaning();
+    }
+    assert.ok(state?.on, `the flowchart's code model is on: ${JSON.stringify(state)}`);
+    console.log(`flowchart code model ok: ${Object.values(state!.purposes).map((p) => p.label).join(', ') || 'no box tagged'}`);
+  } finally {
+    await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', undefined, vscode.ConfigurationTarget.Global);
+  }
   await vscode.window.tabGroups.close(flowTab);
   await vscode.window.showTextDocument(document);
   at('subtotal = ');
@@ -673,6 +689,31 @@ async function explainCodeFlow(): Promise<void> {
   const tab = await tabLabelled((label) => label.startsWith('Explain: '));
   assert.ok(tab, `the explanation opens beside the editor: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
   console.log(`explain this code ok: ${e!.purpose!.text}; ${e!.steps.join(' ')}`);
+  // A function's name highlighted where it is called, in another file: that whole function, with what it takes,
+  // gives back and changes, found through Go to Definition.
+  const user = path.join(sample, 'src', 'explainUse.ts');
+  fs.writeFileSync(user, "import { addToCart } from './explainMe';\n\nexport const basket = addToCart([], 3);\n");
+  try {
+    const userEditor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(user));
+    const call = userEditor.document.getText().lastIndexOf('addToCart');
+    userEditor.selection = new vscode.Selection(userEditor.document.positionAt(call), userEditor.document.positionAt(call + 'addToCart'.length));
+    type Facts = { subject: string; facts?: { inputs: { name: string; type?: string }[]; output: { type?: string } } };
+    let called: Facts | undefined;
+    // The language server may still be starting: Go to Definition answers once it is up.
+    for (let i = 0; i < 30 && called?.subject !== 'the function addToCart()'; i++) {
+      called = await vscode.commands.executeCommand<Facts>('tsStructure.explainCode');
+      if (called?.subject !== 'the function addToCart()') await new Promise((r) => setTimeout(r, 500));
+    }
+    assert.equal(called?.subject, 'the function addToCart()', JSON.stringify(called));
+    assert.deepEqual(called!.facts!.inputs.map((i) => `${i.name}: ${i.type}`), ['items: number[]', 'item: number']);
+    assert.equal(called!.facts!.output.type, 'number[]');
+    console.log('explain this code by name ok: a call in another file explains the function it calls');
+  } finally {
+    fs.rmSync(user, { force: true });
+    // The video below is of addToCart, from its own file.
+    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+    await vscode.commands.executeCommand('tsStructure.explainCode');
+  }
   // As a video, in the Git reel's player: a scene per step on the flowchart. The voice-over is tested with the reel.
   const reelSettings = vscode.workspace.getConfiguration('tsStructure.reel');
   await reelSettings.update('narrationVoice', 'Off', vscode.ConfigurationTarget.Global);

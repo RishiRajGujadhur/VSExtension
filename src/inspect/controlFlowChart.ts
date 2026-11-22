@@ -140,7 +140,21 @@ export function controlFlowChart(project: VirtualProject, fileName: string, offs
  * Charts of the functions in one TypeScript or JavaScript text on its own, without the project: for an older version
  * of a file (the last commit). The file is parsed once; calls are not followed into other files.
  */
-export function standaloneCharts(fileName: string, text: string): (offset: number, code?: CodeOptions) => ControlFlowChart {
+export function standaloneCharts(fileName: string, text: string, parsed?: StandaloneProgram): (offset: number, code?: CodeOptions) => ControlFlowChart {
+  const { sourceFile, checker } = parsed ?? standaloneProgram(fileName, text);
+  return (offset, code = {}) => {
+    const fn = functionAtOffset(sourceFile, offset, checker);
+    return chartOf(buildCfg(fn), sourceFile, () => [], code);
+  };
+}
+
+export interface StandaloneProgram {
+  sourceFile: ts.SourceFile;
+  checker: ts.TypeChecker;
+}
+
+/** One file parsed and checked on its own, without the project or the standard library. */
+export function standaloneProgram(fileName: string, text: string): StandaloneProgram {
   const options: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true, types: [], jsx: ts.JsxEmit.Preserve };
   const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
   const host = ts.createCompilerHost(options);
@@ -149,11 +163,7 @@ export function standaloneCharts(fileName: string, text: string): (offset: numbe
     options,
     host: { ...host, getSourceFile: (name) => (normalizePath(name) === normalizePath(fileName) ? sourceFile : undefined), fileExists: (name) => normalizePath(name) === normalizePath(fileName), readFile: () => undefined },
   });
-  const checker = program.getTypeChecker();
-  return (offset, code = {}) => {
-    const fn = functionAtOffset(sourceFile, offset, checker);
-    return chartOf(buildCfg(fn), sourceFile, () => [], code);
-  };
+  return { sourceFile, checker: program.getTypeChecker() };
 }
 
 function scriptKindOf(fileName: string): ts.ScriptKind {

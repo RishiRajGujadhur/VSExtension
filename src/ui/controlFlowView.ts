@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ChartMeaning, MeaningItem, MeaningSource } from './chartMeaning';
 import { followAnimations } from './animationSettings';
 import { showProblem, unexpectedRemedies } from './problems';
 import { offerSymbols } from './analysisActions';
@@ -25,6 +26,26 @@ import { fileAtRef } from '../navigate/graphDiff';
  * the function is edited, outlines the box the editor's cursor is in, and opens the code of a clicked box.
  */
 export class ControlFlowPanel {
+  /** The code model in the flowchart, when you turn it on: what each box is for, and Find by meaning. */
+  private readonly meaning = new ChartMeaning();
+
+  /** The code model every chart may use (the Git reel's: one model, one download). */
+  useCodeModel(source: MeaningSource): vscode.Disposable {
+    this.meaning.use(source);
+    return ChartMeaning.onChange(() => this.post());
+  }
+
+  /** For tests: what the flowchart was last told about the code model. */
+  get meaningState(): ChartMeaning['state'] {
+    return this.meaning.state;
+  }
+
+  /** Each box of the flowchart for the code model, keyed by its id; start and end have no code. */
+  private postMeaning(): void {
+    const items: MeaningItem[] = (this.chart?.nodes ?? []).filter((n) => n.kind !== 'start' && n.kind !== 'end').map((n) => ({ key: String(n.id), label: (n.lines[0] ?? '').trim(), text: n.text || n.lines.join(' ') }));
+    void this.meaning.analyse(items, (state) => void this.panel?.webview.postMessage({ type: 'meaning', ...state }));
+  }
+
   static readonly viewType = 'tsStructure.controlFlow';
   private panel: vscode.WebviewPanel | undefined;
   private ready = false;
@@ -148,7 +169,13 @@ export class ControlFlowPanel {
     this.panel.webview.html = html(this.panel.webview, this.extensionUri);
     followAnimations(this.panel);
     this.panel.webview.onDidReceiveMessage(async (message: { type: string; location?: ReportLocation; svg?: string; png?: string; text?: string; command?: string; direction?: string; path?: { nodes: number[]; edges: number[] }; keys?: string[]; expand?: boolean; id?: string; value?: unknown; dependences?: boolean }) => {
-      if (message.type === 'ready') {
+      if (message.type === 'toggleMeaning') {
+        await this.meaning.toggle();
+      } else if (message.type === 'meaningFind' && typeof message.text === 'string') {
+        // Find by meaning: the boxes whose code means what was typed, worked out here, nothing sent.
+        const text = message.text;
+        void this.panel?.webview.postMessage({ type: 'meaningFound', text, keys: await this.meaning.find(text) });
+      } else if (message.type === 'ready') {
         this.ready = true;
         this.post();
       } else if (message.type === 'open' && message.location) {
@@ -351,6 +378,7 @@ export class ControlFlowPanel {
     if (!this.panel || !this.ready) return;
     this.panel.title = this.chart ? `Flowchart: ${this.chart.name}()` : 'Flowchart';
     void this.panel.webview.postMessage({ type: 'chart', chart: this.chart, analyses: menuAnalyses(), controls: [callLevelsControl(), codeControl()], changes: this.changes, comparing: this.comparing });
+    this.postMeaning();
     if (this.slice) void this.panel.webview.postMessage({ type: 'slice', slice: this.slice });
     if (this.pendingDeps && this.chart) {
       this.pendingDeps = false;
@@ -418,6 +446,7 @@ function html(webview: vscode.Webview, extensionUri: vscode.Uri): string {
   <span class="group" role="group" aria-label="Effects">
   ${button('effects', 'sparkle', 'Animated Grid: the dot grid behind the chart follows the pointer', 'aria-pressed="true"')}
   ${button('flowToggle', 'play-circle', 'Flow Animation: clicking a box animates every path through it (Escape stops it)', 'aria-pressed="true"')}
+  ${button('meaning', 'wand', 'Code Model: what each box is for, and Find by meaning', 'aria-pressed="false" hidden')}
   </span>
   ${button('otherGraphs', 'graph-scatter', 'Other Graphs of This Function: draw it another way (G)')}
   ${button('compare', 'git-commit', 'Compare with Last Commit: mark what changed in this function since the last commit, and list what is gone (V)', 'aria-pressed="false"')}

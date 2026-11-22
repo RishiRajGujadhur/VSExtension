@@ -37,13 +37,39 @@ export class ExplainCodeView {
     // Nothing highlighted: the line the cursor is on, which explains the function it starts, or that line.
     const range = selection.isEmpty ? document.lineAt(selection.active.line).range : selection;
     const understand = await this.understanding();
-    const explanation = await explainCode(document.fileName, document.getText(), document.offsetAt(range.start), document.offsetAt(range.end), understand);
+    let explanation = await explainCode(document.fileName, document.getText(), document.offsetAt(range.start), document.offsetAt(range.end), understand);
+    let file = document.fileName;
+    // A function's name highlighted where it is called, and declared in another file: that function, found the way
+    // Go to Definition finds it (on this computer, by the language's own extension).
+    const word = document.getText(range).trim();
+    if (!explanation.walk && /^[#\w$]+$/.test(word)) {
+      const elsewhere = await this.definitionOf(document, range.start.translate(0, document.getText(range).length - document.getText(range).trimStart().length), understand);
+      if (elsewhere) ({ explanation, file } = elsewhere);
+    }
     this.last = explanation;
-    this.lastFile = document.fileName;
+    this.lastFile = file;
     this.show(explanation, !!understand);
     return explanation;
   }
   private lastFile: string | undefined;
+
+  /** The explanation of the function a name refers to, when it is declared somewhere else. */
+  private async definitionOf(document: vscode.TextDocument, at: vscode.Position, understand: ((texts: string[]) => Promise<Float32Array[]>) | undefined): Promise<{ explanation: CodeExplanation; file: string } | undefined> {
+    try {
+      const found = await vscode.commands.executeCommand<(vscode.Location | vscode.LocationLink)[]>('vscode.executeDefinitionProvider', document.uri, at);
+      for (const d of found ?? []) {
+        const uri = 'targetUri' in d ? d.targetUri : d.uri;
+        const target = 'targetUri' in d ? (d.targetSelectionRange ?? d.targetRange) : d.range;
+        if (uri.toString() === document.uri.toString() && target.contains(at)) continue;
+        const other = await vscode.workspace.openTextDocument(uri);
+        const explanation = await explainCode(other.fileName, other.getText(), other.offsetAt(target.start), other.offsetAt(target.end), understand);
+        if (explanation.walk) return { explanation, file: other.fileName };
+      }
+    } catch {
+      // No definition to go to: the highlight is explained as it is.
+    }
+    return undefined;
+  }
 
   /**
    * The explanation as a video in the Git reel's player: a scene per step on the function's flowchart, with the

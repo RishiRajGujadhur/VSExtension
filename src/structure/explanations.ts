@@ -41,7 +41,7 @@ export const explanations: Record<string, Explanation> = {
   },
   dataFlow: {
     title: 'Data Flow',
-    text: 'Every place the value is defined, changed, checked, passed on and read, grouped by function. Flows in shows what it is computed from, Flows out where it goes, and Design patterns how the code around it is organized.',
+    text: 'Every place the value is defined, changed, checked, passed on and read, grouped by function. Flows in shows what it is computed from, and Flows out where it goes.',
     anchor: 'data-flow',
   },
   patterns: {

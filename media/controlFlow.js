@@ -202,6 +202,17 @@
         const line = lineOf(n);
         // It sits just above the box's top left corner, clear of the code and of the arrow coming in.
         if (line) el('text', { x: isDecision(n) && n.kind !== 'loop' ? 14 : 2, y: -4, class: 'line-badge' }, g).textContent = `L${line}`;
+        // With the code model on: what the box is for, on its bottom edge, by a rule (solid) or the model (dashed).
+        const purpose = meaning.on ? meaning.purposes[String(n.id)] : undefined;
+        if (purpose) {
+          const width = purpose.label.length * 5.6 + 26;
+          const pill = el('g', { class: `purpose-pill by-${purpose.by}`, transform: `translate(${isDecision(n) ? 24 : 10},${n.height - 7})`, 'aria-hidden': 'true' }, g);
+          el('title', {}, pill).textContent = `${purpose.label}: ${purpose.by === 'model' ? 'what the code model reads this box as' : 'from the code it calls'}`;
+          el('rect', { width, height: 14, rx: 7 }, pill);
+          kit.icon(pill, purpose.icon, 9, 7, 'purpose-icon');
+          el('text', { x: 17, y: 10 }, pill).textContent = purpose.label;
+          g.setAttribute('aria-label', `${g.getAttribute('aria-label')}. ${purpose.label}`);
+        }
       }
       if (n.calls && n.calls.length) {
         // Expand the called functions in place (or fold them back).
@@ -811,11 +822,8 @@
       }
     }
     const carried = [...lines].filter((e) => elements[e]).map((e) => elements[e].querySelector('.line'));
-    // Rings round start and end carry the flow too, from top to bottom like the lines.
-    const rings = carried.length
-      ? chart.nodes.filter(isTerminal).flatMap((n) => kit.ringPaths(n.x + n.width / 2, n.y + n.height / 2, n.width / 2 + 5, -90, 90))
-      : [];
-    kit.drawFlows(scene, null, [...carried, ...rings]);
+    // Only the lines carry the flow: no rings round start and end.
+    kit.drawFlows(scene, null, carried);
   }
 
   function stopFlow() {
@@ -1233,9 +1241,13 @@
   // Search: boxes whose code has the words light up, the rest fade; Enter goes to the next one.
   function search(text) {
     query = text.trim().toLowerCase();
-    matches = query && chart ? chart.nodes.filter((n) => `${n.text} ${n.kind === 'start' ? chart.name : ''}`.toLowerCase().includes(query)).map((n) => n.id) : [];
+    // By its words, and with the code model on, by what it means.
+    const byText = (n) => `${n.text} ${n.kind === 'start' ? chart.name : ''}`.toLowerCase().includes(query);
+    const byMeaning = (n) => meaning.on && meaningKeys.has(String(n.id));
+    matches = query && chart ? chart.nodes.filter((n) => byText(n) || byMeaning(n)).map((n) => n.id) : [];
+    const meant = query && chart ? chart.nodes.filter((n) => byMeaning(n) && !byText(n)).length : 0;
     matchAt = matches.length ? 0 : -1;
-    searchCount.textContent = query ? (matches.length ? `1 of ${matches.length}` : 'No match') : '';
+    searchCount.textContent = query ? (matches.length ? `1 of ${matches.length}${meant ? ` (${meant} by meaning)` : ''}` : 'No match') : '';
     if (showDeps) render();
     highlight();
     if (matches.length) centerOn(chart.nodes[matches[0]]);
@@ -1247,7 +1259,33 @@
     highlight();
     centerOn(chart.nodes[matches[matchAt]]);
   }
-  searchBox.addEventListener('input', () => search(searchBox.value));
+  searchBox.addEventListener('input', () => {
+    search(searchBox.value);
+    askMeaning(searchBox.value);
+  });
+
+  // The code model (the wand button): what each box is for, and Find by meaning, when it is on.
+  let meaning = { available: false, on: false, purposes: {} };
+  let meaningKeys = new Set();
+  let meaningTimer;
+  function askMeaning(text) {
+    clearTimeout(meaningTimer);
+    if (!meaning.on || text.trim().length < 3) {
+      meaningKeys = new Set();
+      return;
+    }
+    meaningTimer = setTimeout(() => vscode.postMessage({ type: 'meaningFind', text: text.trim() }), 250);
+  }
+  const meaningButton = document.getElementById('meaning');
+  function showMeaning() {
+    meaningButton.hidden = !meaning.available;
+    meaningButton.setAttribute('aria-pressed', String(meaning.on));
+    meaningButton.title = meaning.on
+      ? 'Code Model: on. Boxes say what they are for, and Find also finds boxes by meaning (all-MiniLM-L6-v2, on your computer). Click to turn it off.'
+      : 'Code Model: off. Turn it on to see what each box is for and find boxes by meaning (all-MiniLM-L6-v2, a 23 MB download the first time, run on your computer).';
+    searchBox.placeholder = meaning.on ? 'Find in boxes, by text or meaning (Ctrl+F)' : 'Find in boxes (Ctrl+F)';
+  }
+  meaningButton.addEventListener('click', () => vscode.postMessage({ type: 'toggleMeaning' }));
   searchBox.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -1409,7 +1447,25 @@
       if (card.key === message.id) card.update(cardContent(chart.nodes[message.id]), message.id);
       return;
     }
+    if (message.type === 'meaning') {
+      meaning = { available: !!message.available, on: !!message.on, purposes: message.purposes || {} };
+      showMeaning();
+      if (message.error) searchCount.textContent = `Code model: ${message.error}`;
+      if (chart) {
+        render();
+        if (query) askMeaning(searchBox.value);
+      }
+      return;
+    }
+    if (message.type === 'meaningFound') {
+      // Only for what is still in the box: an older answer is dropped.
+      if (message.text !== searchBox.value.trim()) return;
+      meaningKeys = new Set(message.keys || []);
+      search(searchBox.value);
+      return;
+    }
     if (message.type === 'chart') {
+      meaningKeys = new Set();
       boxEdits.clear();
       spot = undefined;
       svg.classList.remove('spotlight');

@@ -155,3 +155,84 @@ test('Explain this code as a video: an icon on each box, by what its code does',
   const step = plan.scenes.find((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow')!;
   assert.ok(step.flow.nodes.some((n) => n.icon === 'cloud'), 'the request box has its icon');
 });
+
+const shop = `const cache = new Map<string, number>();
+let calls = 0;
+
+export class Cart {
+  items: string[] = [];
+  add(id: string, qty = 1, ...tags: string[]): number {
+    this.items.push(id);
+    calls++;
+    return this.items.length;
+  }
+}
+
+export async function priceOf(id: string, { currency }: { currency?: string } = {}): Promise<number | undefined> {
+  if (!id) return;
+  const known = cache.get(id);
+  if (known !== undefined) return known;
+  console.log('pricing', id, currency);
+  return undefined;
+}
+
+function checkout(cart: Cart) {
+  const total = priceOf(cart.items[0]);
+  cart.add('fee');
+  return total;
+}
+`;
+
+test('Explain this code: a function name highlighted, where declared or where called, explains the whole function', async () => {
+  const at = (needle: string, from = 0) => shop.indexOf(needle, from);
+  // Its own name, behind export async.
+  const declared = await explainCode('shop.ts', shop, at('priceOf'), at('priceOf') + 'priceOf'.length);
+  assert.equal(declared.subject, 'the function priceOf()');
+  assert.ok(declared.walk);
+  // A call to it, inside another function.
+  const call = at('priceOf(cart');
+  const called = await explainCode('shop.ts', shop, call, call + 'priceOf'.length);
+  assert.equal(called.subject, 'the function priceOf()');
+  // A method called on an object.
+  const method = at('add(', at('checkout'));
+  const added = await explainCode('shop.ts', shop, method, method + 3);
+  assert.equal(added.subject, 'the function add()');
+  // A parameter in the header: the function too.
+  const param = at('qty');
+  assert.equal((await explainCode('shop.ts', shop, param, param + 3)).subject, 'the function add()');
+  // A plain variable in a body is not a function: those lines.
+  const total = at('total =');
+  assert.match((await explainCode('shop.ts', shop, total, total + 5)).subject, /highlighted lines in checkout/);
+});
+
+test('Explain this code: what a function takes, what it gives back and what it changes outside itself', async () => {
+  const add = await explainCode('shop.ts', shop, shop.indexOf('add('), shop.indexOf('add(') + 3);
+  const facts = add.facts!;
+  assert.deepEqual(facts.inputs.map((i) => [i.name, i.type, i.defaultValue, i.optional, i.rest]), [
+    ['id', 'string', undefined, false, false],
+    ['qty', undefined, '1', true, false],
+    ['tags', 'string[]', undefined, false, true],
+  ]);
+  assert.deepEqual(facts.output, { type: 'number', later: false, values: ['this.items.length'], nothing: false });
+  assert.ok(facts.effects.some((e) => /this\.items/.test(e)), facts.effects.join(' | '));
+  assert.ok(facts.effects.some((e) => /calls/.test(e)), facts.effects.join(' | '));
+
+  const price = await explainCode('shop.ts', shop, shop.indexOf('priceOf'), shop.indexOf('priceOf') + 7);
+  assert.equal(price.facts!.inputs[1].name, '{ currency }');
+  assert.equal(price.facts!.output.type, 'number | undefined');
+  assert.equal(price.facts!.output.later, true);
+  assert.deepEqual(price.facts!.output.values, ['known', 'undefined']);
+  assert.ok(price.facts!.effects.some((e) => /console/i.test(e)), price.facts!.effects.join(' | '));
+
+  const html = explanationHtml(add, false);
+  assert.match(html, /Takes/);
+  assert.match(html, /Gives back a? ?number|Gives back number/);
+  assert.match(html, /Changes outside itself/);
+  assert.match(html, /any number of them/);
+  // The name and type each appear once in a parameter's row.
+  const row = /<li><code>id<\/code>.*?<\/li>/.exec(html)![0];
+  assert.equal(row.match(/string/g)?.length, 1);
+
+  const lines = await explainCode('shop.ts', shop, shop.indexOf('const total'), shop.indexOf('cart.add'));
+  assert.equal(lines.facts, undefined);
+});

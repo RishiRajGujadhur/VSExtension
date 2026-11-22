@@ -385,7 +385,7 @@ export const scenes: Scene[] = [
     name: 'data-flow-code-model-check',
     still: true,
     async run({ open, delay, cdp }) {
-      await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', true, vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', true, vscode.ConfigurationTarget.Global);
       // A value that goes to disk, the network, the log and a helper of its own.
       const file = path.join(root(), 'src', 'cartStore.ts');
       fs.writeFileSync(file, [
@@ -412,7 +412,7 @@ export const scenes: Scene[] = [
       await cdp.capture(path.join(tmp, 'data-flow-code-model-check.png'));
     },
     async cleanup() {
-      await vscode.workspace.getConfiguration().update('tsStructure.dataFlow.codeModel', undefined, vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', undefined, vscode.ConfigurationTarget.Global);
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');
       fs.rmSync(path.join(root(), 'src', 'cartStore.ts'), { force: true });
     },

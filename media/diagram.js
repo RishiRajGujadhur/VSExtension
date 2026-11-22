@@ -683,10 +683,8 @@
       behind(flowing);
     }
     const lines = edges.filter((edge) => !edge.classList.contains('relation'));
-    // The ring round the subject carries the flow too: in at its left, out at its right.
-    const c = diagram.center;
-    const rings = lines.length ? window.chartKit.ringPaths(c.px + c.w / 2, c.py + H / 2, c.w / 2 + 5, 180, 0) : [];
-    window.chartKit.drawFlows(scene, null, [...lines, ...rings]);
+    // Only the lines carry the flow: no ring round the subject.
+    window.chartKit.drawFlows(scene, null, lines);
   }
 
   /** Boxes that would show, without drawing anything. */

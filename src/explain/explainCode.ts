@@ -1,6 +1,7 @@
 import * as path from 'path';
 import ts = require('typescript');
-import { standaloneCharts } from '../inspect/controlFlowChart';
+import { standaloneCharts, standaloneProgram } from '../inspect/controlFlowChart';
+import { FunctionFacts, functionFacts } from './functionFacts';
 import { csharpFlowChart } from '../csharp/flow';
 import { tsqlFlowChart } from '../tsql/flow';
 import { isFunctionWithBody } from '../structure/util';
@@ -25,6 +26,8 @@ export interface CodeExplanation {
   purpose?: { text: string; by: 'rules' | 'model' };
   /** What it does, step by step. */
   steps: string[];
+  /** For a whole function: what it takes, what it gives back and what it changes outside itself. */
+  facts?: FunctionFacts;
   /** For a whole function: its flowchart and the boxes each step is about, for the explanation video. */
   walk?: { name: string; chart: ControlFlowChart; nodes: number[][]; /** Its first line, up to the body: "async function poll(currentGeneration: number)". */ signature?: string };
 }
@@ -52,17 +55,22 @@ export async function explainCode(file: string, text: string, start: number, end
       return withPurpose({ subject: 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
     }
   }
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-  const fn = innermostFunction(source, start, end);
+  const parsed = standaloneProgram(file, text);
+  const source = parsed.sourceFile;
+  // A function's name highlighted, where it is declared or where it is called: that whole function.
+  const named = namedFunction(source, parsed.checker, start, end);
+  const fn = named ?? innermostFunction(source, start, end);
   const name = fn ? functionName(fn) : undefined;
-  // Most of a function highlighted (or its first line): the function. A few of its lines: those lines.
-  const whole = !!fn && (start <= fn.getStart(source) + 1 || (end - start) / Math.max(1, fn.end - fn.getStart(source)) >= 0.6);
+  // Most of a function highlighted, its first line, or anything in its header (its name, its parameters): the
+  // function. A few of its lines: those lines.
+  const whole = !!fn && (!!named || start <= fn.getStart(source) + 1 || inHeader(fn, source, start, end) || (end - start) / Math.max(1, fn.end - fn.getStart(source)) >= 0.6);
   if (fn && name && whole) {
     const anchor = fn.name?.getStart(source) ?? (ts.isVariableDeclaration(fn.parent) ? fn.parent.name.getStart(source) : fn.getStart(source));
-    const chart = standaloneCharts(file, text)(anchor);
+    const chart = standaloneCharts(file, text, parsed)(anchor);
     const body = text.slice(fn.getStart(source), fn.end).split('\n');
     const head = fn.body ? text.slice(fn.getStart(source), fn.body.getStart(source)) : body[0];
-    return withPurpose(fromChart(`the function ${name}()`, name, chart, signatureSentence(fn, name, source), oneLine(head.replace(/\s*=>\s*$/, ''))), name, file, body, understand);
+    const explained = fromChart(`the function ${name}()`, name, chart, signatureSentence(fn, name, source), oneLine(head.replace(/\s*=>\s*$/, '')));
+    return withPurpose({ ...explained, facts: functionFacts(fn, source, parsed.checker) }, name, file, body, understand);
   }
   return withPurpose({ subject: name ? `the highlighted lines in ${name}()` : 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
 }
@@ -90,6 +98,58 @@ async function withPurpose(explanation: CodeExplanation, name: string | undefine
     if (said && !/^(does|works|handles) /.test(said)) return { ...explanation, purpose: { text: said.charAt(0).toUpperCase() + said.slice(1), by: 'rules' } };
   }
   return explanation;
+}
+
+/** The highlight is within the function's header: from its start up to its body. */
+function inHeader(fn: ts.FunctionLikeDeclaration, source: ts.SourceFile, start: number, end: number): boolean {
+  const from = ts.isVariableDeclaration(fn.parent) ? fn.parent.getStart(source) : fn.getStart(source);
+  return start >= from && end <= (fn.body?.getStart(source) ?? fn.end);
+}
+
+/**
+ * The function a highlighted name stands for: `load` in `function load()`, `this.load()`, `const load = () =>` or a
+ * call `load(id)`, when the function is in this file. Nothing for any other highlight.
+ */
+function namedFunction(source: ts.SourceFile, checker: ts.TypeChecker, start: number, end: number): ts.FunctionLikeDeclaration | undefined {
+  const selected = source.text.slice(start, end);
+  const at = start + (selected.length - selected.trimStart().length);
+  const word = selected.trim();
+  if (!/^[#\w$]+$/.test(word)) return undefined;
+  let identifier: ts.Identifier | ts.PrivateIdentifier | undefined;
+  const visit = (node: ts.Node) => {
+    if (node.getStart(source) <= at && at < node.end) {
+      if ((ts.isIdentifier(node) || ts.isPrivateIdentifier(node)) && node.text === word) identifier = node;
+      ts.forEachChild(node, visit);
+    }
+  };
+  visit(source);
+  if (!identifier) return undefined;
+  const asFunction = (d: ts.Node | undefined): ts.FunctionLikeDeclaration | undefined => {
+    if (!d || d.getSourceFile() !== source) return undefined;
+    if (isFunctionWithBody(d)) return d as ts.FunctionLikeDeclaration;
+    if ((ts.isVariableDeclaration(d) || ts.isPropertyAssignment(d) || ts.isPropertyDeclaration(d)) && d.initializer) {
+      const value = ts.isParenthesizedExpression(d.initializer) ? d.initializer.expression : d.initializer;
+      if (isFunctionWithBody(value)) return value as ts.FunctionLikeDeclaration;
+    }
+    return undefined;
+  };
+  // Its declaration's own name.
+  const parent = identifier.parent;
+  if ((isFunctionWithBody(parent) && (parent as ts.FunctionLikeDeclaration).name === identifier) || ((ts.isVariableDeclaration(parent) || ts.isPropertyAssignment(parent) || ts.isPropertyDeclaration(parent)) && parent.name === identifier)) {
+    const own = asFunction(parent);
+    if (own) return own;
+  }
+  // A use of it: what the name refers to.
+  try {
+    const symbol = checker.getSymbolAtLocation(identifier);
+    for (const d of symbol?.declarations ?? []) {
+      const found = asFunction(d);
+      if (found) return found;
+    }
+  } catch {
+    // Nothing known about the name: not a function's.
+  }
+  return undefined;
 }
 
 function innermostFunction(source: ts.SourceFile, start: number, end: number): ts.FunctionLikeDeclaration | undefined {

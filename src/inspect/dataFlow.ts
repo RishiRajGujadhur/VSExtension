@@ -285,22 +285,7 @@ export function dataFlowReport(project: VirtualProject, fileName: string, offset
       children: [...outflows, ...codeGroup('Where it is read', 'eye', read)],
     },
   );
-  // Types the value has: patterns about them count too, wherever they are declared.
-  const checker = project.program().getTypeChecker();
-  const typeDeclarations = steps.flatMap((s) => {
-    const symbol = checker.getTypeAtLocation(s.node).getSymbol();
-    return symbol?.declarations?.filter((d) => !d.getSourceFile().isDeclarationFile).map((d) => ({ name: symbol.getName(), file: d.getSourceFile() })) ?? [];
-  });
-  const patterns = patternsAlong(steps, typeDeclarations);
-  if (patterns.length > 0) {
-    roots.push({
-      label: 'Design patterns',
-      description: 'how the code this value passes through is organized',
-      icon: 'library',
-      expanded: true,
-      children: groupPatterns(patterns.map((p) => ({ name: p.name, row: { label: p.name, description: p.evidence, tooltip: `**${p.name}**: ${p.meaning}\n\n${p.evidence}${learnMore(p.name)}`, icon: 'symbol-namespace', location: p.node ? builder.at(p.node) : undefined, action: { kind: 'explainPattern', name: p.name } } }))),
-    });
-  }
+  // Design patterns are Pattern spotting's to show, not Data flow's.
   // Shared state read, awaited and written: the same findings as Race Conditions.
   const races = raceFindings(variableUse(project, fileName, offset, { name, steps, declaration }));
   if (races.length) {

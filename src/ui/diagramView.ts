@@ -12,10 +12,9 @@ import { featureOf } from '../structure/features';
 import { isFeatureEnabled } from './features';
 import { activeFeature } from './activeFeature';
 import { editsFor, runEdit } from './editActionsUi';
-import type { CodeModel } from '../reel/codeModel';
-import { boxWords, diagramBoxes, FLOW_PURPOSES, isGroup, meaningMatches, modelPurpose, Purpose, purposeIndex, rulePurpose, searchWords } from '../structure/flowPurpose';
+import { diagramBoxes, isGroup } from '../structure/flowPurpose';
+import { ChartMeaning, MeaningItem, MeaningSource } from './chartMeaning';
 
-const meaningSetting = 'tsStructure.dataFlow.codeModel';
 
 /** The analyses a box's right-click menu offers, with the icon each has everywhere else. */
 export const boxAnalyses: { command: string; runs: string; label: string; more?: boolean }[] = [
@@ -49,81 +48,29 @@ export class DiagramPanel {
   private ready = false;
   /** The report the chart shows. */
   private shown: Report | undefined;
-  /** The code model, for Data flow when you turn it on: what each box is for, and Find by meaning. */
-  private meaning: { codeModel: CodeModel; confirmAndDownloadCodeModel(): Promise<boolean> } | undefined;
-  /** The boxes of the Data flow chart on screen, as the code model reads them, for Find by meaning. */
-  private boxVectors: { key: string; vector: Float32Array; purpose?: number }[] = [];
-  private purposeVectors: Float32Array[] | undefined;
-  private meaningRun = 0;
+  /** The code model in this chart, when you turn it on: what each box is for, and Find by meaning. */
+  private readonly meaning = new ChartMeaning();
 
-  /** The code model the Data flow chart may use (the Git reel's: one model, one download). */
-  useCodeModel(meaning: { codeModel: CodeModel; confirmAndDownloadCodeModel(): Promise<boolean> }): vscode.Disposable {
-    this.meaning = meaning;
-    return vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration(meaningSetting) && this.panel && this.post(this.view.report));
-  }
-
-  /** Turned on for Data flow, and the model is on this computer. */
-  private meaningOn(): boolean {
-    return !!this.meaning && vscode.workspace.getConfiguration().get<boolean>(meaningSetting, false) && this.meaning.codeModel.runnable;
-  }
-
-  private static isDataFlow(report: Report | undefined): boolean {
-    return !!report && (activeFeature.originOf(report) === 'tsStructure.dataFlow' || titleParts(report).heading === 'Data flow');
-  }
-
-  /**
-   * For a Data flow chart: tells the page whether the code model can be turned on, and when it is on, what each box is
-   * for (rules first, the model for the rest), then keeps each box's meaning for Find. Worked out on this computer.
-   */
-  private async postMeaning(diagram: Diagram | undefined, dataFlow: boolean): Promise<void> {
-    const run = ++this.meaningRun;
-    this.boxVectors = [];
-    const on = dataFlow && this.meaningOn();
-    this.meaningState = { available: dataFlow && !!this.meaning, on: false, purposes: {} };
-    void this.panel?.webview.postMessage({ type: 'meaning', available: dataFlow && !!this.meaning, on, purposes: {} });
-    if (!on || !diagram || !this.meaning) return;
-    try {
-      const boxes = diagramBoxes(diagram);
-      this.purposeVectors ??= await this.meaning.codeModel.embed(FLOW_PURPOSES.map((k) => k.meaning));
-      // What a box is for is read from its own code (its label): its description is where it is (the function around it).
-      const vectors = await this.meaning.codeModel.embed(boxes.map((b) => boxWords(b.node.label)));
-      if (run !== this.meaningRun) return;
-      const purposes: Record<string, Purpose> = {};
-      boxes.forEach((b, i) => {
-        if (isGroup(b.node)) return;
-        const purpose = rulePurpose(b.text) ?? modelPurpose(vectors[i], this.purposeVectors!, boxWords(b.node.label));
-        if (purpose) purposes[b.key] = purpose;
-      });
-      // For Find: each box by its words and what its purpose means.
-      const searchable = await this.meaning.codeModel.embed(boxes.map((b) => searchWords(b.text, purposes[b.key])));
-      if (run !== this.meaningRun) return;
-      this.boxVectors = boxes.map((b, i) => ({ key: b.key, vector: searchable[i], purpose: purposeIndex(purposes[b.key]) }));
-      this.meaningState = { available: true, on: true, purposes };
-      void this.panel?.webview.postMessage({ type: 'meaning', available: true, on: true, purposes });
-    } catch (error) {
-      void this.panel?.webview.postMessage({ type: 'meaning', available: true, on: false, purposes: {}, error: error instanceof Error ? error.message : String(error) });
-    }
+  /** The code model every chart may use (the Git reel's: one model, one download). */
+  useCodeModel(source: MeaningSource): vscode.Disposable {
+    this.meaning.use(source);
+    return ChartMeaning.onChange(() => this.panel && this.post(this.view.report));
   }
 
   /** For tests: what the chart was last told about the code model, and the purposes it drew. */
-  meaningState: { available: boolean; on: boolean; purposes: Record<string, Purpose> } = { available: false, on: false, purposes: {} };
-
-  /** Find by meaning: the keys of the boxes that mean what was typed (none with the model off). */
-  async findByMeaning(text: string): Promise<string[]> {
-    if (!this.meaningOn() || !this.boxVectors.length || text.trim().length < 3) return [];
-    return meaningMatches((await this.meaning!.codeModel.embed([text]))[0], this.boxVectors, this.purposeVectors ?? []);
+  get meaningState(): ChartMeaning['state'] {
+    return this.meaning.state;
   }
 
-  /** The button: the code model on (downloaded first, once you agree) or off for Data flow. */
-  private async toggleMeaning(): Promise<void> {
-    if (!this.meaning) return;
-    const config = vscode.workspace.getConfiguration();
-    if (config.get<boolean>(meaningSetting, false)) {
-      await config.update(meaningSetting, false, vscode.ConfigurationTarget.Global);
-      return;
-    }
-    if (!this.meaning.codeModel.runnable && !(await this.meaning.confirmAndDownloadCodeModel())) return;
-    await config.update(meaningSetting, true, vscode.ConfigurationTarget.Global);
+  /** Find by meaning: the keys of the boxes that mean what was typed (none with the model off). */
+  findByMeaning(text: string): Promise<string[]> {
+    return this.meaning.find(text);
+  }
+
+  /** The boxes of a chart for the code model, keyed as the page keys them. */
+  private postMeaning(diagram: Diagram | undefined): void {
+    const items: MeaningItem[] = diagram ? diagramBoxes(diagram).map((b) => ({ key: b.key, label: b.node.label, text: b.text, group: isGroup(b.node) })) : [];
+    void this.meaning.analyse(items, (state) => void this.panel?.webview.postMessage({ type: 'meaning', ...state }));
   }
 
   constructor(
@@ -196,7 +143,7 @@ export class DiagramPanel {
       } else if (message.type === 'error' && message.text) {
         void vscode.window.showWarningMessage(message.text);
       } else if (message.type === 'toggleMeaning') {
-        await this.toggleMeaning();
+        await this.meaning.toggle();
       } else if (message.type === 'meaningFind' && typeof message.text === 'string') {
         // Find by meaning: the boxes whose code means what was typed, worked out here, nothing sent.
         const query = message.text;
@@ -227,7 +174,7 @@ export class DiagramPanel {
     const analyses = menuAnalyses();
     const diagram = report ? reportDiagram(report) : undefined;
     void this.panel.webview.postMessage({ type: 'diagram', diagram, analyses, controls: report?.controls ?? [] });
-    void this.postMeaning(diagram, DiagramPanel.isDataFlow(report));
+    this.postMeaning(diagram);
   }
 
   private html(webview: vscode.Webview): string {
@@ -291,7 +238,7 @@ export class DiagramPanel {
     <li><span class="swatch arrow">⇒</span>An arrow function, such as a callback (amber outline and an arrow)</li>
     <li><span class="glyph">→</span>The way the value moves: into the subject on the left, out of it on the right</li>
     <li><span class="glyph">3</span>A folded box and how many boxes it hides; click it, or press Space, to unfold</li>
-    <li><span class="swatch purpose">◦</span>With the code model on (Data flow, the wand button): what a box is for, on its bottom edge, from the code it calls (solid) or as the code model reads it (dashed)</li>
+    <li><span class="swatch purpose">◦</span>With the code model on (the wand button): what a box is for, on its bottom edge, from the code it calls (solid) or as the code model reads it (dashed)</li>
   </ul>
   <h2>Keys</h2>
   <ul>

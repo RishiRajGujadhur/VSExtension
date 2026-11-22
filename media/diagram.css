@@ -225,10 +225,3 @@ svg.spotlight .node.lit .box { stroke: var(--vscode-focusBorder); stroke-width: 
 @starting-style { #legend { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { #legend { transition: none; } }
 
-/* What a box is for (Data flow with the code model on): a pill on its bottom edge. Dashed when the model said so. */
-.purpose-pill rect { fill: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 18%, var(--box-fill, #2a2a2a)); stroke: var(--vscode-textLink-foreground, #3794ff); stroke-width: 1; }
-.purpose-pill.by-model rect { stroke-dasharray: 3 2; }
-.purpose-pill text { fill: var(--vscode-foreground, #ccc); font-size: 9.5px; font-weight: 600; font-family: var(--vscode-font-family, sans-serif); }
-.purpose-pill text.purpose-icon { font-family: codicon; font-size: 10px; font-weight: normal; fill: var(--vscode-textLink-foreground, #3794ff); }
-.swatch.purpose { border: 1px dashed var(--vscode-textLink-foreground, #3794ff); border-radius: 7px; }
-@media (forced-colors: active) { .purpose-pill rect { fill: Canvas; stroke: CanvasText; } .purpose-pill text { fill: CanvasText; } }
