@@ -121,7 +121,16 @@ Your code, captions and recordings never leave your computer, and the extension 
 | Kitten TTS Micro 0.8 · Nano 0.8 full precision · Mini 0.8 | Apache-2.0 | 44.7 · 60.0 · 81.5 MB |
 | Code model all-MiniLM-L6-v2 (int8): Git reel key changes, Explain this code, chart purpose pills and Find by meaning | Apache-2.0 | 23.2 MB |
 
-Every download comes from huggingface.co. Each file is pinned to one version and checked against its hash before it is kept. Downloading shows Hugging Face your IP address, and sends no code, file name, account or token. Before downloading, you are told exactly that. The models then run offline, in a background thread. **Voice model** (`tsStructure.reel.voiceModel`), **Code model** (`tsStructure.reel.codeModel`) and **Charts: code model** (`tsStructure.charts.codeModel`) control them, and commands remove them to free the space.
+**At the download step itself**, before anything is sent, a dialog tells you exactly how your data is used:
+
+- **What is sent**: one HTTPS request to huggingface.co per file, carrying only the file's address, the client name `code-x-ray` and, as with any connection, your IP address.
+- **What is never sent**: your code, file names, project or repository names, Git history, captions, recordings, settings, accounts, tokens or cookies. Code X-Ray collects no usage data or telemetry.
+- **How Hugging Face may use it**: it may log each request (IP address, time, file) under [its privacy policy](https://huggingface.co/privacy), which the dialog opens in one click.
+- **On your computer**: where the files are kept, and that each is checked against its published hash.
+- **When it runs**: offline, what it reads and gives back, and what it keeps (the voice-over caches its spoken clips; the code model keeps nothing).
+- **How to remove it.**
+
+Nothing downloads unless you choose **Download** in that dialog, or set a model's setting to download without asking. The models then run offline, in a background thread. **Voice model** (`tsStructure.reel.voiceModel`), **Code model** (`tsStructure.reel.codeModel`) and **Charts: code model** (`tsStructure.charts.codeModel`) control them, and commands remove them to free the space.
 
 ## Credits
 

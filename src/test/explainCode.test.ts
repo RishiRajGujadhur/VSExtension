@@ -5,6 +5,8 @@ import * as path from 'path';
 import { explainCode } from '../explain/explainCode';
 import { CodeModel } from '../reel/codeModel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
+import { downloadPrivacy } from '../reel/downloadPrivacy';
+import { VOICE_MODELS } from '../reel/voiceModels';
 import { boxIcon, explanationReel, stepKind, walkSteps } from '../explain/explainReel';
 import { explanationHtml } from '../explain/explainHtml';
 import type { ReelScene } from '../reel/plan';
@@ -62,11 +64,30 @@ test('Explain this code: what a function is for, by the rules; a few lines on th
 });
 
 test('Explain this code: before any download, it says what is sent and what never is', () => {
-  const said = downloadDisclosure();
+  const said = downloadDisclosure('C:/storage/code-model');
   assert.match(said, /huggingface\.co/);
   assert.match(said, /IP address/);
-  assert.match(said, /none of your code, file names, account details, tokens or settings/);
   assert.match(said, /model_quantized\.onnx and vocab\.txt/);
+  // Every part of how the data is used, at the download step.
+  for (const part of ['WHAT IS SENT', 'WHAT IS NEVER SENT', 'HOW HUGGING FACE MAY USE IT', 'ON YOUR COMPUTER', 'WHEN IT RUNS', 'TO REMOVE IT']) assert.match(said, new RegExp(part));
+  assert.match(said, /Your code, file names or paths/);
+  assert.match(said, /"code-x-ray"/);
+  assert.match(said, /huggingface\.co\/privacy/);
+  assert.match(said, /C:\/storage\/code-model/);
+  assert.match(said, /at version 751bff3/);
+  assert.match(said, /no usage data or telemetry/);
+});
+
+test('Model downloads: the notice says what a voice model keeps on disk, and is true to the downloader', () => {
+  const said = downloadPrivacy(VOICE_MODELS[0], { reads: 'the captions', gives: 'the sound of each caption', keeps: 'the spoken clips, as WAV files in X', folder: 'Y', remove: 'run "Git reel: remove downloaded voice models"' });
+  assert.match(said, /It keeps the spoken clips, as WAV files in X, and sends nothing\./);
+  assert.match(said, /model\.onnx and voices\.npz/);
+  // The downloader sends exactly the headers the notice names, and only to Hugging Face's hosts.
+  const downloader = fs.readFileSync(path.join(root, 'src', 'reel', 'pinnedDownload.ts'), 'utf8');
+  assert.match(downloader, /headers: \{ 'User-Agent': 'code-x-ray', Accept: '\*\/\*' \}/);
+  // No cookie or credential header in the code itself (its comments say there are none).
+  const code = downloader.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.ok(!/cookie|authorization/i.test(code));
 });
 
 test('Explain this code: the code model names what the rules cannot', { skip: !runnable && 'needs assets/code-model and the bundle', timeout: 120000 }, async () => {

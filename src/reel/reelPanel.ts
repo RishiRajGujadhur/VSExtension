@@ -15,6 +15,7 @@ import { DEFAULT_VOICE_MODEL, SYSTEM_VOICE_MODEL, VOICE_MODELS, voiceModel, Voic
 import { speakable } from './describe';
 import { CodeModel } from './codeModel';
 import { CODE_MODEL, downloadDisclosure } from './codeModelText';
+import { downloadPrivacy, HUGGING_FACE_PRIVACY } from './downloadPrivacy';
 
 const lastRefKey = 'tsStructure.reel.lastRevision';
 const captionsKey = 'tsStructure.reel.captions';
@@ -118,7 +119,7 @@ export class ReelPanel {
     ];
     const pick = await vscode.window.showQuickPick(items, {
       title,
-      placeHolder: 'Downloaded once from huggingface.co: the request shows Hugging Face your IP address, and sends none of your code',
+      placeHolder: 'Downloaded once from Hugging Face. None of your code is sent; before it downloads, you see exactly what is',
       ignoreFocusOut: true,
     });
     if (!pick) return undefined;
@@ -130,6 +131,15 @@ export class ReelPanel {
   /** Downloads a voice model, with its progress and a way to cancel; true when it is ready. */
   private async downloadVoiceModel(model: VoiceModel): Promise<boolean> {
     if (this.voiceModels.downloaded(model)) return true;
+    // Exactly what the download does with your data, before anything is sent.
+    const detail = downloadPrivacy(model, {
+      reads: 'the captions of the videos you choose to narrate, as phonemes (sounds) made by the bundled eSpeak NG',
+      gives: 'the sound of each caption',
+      keeps: `the spoken clips, as WAV files in ${path.join(this.storage, 'reel-voice')}, so a video plays again without speaking it again (delete that folder to remove them)`,
+      folder: this.voiceModels.dir(model),
+      remove: 'run "Git reel: remove downloaded voice models" from the Command Palette',
+    });
+    if (!(await this.confirmDownload(`Download ${model.name} (${model.megabytes} MB, Apache-2.0) from Hugging Face?`, detail))) return false;
     try {
       await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: `Downloading ${model.name} (${model.megabytes} MB, from Hugging Face)`, cancellable: true },
@@ -237,8 +247,25 @@ export class ReelPanel {
       void vscode.window.showInformationMessage('The code model is already downloaded. It runs on your computer.');
       return true;
     }
-    const choice = await vscode.window.showInformationMessage(`Download the code model (all-MiniLM-L6-v2, Apache-2.0, ${CODE_MODEL.megabytes} MB)?`, { modal: true, detail: downloadDisclosure() }, 'Download');
-    return choice === 'Download' ? this.downloadCodeModel() : false;
+    return (await this.confirmDownload(`Download the code model (all-MiniLM-L6-v2, Apache-2.0, ${CODE_MODEL.megabytes} MB) from Hugging Face?`, downloadDisclosure(this.codeModelFolder))) ? this.downloadCodeModel() : false;
+  }
+
+  /** Where the code model is kept once downloaded. */
+  get codeModelFolder(): string {
+    return path.join(this.storage, 'code-model');
+  }
+
+  /**
+   * The download step: a dialog with exactly what downloading sends and how the data is used, and Hugging Face's
+   * privacy policy one click away. Nothing is sent unless you choose Download.
+   */
+  async confirmDownload(question: string, detail: string): Promise<boolean> {
+    for (;;) {
+      const choice = await vscode.window.showWarningMessage(question, { modal: true, detail }, 'Download', "Hugging Face's Privacy Policy");
+      if (choice === 'Download') return true;
+      if (choice !== "Hugging Face's Privacy Policy") return false;
+      await vscode.env.openExternal(vscode.Uri.parse(HUGGING_FACE_PRIVACY));
+    }
   }
 
   /** Removes the downloaded code model; Git reels go back to the rules alone. */
@@ -259,12 +286,12 @@ export class ReelPanel {
     }
     // What a download sends is said before it happens: only a request for the files, never your code.
     const choice = await vscode.window.showInformationMessage(
-      `Git reel can explain changes better with a small code model: a one-time ${CODE_MODEL.megabytes} MB download from Hugging Face (all-MiniLM-L6-v2, Apache-2.0). The download sends only a request for the model's files, which shows Hugging Face your IP address; none of your code is sent, and the model runs on your computer.`,
-      'Download',
+      `Git reel can explain changes better with a small code model: a one-time ${CODE_MODEL.megabytes} MB download from Hugging Face (all-MiniLM-L6-v2, Apache-2.0) that runs on your computer. None of your code is sent; Download first shows exactly what is.`,
+      'Download…',
       'Not Now',
       "Don't Ask Again",
     );
-    if (choice === 'Download') await this.downloadCodeModel();
+    if (choice === 'Download…') await this.confirmAndDownloadCodeModel();
     else if (choice === "Don't Ask Again") await vscode.workspace.getConfiguration('tsStructure.reel').update('codeModel', 'off', vscode.ConfigurationTarget.Global);
   }
 

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CodeExplanation, explainCode } from '../explain/explainCode';
 import type { ReelPanel } from '../reel/reelPanel';
 import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
+import { HUGGING_FACE_PRIVACY } from '../reel/downloadPrivacy';
 import { webviewPage, webviewRoots } from './webviewPage';
 import { explanationHtml } from '../explain/explainHtml';
 import { showProblem } from './problems';
@@ -102,12 +103,19 @@ export class ExplainCodeView {
     if (setting === 'off') return undefined;
     if (!this.reel.codeModel.runnable && !this.declined) {
       if (setting !== 'on') {
-        const choice = await vscode.window.showInformationMessage(
-          `Explain this code works better with the code model (all-MiniLM-L6-v2, Apache-2.0, ${CODE_MODEL.megabytes} MB, downloaded once).`,
-          { modal: true, detail: downloadDisclosure() },
-          'Download and Explain',
-          'Explain Without It',
-        );
+        // The download step: exactly what downloading sends and how the data is used, before anything is sent.
+        let choice: string | undefined;
+        for (;;) {
+          choice = await vscode.window.showInformationMessage(
+            `Explain this code works better with the code model (all-MiniLM-L6-v2, Apache-2.0, ${CODE_MODEL.megabytes} MB, downloaded once from Hugging Face). Download it?`,
+            { modal: true, detail: downloadDisclosure(this.reel.codeModelFolder) },
+            'Download and Explain',
+            'Explain Without It',
+            "Hugging Face's Privacy Policy",
+          );
+          if (choice !== "Hugging Face's Privacy Policy") break;
+          await vscode.env.openExternal(vscode.Uri.parse(HUGGING_FACE_PRIVACY));
+        }
         if (choice !== 'Download and Explain') {
           this.declined = true;
           return undefined;

@@ -1,3 +1,4 @@
+import { downloadPrivacy } from './downloadPrivacy';
 import { createHash } from 'crypto';
 
 /**
@@ -172,10 +173,11 @@ const STOP = new Set('const let var function return if else for of in new this a
 /**
  * What downloading the code model sends, said before it happens: for the download prompts.
  */
-export function downloadDisclosure(): string {
-  return [
-    `What the download sends: a request to huggingface.co for each of the model's two files (${CODE_MODEL.files.map((f) => f.name).join(' and ')}), which Hugging Face may redirect to its file storage. Like any download, this shows Hugging Face your IP address, and the request names the client as "code-x-ray".`,
-    'It sends none of your code, file names, account details, tokens or settings.',
-    'The files are checked against their published hashes, kept in the extension\'s storage, and the model then runs on your computer only. Remove it any time with "Git reel: remove the code model".',
-  ].join('\n\n');
+export function downloadDisclosure(folder = "VS Code's storage for Code X-Ray"): string {
+  return downloadPrivacy({ name: 'the code model (all-MiniLM-L6-v2)', ...CODE_MODEL }, {
+    reads: "the text you use it on: the code you explain, the changed code of a Git reel, and the words of chart boxes and of what you type in a chart's Find",
+    gives: 'a list of numbers for each text, which Code X-Ray compares on your computer to name what code is for and to find matches by meaning',
+    folder,
+    remove: 'run "Git reel: remove the code model" from the Command Palette',
+  });
 }

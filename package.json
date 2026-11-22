@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "Explain code in plain words, see data flow and flowcharts, find usages and affected tests, and turn Git changes into narrated videos. For TypeScript, JavaScript, React, C# and T-SQL. Runs on your computer: exact analyses from the compiler, nothing uploaded. Optional local models (a Kitten TTS voice, all-MiniLM-L6-v2) download only if you agree.",
-  "version": "0.100.0",
+  "version": "0.101.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -3390,7 +3390,7 @@
             ],
             "enumDescriptions": [
               "Offer the download once a session, the first time a Git reel opens.",
-              "Download it without asking (once) and use it.",
+              "Download it without asking (once) and use it. You agree to the download by choosing this: it sends Hugging Face one HTTPS request for each of the model's two files, carrying only the file's address, the client name code-x-ray and your IP address, never any code, names or account; Hugging Face may log those requests under its privacy policy (huggingface.co/privacy).",
               "Never download or use it: Git reels use the rules alone."
             ],
             "default": "ask",
