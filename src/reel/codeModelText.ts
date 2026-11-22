@@ -43,8 +43,8 @@ export function fileMatches(file: ModelFile, bytes: Buffer): boolean {
 }
 
 /** The download address of a pinned file. */
-export function fileUrl(file: ModelFile): string {
-  return `https://huggingface.co/${CODE_MODEL.repo}/resolve/${CODE_MODEL.revision}/${file.path}`;
+export function fileUrl(file: ModelFile, repo = CODE_MODEL.repo, revision = CODE_MODEL.revision): string {
+  return `https://huggingface.co/${repo}/resolve/${revision}/${file.path}`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

@@ -15,8 +15,8 @@ node_modules/@vscode/codicons/**
 !node_modules/@vscode/codicons/dist/codicon.ttf
 !node_modules/@vscode/codicons/LICENSE*
 !node_modules/@vscode/codicons/package.json
-# The Kitten voice: its source copies (the model fetched for the build, the phonemizer program and notices) ship
-# from dist/kitten instead.
+# The voice engine: its source copies (the phonemizer program and notices) ship from dist/kitten; the voice models
+# are not shipped at all (downloaded on first use), and assets/ holds only copies for the tests.
 assets/**
 media/kitten/**
 .claude/**

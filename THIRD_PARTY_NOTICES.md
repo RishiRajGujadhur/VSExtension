@@ -104,15 +104,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Kitten TTS (the Git reel voice-over)
+## Kitten TTS (the Git reel voice-over, downloaded on use)
 
-https://github.com/KittenML/KittenTTS and https://huggingface.co/KittenML/kitten-tts-nano-0.8-int8
-(revision 84781d74e29ee25217551556398b42f80593a813)
+https://github.com/KittenML/KittenTTS and the 0.8 models on Hugging Face: kitten-tts-nano-0.8-int8 (revision
+84781d74e29ee25217551556398b42f80593a813), kitten-tts-nano-0.8-fp32 (e73cfb095bd949c786ccdcf3b8ab04eb36c47442),
+kitten-tts-micro-0.8 (1ccf72b2c2048fd17efac7de2fab32d10e225084) and kitten-tts-mini-0.8
+(c02725660cea441db4c383af69f1f26f5cd00947).
 
-The model `kitten_tts_nano_v0_8.onnx`, its voices `voices.npz` and `config.json` are bundled unchanged in
-`dist/kitten/model`. They are licensed under the Apache License 2.0 by KittenML / Stellon Labs
-(https://www.apache.org/licenses/LICENSE-2.0). The model architecture follows StyleTTS 2. Code X-Ray's own engine
-(`src/reel/kittenModel.ts`, `src/reel/kittenWorker.ts`) follows the official KittenTTS-web engine
+Not bundled: the model you choose (its `.onnx` file and `voices.npz`) is downloaded unchanged into the extension's
+storage the first time a video needs the voice-over. They are licensed under the Apache License 2.0 by KittenML /
+Stellon Labs (https://www.apache.org/licenses/LICENSE-2.0). The model architecture follows StyleTTS 2. Code X-Ray's
+own engine (`src/reel/kittenModel.ts`, `src/reel/kittenWorker.ts`) follows the official KittenTTS-web engine
 (https://github.com/KittenML/KittenTTS-web, Apache-2.0): its symbol table, style selection and speed priors.
 
 ## ONNX Runtime Web

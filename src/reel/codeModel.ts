@@ -1,8 +1,8 @@
 import * as fs from 'fs';
-import * as https from 'https';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { CODE_MODEL, fileMatches, fileUrl } from './codeModelText';
+import { CODE_MODEL } from './codeModelText';
+import { downloadPinned, isDownloaded } from './pinnedDownload';
 
 /**
  * The code model on this computer: downloaded once, when you agree to it, from Hugging Face (two files, pinned to
@@ -26,13 +26,7 @@ export class CodeModel {
 
   /** Whether the model is downloaded (its files there, at their sizes) and can run here. */
   get downloaded(): boolean {
-    return CODE_MODEL.files.every((f) => {
-      try {
-        return fs.statSync(path.join(this.dir, f.name)).size === f.size;
-      } catch {
-        return false;
-      }
-    });
+    return isDownloaded(this.dir, CODE_MODEL.files);
   }
 
   get runnable(): boolean {
@@ -44,24 +38,7 @@ export class CodeModel {
    * told the bytes so far; `cancelled` stops it between chunks.
    */
   async download(onProgress?: (received: number, total: number) => void, cancelled?: () => boolean): Promise<void> {
-    fs.mkdirSync(this.dir, { recursive: true });
-    const total = CODE_MODEL.files.reduce((n, f) => n + f.size, 0);
-    let received = 0;
-    for (const file of CODE_MODEL.files) {
-      const target = path.join(this.dir, file.name);
-      if (fs.existsSync(target) && fileMatches(file, fs.readFileSync(target))) {
-        received += file.size;
-        onProgress?.(received, total);
-        continue;
-      }
-      const start = received;
-      const bytes = await fetchPinned(fileUrl(file), (n) => onProgress?.(start + n, total), cancelled);
-      if (!fileMatches(file, bytes)) throw new Error(`The downloaded ${file.name} is not the expected file (its hash differs), so it was not kept.`);
-      const temp = `${target}.part`;
-      fs.writeFileSync(temp, bytes);
-      fs.renameSync(temp, target);
-      received = start + file.size;
-    }
+    await downloadPinned(this.dir, CODE_MODEL.files, CODE_MODEL, onProgress, cancelled);
   }
 
   /** Removes the downloaded model. */
@@ -106,45 +83,4 @@ export class CodeModel {
     for (const w of this.waiting.values()) w.reject(error);
     this.waiting.clear();
   }
-}
-
-/** Hugging Face and the hosts it hands its files to. Nothing else is ever asked for. */
-export function allowedHost(host: string): boolean {
-  return host === 'huggingface.co' || host.endsWith('.huggingface.co') || host === 'hf.co' || host.endsWith('.hf.co');
-}
-
-/** GETs a pinned model file, following Hugging Face's redirects (to its file storage), with no cookies or names. */
-function fetchPinned(url: string, onBytes: (n: number) => void, cancelled?: () => boolean, hops = 0): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' || !allowedHost(parsed.hostname)) return reject(new Error(`The code model is only downloaded from Hugging Face, not ${parsed.hostname}.`));
-    const request = https.get(parsed, { headers: { 'User-Agent': 'code-x-ray', Accept: '*/*' }, timeout: 30000 }, (response) => {
-      const status = response.statusCode ?? 0;
-      if (status >= 300 && status < 400 && response.headers.location) {
-        response.resume();
-        if (hops >= 5) return reject(new Error('Too many redirects while downloading the code model.'));
-        resolve(fetchPinned(new URL(response.headers.location, parsed).href, onBytes, cancelled, hops + 1));
-        return;
-      }
-      if (status !== 200) {
-        response.resume();
-        return reject(new Error(`Hugging Face answered ${status} for the code model.`));
-      }
-      const chunks: Buffer[] = [];
-      let n = 0;
-      response.on('data', (chunk: Buffer) => {
-        if (cancelled?.()) {
-          request.destroy(new Error('The download was cancelled.'));
-          return;
-        }
-        chunks.push(chunk);
-        n += chunk.length;
-        onBytes(n);
-      });
-      response.on('end', () => resolve(Buffer.concat(chunks)));
-      response.on('error', reject);
-    });
-    request.on('timeout', () => request.destroy(new Error('The download of the code model timed out.')));
-    request.on('error', reject);
-  });
 }

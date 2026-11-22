@@ -41,20 +41,17 @@ async function bundle() {
 }
 
 /**
- * The Kitten TTS voice-over, in dist/kitten: the model (assets/kitten, fetched at a pinned, checksummed revision), the
- * one ONNX Runtime Web build it runs on (WebAssembly, one thread), the model's worker (dist/kittenWorker.js), and the
- * eSpeak NG phonemizer, which runs as its own GPL program (media/kitten) with its license and notice.
+ * The natural voices' engine, in dist/kitten: the one ONNX Runtime Web build it runs on (WebAssembly, one thread), the
+ * worker (dist/kittenWorker.js), and the eSpeak NG phonemizer, which runs as its own GPL program (media/kitten) with
+ * its license and notice. No voice model: you choose one, and it is downloaded on first use (src/reel/voiceModels.ts).
  */
 async function bundleKitten() {
-  const { fetchKitten } = require('./fetch-kitten');
-  await fetchKitten();
   const home = path.join(root, 'dist', 'kitten');
   fs.rmSync(home, { recursive: true, force: true });
   const copy = (from, to) => {
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.copyFileSync(from, to);
   };
-  for (const file of ['kitten_tts_nano_v0_8.onnx', 'voices.npz', 'config.json']) copy(path.join(root, 'assets', 'kitten', file), path.join(home, 'model', file));
   const ort = path.join(root, 'node_modules', 'onnxruntime-web');
   for (const file of ['ort.wasm.min.mjs', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) copy(path.join(ort, 'dist', file), path.join(home, 'ort', file));
   // The npm package has no license file; its license is MIT (Microsoft), shipped from media/kitten.

@@ -7,7 +7,7 @@ import { encode, KITTEN_VOICES, modelSpeed, readVoices, styleFor, trimEnd, Voice
 /**
  * The Kitten TTS model, run in a worker thread so the editor never waits on it: ONNX Runtime Web (WebAssembly, one
  * thread) loads the bundled model once, then turns phonemes into samples, one clip at a time.
- * Bundled to dist/kittenWorker.js; workerData.home is dist/kitten (the model and the runtime's files).
+ * Bundled to dist/kittenWorker.js; workerData.home is dist/kitten (the runtime), workerData.model the downloaded model's folder.
  */
 
 interface Ort {
@@ -20,7 +20,8 @@ interface Session {
   run(feeds: Record<string, unknown>): Promise<Record<string, { data: Float32Array }>>;
 }
 
-const home: string = workerData.home;
+// The runtime is bundled (dist/kitten); the model is the one you downloaded (its own folder in the extension's storage).
+const { home, model, priors } = workerData as { home: string; model: string; priors: boolean };
 
 // Everything the model needs is in the extension's folder: no request leaves this thread. A runtime that tried to
 // fetch anything (a wasm file from a CDN, say) is refused here rather than allowed out.
@@ -39,8 +40,8 @@ function load() {
     const ort = (await import(pathToFileURL(path.join(runtime, 'ort.wasm.min.mjs')).href)) as Ort;
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.wasmPaths = `${pathToFileURL(runtime).href}/`;
-    const session = await ort.InferenceSession.create(fs.readFileSync(path.join(home, 'model', 'kitten_tts_nano_v0_8.onnx')));
-    const voices = readVoices(fs.readFileSync(path.join(home, 'model', 'voices.npz')));
+    const session = await ort.InferenceSession.create(fs.readFileSync(path.join(model, 'model.onnx')));
+    const voices = readVoices(fs.readFileSync(path.join(model, 'voices.npz')));
     return { ort, session, voices };
   })();
   return ready;
@@ -59,7 +60,7 @@ parentPort?.on('message', async (message: { id: number; phonemes: string; voice:
     const result = await session.run({
       input_ids: new ort.Tensor('int64', BigInt64Array.from(tokens.map(BigInt)), [1, tokens.length]),
       style: new ort.Tensor('float32', style, [1, style.length]),
-      speed: new ort.Tensor('float32', Float32Array.of(modelSpeed(message.voice, message.pace)), [1]),
+      speed: new ort.Tensor('float32', Float32Array.of(modelSpeed(message.voice, message.pace, priors)), [1]),
     });
     const key = session.outputNames.find((n) => /wave/i.test(n)) ?? session.outputNames[0];
     const samples = trimEnd(result[key].data);

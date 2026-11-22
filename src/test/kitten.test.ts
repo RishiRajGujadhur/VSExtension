@@ -9,7 +9,10 @@ import { wavSeconds } from '../reel/voice';
 
 const root = path.resolve(__dirname, '../..');
 const home = path.join(root, 'dist', 'kitten');
-const bundled = fs.existsSync(path.join(home, 'model', 'voices.npz'));
+// The engine is bundled; a voice model is downloaded on use: here the copy in assets/kitten, laid out the same way.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const model: { id: string; dir: string; priors: boolean } | undefined = require(path.join(root, 'test-fixtures', 'voice-model.cjs')).testVoiceModel();
+const bundled = fs.existsSync(path.join(home, 'phonemize.mjs')) && !!model;
 
 test('Kitten: phonemes to tokens as the model expects, spaced words and marks, pieces around punctuation', () => {
   // Start token 0, then symbols, then end 10 and pad 0; unknown symbols are skipped.
@@ -25,14 +28,16 @@ test('Kitten: a natural pace from the voices\' slower priors, silence trimmed, a
   assert.equal(modelSpeed('Jasper'), 1);
   assert.equal(modelSpeed('Hugo'), 0.9 / 0.8);
   assert.equal(modelSpeed('Bella', 1.5), 1.5);
+  // Micro and Mini have no priors: the pace asked for.
+  assert.equal(modelSpeed('Hugo', 1, false), 1);
   const samples = new Float32Array(24000 + 2400);
   samples.fill(0.2, 0, 24000);
   assert.equal(trimEnd(samples).length, 24000);
   assert.equal(wavSeconds(toWav(new Float32Array(48000))), 2);
 });
 
-test('Kitten: the bundled voices file holds the eight voices, a style row for each text length', { skip: !bundled && 'dist/kitten is built by the bundle' }, () => {
-  const voices = readVoices(fs.readFileSync(path.join(home, 'model', 'voices.npz')));
+test('Kitten: the voices file holds the eight voices, a style row for each text length', { skip: !bundled && 'needs the bundle and assets/kitten (node scripts/fetch-kitten.js)' }, () => {
+  const voices = readVoices(fs.readFileSync(path.join(model!.dir, 'voices.npz')));
   for (const key of Object.values(KITTEN_VOICES)) {
     assert.ok(voices[key], key);
     assert.equal(voices[key].cols, 256);
@@ -43,8 +48,11 @@ test('Kitten: the bundled voices file holds the eight voices, a style row for ea
   assert.deepEqual(styleFor(table, 100000), styleFor(table, table.rows + 2));
 });
 
-test('Kitten: the narrator speaks a caption with the bundled model, offline, and keeps the clip', { skip: !bundled && 'dist/kitten is built by the bundle', timeout: 120000 }, async () => {
+test('Kitten: the narrator speaks a caption with a downloaded model, offline, and keeps the clip', { skip: !bundled && 'needs the bundle and assets/kitten (node scripts/fetch-kitten.js)', timeout: 120000 }, async () => {
   const narrator = new KittenNarrator(home, path.join(root, 'dist', 'kittenWorker.js'));
+  // No model chosen yet: not available, nothing to speak with.
+  assert.ok(!narrator.available);
+  narrator.use(model);
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'kitten-test-'));
   try {
     assert.ok(narrator.available);

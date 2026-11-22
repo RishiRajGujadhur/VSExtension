@@ -124,3 +124,19 @@ input.field.invalid { border-color: var(--vscode-inputValidation-errorBorder, #f
 .severity-row select { min-width: 150px; }
 .severity-row select.changed { border-color: var(--accent); }
 @media (max-width: 640px) { .severity-row { flex-wrap: wrap; } .severity-row select { width: 100%; } }
+
+/* Credits: a card for each library and model. */
+.credits .group-title { margin-top: 18px; }
+.credits .group-title:first-child { margin-top: 0; }
+.credit-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.credit { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.credit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.credit h3 { margin: 0; font-size: 1.05em; font-weight: 600; }
+.credit-license { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--vscode-descriptionForeground); white-space: nowrap; }
+.credit-license.downloaded { border-color: var(--vscode-focusBorder); color: var(--vscode-foreground); }
+.credit-use { margin: 0; color: var(--vscode-foreground); }
+.credit-facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; color: var(--vscode-descriptionForeground); font-size: 0.92em; }
+.credit-facts dt { font-weight: 600; }
+.credit-facts dd { margin: 0; }
+.credit-links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: auto; }
+.credits-notices { margin-top: 16px; }

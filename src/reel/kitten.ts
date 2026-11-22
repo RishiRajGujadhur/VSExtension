@@ -34,9 +34,20 @@ export class KittenNarrator {
     private readonly workerFile: string,
   ) {}
 
-  /** Whether the bundled model and phonemizer are there. */
+  /** The voice model it speaks with: one you downloaded (its folder), or none yet. */
+  private model: { id: string; dir: string; priors: boolean } | undefined;
+
+  /** Speaks with this model from now on (a different one restarts the worker). */
+  use(model: { id: string; dir: string; priors: boolean } | undefined): void {
+    if (model?.id === this.model?.id && model?.dir === this.model?.dir) return;
+    void this.worker?.terminate();
+    this.worker = undefined;
+    this.model = model;
+  }
+
+  /** Whether a downloaded model is set, and the bundled runtime and phonemizer are there. */
   get available(): boolean {
-    return fs.existsSync(path.join(this.home, 'model', 'kitten_tts_nano_v0_8.onnx')) && fs.existsSync(path.join(this.home, 'phonemize.mjs')) && fs.existsSync(this.workerFile);
+    return !!this.model && fs.existsSync(path.join(this.model.dir, 'model.onnx')) && fs.existsSync(path.join(this.home, 'phonemize.mjs')) && fs.existsSync(this.workerFile);
   }
 
   /** The natural voices by name, as the voice picker shows them: "Jasper", "Bella"… */
@@ -57,7 +68,7 @@ export class KittenNarrator {
     const voice = voiceName.replace(/^Kitten /, '');
     if (!KITTEN_VOICES[voice]) throw new Error(`No natural voice called ${voice}`);
     fs.mkdirSync(cacheDir, { recursive: true });
-    const target = (text: string) => path.join(cacheDir, `kitten-${createHash('sha1').update(`kitten-nano-0.8-int8\n${voice}\n${text}`).digest('hex').slice(0, 20)}.wav`);
+    const target = (text: string) => this.clipFile(cacheDir, voice, text);
     const missing = items.filter((i) => i.text.trim() && !fs.existsSync(target(i.text)));
     let done = 0;
     for (const item of missing) {
@@ -78,7 +89,12 @@ export class KittenNarrator {
   /** How many of these texts still need recording with the voice: for saying how long it will take. */
   missing(items: { text: string }[], voiceName: string, cacheDir: string): number {
     const voice = voiceName.replace(/^Kitten /, '');
-    return items.filter((i) => i.text.trim() && !fs.existsSync(path.join(cacheDir, `kitten-${createHash('sha1').update(`kitten-nano-0.8-int8\n${voice}\n${i.text}`).digest('hex').slice(0, 20)}.wav`))).length;
+    return items.filter((i) => i.text.trim() && !fs.existsSync(this.clipFile(cacheDir, voice, i.text))).length;
+  }
+
+  /** A clip, kept by the model, the voice and the text: another model records its own. */
+  private clipFile(cacheDir: string, voice: string, text: string): string {
+    return path.join(cacheDir, `kitten-${createHash('sha1').update(`${this.model?.id ?? 'none'}\n${voice}\n${text}`).digest('hex').slice(0, 20)}.wav`);
   }
 
   /** Text to the phonemes the model reads: the phonemizer's output, spaced into words and marks. */
@@ -105,7 +121,8 @@ export class KittenNarrator {
 
   private ask(message: Record<string, unknown>): Promise<unknown> {
     if (!this.worker) {
-      const worker = new Worker(this.workerFile, { workerData: { home: this.home } });
+      if (!this.model) return Promise.reject(new Error('No voice model is downloaded.'));
+      const worker = new Worker(this.workerFile, { workerData: { home: this.home, model: this.model.dir, priors: this.model.priors } });
       worker.on('message', (reply: { id: number; samples?: Float32Array; ok?: boolean; error?: string }) => {
         const w = this.waiting.get(reply.id);
         if (!w) return;

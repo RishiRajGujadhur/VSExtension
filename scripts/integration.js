@@ -12,6 +12,15 @@ if (!executable) {
   process.exit(1);
 }
 const root = path.resolve(__dirname, '..');
+const userData = path.join(os.tmpdir(), 'ts-impact-vscode-user');
+// The voice model the tests speak with, as if downloaded: the copy in assets/kitten (node scripts/fetch-kitten.js),
+// put where the extension keeps downloaded models. Without it, the voice-over would stop to ask which to download.
+const fs = require('fs');
+const voiceModels = path.join(userData, 'User', 'globalStorage', 'rishigujadhur.ts-test-impact', 'voice-models');
+fs.rmSync(voiceModels, { recursive: true, force: true });
+const model = require('../test-fixtures/voice-model.cjs').testVoiceModel();
+if (model) fs.cpSync(model.dir, path.join(voiceModels, model.id), { recursive: true });
+else console.warn('No assets/kitten: the voice-over tests use the system voice (run node scripts/fetch-kitten.js).');
 const result = spawnSync(
   executable,
   [
@@ -22,7 +31,7 @@ const result = spawnSync(
     '--skip-welcome',
     '--skip-release-notes',
     '--disable-workspace-trust',
-    `--user-data-dir=${path.join(os.tmpdir(), 'ts-impact-vscode-user')}`,
+    `--user-data-dir=${userData}`,
     path.join(root, 'sample'),
   ],
   { stdio: 'inherit' },

@@ -11,6 +11,7 @@ import { AnalysisError } from '../analysis/types';
 import { listVoices, speak, VoiceClip } from './voice';
 import { KittenNarrator } from './kitten';
 import { DEFAULT_KITTEN_VOICE } from './kittenModel';
+import { DEFAULT_VOICE_MODEL, SYSTEM_VOICE_MODEL, VOICE_MODELS, voiceModel, VoiceModel, VoiceModelStore } from './voiceModels';
 import { speakable } from './describe';
 import { CodeModel } from './codeModel';
 import { CODE_MODEL, downloadDisclosure } from './codeModelText';
@@ -53,9 +54,131 @@ export class ReelPanel {
     if (saved) this.voice = { ...this.voice, on: saved.on, name: saved.name };
     this.kitten = new KittenNarrator(path.join(extensionUri.fsPath, 'dist', 'kitten'), path.join(extensionUri.fsPath, 'dist', 'kittenWorker.js'));
     this.codeModel = new CodeModel(path.join(storage, 'code-model'), path.join(extensionUri.fsPath, 'dist', 'codeModelWorker.js'), path.join(extensionUri.fsPath, 'dist', 'kitten', 'ort'));
+    this.voiceModels = new VoiceModelStore(path.join(storage, 'voice-models'));
   }
-  /** The bundled Kitten voices, started on first use and stopped with the extension. */
+  /** The natural voices' engine (bundled), speaking with the voice model you downloaded; stopped with the extension. */
   private readonly kitten: KittenNarrator;
+  /** The voice models downloaded, one folder each in the extension's storage. */
+  readonly voiceModels: VoiceModelStore;
+  /** "Not now" to the voice model prompt: the computer's voice reads until VS Code restarts. */
+  private voiceModelDeclined = false;
+
+  /**
+   * The Voice model setting: a model's id, or "system" for the computer's own voice. Natural voices turned off in an
+   * earlier version (and no model chosen since) read as "system".
+   */
+  private voiceModelSetting(): string {
+    const config = vscode.workspace.getConfiguration('tsStructure.reel');
+    const chosen = config.inspect<string>('voiceModel');
+    const set = chosen?.workspaceValue ?? chosen?.globalValue;
+    if (set === undefined && config.get<boolean>('naturalVoices', true) === false) return SYSTEM_VOICE_MODEL;
+    return set ?? DEFAULT_VOICE_MODEL;
+  }
+
+  /**
+   * The voice model to speak with, downloaded: the one set, or the one you choose now. When none is downloaded, you
+   * are asked which (Kitten Nano is recommended), with what each download weighs and what it sends; or your
+   * computer's own voice, with nothing to download. Undefined: the computer's voice reads.
+   */
+  async ensureVoiceModel(): Promise<VoiceModel | undefined> {
+    const setting = this.voiceModelSetting();
+    if (setting === SYSTEM_VOICE_MODEL) return undefined;
+    const set = voiceModel(setting) ?? voiceModel(DEFAULT_VOICE_MODEL)!;
+    if (this.voiceModels.downloaded(set)) return this.useVoiceModel(set);
+    if (this.voiceModelDeclined) return undefined;
+    const picked = await this.pickVoiceModel('The voice-over needs a voice model: choose one to download (once), or your computer\'s own voice');
+    if (!picked) {
+      this.voiceModelDeclined = true;
+      return undefined;
+    }
+    if (picked === SYSTEM_VOICE_MODEL) return undefined;
+    return (await this.downloadVoiceModel(picked)) ? this.useVoiceModel(picked) : undefined;
+  }
+
+  private useVoiceModel(model: VoiceModel): VoiceModel {
+    this.kitten.use({ id: model.id, dir: this.voiceModels.dir(model), priors: model.speedPriors });
+    return model;
+  }
+
+  /**
+   * The voice models to choose from, the recommended one first, each with its download size and whether it is on
+   * this computer; then your computer's own voice. The choice is kept in the Voice model setting.
+   */
+  private async pickVoiceModel(title: string): Promise<VoiceModel | typeof SYSTEM_VOICE_MODEL | undefined> {
+    type Item = vscode.QuickPickItem & { model?: VoiceModel; system?: boolean };
+    const current = this.voiceModelSetting();
+    const items: Item[] = [
+      ...VOICE_MODELS.map((m): Item => ({
+        label: `${m.recommended ? '$(star-full) ' : ''}${m.name}${m.recommended ? ' (recommended)' : ''}`,
+        description: this.voiceModels.downloaded(m) ? 'downloaded' : `${m.megabytes} MB download`,
+        detail: `${m.note} Eight voices. Apache-2.0, by KittenML.${m.id === current ? ' Chosen now.' : ''}`,
+        model: m,
+      })),
+      { label: '$(device-desktop) Your computer\'s own voice', description: 'no download', detail: 'Made at once, more robotic.', system: true },
+    ];
+    const pick = await vscode.window.showQuickPick(items, {
+      title,
+      placeHolder: 'Downloaded once from huggingface.co: the request shows Hugging Face your IP address, and sends none of your code',
+      ignoreFocusOut: true,
+    });
+    if (!pick) return undefined;
+    const value = pick.system ? SYSTEM_VOICE_MODEL : pick.model!.id;
+    await vscode.workspace.getConfiguration('tsStructure.reel').update('voiceModel', value, vscode.ConfigurationTarget.Global);
+    return pick.system ? SYSTEM_VOICE_MODEL : pick.model;
+  }
+
+  /** Downloads a voice model, with its progress and a way to cancel; true when it is ready. */
+  private async downloadVoiceModel(model: VoiceModel): Promise<boolean> {
+    if (this.voiceModels.downloaded(model)) return true;
+    try {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Downloading ${model.name} (${model.megabytes} MB, from Hugging Face)`, cancellable: true },
+        async (progress, token) => {
+          let shown = 0;
+          await this.voiceModels.download(model, (received, total) => {
+            const percent = Math.floor((100 * received) / total);
+            if (percent > shown) {
+              progress.report({ increment: percent - shown, message: `${percent}%` });
+              shown = percent;
+            }
+          }, () => token.isCancellationRequested);
+        },
+      );
+    } catch (error) {
+      void showProblem(`${model.name} could not be downloaded, so your computer's voice reads instead: ${error instanceof Error ? error.message : String(error)}`, [], 'info');
+      return false;
+    }
+    return this.voiceModels.downloaded(model);
+  }
+
+  /** The command: choose the voice model (downloading it if needed), or the computer's voice. */
+  async chooseVoiceModel(): Promise<void> {
+    const picked = await this.pickVoiceModel('Choose the voice model for the voice-over');
+    if (!picked) return;
+    this.voiceModelDeclined = false;
+    if (picked !== SYSTEM_VOICE_MODEL && (await this.downloadVoiceModel(picked))) {
+      void vscode.window.showInformationMessage(`${picked.name} is ready: the voice-over speaks with it, on your computer.`);
+    }
+    this.settingsChanged();
+  }
+
+  /** The command: remove downloaded voice models, chosen from those on this computer. */
+  async removeVoiceModels(): Promise<void> {
+    const here = this.voiceModels.list();
+    if (!here.length) {
+      void vscode.window.showInformationMessage('No voice model is downloaded.');
+      return;
+    }
+    const picks = await vscode.window.showQuickPick(
+      here.map((m) => ({ label: m.name, description: `${m.megabytes} MB`, picked: true, model: m })),
+      { title: 'Remove downloaded voice models', canPickMany: true, placeHolder: 'The ones ticked are removed; the voice-over asks again when it next needs one' },
+    );
+    if (!picks?.length) return;
+    this.kitten.use(undefined);
+    for (const p of picks) this.voiceModels.remove(p.model);
+    void vscode.window.showInformationMessage(`Removed ${picks.map((p) => p.model.name).join(', ')}.`);
+    this.settingsChanged();
+  }
   /** The code model: downloaded only when you agree to it, then run on this computer. */
   readonly codeModel: CodeModel;
   /** Asked once per session whether to download the code model. */
@@ -385,18 +508,19 @@ export class ReelPanel {
     this.voice.voices = [...(this.naturalVoicesOn() ? KittenNarrator.voices() : []), ...this.systemVoices];
   }
 
-  /** The natural voices: bundled, and not turned off in the settings. */
+  /** The natural voices: offered unless the Voice model setting is your computer's own voice (downloaded on first use). */
   private naturalVoicesOn(): boolean {
-    return this.kitten.available && vscode.workspace.getConfiguration('tsStructure.reel').get<boolean>('naturalVoices', true);
+    return this.voiceModelSetting() !== SYSTEM_VOICE_MODEL && fs.existsSync(path.join(this.extensionUri.fsPath, 'dist', 'kitten', 'phonemize.mjs'));
   }
 
-  /** The Git reel settings changed: the voices offered again; natural voices turned off stop at once. */
+  /** The Git reel settings changed: the voices offered again; natural voices turned off (or another model) stop at once. */
   settingsChanged(): void {
     this.voice.voices = [];
-    if (!this.naturalVoicesOn()) {
-      this.kitten.dispose();
-      if (KittenNarrator.isNatural(this.voice.name)) this.voice.name = undefined;
-    }
+    const model = voiceModel(this.voiceModelSetting());
+    if (!this.naturalVoicesOn() || !model || !this.voiceModels.downloaded(model)) {
+      this.kitten.use(undefined);
+      if (!this.naturalVoicesOn() && KittenNarrator.isNatural(this.voice.name)) this.voice.name = undefined;
+    } else this.useVoiceModel(model);
     void this.loadVoices().then(() => this.post());
   }
   private systemVoices: string[] = [];
@@ -423,6 +547,13 @@ export class ReelPanel {
   private async record(items: { id: string; text: string }[], voiceName: string): Promise<VoiceClip[]> {
     const cache = path.join(this.storage, 'reel-voice');
     if (!KittenNarrator.isNatural(voiceName) || !this.naturalVoicesOn()) return speak(items, voiceName, cache);
+    // A natural voice needs its model on this computer: asked for now if none is downloaded yet.
+    if (!(await this.ensureVoiceModel())) {
+      const fallback = this.systemVoices[0];
+      if (!fallback) throw new Error('No voice model is downloaded, and no system voice was found.');
+      this.voice.name = fallback;
+      return speak(items, fallback, cache);
+    }
     try {
       const missing = this.kitten.missing(items, voiceName, cache);
       if (!missing) return await this.kitten.speak(items, voiceName, cache);

@@ -101,7 +101,9 @@ export function styleFor(table: VoiceTable, tokenCount: number): Float32Array {
  * The speed the model is given. The voices speak slowly at 1 (their priors are 0.8, Hugo 0.9); the reel's pace,
  * `pace`, is 1 for a natural speed.
  */
-export function modelSpeed(voice: string, pace = 1): number {
+export function modelSpeed(voice: string, pace = 1, priors = true): number {
+  // A model without speed priors (Micro, Mini) speaks at the pace asked for.
+  if (!priors) return pace;
   const prior = voice === 'Hugo' ? 0.9 : 0.8;
   return (pace / 0.8) * prior;
 }

@@ -28,27 +28,28 @@ in THIRD_PARTY_NOTICES.md and in the extension's dist/kitten folder). The
 sizes are what each adds to the installed extension and to the download.
 
 - Extension code, pages and icons: Code X-Ray (MIT).
-  2.2 MB installed, 1.0 MB of the download.
+  2.4 MB installed, 1.0 MB of the download.
 - Analyses of TypeScript and JavaScript: TypeScript compiler 6.0.3 (Apache-2.0).
   23.2 MB installed, 4.4 MB of the download.
 - C# support: tree-sitter and tree-sitter-c-sharp (MIT).
   5.8 MB installed, 0.4 MB of the download.
-- Git reel natural voices: the voice model: Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0).
-  23.2 MB installed, 19.6 MB of the download.
-- Git reel natural voices: the eight voices: Kitten TTS voices file (Apache-2.0).
-  3.1 MB installed, 2.9 MB of the download.
-- Git reel natural voices: the model runtime: ONNX Runtime Web 1.24.3, by Microsoft (MIT).
+- Natural voices and the code model: the model runtime: ONNX Runtime Web 1.24.3, by Microsoft (MIT).
   11.9 MB installed, 3.0 MB of the download.
-- Git reel natural voices: pronunciation: eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0).
+- Natural voices: pronunciation and the voice engine: eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0).
   1.3 MB installed, 0.7 MB of the download.
 
-Total: about 70.9 MB installed, a 32.0 MB download. The Git reel natural voices
-(the last four) are 39.5 MB installed and 26.2 MB of the download; they run
-only on your computer and can be turned off with the setting
-tsStructure.reel.naturalVoices. eSpeak NG (GPL-3.0) runs as a separate program,
-dist/kitten/phonemize.mjs, with the GPL text and a source notice next to it.
+Total: about 44.7 MB installed, a 9.5 MB download. eSpeak NG (GPL-3.0) runs as
+a separate program, dist/kitten/phonemize.mjs, with the GPL text and a source
+notice next to it.
 
-Not bundled: the Git reel code model, all-MiniLM-L6-v2 (Apache-2.0, by the
-sentence-transformers team; int8 ONNX export by Xenova). 23.2 MB, downloaded
-from Hugging Face only if you agree, into the extension's storage; turned off
-with the setting tsStructure.reel.codeModel.
+Not bundled, downloaded from Hugging Face only when you choose them, into the
+extension's storage, each under its own license:
+
+- Git reel natural voices: one Kitten TTS 0.8 model, by KittenML / Stellon Labs
+  (Apache-2.0): Nano int8 27.6 MB (recommended), Nano 60.0 MB, Micro 44.7 MB or
+  Mini 81.5 MB. Chosen with the setting tsStructure.reel.voiceModel.
+- Git reel code model: all-MiniLM-L6-v2 (Apache-2.0, by the
+  sentence-transformers team; int8 ONNX export by Xenova), 23.2 MB. Turned off
+  with the setting tsStructure.reel.codeModel.
+
+Every library and model is credited on the Credits page of Code X-Ray Settings.

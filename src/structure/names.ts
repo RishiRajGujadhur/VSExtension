@@ -31,6 +31,8 @@ export const names: Record<string, string> = {
   'tsStructure.explainCode.video': 'Explain this code as a video',
   'tsStructure.gitReel.downloadCodeModel': 'Git reel: download the code model',
   'tsStructure.gitReel.removeCodeModel': 'Git reel: remove the code model',
+  'tsStructure.gitReel.chooseVoiceModel': 'Git reel: choose the voice model',
+  'tsStructure.gitReel.removeVoiceModels': 'Git reel: remove downloaded voice models',
   'tsStructure.dependenceGraph': 'What depends on what',
   'tsStructure.exceptionFlow': 'Error paths',
   'tsStructure.promiseRejections': 'Promise rejections',

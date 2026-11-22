@@ -342,9 +342,13 @@
       head.append(titles);
       const tools = sectionTools(section);
       if (tools) head.append(tools);
-      const list = make('div', 'rows');
-      section.rows.forEach((r) => list.append(rowElement(r)));
-      page.append(head, list);
+      if (section.credits) {
+        page.append(head, creditsElement(section.credits));
+      } else {
+        const list = make('div', 'rows');
+        section.rows.forEach((r) => list.append(rowElement(r)));
+        page.append(head, list);
+      }
     }
     main.replaceChildren(page);
     if (fade) {
@@ -352,6 +356,49 @@
       main.scrollTop = 0;
     }
     document.querySelectorAll('.nav-item[data-section]').forEach((n) => n.setAttribute('aria-current', String(!query && !changedOnly && n.dataset.section === current)));
+  }
+
+  /**
+   * The Credits page: a card for each library and model, what it does here, who made it, its license, whether it is
+   * bundled or downloaded when you choose it, and what it adds. Its links open in your browser.
+   */
+  function creditsElement(list) {
+    const wrap = make('div', 'credits');
+    for (const group of [['bundled', 'Bundled with Code X-Ray'], ['downloaded', 'Downloaded only when you choose them']]) {
+      const items = list.map((c, index) => ({ c, index })).filter(({ c }) => c.shipped === group[0]);
+      if (!items.length) continue;
+      wrap.append(make('div', 'group-title', group[1]));
+      const cards = make('div', 'credit-cards');
+      for (const { c, index } of items) {
+        const card = make('article', 'credit');
+        const top = make('div', 'credit-head');
+        top.append(make('h3', '', c.name), make('span', `credit-license ${c.shipped}`, c.license));
+        card.append(top, make('p', 'credit-use', c.usedFor));
+        const facts = make('dl', 'credit-facts');
+        for (const [label, value] of [['By', c.author], ['Adds', c.size]]) facts.append(make('dt', '', label), make('dd', '', value));
+        card.append(facts);
+        const links = make('div', 'credit-links');
+        const link = (label, which, iconName) => {
+          const b = make('button', 'link');
+          b.type = 'button';
+          b.append(icon(iconName), label);
+          b.title = which === 'license' ? `The ${c.license} license` : `${c.name} on the web`;
+          b.addEventListener('click', () => send({ type: 'openCredit', index, which }));
+          links.append(b);
+        };
+        link('Project', 'project', 'link-external');
+        if (c.licenseUrl) link('License', 'license', 'law');
+        card.append(links);
+        cards.append(card);
+      }
+      wrap.append(cards);
+    }
+    const notices = make('button', 'link credits-notices');
+    notices.type = 'button';
+    notices.append(icon('file-text'), 'The full license texts (THIRD_PARTY_NOTICES.md)');
+    notices.addEventListener('click', () => send({ type: 'openNotices' }));
+    wrap.append(notices);
+    return wrap;
   }
 
   function show(id, fade) {

@@ -54,7 +54,7 @@ Every answer comes from the TypeScript compiler on your machine. It works offlin
 
 - Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
 - It plays a video of your changes, up to two and a half minutes, in a player like YouTube's (chapters, captions, full screen): the title (no counts), then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
-- Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, bundled and run on your computer: eight voices, or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
+- Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, run on your computer: eight voices from the model you choose, downloaded once, Kitten Nano recommended; or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
 - Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
 - **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis, nothing uploaded. With the optional **code model** (offered the first time, a one-time 23.2 MB download from Hugging Face, run on your computer), the key change in each file is the part closest to what the change is about, and functions the rules cannot place get named (*applyCoupon* → *Works out coupon*).
 
@@ -135,40 +135,47 @@ The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 
 Everything runs on your computer: no code, caption or recording is sent anywhere, and the extension makes no network
 requests of its own (a test runs the voice-over with every network route blocked). The only things that go online are
-links you click, such as a documentation page, which open in your browser, and the Git reel's **code model**, if you
-agree to download it (below). What each part adds:
+links you click, such as a documentation page, which open in your browser, and the models below, each only if you
+choose to download it. What each bundled part adds:
 
 | Feature | Bundled component | Installed | Download |
 |---|---|---|---|
-| Extension code, pages and icons | Code X-Ray (MIT) | 2.2 MB | 1.0 MB |
+| Extension code, pages and icons | Code X-Ray (MIT) | 2.4 MB | 1.0 MB |
 | Analyses of TypeScript and JavaScript | TypeScript compiler 6.0.3 (Apache-2.0) | 23.2 MB | 4.4 MB |
 | C# support | tree-sitter and tree-sitter-c-sharp (MIT) | 5.8 MB | 0.4 MB |
-| Git reel natural voices: the voice model | Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0) | 23.2 MB | 19.6 MB |
-| Git reel natural voices: the eight voices | Kitten TTS voices file (Apache-2.0) | 3.1 MB | 2.9 MB |
-| Git reel natural voices: the model runtime | ONNX Runtime Web 1.24.3, by Microsoft (MIT) | 11.9 MB | 3.0 MB |
-| Git reel natural voices: pronunciation | eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0) | 1.3 MB | 0.7 MB |
-| **Total** |  | **70.9 MB** | **32.0 MB** |
+| Natural voices and the code model: the model runtime | ONNX Runtime Web 1.24.3, by Microsoft (MIT) | 11.9 MB | 3.0 MB |
+| Natural voices: pronunciation and the voice engine | eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0) | 1.3 MB | 0.7 MB |
+| **Total** |  | **44.7 MB** | **9.5 MB** |
 
-The Git reel natural voices are the last four rows: 39.5 MB installed, 26.2 MB of the download. Turn them off with
-**Natural voices** in the Git reel settings (`tsStructure.reel.naturalVoices`); the voice-over then uses your
-computer's own voice.
+No voice model is bundled: the extension ships only the engine that runs one (the last two rows, 13.2 MB installed,
+3.7 MB of the download). Downloaded only when you choose them, into the extension's storage:
 
-Not bundled, downloaded only if you agree:
-
-| Feature | Component | On disk | Download |
+| Feature | Model | On disk | Download |
 |---|---|---|---|
+| Git reel natural voices (one model, the one you choose) | Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0), recommended | 27.6 MB | 27.6 MB |
+|  | Kitten TTS Nano 0.8, full precision (Apache-2.0) | 60.0 MB | 60.0 MB |
+|  | Kitten TTS Micro 0.8 (Apache-2.0) | 44.7 MB | 44.7 MB |
+|  | Kitten TTS Mini 0.8 (Apache-2.0) | 81.5 MB | 81.5 MB |
 | Git reel code model (key changes, what code is for) | all-MiniLM-L6-v2, int8 ONNX by Xenova (Apache-2.0) | 23.2 MB | 23.2 MB |
 
-The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model** setting
-(`tsStructure.reel.codeModel`: ask, on, off) and the commands *Git reel: download the code model* and *Git reel: remove
-the code model* control it. The download is two files from huggingface.co, pinned to one version and checked against
-their hashes before they are kept; no code, name or token of yours is sent with it. The model then runs offline, in a
-background thread, on the runtime already bundled for the voices.
+**Voice models.** The first time a video needs the voice-over, you choose a model: **Kitten Nano** is recommended
+(the smallest download and the quickest to speak); the others are larger, more natural and slower. Or your computer's
+own voice, with nothing to download. The choice is the **Voice model** setting (`tsStructure.reel.voiceModel`), and
+*Git reel: choose the voice model* and *Git reel: remove downloaded voice models* change it or free the space.
+
+**The code model.** The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model**
+setting (`tsStructure.reel.codeModel`: ask, on, off) and the commands *Git reel: download the code model* and *Git
+reel: remove the code model* control it.
+
+Every download is from huggingface.co, each file pinned to one version of its repository and checked against its hash
+before it is kept. It is a plain request for the files: it shows Hugging Face your IP address, and sends no code, file
+name, account or token of yours. The models then run offline, in a background thread. Their authors and licenses are
+on the **Credits** page of Code X-Ray Settings.
 
 ## Credits
 
 The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
 
-The Git reel's voice-over speaks with [Kitten TTS](https://github.com/KittenML/KittenTTS) by KittenML / Stellon Labs (the Nano 0.8 int8 model, Apache-2.0), bundled and run on your computer with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT). Its phonemes come from [eSpeak NG](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) via [phonemizer.js](https://github.com/xenova/phonemizer.js), run as a separate program, with its licence and source notice in the extension's `dist/kitten` folder.
+The Git reel's voice-over speaks with [Kitten TTS](https://github.com/KittenML/KittenTTS) by KittenML / Stellon Labs (the 0.8 models, Apache-2.0), downloaded when you choose one and run on your computer with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT). Its phonemes come from [eSpeak NG](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) via [phonemizer.js](https://github.com/xenova/phonemizer.js), run as a separate program, with its licence and source notice in the extension's `dist/kitten` folder. Every library and model is credited, with its license, on the **Credits** page of Code X-Ray Settings.
 
 Other credits (the animated chart grid, the Welcome page) are in the [guide](docs/GUIDE.md#credits), with licence notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

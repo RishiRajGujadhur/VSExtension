@@ -1,8 +1,8 @@
 {
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
-  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: adds 26 MB to the download, 40 MB installed; can be turned off), and an optional code model for them, downloaded only if you agree (all-MiniLM-L6-v2, Apache-2.0: 23 MB, not bundled). Chart animations adapted from robot-components (MIT).",
-  "version": "0.95.0",
+  "description": "See inside your TypeScript, JavaScript and React code. Flowchart, Data flow, Why this value, Null checks, Find usages, Affected tests, Change parameters, Delete safely and Search by shape: plain names, real answers, all offline and without AI. Git reel videos with an offline natural voice-over (Kitten TTS, Apache-2.0: a voice model you choose, downloaded on first use, 28 to 82 MB; or your computer's own voice), and an optional code model for them, downloaded only if you agree (all-MiniLM-L6-v2, Apache-2.0: 23 MB, not bundled). Chart animations adapted from robot-components (MIT).",
+  "version": "0.96.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {
@@ -932,6 +932,16 @@
         "category": "Code X-Ray"
       },
       {
+        "command": "tsStructure.gitReel.chooseVoiceModel",
+        "title": "Git reel: choose the voice model",
+        "category": "Code X-Ray"
+      },
+      {
+        "command": "tsStructure.gitReel.removeVoiceModels",
+        "title": "Git reel: remove downloaded voice models",
+        "category": "Code X-Ray"
+      },
+      {
         "command": "tsStructure.explainValue",
         "title": "Why this value",
         "category": "Code X-Ray",
@@ -1761,6 +1771,14 @@
         },
         {
           "command": "tsStructure.gitReel.removeCodeModel",
+          "when": "config.tsStructure.features.gitReel"
+        },
+        {
+          "command": "tsStructure.gitReel.chooseVoiceModel",
+          "when": "config.tsStructure.features.gitReel"
+        },
+        {
+          "command": "tsStructure.gitReel.removeVoiceModels",
           "when": "config.tsStructure.features.gitReel"
         },
         {
@@ -3289,11 +3307,31 @@
       {
         "title": "Git reel",
         "properties": {
+          "tsStructure.reel.voiceModel": {
+            "type": "string",
+            "enum": [
+              "kitten-nano-int8",
+              "kitten-nano",
+              "kitten-micro",
+              "kitten-mini",
+              "system"
+            ],
+            "enumDescriptions": [
+              "Kitten Nano (recommended): the quickest to speak and the smallest download, 27.6 MB.",
+              "Kitten Nano, full precision: the same voices a little cleaner, 60.0 MB.",
+              "Kitten Micro: more natural, slower to speak, 44.7 MB.",
+              "Kitten Mini: the most natural, the slowest to speak, 81.5 MB.",
+              "Your computer's own voice: nothing to download, made at once, more robotic."
+            ],
+            "default": "kitten-nano-int8",
+            "order": 1,
+            "markdownDescription": "Git reel: the **voice model** for the natural voices of the voice-over (Jasper, Bella, Luna, Bruno, Rosie, Hugo, Kiki and Leo). None is bundled with the extension: the one chosen is **downloaded once, the first time a video needs it** (you are asked first), from Hugging Face (Kitten TTS by KittenML, Apache-2.0, pinned to one version and checked against its hashes), and runs on your computer only. **Kitten Nano** is recommended: the smallest download and the quickest to speak. The download sends only a request for the model's files, which shows Hugging Face your IP address; none of your code. **system** uses your computer's own voice. *Git reel: choose the voice model* changes it, *Git reel: remove downloaded voice models* frees the space."
+          },
           "tsStructure.reel.naturalVoices": {
             "type": "boolean",
             "default": true,
-            "order": 1,
-            "markdownDescription": "Git reel: the **natural voices** for the voice-over (Jasper, Bella, Luna, Bruno, Rosie, Hugo, Kiki and Leo), bundled with the extension and run on your computer only: no download, nothing sent. They take **39.5 MB of the installed extension** (26.2 MB of the download). **Off**: they are neither offered nor started, and the voice-over uses your computer's own voice."
+            "deprecationMessage": "Replaced by Voice model (tsStructure.reel.voiceModel): choose \"system\" for your computer's own voice.",
+            "markdownDescription": "Replaced by **Voice model** (`tsStructure.reel.voiceModel`)."
           },
           "tsStructure.reel.narrationVoice": {
             "type": "string",

@@ -133,6 +133,8 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
     // For tests: the last explanation shown.
     vscode.commands.registerCommand('tsStructure.explainCode.last', () => explain.last),
     registerCommand('tsStructure.gitReel.removeCodeModel', () => reel.removeCodeModel()),
+    registerCommand('tsStructure.gitReel.chooseVoiceModel', () => reel.chooseVoiceModel()),
+    registerCommand('tsStructure.gitReel.removeVoiceModels', () => reel.removeVoiceModels()),
     // For tests: whether the code model is downloaded.
     vscode.commands.registerCommand('tsStructure.gitReel.codeModelInfo', () => ({ downloaded: reel.codeModel.downloaded })),
     vscode.commands.registerCommand('tsStructure.gitReel.current', () => reel.current),

@@ -5,13 +5,14 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { phonemizerEnvironment } from '../reel/kitten';
-import { allowedHost } from '../reel/codeModel';
+import { allowedHost } from '../reel/pinnedDownload';
 import { CODE_MODEL, fileMatches, fileUrl } from '../reel/codeModelText';
 
 const root = path.resolve(__dirname, '../..');
-const bundled = fs.existsSync(path.join(root, 'dist', 'kitten', 'model', 'voices.npz'));
+// The engine is bundled (dist/kitten); a voice model is downloaded on use, here the copy in assets/kitten.
+const bundled = fs.existsSync(path.join(root, 'dist', 'kitten', 'phonemize.mjs')) && fs.existsSync(path.join(root, 'assets', 'kitten', 'voices.npz'));
 
-test('Privacy: the voice-over runs with every network route blocked, and tries none', { skip: !bundled && 'dist/kitten is built by the bundle', timeout: 180000 }, () => {
+test('Privacy: the voice-over runs with every network route blocked, and tries none', { skip: !bundled && 'needs the bundle and assets/kitten (node scripts/fetch-kitten.js)', timeout: 180000 }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reel-privacy-'));
   const log = path.join(dir, 'network.log');
   fs.writeFileSync(log, '');
@@ -43,7 +44,7 @@ test('Privacy: the code model is downloaded from Hugging Face only, pinned, chec
   assert.ok(!allowedHost('example.com') && !allowedHost('huggingface.co.example.com') && !allowedHost('evilhf.co'));
   for (const file of CODE_MODEL.files) assert.match(fileUrl(file), /^https:\/\/huggingface\.co\/Xenova\/all-MiniLM-L6-v2\/resolve\/[0-9a-f]{40}\//);
   // Only the download module touches the network, only in its download, with no cookie, token or name of yours.
-  const source = fs.readFileSync(path.join(root, 'src', 'reel', 'codeModel.ts'), 'utf8');
+  const source = fs.readFileSync(path.join(root, 'src', 'reel', 'pinnedDownload.ts'), 'utf8');
   assert.equal((source.match(/https\.get\(/g) ?? []).length, 1);
   assert.doesNotMatch(source, /Authorization|Cookie|process\.env|os\.userInfo|hostname\(\)/);
   assert.ok(!fileMatches(CODE_MODEL.files[1], Buffer.from('not the vocabulary')));
@@ -65,7 +66,7 @@ test('Privacy: nothing the extension ships calls the network, and its pages cann
   };
   walk(path.join(root, 'src'));
   walk(path.join(root, 'media'));
-  assert.deepEqual(offenders.filter((f) => !f.startsWith(path.join('src', 'test'))), [path.join('src', 'reel', 'codeModel.ts')]);
+  assert.deepEqual(offenders.filter((f) => !f.startsWith(path.join('src', 'test'))), [path.join('src', 'reel', 'pinnedDownload.ts')]);
   // Every webview page: no connections, no remote scripts, styles or images.
   const page = fs.readFileSync(path.join(root, 'src', 'ui', 'webviewPage.ts'), 'utf8');
   assert.match(page, /default-src 'none'/);

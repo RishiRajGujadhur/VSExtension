@@ -6,6 +6,7 @@ import { builtInInspections } from '../inspect/registry';
 import type { Severity } from '../inspect/inspection';
 import { csharpInspections } from '../csharp/inspections';
 import { tsqlInspections } from '../tsql/inspections';
+import { Credit, credits } from '../structure/credits';
 
 const severityKey = 'tsStructure.inspections.severity';
 
@@ -44,6 +45,8 @@ interface Section {
   icon: string;
   description: string;
   rows: Row[];
+  /** The Credits page: libraries and models, instead of settings. */
+  credits?: Credit[];
 }
 
 interface ConfigProperty {
@@ -167,7 +170,15 @@ export function sections(manifest: { contributes: { configuration: { title: stri
   // Features first, then Animations and General, then the rest in the order the extension lists them.
   const first = ['Animations', 'General'];
   groups.sort((a, b) => (first.indexOf(a.title) + 1 || 99) - (first.indexOf(b.title) + 1 || 99));
-  return [{ id: 'features', title: 'Features', icon: icons.Features, description: blurbs.Features, rows: featureRows }, ...groups];
+  const creditsPage: Section = {
+    id: 'credits',
+    title: 'Credits',
+    icon: 'heart',
+    description: 'Code X-Ray is built on the work of others. These are the libraries it bundles and the models it can download, with their authors and licenses.',
+    rows: [],
+    credits,
+  };
+  return [{ id: 'features', title: 'Features', icon: icons.Features, description: blurbs.Features, rows: featureRows }, ...groups, creditsPage];
 }
 
 /** Clears a setting wherever it is set: user, workspace and folder. */
@@ -206,7 +217,7 @@ export class SettingsPanel {
       scripts: ['dom.js', 'settings.js'],
       body: '<div id="app" class="settings"></div>',
     });
-    this.panel.webview.onDidReceiveMessage(async (message: { type: string; key?: string; value?: unknown; id?: string; on?: boolean; section?: string }) => {
+    this.panel.webview.onDidReceiveMessage(async (message: { type: string; key?: string; value?: unknown; id?: string; on?: boolean; section?: string; index?: unknown; which?: string }) => {
       if (message.type === 'ready') {
         this.post(section);
       } else if (message.type === 'set' && this.known(message.key)) {
@@ -233,6 +244,13 @@ export class SettingsPanel {
       } else if (message.type === 'copy' && this.known(message.key)) {
         await vscode.env.clipboard.writeText(message.key);
         void vscode.window.setStatusBarMessage(`Copied ${message.key}`, 3000);
+      } else if (message.type === 'openCredit' && typeof message.index === 'number') {
+        // Only the pages of the credits themselves: a link of the list, opened in the browser.
+        const credit = credits[message.index];
+        const url = message.which === 'license' ? credit?.licenseUrl : credit?.url;
+        if (url) await vscode.env.openExternal(vscode.Uri.parse(url));
+      } else if (message.type === 'openNotices') {
+        await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(this.extensionUri, 'THIRD_PARTY_NOTICES.md'));
       } else if (message.type === 'vscodeSettings') {
         await vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.extensionId}`);
       }
