@@ -278,8 +278,10 @@
   }
 
   // Layout covers every unfolded box; painting puts only the boxes in and around the window into the document, so
-  // a chart of thousands of boxes stays as quick as a small one. Below DETAIL_ZOOM boxes are drawn without text.
+  // a chart of thousands of boxes stays as quick as a small one. Below DETAIL_ZOOM boxes of a big chart are drawn
+  // without text; a chart of up to DETAIL_ALWAYS boxes keeps its text at any zoom, or it would show blank boxes.
   const DETAIL_ZOOM = 0.45;
+  const DETAIL_ALWAYS = 150;
   let painted;
   let captions = {};
 
@@ -341,7 +343,7 @@
   function paint(force, everything) {
     if (!diagram || !shownNodes.length) return;
     const v = viewport();
-    const detail = everything || view.k >= DETAIL_ZOOM;
+    const detail = everything || view.k >= DETAIL_ZOOM || shownNodes.length <= DETAIL_ALWAYS;
     if (!force && painted && painted.detail === detail && v.x0 >= painted.x0 && v.y0 >= painted.y0 && v.x1 <= painted.x1 && v.y1 <= painted.y1) return;
     const spanX = v.x1 - v.x0;
     const spanY = v.y1 - v.y0;
@@ -742,13 +744,15 @@
       if (!bounds) return undefined;
       const box = { x: bounds.x, y: bounds.y - 30, width: bounds.w, height: bounds.h + 30 };
       if (!box.width || !box.height) return undefined;
-      const k = Math.min(1.2, (width - 40) / box.width, (height - 40) / box.height);
+      // The zoom and map buttons sit over the bottom of the chart: the fitted chart ends above them.
+      const room = height - 52;
+      const k = Math.min(1.2, (width - 40) / box.width, (room - 40) / box.height);
       if (k < 0.6 && diagram && !all) {
         // Too small to read when it all fits: show the subject at a readable size; drag or zoom out for the rest.
         const c = diagram.center;
         return { k: 0.9, x: width / 2 - (c.px + c.w / 2) * 0.9, y: height / 2 - (c.py + H / 2) * 0.9 };
       }
-      return { k, x: width / 2 - (box.x + box.width / 2) * k, y: height / 2 - (box.y + box.height / 2) * k };
+      return { k, x: width / 2 - (box.x + box.width / 2) * k, y: room / 2 - (box.y + box.height / 2) * k };
     },
     canDrag: (target) => !target.closest('.node'),
     beforeInteract: () => card.hide(),
@@ -823,7 +827,7 @@
     meaningButton.title = meaning.on
       ? 'Code Model: on. Boxes say what they are for, and Find also finds boxes by meaning (all-MiniLM-L6-v2, on your computer). Click to turn it off.'
       : 'Code Model: off. Turn it on to see what each box is for and find boxes by meaning (all-MiniLM-L6-v2, a 23 MB download the first time, run on your computer).';
-    searchBox.placeholder = meaning.on ? 'Find a box, by text or meaning (Ctrl+F)' : 'Find a box (Ctrl+F)';
+    searchBox.placeholder = meaning.on ? 'Find by text or meaning' : 'Find a box (Ctrl+F)';
   }
   meaningButton.addEventListener('click', () => vscode.postMessage({ type: 'toggleMeaning' }));
 
@@ -1124,6 +1128,12 @@
       if (key === infoKey) showCode(event.data.code);
       // Several boxes can point at the same line: the card is updated for the box it was opened on.
       if (cardNode && cardKey(cardNode) === key) card.update(cardContent(cardNode), key);
+      return;
+    }
+    if (event.data.type === 'find') {
+      searchBox.value = event.data.text || '';
+      searchBox.focus();
+      searchBox.dispatchEvent(new Event('input'));
       return;
     }
     if (event.data.type === 'meaning') {

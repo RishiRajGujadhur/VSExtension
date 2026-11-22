@@ -48,13 +48,9 @@ Highlight code in the editor and the Actions view shows only the actions that wo
 - In the charts, a box's card fades in when it opens and fades out when it closes; unpinning a card fades it out too.
 - Menus, tips and legends fade in and out, and new content fades in: another tab of actions, an unfolded section, a new result card or a new chart (not the same one redrawn after an edit). Boxes faded by a picked path or a search don't open a card. Both stay still when your system asks for reduced motion.
 
-<img src="images/actions-active.png" width="320" alt="The Actions view with Control Flow Graph highlighted as the feature on screen, Nullability marked last run, and dots on the Analyze and Charts tabs">
-
 Not sure which analysis answers your question? Run **Ask the rubber duck…** (`Ctrl+Alt+S /`) and pick a question such as *Where does this value come from?*
 
 The first time the extension starts, the **Welcome to Code X-Ray** page opens: the title in a pixel font over a moving field of ASCII characters, then eight short steps as panels, each with its buttons and a picture. A step is ticked once you try it. Reopen the page with **Guided tour** (the **?** in the view); VS Code's own walkthrough of the same steps is a button at the bottom, or **Guided tour in VS Code’s walkthrough** in the Command Palette. The animation stops while the tab is hidden and is a still picture when your system asks for reduced motion.
-
-![The Welcome to Code X-Ray page: GET STARTED WITH CODE X-RAY in a pixel font beside a field of grey and teal ASCII characters](images/welcome.png)
 
 ![The right-click menu with Find Usages, Data Flow and Analyze or Refactor This at the top](images/context-menu.gif)
 
@@ -135,7 +131,7 @@ The functions that write the value sit under **Flows in** and those that read it
 - **?** explains the colors, arrows and keys.
 - An animated dot grid sits behind the chart and bends around every box: it glows and moves aside around the pointer and the hovered box, and clicking a box sends a wave across it. Every line is a blue wire with soft cyan pulses travelling along it the way the value goes; clicking a box keeps the pulses to the lines between it and the subject (clicking the background brings them all back). Boxes are rounded cards with a soft shadow, their border brightening on hover. The **Grid** and **Flow** buttons turn each off; both stay still when your system asks for reduced motion. (The grid, the flowing lines and the box style are adapted from [robot-components](https://github.com/dashrobotco/robot-components); see Credits.)
 
-![The data flow of payment as a chart, with the hover card of placeOrder showing its code, where it is and the way to the subject](images/data-flow-diagram.png)
+![The data flow of payment as a chart: the values callers pass on the left, where it goes on the right](images/data-flow-chart.gif)
 
 #### The code model in charts (optional)
 
@@ -143,6 +139,8 @@ Off by default. The **wand** button in every chart and the Flowchart, next to th
 
 - **What each box is for**: a pill on the box's bottom edge, with an icon: *Checks disk*, *File*, *Network*, *Module*, *Config*, *Stored*, *Logged*, *Shown*, *Error*, *Sent*, *Process*, *Time*, *Input*. Known APIs are tagged by rule (solid pill); boxes the rules cannot place, such as your own helpers, are tagged by the model (dashed pill) when it is clearly closer to one purpose than the others; a box that says nothing about what for (a plain read) gets no tag rather than a guess.
 - **Find by meaning**: Find also finds boxes by what they mean, not only by their words: *where is it saved* finds a file write or a storage call, *sent to the server* an API call, *loaded from a module* a `require`. The count says how many were found by meaning. A word that only looks alike does not match (Find's plain text search covers words).
+
+![A Data flow chart with the code model on: a pill on each box for what it is for, then Find by meaning](images/chart-code-model.gif)
 
 Everything is worked out on your computer; turning it off removes the tags and the meaning matches in every chart.
 
@@ -155,8 +153,6 @@ The **path list** lists every path through the function with the branches it tak
 **Why this value** (`Ctrl+Alt+S 0`) answers *why does this variable have this value here?*: every value it can have at the cursor, with the conditions that lead to each. At the final `return permission` of a permissions check it lists `'write'` (active admin), `'limited'` (active member, sensitive), `'read'` (active member, not sensitive) and `'none'` (anyone else).
 
 The answer shows as a card in the panel at the bottom of the sidebar: each value on a timeline with how many ways lead to it and what has to be true, and how long the analysis took. Click a value to open its code; **Next** runs another analysis at the cursor.
-
-<img src="images/actions-value-path.png" width="340" alt="The Value path panel: permission can be 'write', 'limited', 'read' or 'none' at line 25, each with the conditions that lead to it, and a Next step">
 
 - **Expand calls in place**: a box that calls a function of your project has an **ƒ+** button. It splices the called function into the chart, in a labeled frame, with its returns leading on to what followed the call; paths then run through it.
 - **Compare two paths**: Shift+click a second path. The shared route is purple, the first path's own branches blue and the second's orange, with a summary of where they part and how each ends.
@@ -185,8 +181,6 @@ Both charts:
 - Click the background and use the arrow keys to pan (`Shift` for bigger steps); `M` opens or closes the minimap card, and the choice is kept; `Ctrl+Z` and `Ctrl+Y` undo and redo moves.
 - Right-click a box for **Copy text** or **Copy location** (`file:line:column`).
 
-![The right-click menu of a decision with the search field at the top, shortcuts on the right and the box's line, file and paths at the bottom](images/graph-menu-search.png)
-
 The chart has the same animated grid as the data flow chart, bending around every box, and clicking a box makes pulses flow along every possible path through it; a picked path pulses the same way. The **Grid** and **Flow** buttons turn each off, and both stay still when your system asks for reduced motion.
 
 #### Flowchart vs last commit
@@ -201,10 +195,6 @@ The chart has the same animated grid as the data flow chart, bending around ever
 - It works for TypeScript, JavaScript, C# and T-SQL, and needs the file in a git repository.
 
 Each loop is taken zero or one times, and branches inside expressions (`&&`, `||`, `?:`) and exceptions thrown by called functions are not followed.
-
-![The control flow of getPermission with the hover card of the sensitive decision: its code, the paths through it, what it reads and controls, and that it runs when the role is 'member'](images/control-flow-card.png)
-
-![A long block of code folded to its first lines with a "+ 7 more lines" chip, and its hover card showing all of it](images/control-flow-long-code.png)
 
 #### What depends on what
 
@@ -303,7 +293,11 @@ Highlight some code and choose **Explain this code** (the first action under *Hi
 
 Highlight most of a function, its first line, its name or a parameter to explain the whole function. Highlight a function's name where it is called (`priceOf(…)`, `cart.add(…)`) to explain that function, even when it is in another file; highlight a few lines to explain just those. It works in TypeScript, JavaScript, C# and T-SQL.
 
+![Explain this code on the name placeOrder: what it takes, gives back and changes, then step by step](images/explain-code.gif)
+
 **Generate video** (the button beside the heading, for a whole function) turns the explanation into a video in the Git reel's player, essential information only: an opening card with the function's **signature** and what it is (and is for, when known); then **one scene per step on its flowchart** (steps on the same box are one scene, and steps that say little, such as *It uses the config*, are left out), each **labelled by kind** (*Step*, *Decision*, *Loop*, *Returns*, and *If it fails* in red for what happens when something goes wrong), with **progress dots**, the step's **code that its boxes do not already show** typed in above the chart (never the same line twice on screen), an **icon on each box** for what its code does (a cloud for a request to a server, a database for a save, a file, a bell for a notification, a clock for a timer, a ⊘ for cancelling, a pencil for setting a value, a question mark for a decision, a loop, a shield for error handling…), and the view **gliding** from the step before; the step's box in amber and the steps so far in green, the view staying on the step, the chart building up as it goes: boxes not reached yet are faint outlines, the line into each step draws itself in (a bright dot at its head), then the step's box pops up; and the flow animated as in the charts: the path walked so far is a blue wire and the lines into the step carry cyan pulses travelling the way the code runs (all of it shown at once, without motion, when the Charts animations are off or your system asks for less motion), each step a chapter (*Step 1*, *Step 2*…). The video ends on its last step: no closing card (what the function is for is said at the start). Scenes last as long as their caption takes to read (longer when the voice needs it). The voice-over reads each step (the Git reel's voices and settings; it turns on unless the **Narration voice** setting is *Off*), with the same captions, full screen, themes, 16:9 or 9:16, caption editing and **Export MP4** or **WebM** (saved under `.codexray/reels/` in the repository). It is made on your computer from the explanation shown: nothing is sent.
+
+![The explanation as a video: each step lit up in turn on the function's flowchart](images/explain-video.gif)
 
 **Privacy.** The explanation is worked out on your computer and nothing is sent. If the code model is not downloaded, you are asked first, in a dialog that says exactly what a download sends: a request to huggingface.co for the model's two files, which shows Hugging Face your IP address and names the client *code-x-ray*, and none of your code, file names, account details, tokens or settings. **Explain Without It** explains with the rules alone (and is not asked again until VS Code restarts); the **Code model** setting *off* never asks. *Git reel: download the code model* asks the same way before it downloads.
 
@@ -430,6 +424,8 @@ The charts work in C# files as well, from the bundled parser (names matched as t
 - **Override reach**: what the member overrides or implements, its overrides (and `new` members hiding it) in subtypes, and its call sites.
 - **Who imports this**: the files using the file's namespace (a `using` or the same namespace) and naming its types.
 
+![The data flow chart of a C# variable: where its values come from and where they go](images/csharp-chart-dataflow.gif)
+
 Why this import… (a chain of imports between two files) and React state are TypeScript and JavaScript only.
 
 In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (Data flow, Null checks…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.
@@ -438,6 +434,10 @@ Two more work with nothing else installed, from a C# parser (tree-sitter's C# gr
 
 - **Flowchart** and **What depends on what**: any method, constructor, property accessor (an expression-bodied property is its getter), local function or lambda. Decisions, `for`/`foreach`/`while`/`do` loops, `switch` sections with patterns and `when` clauses, `try`/`catch`/`finally` (with filters), `using` and `lock` blocks, `break`, `continue`, `return` and `throw` become boxes and edges as in TypeScript, with every path listed, impossible ones flagged (the same condition taken both ways with nothing changed in between), and data and control dependences. Calls are not expanded in place, and boxes have no quick edits, since the parser sees syntax only, not types.
 - **Inspections** in the Problems panel as you type: empty catch block, `throw ex;` that resets the stack trace, `async void` outside event handlers, assignment to itself, comparison with itself, identical `if` and `else` branches, `if (…);` and constant conditions. They follow the same switches as the TypeScript ones (Inspections: Enabled, the delay, and each one's severity or `off` in Inspections: Severity, by ids such as `csharpEmptyCatch`).
+
+![The flowchart of a C# method, with its paths](images/csharp-flowchart.gif)
+
+![C# inspections underlined as you type, with the Problems panel](images/csharp-inspections.gif)
 
 The rest of Code X-Ray is TypeScript and JavaScript only for now.
 

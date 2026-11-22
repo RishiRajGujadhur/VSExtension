@@ -22,11 +22,16 @@ const git = (...args) => execFileSync('git', args, { cwd: workspace, stdio: 'ign
 git('init', '-q');
 // Keep the demo's line endings on checkout, so restoring files after a scene doesn't change them.
 git('config', 'core.autocrlf', 'false');
+// Settings the scenes change are the recording's, not the project's: kept out of the Git reel.
+fs.writeFileSync(path.join(workspace, '.gitignore'), '.vscode/\n');
 git('add', '.');
 git('-c', 'user.name=demo', '-c', 'user.email=demo@example.com', 'commit', '-q', '-m', 'Demo project');
 
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-structure-shots-'));
 fs.mkdirSync(path.join(userData, 'User'), { recursive: true });
+// The voice model, as if downloaded, so the voice-over does not stop to ask which model to download.
+const voiceModel = require('../test-fixtures/voice-model.cjs').testVoiceModel();
+if (voiceModel) fs.cpSync(voiceModel.dir, path.join(userData, 'User', 'globalStorage', 'rishigujadhur.ts-test-impact', 'voice-models', voiceModel.id), { recursive: true });
 // The code model, as if downloaded, for the scenes that turn it on (assets/code-model, git-ignored).
 const codeModel = path.join(root, 'assets', 'code-model');
 if (fs.existsSync(path.join(codeModel, 'model_quantized.onnx'))) fs.cpSync(codeModel, path.join(userData, 'User', 'globalStorage', 'rishigujadhur.ts-test-impact', 'code-model'), { recursive: true });

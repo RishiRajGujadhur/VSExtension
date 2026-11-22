@@ -1,181 +1,132 @@
 # Code X-Ray
 
-See inside your TypeScript, JavaScript and React code. Put the cursor on something and ask where a value comes from, what a function can do, or what breaks if you change it.
+**See inside your TypeScript, JavaScript, React, C# and T-SQL code.** Put the cursor on something and ask what it does, where a value comes from, what a function changes, or what breaks if you edit it. Answers come in plain words, flowcharts and short narrated videos.
 
-Every answer comes from the TypeScript compiler on your machine. It works offline, uses no AI, and nothing leaves your computer. (Git reels can also use a small code model that runs on your computer, downloaded only if you agree: see [Size and privacy](#size-and-privacy).)
+- **Runs on your computer.** Every answer comes from the TypeScript compiler (and bundled C# and T-SQL parsers) on your machine. No account, no cloud, nothing uploaded.
+- **No AI needed.** The analyses are exact, not guessed. Two small optional models (a voice and a code model) run locally, and download only if you agree. See [Privacy and size](#privacy-and-size).
+- **One shortcut away.** `Ctrl+Alt+Shift+T` lists everything that works at the cursor.
 
-## Every action at the cursor
+![Analyze or Refactor This: every analysis and refactoring for the symbol at the cursor, each with its shortcut](docs/images/actions-at-cursor.gif)
 
-![The Analyze or refactor this list, with every analysis and refactoring for the symbol at the cursor](docs/images/actions-at-cursor.gif)
+## Get started
 
-- Put the cursor on a symbol and press `Ctrl+Alt+Shift+T`, or right-click and choose **Analyze or refactor this…**.
-- The **Code X-Ray** view in the Activity Bar lists every action with a search box. Pin the ones you use most.
-- Press `Ctrl+Alt+S`, then a letter, to run one directly (`D` data flow, `U` usages, `1` flowchart). `Ctrl+Alt+S K` shows them all.
-- Not sure which one you need? Run **Ask the rubber duck…** and pick a question.
+1. Open a TypeScript, JavaScript, C# or SQL file.
+2. Put the cursor on a function, variable or parameter, or highlight some code.
+3. Press `Ctrl+Alt+Shift+T`, right-click **Analyze or Refactor This…**, or open the **Code X-Ray** view in the Activity Bar.
 
-## Actions for the highlighted code
+`Ctrl+Alt+S` then a letter runs an action directly: `D` Data flow, `1` Flowchart, `U` Find usages, `T` Affected tests. `Ctrl+Alt+S K` shows them all.
+
+Highlight code and the Code X-Ray view narrows to the actions that work with it:
 
 ![Highlighting code narrows the Code X-Ray view to the actions that work with it](docs/images/actions-for-selection.gif)
 
-- Highlight code in the editor. The **Code X-Ray** view then shows only the buttons that work with it, on every tab.
-- Highlight a name to get its analyses (data flow, usages, changes). Highlight lines inside a function to get its charts (flowchart, what depends on what, error paths) and tools that take a range (find copies, inspect, search by shape). Highlight whole declarations to move them to another file.
-- The banner above the buttons says what is highlighted and how many actions fit on each tab. **Show all** brings back the rest.
+## Explain this code
+
+![Explain this code on the name placeOrder: what it is for, what it takes, gives back and changes, then step by step](docs/images/explain-code.gif)
+
+Highlight code, or just a function or method name, and choose **Explain this code**. A page beside the editor says, in plain sentences:
+
+- **What it is and what it is for**: *placeOrder is an async function that takes the id, the items, the payment and the coupon and returns a Receipt.* *Places the order.*
+- **Takes**: each parameter, with its type and its default, or that it can be left out.
+- **Gives back**: the return type, whether it comes later, and what its `return`s give back.
+- **Changes outside itself**: fields, arguments, module state, the console, the network, and the calls it makes only for what they do.
+- **Step by step**, in the order it runs.
+
+A name works where the function is declared and where it is called, even in another file. **Generate video** turns the steps into a short narrated video on the function's flowchart:
+
+![The explanation as a video: the steps light up one by one on the function's flowchart](docs/images/explain-video.gif)
 
 ## Data flow
 
-![Data flow for a parameter: where its values come from and where they go](docs/images/data-flow.gif)
+![Data flow of payment: the values callers pass in, and everywhere it goes](docs/images/data-flow.gif)
 
-- Put the cursor on a variable or parameter and press `Ctrl+Alt+S D`.
-- See every value that flows in, where it goes next, and the functions it reaches.
-- Click a row to jump to that line. Open the chart to see the same flow as a diagram.
+Put the cursor on a variable or parameter and press `Ctrl+Alt+S D`: every value that flows in, every place it changes, and where it goes next, across files. **Draw as chart** shows the same flow as a chart you can fold, search and export:
+
+![The data flow of payment as a chart, values coming in on the left and going out on the right](docs/images/data-flow-chart.gif)
 
 ## Flowchart
 
-![The flowchart of a function, with its paths listed beside it](docs/images/flowchart.gif)
+![The flowchart of applyCoupon, with its paths listed below](docs/images/flowchart.gif)
 
-- Put the cursor in a function and press `Ctrl+Alt+S 1`.
-- Every decision, loop and return becomes a box. The **Paths** list shows each route through the function.
-- Click a path to light it up, Shift+click another to compare them, or click a branch label to keep only the paths through it.
-- Save the chart as Mermaid, SVG or PNG.
-- Zoom, the minimap and undo/redo for moving around sit in the bottom-left corner. Click the map button (or press `M`) to open the minimap. `Ctrl+Z` takes you back to where you were.
+Put the cursor in a function and press `Ctrl+Alt+S 1`. Every decision, loop, return and throw becomes a box, and the **Paths** list shows each route through the function. Click a path to light it up, Shift+click another to compare, and save the chart as Mermaid, SVG or PNG.
 
-## Flowchart vs last commit
+**Flowchart vs last commit** (`Ctrl+Alt+S Shift+1`) outlines the boxes you added or changed since your last commit, saved or not:
 
-![A flowchart with the boxes changed since the last commit outlined, and the changes listed above the paths](docs/images/flowchart-vs-commit.gif)
+![A flowchart with the new boxes outlined green and the changed one dashed amber, and the changes listed](docs/images/flowchart-vs-commit.gif)
 
-- Put the cursor in a function and press `Ctrl+Alt+S Shift+1`, or click the commit button in the flowchart's toolbar (`V`).
-- New boxes are outlined green and changed ones dashed amber. Hover a changed box to see its code before.
-- Above the paths: removed boxes, and which paths are new or gone. Click a row to go to its box.
-- It compares with your last commit (HEAD) and follows your edits as you type, saved or not. Works for TypeScript, JavaScript, C# and T-SQL.
+## The code model in charts (optional)
+
+![A Data flow chart with the code model on: each box tagged with what it is for, and Find by meaning](docs/images/chart-code-model.gif)
+
+Press the **wand** button in any chart or flowchart to turn on the code model (all-MiniLM-L6-v2, 23 MB, downloaded once if you agree, run on your computer). Each box gets a pill saying what it is for (*File*, *Network*, *Logged*, *Stored*…), and **Find** matches by meaning: *where is it saved* finds the file write.
 
 ## Git reel
 
-![A Git reel of a change: the code with lines added and removed beside the function's flowchart, its new boxes in green](docs/images/git-reel.gif)
+![A Git reel playing: the key change in applyCoupon, the code with lines added and removed](docs/images/git-reel.gif)
 
-- Run **Git reel** from the Command Palette or the camera button in the Source Control title bar, and pick what to compare with: your last commit, where your branch started, or any commit.
-- It plays a video of your changes, up to two and a half minutes, in a player like YouTube's (chapters, captions, full screen): the title (no counts), then **the key change in each file**, shown large and framed with a callout (*Key change: early exit*), what the file or function is for (*Adds item to cart*, *Shows cart items*) and what the change does, then a summary.
-- Captions explain what the code does, in plain words, not how much changed: *applyCoupon now returns 0 early when the amount is at most 0*, *This new file adds validateSettings, which validates the settings*. Turn on the **voice-over** and a natural voice reads them (Kitten TTS, run on your computer: eight voices from the model you choose, downloaded once, Kitten Nano recommended; or your system voice), in the preview and in the exported video; it says "this file" rather than reading file names.
-- Switch between 16:9 and 9:16, pick a theme, edit any caption, switch scenes off, open a scene's code, or **Copy as Markdown** for a pull request.
-- **Export MP4** or **Export WebM** (`E`) saves it to `.codexray/reels/`. It is made on your machine from Git and Code X-Ray's own analysis, nothing uploaded. With the optional **code model** (offered the first time, a one-time 23.2 MB download from Hugging Face, run on your computer), the key change in each file is the part closest to what the change is about, and functions the rules cannot place get named (*applyCoupon* → *Works out coupon*).
+Run **Git reel** (the camera button in Source Control) to turn your changes into a short video: the key change in each file, framed and captioned in plain words (*applyCoupon now returns 0 early when the amount is at most 0*), tests last. Switch between 16:9 and 9:16, edit any caption, turn on a natural **voice-over**, and export MP4 or WebM. **Copy as Markdown** gives you a pull request description.
 
-## Explain this code
+The voice-over uses a Kitten TTS voice model you choose the first time (Kitten Nano is recommended, 27.6 MB), or your computer's own voice.
 
-Highlight code and choose **Explain this code** (Actions view, right-click menu, Command Palette, or the hover card of a function in any chart): what it is, what it is for, what it takes, gives back and changes outside itself, and what it does step by step, in plain sentences, beside the editor. Highlight a function or method name, where it is declared or called, to explain that whole function. It is worked out on your computer; with the optional code model downloaded it also names what a function is for when the rules cannot tell. Before any download you are told what it sends (a file request that shows Hugging Face your IP address) and that none of your code is sent. **Generate video** plays the explanation in the Git reel's player: a scene per step on the function's flowchart, read aloud by the voice-over, ready to export.
+## Find, test and refactor
 
-## Find usages
+| | |
+|---|---|
+| **Find usages** (`Alt+F7`): grouped into definitions, calls, reads, writes, imports and tests. | **Affected tests** (`Ctrl+Alt+S T`): every test that reaches this code, with the chain of calls to each. |
+| ![Find usages grouped by kind](docs/images/semantic-usages.gif) | ![The tests that cover calculateSubtotal](docs/images/test-impact.gif) |
+| **Change parameters** (`Ctrl+F6`): rename, add, remove and reorder parameters; every call is updated, with a preview first. | **Search by shape** (`Ctrl+Alt+S S`): find code by its structure and types, such as `$list$.find($callback$)` on a `LineItem[]`. |
+| ![The Change parameters panel](docs/images/change-signature.gif) | ![Search by shape](docs/images/structural-search.gif) |
 
-![Find usages, grouped into definitions, calls, imports and exports](docs/images/semantic-usages.gif)
+Also: **Delete safely**, **Move to another file**, 70 quick rewrites, **Callers and calls**, **Error paths**, **Side effects**, **Null checks**, **Mutations**, import loops and bundle weight.
 
-- Turn on **Find usages** in Settings first (it is off on a new install).
-- Press `Alt+F7` on a symbol.
-- Usages are grouped by kind (definitions, calls, reads, writes, imports), with tests marked.
-- Filter the list, or narrow it to the current file.
+## Catch problems as you type
 
-## Change parameters
+![A missing await underlined, its hover, and every finding listed in Problems](docs/images/missing-await.gif)
 
-![The Change parameters panel, with the resulting signature](docs/images/change-signature.gif)
+Inspections underline missing `await`s, unused exports, copied code and more (`Ctrl+Alt+S I` lists them all). **Pattern spotting** names the design patterns and architecture in a file, folder or the whole project, each with a link to learn more:
 
-- Turn on **Refactorings** in Settings first (it is off on a new install).
-- Press `Ctrl+F6` on a function or method.
-- Rename it, add, remove or reorder parameters, and change types and defaults.
-- The new signature updates as you type. **Preview changes** shows every call that will be updated before you apply it.
+![Design patterns found in the demo project](docs/images/design-patterns.gif)
 
-## Affected tests
+## C# and T-SQL
 
-![The tests that cover calculateSubtotal, with the dependency chain to each one](docs/images/test-impact.gif)
+![The flowchart of a C# method, with its paths](docs/images/csharp-flowchart.gif)
 
-- Put the cursor on a function and press `Ctrl+Alt+S T`.
-- See every test that reaches this code, and the chain of calls that connects them.
-- Run a test from the list, or run **Tests for my changes** before you commit.
-
-## C#
-
-![The flowchart of a C# method, with its paths listed beside it](docs/images/csharp-flowchart.gif)
-
-- **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart any C# method, constructor, property accessor or lambda, with every path listed and impossible ones flagged.
-- **Charts** work in C# files too: Data flow and its chart, Error paths, Promise rejections (tasks not awaited, `async void`), Changes to this variable, Arguments passed in, Family tree, Override reach and Who imports this, from the same shortcuts and the Charts tab.
-
-![The data flow chart of a C# variable: where its values come from and where they go](docs/images/csharp-chart-dataflow.gif)
-
-- **Inspections** underline C# slips as you type: empty `catch`, `throw ex`, `async void`, assigning or comparing a value with itself, identical `if`/`else` branches and more.
-- These two need nothing else installed: a C# parser ships with Code X-Ray.
-- **Find usages** uses the C# extension's language server when it is installed, and otherwise finds the name in the workspace's `.cs` files (it says so). **Callers and calls** and **Family tree** need the **C# extension** (or C# Dev Kit).
-- **Analyze or Refactor This…** (`Ctrl+Alt+Shift+T`) in a C# file lists what works there; a TypeScript-only action says so and offers those instead.
-- The other features are TypeScript and JavaScript only for now.
-
-## T-SQL
-
-- **Flowchart** (`Ctrl+Alt+S 1`) and **What depends on what** chart stored procedures, functions, triggers and scripts: `IF`/`ELSE`, `WHILE` with `BREAK` and `CONTINUE`, `BEGIN TRY`/`BEGIN CATCH`, `RETURN`, `THROW` and `GOTO`, with every path and how `@variables` flow.
-- **Find usages** (`Alt+F7`) of a table, column, procedure or `@variable`, across the workspace's `.sql` files, as definitions, calls, writes and reads.
-- **Callers and calls** (`Ctrl+Alt+S Shift+C`): which procedures `EXEC` this one, and what it calls.
-- **Inspections** as you type: `UPDATE`/`DELETE` without `WHERE`, `= NULL`, `SELECT *`, `NOLOCK`, `@@IDENTITY`, `TOP` without `ORDER BY`, empty `CATCH` and more.
-- All from the code alone: no database connection and nothing else to install.
+- **C#**: Flowchart, What depends on what, Data flow and its chart, Error paths, Promise rejections, Changes to a variable, Family tree and inspections (empty `catch`, `throw ex`, `async void`…), with a bundled parser. Find usages, Callers and calls and Family tree use the C# extension when it is installed.
+- **T-SQL**: Flowcharts of procedures, functions and triggers (`IF`, `WHILE`, `TRY`/`CATCH`, `GOTO`), Find usages of tables, columns and `@variables`, Callers and calls, and inspections (`UPDATE` without `WHERE`, `= NULL`, `SELECT *`…). No database connection needed.
 
 ## Settings
 
-- Run **Code X-Ray: Settings**, or press the gear in the Actions view's title bar.
-- **Features**: switch each part of Code X-Ray on or off. A new install starts with Affected tests and Data flow; **Turn all on** switches on the rest (find usages, refactorings, quick rewrites, inspections, React state and more). With every edit feature off, the Edit tab of the Actions view is hidden.
-- **Animations**: turn on the button effects in the Actions view (off by default), or turn off the charts' moving grid and flowing lines.
-- Every other setting is there too, grouped and searchable (`Ctrl+F`), with a reset button on anything you changed.
+![Choosing which features are on](docs/images/choose-features.gif)
 
-## More
-
-Most of these start off on a new install; switch them on in **Settings › Features**.
-
-- Inspections that underline missing `await`s, unused exports, copied code and more (`Ctrl+Alt+S I`).
-- Null checks, side effects, error paths, callers and calls, import loops and bundle weight.
-- 70 quick rewrites, **Move to another file**, **Delete safely** and **Search by shape** (`Ctrl+Alt+S S`).
-- Works with a keyboard, screen readers and high contrast themes.
-
-All settings are on the **Code X-Ray: Settings** page, and under **Code X-Ray** in VS Code's settings (`tsStructure.*`).
+Run **Code X-Ray: Settings** (or the gear in the Code X-Ray view) to switch features on or off, choose animations, pick the voice and code models, and see the **Credits**. A new install starts with Affected tests and Data flow; **Turn all on** switches on the rest.
 
 The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 
-## Size and privacy
+## Privacy and size
 
-Everything runs on your computer: no code, caption or recording is sent anywhere, and the extension makes no network
-requests of its own (a test runs the voice-over with every network route blocked). The only things that go online are
-links you click, such as a documentation page, which open in your browser, and the models below, each only if you
-choose to download it. What each bundled part adds:
+Your code, captions and recordings never leave your computer, and the extension makes no network requests of its own. The only things that go online are links you click, and the models below, each only if you choose to download it.
 
-| Feature | Bundled component | Installed | Download |
+| Bundled | License | Installed | Download |
 |---|---|---|---|
-| Extension code, pages and icons | Code X-Ray (MIT) | 2.4 MB | 1.0 MB |
-| Analyses of TypeScript and JavaScript | TypeScript compiler 6.0.3 (Apache-2.0) | 23.2 MB | 4.4 MB |
-| C# support | tree-sitter and tree-sitter-c-sharp (MIT) | 5.8 MB | 0.4 MB |
-| Natural voices and the code model: the model runtime | ONNX Runtime Web 1.24.3, by Microsoft (MIT) | 11.9 MB | 3.0 MB |
-| Natural voices: pronunciation and the voice engine | eSpeak NG via phonemizer.js 1.2.1 (GPL-3.0, Apache-2.0) | 1.3 MB | 0.7 MB |
-| **Total** |  | **44.7 MB** | **9.5 MB** |
+| Code X-Ray: code, pages and icons | MIT | 2.4 MB | 1.0 MB |
+| TypeScript compiler 6.0.3, for every TypeScript and JavaScript analysis | Apache-2.0 | 23.2 MB | 4.4 MB |
+| tree-sitter and tree-sitter-c-sharp, for C# | MIT | 5.8 MB | 0.4 MB |
+| ONNX Runtime Web 1.24.3, which runs the optional models | MIT | 11.9 MB | 3.0 MB |
+| eSpeak NG via phonemizer.js 1.2.1, pronunciation for the voice-over | GPL-3.0, Apache-2.0 | 1.3 MB | 0.7 MB |
+| **Total** | | **44.7 MB** | **9.5 MB** |
 
-No voice model is bundled: the extension ships only the engine that runs one (the last two rows, 13.2 MB installed,
-3.7 MB of the download). Downloaded only when you choose them, into the extension's storage:
+| Downloaded only if you choose it | License | Size |
+|---|---|---|
+| Voice model for the voice-over, one of: Kitten TTS Nano 0.8 int8 (recommended) | Apache-2.0 | 27.6 MB |
+| Kitten TTS Micro 0.8 · Nano 0.8 full precision · Mini 0.8 | Apache-2.0 | 44.7 · 60.0 · 81.5 MB |
+| Code model all-MiniLM-L6-v2 (int8): Git reel key changes, Explain this code, chart purpose pills and Find by meaning | Apache-2.0 | 23.2 MB |
 
-| Feature | Model | On disk | Download |
-|---|---|---|---|
-| Git reel natural voices (one model, the one you choose) | Kitten TTS Nano 0.8 int8, by KittenML (Apache-2.0), recommended | 27.6 MB | 27.6 MB |
-|  | Kitten TTS Nano 0.8, full precision (Apache-2.0) | 60.0 MB | 60.0 MB |
-|  | Kitten TTS Micro 0.8 (Apache-2.0) | 44.7 MB | 44.7 MB |
-|  | Kitten TTS Mini 0.8 (Apache-2.0) | 81.5 MB | 81.5 MB |
-| Code model (Git reel key changes; Data flow tags and Find by meaning, when turned on) | all-MiniLM-L6-v2, int8 ONNX by Xenova (Apache-2.0) | 23.2 MB | 23.2 MB |
-
-**Voice models.** The first time a video needs the voice-over, you choose a model: **Kitten Nano** is recommended
-(the smallest download and the quickest to speak); the others are larger, more natural and slower. Or your computer's
-own voice, with nothing to download. The choice is the **Voice model** setting (`tsStructure.reel.voiceModel`), and
-*Git reel: choose the voice model* and *Git reel: remove downloaded voice models* change it or free the space.
-
-**The code model.** Data flow uses it only when you turn it on (the wand button on a Data flow chart): each box gets a tag for what it is for, and Find also finds boxes by meaning. The first Git reel offers it (**Download**, **Not Now**, **Don't Ask Again**); the **Code model**
-setting (`tsStructure.reel.codeModel`: ask, on, off) and the commands *Git reel: download the code model* and *Git
-reel: remove the code model* control it.
-
-Every download is from huggingface.co, each file pinned to one version of its repository and checked against its hash
-before it is kept. It is a plain request for the files: it shows Hugging Face your IP address, and sends no code, file
-name, account or token of yours. The models then run offline, in a background thread. Their authors and licenses are
-on the **Credits** page of Code X-Ray Settings.
+Every download comes from huggingface.co. Each file is pinned to one version and checked against its hash before it is kept. Downloading shows Hugging Face your IP address, and sends no code, file name, account or token. Before downloading, you are told exactly that. The models then run offline, in a background thread. **Voice model** (`tsStructure.reel.voiceModel`), **Code model** (`tsStructure.reel.codeModel`) and **Charts: code model** (`tsStructure.charts.codeModel`) control them, and commands remove them to free the space.
 
 ## Credits
 
-The button animations in the Actions view (Blinky, Glitch, Trail, Stroke-n-fill, Shuffle, Crash-n-blink, Slide-n-blink, Color flash and Build on) are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44), and named after his labels. They are written from scratch in CSS for Code X-Ray, after watching his animation; no code, frames or images are taken from it. The animation and its design remain his work.
+The voice-over speaks with [Kitten TTS](https://github.com/KittenML/KittenTTS) by KittenML / Stellon Labs (Apache-2.0), run with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT), with phonemes from [eSpeak NG](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) via [phonemizer.js](https://github.com/xenova/phonemizer.js), run as a separate program; its licence and source notice are in the extension's `dist/kitten` folder. The code model is [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) (Apache-2.0), converted to ONNX by [Xenova](https://huggingface.co/Xenova/all-MiniLM-L6-v2).
 
-The Git reel's voice-over speaks with [Kitten TTS](https://github.com/KittenML/KittenTTS) by KittenML / Stellon Labs (the 0.8 models, Apache-2.0), downloaded when you choose one and run on your computer with [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT). Its phonemes come from [eSpeak NG](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) via [phonemizer.js](https://github.com/xenova/phonemizer.js), run as a separate program, with its licence and source notice in the extension's `dist/kitten` folder. Every library and model is credited, with its license, on the **Credits** page of Code X-Ray Settings.
+The button animations in the Code X-Ray view are recreated from [the motion language Jerry Liu shared](https://x.com/SloppyJ44/status/1846584501847142705) (@SloppyJ44) and named after his labels. They were written from scratch in CSS after watching his animation, and the design remains his work.
 
-Other credits (the animated chart grid, the Welcome page) are in the [guide](docs/GUIDE.md#credits), with licence notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Every library and model is listed with its license on the **Credits** page of Code X-Ray Settings. Other credits are in the [guide](docs/GUIDE.md#credits), and licence notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

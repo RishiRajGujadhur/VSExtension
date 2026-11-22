@@ -145,7 +145,7 @@ li.selected .path-steps { color: var(--vscode-foreground); }
 /* Search in the toolbar: matching boxes are outlined, the current one more strongly. */
 .search-box { position: relative; display: inline-flex; align-items: center; }
 .search-box .codicon { position: absolute; left: 6px; font-size: 14px; color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground)); pointer-events: none; }
-#search { width: 170px; padding: 3px 6px 3px 24px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; font-size: 12px; }
+#search { width: 196px; padding: 3px 6px 3px 24px; border: 1px solid var(--vscode-input-border, transparent); border-radius: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); font: inherit; font-size: 12px; }
 #search:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
 #searchCount { margin-left: 6px; min-width: 0; color: var(--vscode-descriptionForeground); font-size: 11px; white-space: nowrap; }
 .node.match .shape { stroke: var(--vscode-editor-findMatchHighlightBorder, var(--vscode-charts-orange, #d18616)); stroke-width: 2; }

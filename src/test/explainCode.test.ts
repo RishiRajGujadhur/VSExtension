@@ -236,3 +236,19 @@ test('Explain this code: what a function takes, what it gives back and what it c
   const lines = await explainCode('shop.ts', shop, shop.indexOf('const total'), shop.indexOf('cart.add'));
   assert.equal(lines.facts, undefined);
 });
+
+test('Explain this code: calls made only for what they do are named as possible changes', async () => {
+  const code = `declare function saveOrder(id: string): Promise<void>;
+declare function notify(id: string): void;
+declare const pay: { charge(n: number): Promise<number> };
+export async function placeOrder(id: string, total: number) {
+  const receipt = await pay.charge(total);
+  await saveOrder(id);
+  notify(id);
+  return receipt;
+}
+`;
+  const at = code.indexOf('placeOrder');
+  const e = await explainCode('orders.ts', code, at, at + 'placeOrder'.length);
+  assert.deepEqual(e.facts!.effects, ['calls pay.charge(), a property holding any function', 'calls saveOrder() and notify() for what they do, which may change things']);
+});

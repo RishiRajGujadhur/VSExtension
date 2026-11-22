@@ -291,6 +291,8 @@ export const scenes: Scene[] = [
       await delay(400);
       await vscode.commands.executeCommand('tsStructure.gitReel', 'HEAD');
       await delay(1500);
+      await vscode.commands.executeCommand('tsStructure.gitReel.focus');
+      await delay(300);
       // Seek to the applyCoupon scene's flowchart, by pressing → in the player.
       for (let i = 0; i < 8; i++) {
         await press(cdp, 'ArrowRight', 'ArrowRight', 39);
@@ -378,6 +380,101 @@ export const scenes: Scene[] = [
     },
     cleanup: () => Promise.resolve(vscode.commands.executeCommand('workbench.action.closeAllEditors')).then(() => undefined),
     settle: 1800,
+  },
+  {
+    // Explain this code: the name placeOrder highlighted, explained as the whole function with what it takes, gives
+    // back and changes.
+    name: 'explain-code',
+    async run({ open, delay }) {
+      await open('src/orders.ts', 'placeOrder(id: string');
+      const editor = vscode.window.activeTextEditor!;
+      const at = editor.document.getText().indexOf('placeOrder(id: string');
+      editor.selection = new vscode.Selection(editor.document.positionAt(at), editor.document.positionAt(at + 'placeOrder'.length));
+      await delay(900);
+      await runTyped('tsStructure.explainCode', delay);
+    },
+    cleanup: () => Promise.resolve(vscode.commands.executeCommand('workbench.action.closeAllEditors')).then(() => undefined),
+    settle: 2500,
+  },
+  {
+    // The explanation as a video: its steps on the function's flowchart, one by one, in the reel's player.
+    name: 'explain-video',
+    async run({ open, delay, cdp }) {
+      await settings().update('reel.narrationVoice', 'Off', vscode.ConfigurationTarget.Global);
+      await open('src/orders.ts', 'placeOrder(id: string');
+      const editor = vscode.window.activeTextEditor!;
+      const at = editor.document.getText().indexOf('placeOrder(id: string');
+      editor.selection = new vscode.Selection(editor.document.positionAt(at), editor.document.positionAt(at + 'placeOrder'.length));
+      await vscode.commands.executeCommand('tsStructure.explainCode');
+      await delay(800);
+      await vscode.commands.executeCommand('tsStructure.explainCode.video');
+      await delay(1500);
+      // Full screen in the editor area, then on to the steps on the flowchart, playing.
+      await vscode.commands.executeCommand('tsStructure.gitReel.fullscreen');
+      await delay(600);
+      await vscode.commands.executeCommand('tsStructure.gitReel.focus');
+      await delay(300);
+      // Past the title card (Shift+→ is 5 seconds), to the steps on the flowchart.
+      for (let i = 0; i < 3; i++) {
+        await press(cdp, 'ArrowRight', 'ArrowRight', 39, { shift: true });
+        await delay(80);
+      }
+      await press(cdp, ' ', 'Space', 32);
+    },
+    async cleanup() {
+      if (await vscode.commands.executeCommand<boolean>('tsStructure.gitReel.fullscreen')) await vscode.commands.executeCommand('tsStructure.gitReel.fullscreen');
+      await settings().update('reel.narrationVoice', undefined, vscode.ConfigurationTarget.Global);
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    },
+    settle: 6000,
+  },
+  {
+    // The code model in a chart: a pill on each box for what it is for, then Find by meaning.
+    name: 'chart-code-model',
+    async run({ open, delay, cdp }) {
+      await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', true, vscode.ConfigurationTarget.Global);
+      const file = path.join(root(), 'src', 'cartStore.ts');
+      fs.writeFileSync(file, [
+        "import * as fs from 'fs';",
+        'declare function postJson(url: string, body: string): Promise<void>;',
+        '',
+        'export async function saveCart(items: string[], origin: string) {',
+        '  const cart = JSON.stringify({ items, at: Date.now() });',
+        "  fs.writeFileSync('cart.json', cart);",
+        "  await postJson(origin + '/carts', cart);",
+        '  console.log(`saved ${cart.length} bytes`);',
+        '  return cart;',
+        '}',
+        '',
+      ].join('\n'));
+      await open('src/cartStore.ts', 'cart = JSON');
+      await delay(600);
+      await vscode.commands.executeCommand('tsStructure.dataFlowDiagram');
+      await delay(3500);
+      // The words typed into the chart's Find box, a letter at a time.
+      const query = 'where is it saved';
+      for (let n = 1; n <= query.length; n++) {
+        await vscode.commands.executeCommand('tsStructure.diagram.typeFind', query.slice(0, n));
+        await delay(55);
+      }
+    },
+    async cleanup() {
+      await vscode.workspace.getConfiguration().update('tsStructure.charts.codeModel', undefined, vscode.ConfigurationTarget.Global);
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      fs.rmSync(path.join(root(), 'src', 'cartStore.ts'), { force: true });
+    },
+    settle: 2500,
+  },
+  {
+    // A Data flow chart: where payment comes from and where it goes.
+    name: 'data-flow-chart',
+    async run({ open, delay }) {
+      await open('src/orders.ts', 'payment: PaymentMethod, coupon');
+      await delay(700);
+      await runTyped('tsStructure.dataFlowDiagram', delay);
+    },
+    cleanup: () => Promise.resolve(vscode.commands.executeCommand('workbench.action.closeAllEditors')).then(() => undefined),
+    settle: 3500,
   },
   {
     // Not for the docs: a Data flow chart with the code model on (boxes tagged by what they are for, and Find by

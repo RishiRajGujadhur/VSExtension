@@ -1283,7 +1283,7 @@
     meaningButton.title = meaning.on
       ? 'Code Model: on. Boxes say what they are for, and Find also finds boxes by meaning (all-MiniLM-L6-v2, on your computer). Click to turn it off.'
       : 'Code Model: off. Turn it on to see what each box is for and find boxes by meaning (all-MiniLM-L6-v2, a 23 MB download the first time, run on your computer).';
-    searchBox.placeholder = meaning.on ? 'Find in boxes, by text or meaning (Ctrl+F)' : 'Find in boxes (Ctrl+F)';
+    searchBox.placeholder = meaning.on ? 'Find by text or meaning' : 'Find in boxes (Ctrl+F)';
   }
   meaningButton.addEventListener('click', () => vscode.postMessage({ type: 'toggleMeaning' }));
   searchBox.addEventListener('keydown', (e) => {
@@ -1301,6 +1301,8 @@
   });
 
   // Pan, zoom and Fit: the kit's viewport, with what this chart adds to each redraw and where Fit goes.
+  /** Room left at the bottom of a fitted chart for the zoom and map buttons, so they never cover a box. */
+  const DOCK_SPACE = 52;
   const vp = kit.viewport({
     svg,
     scene,
@@ -1316,7 +1318,8 @@
     },
     fitTarget: (all, { width: w, height: h }) => {
       if (!chart) return undefined;
-      const k = Math.min(1.2, (w - 40) / chart.width, (h - 40) / chart.height);
+      // The zoom and map buttons sit over the bottom of the chart: the fitted chart ends above them.
+      const k = Math.min(1.2, (w - 40) / chart.width, (h - 40 - DOCK_SPACE) / chart.height);
       if (k < 0.55 && !all) {
         // Too small to read when it all fits: start at the top at a readable size, centered on the start circle.
         const start = chart.nodes.find((n) => n.kind === 'start') || chart.nodes[0];

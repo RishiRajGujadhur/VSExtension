@@ -93,7 +93,39 @@ function effectsOf(fn: ts.FunctionLikeDeclaration, checker: ts.TypeChecker): str
   } catch {
     // The analysis failed: what the code shows on its face below.
   }
-  return [...new Set([...found, ...outsideCalls(fn, checker, found)])].slice(0, 8);
+  const seen = [...new Set([...found, ...outsideCalls(fn, checker, found)])];
+  const unfollowed = callsForEffect(fn, seen);
+  return [...seen.slice(0, unfollowed ? 7 : 8), ...(unfollowed ? [unfollowed] : [])];
+}
+
+/**
+ * Calls made only for what they do, their result unused (`await saveOrder(id)`, `notifyCustomer(id)`), into code the
+ * analysis could not follow: "calls saveOrder() and notifyCustomer(), which may change things".
+ */
+function callsForEffect(fn: ts.FunctionLikeDeclaration, known: string[]): string | undefined {
+  const names: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (node !== fn.body && ts.isFunctionLike(node)) return;
+    if (ts.isExpressionStatement(node)) {
+      let call: ts.Expression = node.expression;
+      if (ts.isAwaitExpression(call) || ts.isVoidExpression(call)) call = call.expression;
+      if (ts.isCallExpression(call)) {
+        const callee = call.expression;
+        let root: ts.Expression = callee;
+        while (ts.isPropertyAccessExpression(root)) root = root.expression;
+        const name = callee.getText().replace(/\s+/g, '');
+        const builtIn = ts.isIdentifier(root) && (root.text in builtIns || root.text === 'Math' || root.text === 'JSON' || root.text === 'Object');
+        const changing = ts.isPropertyAccessExpression(callee) && changingMethods.has(callee.name.text);
+        if (!builtIn && !changing && name.length <= 40 && !known.some((k) => k.includes(`${name.split('.').pop()}()`)) && !names.includes(`${name}()`)) names.push(`${name}()`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (fn.body && ts.isBlock(fn.body)) visit(fn.body);
+  if (!names.length) return undefined;
+  const shown = names.length > 3 ? [...names.slice(0, 3), `${names.length - 3} more`] : names;
+  const list = shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown[0];
+  return `calls ${list} for what ${names.length > 1 ? 'they do' : 'it does'}, which may change things`;
 }
 
 /** Methods that change the object they are called on, whatever its type: `items.push(x)`, `cache.set(k, v)`. */

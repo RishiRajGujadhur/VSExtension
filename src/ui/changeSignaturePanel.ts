@@ -199,6 +199,23 @@ ${editPanelCss}
   .tk-type { color: var(--vscode-charts-green, #89d185); }
   .tk-punct { color: var(--vscode-descriptionForeground); }
   .summary { margin: 10px 0 0; color: var(--vscode-descriptionForeground); }
+  /* A narrow panel: each parameter is a small card of labelled fields, nothing cut off or scrolled sideways. */
+  @media (max-width: 640px) {
+    .table-card { overflow-x: visible; }
+    table { min-width: 0; table-layout: auto; }
+    colgroup, thead { display: none; }
+    table, tbody, tr { display: block; width: 100%; }
+    tbody tr + tr td { border-top: 0; }
+    tbody tr + tr { border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, .25)); }
+    tr { padding: 8px 12px; box-sizing: border-box; }
+    td { display: flex; align-items: center; gap: 8px; padding: 3px 0; text-align: left; }
+    th:first-child, td:first-child, th:last-child, td:last-child { padding-left: 0; padding-right: 0; text-align: left; }
+    td.center { text-align: left; }
+    td::before { content: attr(data-label); flex: 0 0 104px; color: var(--vscode-descriptionForeground); }
+    td > input[type=text], td > .locked { flex: 1; }
+    tr.new td:first-child { box-shadow: none; }
+    tr.new { box-shadow: inset 3px 0 0 var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
+  }
 </style>
 </head>
 <body>
@@ -289,6 +306,7 @@ ${editPanelKeys([['Ctrl+Enter', 'Preview changes'], ['Ctrl+Shift+Enter', 'Apply 
     b.addEventListener('click', onClick);
     return b;
   }
+  const columnNames = [...document.querySelectorAll('thead th')].map((th) => (th.firstChild && th.firstChild.textContent || '').trim());
   function render() {
     const body = $('rows');
     body.innerHTML = '';
@@ -333,6 +351,8 @@ ${editPanelKeys([['Ctrl+Enter', 'Preview changes'], ['Ctrl+Shift+Enter', 'Apply 
       tools.appendChild(button('copy', 'Duplicate' + label + ' (Ctrl+D)', false, () => duplicate(i)));
       tools.appendChild(button('remove', 'Remove' + label + ' (Ctrl+Delete)', false, () => remove(i)));
       tr.appendChild(tools);
+      // Each cell names its column, for the stacked layout of a narrow panel.
+      [...tr.children].forEach((cell, c) => { cell.dataset.label = columnNames[c] || ''; });
       body.appendChild(tr);
     });
     update();

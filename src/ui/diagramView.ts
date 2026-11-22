@@ -63,6 +63,11 @@ export class DiagramPanel {
   }
 
   /** Find by meaning: the keys of the boxes that mean what was typed (none with the model off). */
+  /** For the recordings: puts the text in the chart's Find box, as if typed there. */
+  typeFind(text: string): void {
+    void this.panel?.webview.postMessage({ type: 'find', text });
+  }
+
   findByMeaning(text: string): Promise<string[]> {
     return this.meaning.find(text);
   }

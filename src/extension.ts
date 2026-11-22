@@ -126,7 +126,7 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   // Data flow may use the same code model, when you turn it on there.
   context.subscriptions.push(diagram.useCodeModel(reel), controlFlow.useCodeModel(reel));
   // For tests: the Data flow chart's code model state, and Find by meaning.
-  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.diagram.meaningInfo', () => diagram.meaningState), vscode.commands.registerCommand('tsStructure.diagram.findByMeaning', (text: string) => diagram.findByMeaning(text)), vscode.commands.registerCommand('tsStructure.controlFlow.meaningInfo', () => controlFlow.meaningState));
+  context.subscriptions.push(vscode.commands.registerCommand('tsStructure.diagram.meaningInfo', () => diagram.meaningState), vscode.commands.registerCommand('tsStructure.diagram.findByMeaning', (text: string) => diagram.findByMeaning(text)), vscode.commands.registerCommand('tsStructure.diagram.typeFind', (text: string) => diagram.typeFind(text)), vscode.commands.registerCommand('tsStructure.controlFlow.meaningInfo', () => controlFlow.meaningState));
   context.subscriptions.push(
     registerCommand('tsStructure.gitReel', (ref?: string) => reel.open(typeof ref === 'string' ? ref : undefined)),
     { dispose: () => reel.dispose() },
