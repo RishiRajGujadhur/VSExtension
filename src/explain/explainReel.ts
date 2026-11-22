@@ -11,7 +11,6 @@ import type { CodeExplanation } from './explainCode';
  *   ("It uses the config.") are left out when there are others. The view glides from the step before, the step is
  *   labelled by kind (a decision, a loop, a return, what happens if something fails, in red), its code is typed in
  *   under the chart, and dots show how far the walk has come;
- * - a finale: the whole chart, every step lit, the flow running along all of it, and what the function is for.
  *
  * Made from the explanation alone, on this computer.
  */
@@ -79,21 +78,7 @@ export function explanationReel(e: CodeExplanation, file: string): ReelPlan | un
       seconds: secondsFor(step.text, code.length),
     });
   });
-  // The finale: the whole path lit, and what it is for (or just its name, when that is all there is to say).
-  const closing = purpose ? `So ${name} ${purpose}.` : `That's ${name}.`;
-  scenes.push({
-    kind: 'flow',
-    id: 'finale',
-    chapter: 'The whole path',
-    file,
-    symbol: name,
-    flow: snapshot(new Set(), done, { finale: true, from: before }),
-    badge: 'The whole path',
-    legend: '',
-    caption: closing,
-    captionSource: 'heuristic',
-    seconds: Math.max(5, secondsFor(closing)),
-  });
+  // No ending card: the video ends on its last step (what the function is for is said at the start).
   return {
     version: 1,
     meta: { title: `What ${name}() does`, base: 'explained', head: name, additions: 0, deletions: 0, files: 1, skipped: 0, chip: path.basename(file), ...(signature ? { signature } : { subtitle: 'Step by step' }) },

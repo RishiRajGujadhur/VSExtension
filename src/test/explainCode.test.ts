@@ -79,7 +79,7 @@ test('Explain this code: the code model names what the rules cannot', { skip: !r
   }
 });
 
-test('Explain this code as a video: essential only, a scene per step on the flowchart, then the whole path', async () => {
+test('Explain this code as a video: essential only, a scene per step on the flowchart, ending on the last step', async () => {
   const e = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
   const plan = explanationReel(e, 'src/workspace.ts')!;
   assert.equal(plan.meta.title, 'What currentConfig() does');
@@ -89,7 +89,7 @@ test('Explain this code as a video: essential only, a scene per step on the flow
   assert.equal(plan.scenes[0].caption, 'currentConfig is an async function that returns a Config, once it finishes.');
   assert.ok(plan.scenes.every((s) => !/walk through|step by step/i.test(s.caption)));
   const flows = plan.scenes.filter((s): s is Extract<ReelScene, { kind: 'flow' }> => s.kind === 'flow');
-  const steps = flows.filter((s) => s.id !== 'finale');
+  const steps = flows;
   // Steps on the same box are one scene.
   assert.equal(steps[0].caption, "It asks the server for the workspace, and sets the context repository to the config's repository root.");
   assert.ok(steps.length < e.steps.length);
@@ -109,12 +109,9 @@ test('Explain this code as a video: essential only, a scene per step on the flow
   const failing = steps.find((s) => /^If something goes wrong/.test(s.caption))!;
   assert.deepEqual([failing.badge, failing.flow.tone], ['If it fails', 'error']);
   assert.equal(steps.find((s) => /returns the config\.$/.test(s.caption))?.badge, 'Returns');
-  // The finale: every step lit, nothing current, the flow along all of it.
-  const finale = flows[flows.length - 1];
-  assert.equal(finale.id, 'finale');
-  assert.ok(finale.flow.finale);
-  assert.ok(!finale.flow.nodes.some((n) => n.state === 'changed'));
-  assert.ok(finale.flow.nodes.some((n) => n.state === 'added'));
+  // No ending card: the last scene is the last step (and no frame says only the function's name).
+  assert.equal(plan.scenes[plan.scenes.length - 1].id, `step-${steps.length}`);
+  assert.ok(plan.scenes.every((sc) => !/^That's |^So w+ /.test(sc.caption)));
   // The lines know the boxes they join, so the player can send the flow along them.
   assert.ok(flows.every((s) => s.flow.edges.every((edge) => typeof edge.from === 'number' && typeof edge.to === 'number')));
   // Lines that are not a whole function have no flowchart to walk.

@@ -477,6 +477,20 @@
     // A first-time tip, until something is pinned or the tip is dismissed.
     hint.hidden = !!(saved.hintDismissed || data.layout.pinned.length);
     restoreFocus();
+    fitTrails();
+  }
+
+  /**
+   * Each action's text makes room for its shortcut and tools when they show (hover or focus), so they never sit over
+   * the words: the width they take, measured once drawn (they take their room even while hidden).
+   */
+  function fitTrails() {
+    requestAnimationFrame(() => {
+      for (const item of list.querySelectorAll('.item')) {
+        const trail = item.querySelector('.trail');
+        if (trail) item.style.setProperty('--trail-width', `${trail.offsetWidth + 6}px`);
+      }
+    });
   }
 
   function restoreFocus() {

@@ -6,6 +6,7 @@ import * as path from 'path';
 import { DEFAULT_KITTEN_VOICE, encode, KITTEN_VOICES, modelSpeed, phonemeParts, readVoices, spaceTokens, styleFor, toWav, trimEnd } from '../reel/kittenModel';
 import { KittenNarrator } from '../reel/kitten';
 import { wavSeconds } from '../reel/voice';
+import { VOICE_MODELS } from '../reel/voiceModels';
 
 const root = path.resolve(__dirname, '../..');
 const home = path.join(root, 'dist', 'kitten');
@@ -75,4 +76,18 @@ test('Kitten: the narrator speaks a caption with a downloaded model, offline, an
     narrator.dispose();
     fs.rmSync(cache, { recursive: true, force: true });
   }
+});
+
+test('Kitten: voice names as the picker lists them, by the model they are of', () => {
+  assert.deepEqual(KittenNarrator.parse('Jasper (Mini)'), { voice: 'Jasper', model: 'Mini' });
+  assert.deepEqual(KittenNarrator.parse('Hugo (Nano full precision)'), { voice: 'Hugo', model: 'Nano full precision' });
+  assert.deepEqual(KittenNarrator.parse('Jasper'), { voice: 'Jasper' });
+  // An earlier version's name still reads.
+  assert.deepEqual(KittenNarrator.parse('Kitten Jasper'), { voice: 'Jasper' });
+  assert.ok(KittenNarrator.isNatural('Luna (Micro)'));
+  assert.ok(!KittenNarrator.isNatural('Microsoft Zira Desktop'));
+  // The picker never says Kitten: each model has a short name of its own.
+  const shorts = VOICE_MODELS.map((m) => m.short);
+  assert.equal(new Set(shorts).size, shorts.length);
+  assert.ok(shorts.every((s) => !/kitten/i.test(s)));
 });

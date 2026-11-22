@@ -13,6 +13,8 @@ export interface VoiceModel {
   id: string;
   /** As people see it: "Kitten Nano (recommended)". */
   name: string;
+  /** As the player's voice picker groups its voices, without the brand: "Nano", "Mini". */
+  short: string;
   /** One line on what to expect. */
   note: string;
   repo: string;
@@ -32,6 +34,7 @@ export const VOICE_MODELS: VoiceModel[] = [
   {
     id: 'kitten-nano-int8',
     name: 'Kitten Nano',
+    short: 'Nano',
     note: 'The quickest to speak and the smallest download: recommended.',
     repo: 'KittenML/kitten-tts-nano-0.8-int8',
     revision: '84781d74e29ee25217551556398b42f80593a813',
@@ -43,6 +46,7 @@ export const VOICE_MODELS: VoiceModel[] = [
   {
     id: 'kitten-nano',
     name: 'Kitten Nano, full precision',
+    short: 'Nano full precision',
     note: 'The same voices, a little cleaner, at twice the size.',
     repo: 'KittenML/kitten-tts-nano-0.8-fp32',
     revision: 'e73cfb095bd949c786ccdcf3b8ab04eb36c47442',
@@ -53,6 +57,7 @@ export const VOICE_MODELS: VoiceModel[] = [
   {
     id: 'kitten-micro',
     name: 'Kitten Micro',
+    short: 'Micro',
     note: 'A larger model: more natural, slower to speak.',
     repo: 'KittenML/kitten-tts-micro-0.8',
     revision: '1ccf72b2c2048fd17efac7de2fab32d10e225084',
@@ -66,6 +71,7 @@ export const VOICE_MODELS: VoiceModel[] = [
   {
     id: 'kitten-mini',
     name: 'Kitten Mini',
+    short: 'Mini',
     note: 'The largest: the most natural voices, the slowest to speak.',
     repo: 'KittenML/kitten-tts-mini-0.8',
     revision: 'c02725660cea441db4c383af69f1f26f5cd00947',

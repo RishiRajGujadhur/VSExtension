@@ -46,6 +46,8 @@
   /** Captions on the video (the CC button): in the preview and burned into the export. On unless turned off. */
   let captionsOn = saved.captions !== false;
   const player = document.getElementById('player');
+  // A narrow player (9:16, or a small panel) gets tighter controls, so none of them falls off its edge.
+  new ResizeObserver(() => player.classList.toggle('narrow', player.clientWidth < 480)).observe(player);
   const bigPlay = document.getElementById('bigPlay');
   const chapterLabel = document.getElementById('chapter');
   const hoverTip = document.getElementById('hoverTip');
@@ -181,24 +183,37 @@
 
   const KEYWORDS = new Set('abstract as async await break case catch class const continue default delete do else enum export extends false finally for foreach from function get if implements import in instanceof interface let new null of override private protected public readonly return set static super switch this throw true try type typeof undefined using var void while yield namespace string number boolean decimal int bool void select insert update delete where begin end declare exec procedure create alter table into values join on and or not is go set return raise raiserror throw'.split(' '));
   /** Code drawn with a few colors: keywords, strings, numbers, comments and calls. */
+  // A line's colored pieces and where each starts, worked out once: every frame draws the same lines again.
+  const codeRuns = new Map();
   function drawCode(str, x, y, font, c, maxWidth) {
     ctx.font = font;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const shown = fit(str, maxWidth, font);
-    const re = /(\/\/.*|--.*|"(?:[^"\\]|\\.)*"?|'(?:[^'\\]|\\.)*'?|`[^`]*`?|\b\d[\d_.]*\b|[A-Za-z_$@#][\w$#]*(?=\s*\()|[A-Za-z_$@#][\w$#]*|\s+|.)/g;
-    let cx = x;
-    for (const m of shown.matchAll(re)) {
-      const tok = m[0];
-      let color = c.text;
-      if (/^(\/\/|--)/.test(tok)) color = c.comment;
-      else if (/^["'`]/.test(tok)) color = c.string;
-      else if (/^\d/.test(tok)) color = c.number;
-      else if (KEYWORDS.has(tok.toLowerCase()) && /^[A-Za-z]/.test(tok)) color = c.keyword;
-      else if (/^[A-Za-z_$@#]/.test(tok) && shown.slice(m.index + tok.length).trimStart().startsWith('(')) color = c.call;
-      ctx.fillStyle = color;
-      ctx.fillText(tok, cx, y);
-      cx += ctx.measureText(tok).width;
+    const key = `${font}|${Math.round(maxWidth)}|${str}`;
+    let runs = codeRuns.get(key);
+    if (!runs) {
+      if (codeRuns.size > 4000) codeRuns.clear();
+      const shown = fit(str, maxWidth, font);
+      const re = /(\/\/.*|--.*|"(?:[^"\\]|\\.)*"?|'(?:[^'\\]|\\.)*'?|`[^`]*`?|\b\d[\d_.]*\b|[A-Za-z_$@#][\w$#]*(?=\s*\()|[A-Za-z_$@#][\w$#]*|\s+|.)/g;
+      runs = [];
+      let offset = 0;
+      for (const m of shown.matchAll(re)) {
+        const tok = m[0];
+        let kind = 'text';
+        if (/^(\/\/|--)/.test(tok)) kind = 'comment';
+        else if (/^["'`]/.test(tok)) kind = 'string';
+        else if (/^\d/.test(tok)) kind = 'number';
+        else if (KEYWORDS.has(tok.toLowerCase()) && /^[A-Za-z]/.test(tok)) kind = 'keyword';
+        else if (/^[A-Za-z_$@#]/.test(tok) && shown.slice(m.index + tok.length).trimStart().startsWith('(')) kind = 'call';
+        // Spaces take room but draw nothing.
+        if (tok.trim()) runs.push({ tok, kind, offset });
+        offset += ctx.measureText(tok).width;
+      }
+      codeRuns.set(key, runs);
+    }
+    for (const r of runs) {
+      ctx.fillStyle = c[r.kind];
+      ctx.fillText(r.tok, x + r.offset, y);
     }
   }
 
@@ -503,6 +518,8 @@
     });
     const width = Math.max(2.5, 3 * scale);
     const base = ctx.globalAlpha;
+    const LEVELS = 8;
+    const lit = Array.from({ length: LEVELS }, () => new Path2D());
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -561,17 +578,21 @@
           if (dist >= PULSE_WIDTH / 2) continue;
           const glow = (Math.cos((dist / (PULSE_WIDTH / 2)) * Math.PI) + 1) / 2;
           if (glow <= 0.03) continue;
-          ctx.globalAlpha = base;
-          ctx.strokeStyle = `rgba(0, 200, 255, ${(glow * 0.95).toFixed(3)})`;
-          ctx.lineWidth = width + glow * 3;
-          ctx.beginPath();
-          ctx.moveTo(a.x + ((b.x - a.x) * i) / pieces, a.y + ((b.y - a.y) * i) / pieces);
-          ctx.lineTo(a.x + ((b.x - a.x) * (i + 1)) / pieces, a.y + ((b.y - a.y) * (i + 1)) / pieces);
-          ctx.stroke();
+          // Into one of a few brightness levels, each stroked once below: a frame makes a handful of strokes.
+          const level = lit[Math.min(LEVELS - 1, Math.floor(glow * LEVELS))];
+          level.moveTo(a.x + ((b.x - a.x) * i) / pieces, a.y + ((b.y - a.y) * i) / pieces);
+          level.lineTo(a.x + ((b.x - a.x) * (i + 1)) / pieces, a.y + ((b.y - a.y) * (i + 1)) / pieces);
         }
         walkedLength += length;
       }
     }
+    ctx.globalAlpha = base;
+    lit.forEach((path, level) => {
+      const glow = (level + 0.5) / LEVELS;
+      ctx.strokeStyle = `rgba(0, 200, 255, ${(glow * 0.95).toFixed(3)})`;
+      ctx.lineWidth = width + glow * 3;
+      ctx.stroke(path);
+    });
     ctx.restore();
   }
 
@@ -1408,7 +1429,27 @@
     voiceToggle.title = voice.on ? 'Voice-over on: each caption is read by your computer’s voice (click to turn off)' : 'Voice-over: read the captions with your computer’s voice';
     voiceSelect.hidden = !voice.on || voice.voices.length < 2;
     document.getElementById('voiceRow').hidden = voiceSelect.hidden;
-    voiceSelect.replaceChildren(...voice.voices.map((v) => new Option(v.replace(/^Microsoft\s+|\s+Desktop$/g, ''), v, false, v === voice.name)));
+    // Grouped by where each voice comes from: each voice model you downloaded ("Jasper" under Mini), then this computer.
+    const natural = new Set(['Jasper', 'Bella', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo']);
+    const groups = new Map();
+    for (const v of voice.voices) {
+      const m = /^(\w+)\s+\((.+)\)$/.exec(v);
+      const group = m && natural.has(m[1]) ? m[2] : natural.has(v) ? 'Natural voices (downloaded when chosen)' : 'This computer';
+      const text = m && natural.has(m[1]) ? m[1] : v.replace(/^Microsoft\s+|\s+Desktop$/g, '');
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(new Option(text, v, false, v === voice.name));
+    }
+    // A closed list shows the voice only: its model is in the tooltip ("Luna (Mini)").
+    voiceSelect.title = voice.name || '';
+    voiceSelect.replaceChildren(
+      ...[...groups].map(([label, options]) => {
+        if (groups.size === 1) return options;
+        const g = document.createElement('optgroup');
+        g.label = label;
+        g.append(...options);
+        return [g];
+      }).flat(),
+    );
   }
   document.getElementById('restart').addEventListener('click', () => seek(0));
   document.getElementById('refresh').addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));

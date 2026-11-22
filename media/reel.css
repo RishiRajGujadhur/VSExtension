@@ -128,3 +128,13 @@ body.pseudo-full .player #screen { max-width: 100vw; max-height: 100vh; width: a
 
 #transport .controls { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) { .chrome, #timeline .segment, #playhead, .big-play { transition: none; } }
+
+/* A narrow player (9:16, or a small panel): the chapter name and Back to the start step aside, the buttons tighten,
+   so CC, the settings and full screen always fit. */
+.bar > * { flex-shrink: 0; }
+.bar > .chapter { flex-shrink: 1; }
+.player.narrow .chapter, .player.narrow #restart { display: none; }
+.player.narrow .yt { min-width: 30px; padding: 0 3px; }
+.player.narrow .time { margin: 0 4px; font-size: 12px; }
+.player.narrow .yt-menu { right: 6px; left: 6px; min-width: 0; }
+.yt-menu select optgroup { color: #000; }

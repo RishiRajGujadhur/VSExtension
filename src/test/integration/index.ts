@@ -680,9 +680,9 @@ async function explainCodeFlow(): Promise<void> {
     type VideoPlan = { meta: { title: string }; scenes: { kind: string; chapter?: string; caption: string }[] };
     const video = await vscode.commands.executeCommand<VideoPlan>('tsStructure.explainCode.video');
     assert.equal(video?.meta.title, 'What addToCart() does');
-    // A scene per step on the flowchart (steps on one box together), then the whole path.
+    // A scene per step on the flowchart (steps on one box together), ending on the last step.
     const flows = video!.scenes.filter((s) => s.kind === 'flow');
-    assert.ok(flows.length >= 2 && flows[flows.length - 1].chapter === 'The whole path', JSON.stringify(flows.map((s) => s.chapter)));
+    assert.ok(flows.length >= 1 && video!.scenes[video!.scenes.length - 1] === flows[flows.length - 1], JSON.stringify(video!.scenes.map((s) => s.chapter ?? s.kind)));
     assert.ok(video!.scenes.every((s) => !/walk through/i.test(s.caption)));
     const player = await tabLabelled((label) => label === 'Video: What addToCart() does');
     assert.ok(player, `the video opens in the reel's player: ${vscode.window.tabGroups.all.flatMap((g) => g.tabs).map((t) => t.label).join(' | ')}`);
@@ -736,10 +736,11 @@ async function gitReelFlow(): Promise<void> {
   const voiced = await vscode.commands.executeCommand<{ scenes: { seconds: number }[] }>('tsStructure.gitReel.voice', true);
   if (process.platform === 'win32') {
     assert.ok(voiced && voiced.scenes.length === plan.scenes.length && voiced.scenes.every((s) => s.seconds >= 3), 'scenes timed to the voice');
-    // The bundled Kitten voice reads, by default, a clip for every scene.
+    // The downloaded voice model (Nano, in the test storage) reads, by default, a clip for every scene; the picker lists
+    // its eight voices by the model they are of.
     const info = await vscode.commands.executeCommand<{ name?: string; voices: string[]; clips: number }>('tsStructure.gitReel.voiceInfo');
-    assert.equal(info?.name, 'Jasper', JSON.stringify(info));
-    assert.deepEqual(info?.voices.slice(0, 8), ['Jasper', 'Bella', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo']);
+    assert.equal(info?.name, 'Jasper (Nano)', JSON.stringify(info));
+    assert.deepEqual(info?.voices.slice(0, 8), ['Jasper', 'Bella', 'Luna', 'Bruno', 'Rosie', 'Hugo', 'Kiki', 'Leo'].map((v) => `${v} (Nano)`));
     assert.ok(info?.voices.every((v) => !/kitten/i.test(v)), 'no voice says Kitten');
     assert.equal(info?.clips, plan.scenes.length);
     console.log(`git reel voice ok: ${info?.name}, ${info?.clips} clips, ${info?.voices.length} voices offered`);

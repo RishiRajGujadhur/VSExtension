@@ -505,7 +505,28 @@ export class ReelPanel {
   private async loadVoices(): Promise<void> {
     if (this.voice.voices.length) return;
     this.systemVoices = await listVoices();
-    this.voice.voices = [...(this.naturalVoicesOn() ? KittenNarrator.voices() : []), ...this.systemVoices];
+    this.voice.voices = [...this.naturalVoiceNames(), ...this.systemVoices];
+  }
+
+  /**
+   * The natural voices the picker offers: the eight voices of every model downloaded ("Jasper (Mini)"), the
+   * model set first; with none downloaded yet, the eight by name (choosing one asks which model to download).
+   */
+  private naturalVoiceNames(): string[] {
+    if (!this.naturalVoicesOn()) return [];
+    const set = voiceModel(this.voiceModelSetting());
+    const here = this.voiceModels.list().sort((a, b) => Number(b.id === set?.id) - Number(a.id === set?.id));
+    if (!here.length) return KittenNarrator.voices();
+    return here.flatMap((m) => KittenNarrator.voices().map((v) => `${v} (${m.short})`));
+  }
+
+  /** A voice by name as the picker lists it: "Jasper" from an earlier choice or the setting reads as "Jasper (…)". */
+  private listedVoice(name: string | undefined): string | undefined {
+    if (!name) return undefined;
+    if (this.voice.voices.includes(name)) return name;
+    if (!KittenNarrator.isNatural(name)) return undefined;
+    const { voice } = KittenNarrator.parse(name);
+    return this.voice.voices.find((v) => KittenNarrator.isNatural(v) && KittenNarrator.parse(v).voice === voice);
   }
 
   /** The natural voices: offered unless the Voice model setting is your computer's own voice (downloaded on first use). */
@@ -531,12 +552,12 @@ export class ReelPanel {
 
   /** The voice to read with: the one picked in the player, else the Narration voice setting. */
   private chosenVoice(): string | undefined {
-    const name = this.voice.name?.replace(/^Kitten /, '');
-    if (name && this.voice.voices.includes(name)) return name;
+    const picked = this.listedVoice(this.voice.name);
+    if (picked) return picked;
     // Settings written as "Kitten Jasper" by an earlier version read as "Jasper".
     const setting = vscode.workspace.getConfiguration('tsStructure.reel').get<string>('narrationVoice', DEFAULT_KITTEN_VOICE).replace(/^Kitten /, '');
     if (setting === 'System voice' || (KittenNarrator.isNatural(setting) && !this.naturalVoicesOn())) return this.systemVoices[0];
-    return this.voice.voices.includes(setting) ? setting : this.voice.voices[0];
+    return this.listedVoice(setting) ?? this.voice.voices[0];
   }
 
   /**
@@ -547,8 +568,11 @@ export class ReelPanel {
   private async record(items: { id: string; text: string }[], voiceName: string): Promise<VoiceClip[]> {
     const cache = path.join(this.storage, 'reel-voice');
     if (!KittenNarrator.isNatural(voiceName) || !this.naturalVoicesOn()) return speak(items, voiceName, cache);
-    // A natural voice needs its model on this computer: asked for now if none is downloaded yet.
-    if (!(await this.ensureVoiceModel())) {
+    // A voice of a model on this computer ("Jasper (Mini)") speaks with that model.
+    const named = VOICE_MODELS.find((m) => m.short === KittenNarrator.parse(voiceName).model);
+    if (named && this.voiceModels.downloaded(named)) this.useVoiceModel(named);
+    // Otherwise the model set, asked for now if none is downloaded yet.
+    else if (!(await this.ensureVoiceModel())) {
       const fallback = this.systemVoices[0];
       if (!fallback) throw new Error('No voice model is downloaded, and no system voice was found.');
       this.voice.name = fallback;

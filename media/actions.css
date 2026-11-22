@@ -302,3 +302,6 @@ body.accent-theme { --active-accent: var(--vscode-focusBorder); --active-tint: c
 .tab.no-fit { opacity: .45; }
 @keyframes xr-banner-in { from { opacity: 0; transform: translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) { .selection-banner { animation: none; } }
+
+/* While the shortcut and tools show, the text ends before them (with "…") instead of running under them. */
+.item:is(:hover, :focus-within) .text { padding-right: var(--trail-width, 84px); }
