@@ -1,6 +1,7 @@
 // Fetches the Kitten TTS Nano 0.8 (int8) voice model into assets/kitten, at a pinned revision, and checks every file
-// against its SHA-256. Packaging runs this first; the files are bundled into the extension (dist/kitten/model) and the
-// extension never downloads anything itself. Files already there with the right checksum are kept.
+// against its SHA-256. It is a copy for the tests and recordings only (git-ignored, never packaged): the extension ships
+// no voice model and downloads the one a user chooses, after they agree. Files already there with the right checksum
+// are kept.
 // Model: https://huggingface.co/KittenML/kitten-tts-nano-0.8-int8 (Apache-2.0, KittenML / Stellon Labs).
 const crypto = require('crypto');
 const fs = require('fs');

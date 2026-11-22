@@ -102,6 +102,10 @@ Run **Code X-Ray: Settings** (or the gear in the Code X-Ray view) to switch feat
 
 The full guide to every feature is in [docs/GUIDE.md](docs/GUIDE.md).
 
+## Contributing
+
+Want to fix something or add a feature? [CONTRIBUTING.md](https://github.com/RishiRajGujadhur/VSExtension/blob/main/CONTRIBUTING.md) explains how to set up the repository, the architecture and folder structure, the technologies used, and how to test and send a change.
+
 ## Privacy and size
 
 Your code, captions and recordings never leave your computer, and the extension makes no network requests of its own. The only things that go online are links you click, and the models below, each only if you choose to download it.
