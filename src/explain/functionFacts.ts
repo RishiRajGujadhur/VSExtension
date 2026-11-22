@@ -93,9 +93,29 @@ function effectsOf(fn: ts.FunctionLikeDeclaration, checker: ts.TypeChecker): str
   } catch {
     // The analysis failed: what the code shows on its face below.
   }
-  const seen = [...new Set([...found, ...outsideCalls(fn, checker, found)])];
+  const seen = [...new Set([...found.map(plainModule), ...outsideCalls(fn, checker, found)])];
   const unfollowed = callsForEffect(fn, seen);
   return [...seen.slice(0, unfollowed ? 7 : 8), ...(unfollowed ? [unfollowed] : [])];
+}
+
+/** Node's modules by what they reach: "uses node:fs" → "uses the file system (node:fs)". */
+const MODULES: Record<string, string> = {
+  fs: 'the file system',
+  'fs/promises': 'the file system',
+  path: 'file paths',
+  os: 'the operating system',
+  child_process: 'other programs',
+  http: 'the network',
+  https: 'the network',
+  net: 'the network',
+  crypto: 'cryptography',
+  electron: 'Electron',
+  vscode: 'the VS Code API',
+};
+function plainModule(description: string): string {
+  const m = /^uses (node:)?([\w/]+)$/.exec(description);
+  const what = m && MODULES[m[2]];
+  return what ? `uses ${what} (${m[1] ?? ''}${m[2]})` : description;
 }
 
 /**

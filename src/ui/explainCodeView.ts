@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { CodeExplanation, explainCode } from '../explain/explainCode';
 import type { ReelPanel } from '../reel/reelPanel';
-import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
+import { CODE_MODEL, MODEL_RUNTIME, downloadDisclosure } from '../reel/codeModelText';
+import * as fs from 'fs';
+import ts = require('typescript');
 import { HUGGING_FACE_PRIVACY } from '../reel/downloadPrivacy';
 import { webviewPage, webviewRoots } from './webviewPage';
-import { explanationHtml } from '../explain/explainHtml';
+import { ExplainedBy, explanationHtml } from '../explain/explainHtml';
 import { showProblem } from './problems';
 import * as path from 'path';
 import { explanationReel } from '../explain/explainReel';
@@ -126,6 +128,19 @@ export class ExplainCodeView {
     return this.reel.codeModel.runnable ? (texts) => this.reel.codeModel.embed(texts) : undefined;
   }
 
+  /** Exactly what explained it: Code X-Ray's version, what read the code, and the code model when it was ready. */
+  private explainedBy(withModel: boolean): ExplainedBy {
+    let version = '';
+    try {
+      version = (JSON.parse(fs.readFileSync(path.join(this.extensionUri.fsPath, 'package.json'), 'utf8')) as { version: string }).version;
+    } catch {
+      // Unknown: the page says "Code X-Ray rules".
+    }
+    const ext = path.extname(this.lastFile ?? '').toLowerCase();
+    const reader = ext === '.cs' ? 'the C# parser (tree-sitter-c-sharp)' : ext === '.sql' ? "Code X-Ray's T-SQL parser" : `the TypeScript ${ts.version} compiler`;
+    return { version, reader, ...(withModel ? { model: { name: 'all-MiniLM-L6-v2 (int8, Xenova)', revision: CODE_MODEL.revision, runtime: MODEL_RUNTIME } } : {}) };
+  }
+
   private show(explanation: CodeExplanation, withModel: boolean): void {
     const title = `Explain: ${explanation.subject.replace(/^the (function|highlighted lines in) /, '')}`;
     if (!this.panel) {
@@ -133,7 +148,7 @@ export class ExplainCodeView {
       this.panel.onDidDispose(() => (this.panel = undefined));
     } else this.panel.reveal(vscode.ViewColumn.Beside, true);
     this.panel.title = title;
-    this.panel.webview.html = webviewPage(this.panel.webview, this.extensionUri, { title: 'Explain this code', styles: ['explain.css'], scripts: [], body: explanationHtml(explanation, withModel) });
+    this.panel.webview.html = webviewPage(this.panel.webview, this.extensionUri, { title: 'Explain this code', styles: ['explain.css'], scripts: [], body: explanationHtml(explanation, this.explainedBy(withModel)) });
   }
 }
 

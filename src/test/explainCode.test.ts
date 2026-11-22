@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { explainCode } from '../explain/explainCode';
 import { CodeModel } from '../reel/codeModel';
-import { CODE_MODEL, downloadDisclosure } from '../reel/codeModelText';
+import { CODE_MODEL, MODEL_RUNTIME, downloadDisclosure } from '../reel/codeModelText';
 import { downloadPrivacy } from '../reel/downloadPrivacy';
 import { VOICE_MODELS } from '../reel/voiceModels';
 import { boxIcon, explanationReel, stepKind, walkSteps } from '../explain/explainReel';
@@ -149,12 +149,44 @@ test('Explain this code as a video: steps that say little are left out, and kind
   assert.deepEqual(stepKind('It sets the name.', ['statement']), { label: 'Step', tone: 'step' });
 });
 
+const BY = { version: '9.9.9', reader: 'the TypeScript 6.0.3 compiler' };
+const BY_MODEL = { ...BY, model: { name: 'all-MiniLM-L6-v2 (int8, Xenova)', revision: '751bff37182d3f1213fa05d7196b954e230abad9', runtime: 'ONNX Runtime Web 1.24.3' } };
+
+test('Explain this code: the page says exactly what explained it, behind an info button, with links', async () => {
+  const fn = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
+  const plain = explanationHtml(fn, BY);
+  assert.ok(plain.includes("Explained on your computer. Nothing was sent anywhere."), "Explained on your computer. Nothing was sent anywhere.");
+  assert.ok(plain.includes("class=\"info\" tabindex=\"0\" role=\"button\" aria-label=\"How this was explained\""), "class=\"info\" tabindex=\"0\" role=\"button\" aria-label=\"How this was explained\"");
+  assert.ok(plain.includes("Code X-Ray 9.9.9 rules</b> wrote every sentence, from what the TypeScript 6.0.3 compiler works out"), "Code X-Ray 9.9.9 rules</b> wrote every sentence, from what the TypeScript 6.0.3 compiler works out");
+  assert.ok(plain.includes("Code model:</b> not used"), "Code model:</b> not used");
+  assert.ok(plain.includes("href=\"https://github.com/RishiRajGujadhur/VSExtension/blob/main/docs/HOW_EXPLAINING_WORKS.md\""), "href=\"https://github.com/RishiRajGujadhur/VSExtension/blob/main/docs/HOW_EXPLAINING_WORKS.md\"");
+  assert.ok(plain.includes("href=\"https://github.com/RishiRajGujadhur/VSExtension#privacy-and-size\""), "href=\"https://github.com/RishiRajGujadhur/VSExtension#privacy-and-size\"");
+  const withModel = explanationHtml(fn, BY_MODEL);
+  assert.ok(withModel.includes("with the code model. Nothing was sent anywhere"), "with the code model. Nothing was sent anywhere");
+  assert.ok(withModel.includes("all-MiniLM-L6-v2 (int8, Xenova), version 751bff3, run by ONNX Runtime Web 1.24.3"), "all-MiniLM-L6-v2 (int8, Xenova), version 751bff3, run by ONNX Runtime Web 1.24.3");
+  assert.ok(withModel.includes("the rules were enough here"), "the rules were enough here");
+  // The video is an icon button, named on hover.
+  assert.match(plain, /<a class="video"[^>]*title="Generate video"[^>]*><i class="codicon codicon-device-camera-video"[^>]*><\/i><\/a>/);
+  // The runtime named matches the one installed.
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { devDependencies: Record<string, string> };
+  assert.equal(MODEL_RUNTIME, `ONNX Runtime Web ${pkg.devDependencies['onnxruntime-web']}`);
+});
+
+test('Explain this code: the facts fold to one line, and steps after the fifth fold away', async () => {
+  const add = await explainCode('shop.ts', shop, shop.indexOf('add('), shop.indexOf('add(') + 3);
+  const html = explanationHtml(add, BY);
+  assert.ok(html.includes("<details class=\"facts-box\"><summary><span class=\"facts-line\">Takes <code>id</code>, <code>qty</code>, <code>tags</code> · gives back number · changes 2 things outside itself</span></summary>"), "<details class=\"facts-box\"><summary><span class=\"facts-line\">Takes <code>id</code>, <code>qty</code>, <code>tags</code> · gives back number · changes 2 things outside itself</span></summary>");
+  const many = explanationHtml({ subject: 'the function f()', steps: ['It a b.', 'It c d.', 'It e f.', 'It g h.', 'It i j.', 'It k l.', 'It m n.'] }, BY);
+  assert.match(many, /<ol class="steps">(<li>[^<]*<\/li>){5}<\/ol>/);
+  assert.ok(many.includes("<details class=\"more\"><summary>Show 2 more steps</summary><ol class=\"steps\" start=\"6\">"), "<details class=\"more\"><summary>Show 2 more steps</summary><ol class=\"steps\" start=\"6\">");
+});
+
 test('Explain this code: the page offers the video only for a whole function, as a command link', async () => {
   const fn = await explainCode('workspace.ts', code, ...range('export async function currentConfig'));
-  assert.match(explanationHtml(fn, false), /href="command:tsStructure\.explainCode\.video"[^>]*>.*Generate video/);
+  assert.match(explanationHtml(fn, BY), /href="command:tsStructure\.explainCode\.video" title="Generate video"/);
   const lines = await explainCode('workspace.ts', code, ...range('    const config = saved', 'fixtures\') };'));
-  assert.doesNotMatch(explanationHtml(lines, false), /Generate video/);
-  assert.match(explanationHtml(fn, false), /Nothing was sent anywhere/);
+  assert.doesNotMatch(explanationHtml(lines, BY), /Generate video/);
+  assert.match(explanationHtml(fn, BY), /Nothing was sent anywhere/);
 });
 
 test('Explain this code as a video: an icon on each box, by what its code does', async () => {
@@ -245,7 +277,7 @@ test('Explain this code: what a function takes, what it gives back and what it c
   assert.deepEqual(price.facts!.output.values, ['known', 'undefined']);
   assert.ok(price.facts!.effects.some((e) => /console/i.test(e)), price.facts!.effects.join(' | '));
 
-  const html = explanationHtml(add, false);
+  const html = explanationHtml(add, BY);
   assert.match(html, /Takes/);
   assert.match(html, /Gives back a? ?number|Gives back number/);
   assert.match(html, /Changes outside itself/);
@@ -272,4 +304,21 @@ export async function placeOrder(id: string, total: number) {
   const at = code.indexOf('placeOrder');
   const e = await explainCode('orders.ts', code, at, at + 'placeOrder'.length);
   assert.deepEqual(e.facts!.effects, ['calls pay.charge(), a property holding any function', 'calls saveOrder() and notify() for what they do, which may change things']);
+});
+
+test('Explain this code: verbs made from words, particles, event listeners and flags read naturally', async () => {
+  const { callPhrase, conditionWords } = await import('../reel/words');
+  assert.equal(callPhrase('win.maximize()'), 'maximizes the win');
+  assert.equal(callPhrase('lockDown()'), 'locks down');
+  assert.equal(callPhrase('setUpServer()'), 'sets up the server');
+  assert.equal(callPhrase('win.once("ready-to-show", () => win.show())'), 'acts once on the ready to show event');
+  assert.equal(callPhrase('win.on("closed", () => {})'), 'listens for the closed event');
+  assert.equal(conditionWords('bounds.maximized'), 'the bounds are maximized');
+  assert.equal(conditionWords('!bounds.maximized'), 'the bounds are not maximized');
+  assert.equal(conditionWords('user.hasAccess'), 'the user has access');
+  // The name's own verb when the intent would say it with another one; the intent's wording otherwise.
+  const create = 'export function createWindow() { const w = new BrowserWindow({}); windows.push(w); return w; }';
+  assert.equal((await explainCode('a.ts', create, create.indexOf('createWindow'), create.indexOf('createWindow') + 12)).purpose?.text, 'Creates the window');
+  const add = 'export function addToCart(item) { cart.items.push(item); }';
+  assert.equal((await explainCode('a.ts', add, add.indexOf('addToCart'), add.indexOf('addToCart') + 9)).purpose?.text, 'Adds item to cart');
 });

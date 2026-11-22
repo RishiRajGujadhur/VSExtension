@@ -78,7 +78,7 @@ export async function explainCode(file: string, text: string, start: number, end
 /** What it is for: the rules first; the code model when they cannot tell and it is there. */
 async function withPurpose(explanation: CodeExplanation, name: string | undefined, file: string, lines: string[], understand?: Understand): Promise<CodeExplanation> {
   const ruled = featureIntent({ name, file, added: lines }) ?? (name ? undefined : intentsOf({ added: lines }).find((i) => i.score >= 3));
-  if (ruled) return { ...explanation, purpose: { text: intentLabel(ruled), by: 'rules' } };
+  if (ruled) return { ...explanation, purpose: { text: ownVerb(name, ruled) ?? intentLabel(ruled), by: 'rules' } };
   if (understand && name) {
     try {
       const [own, ...prototypes] = await understand([codeAsWords(name, lines), ...FEATURE_PROTOTYPES.map((p) => p.text)]);
@@ -150,6 +150,19 @@ function namedFunction(source: ts.SourceFile, checker: ts.TypeChecker, start: nu
     // Nothing known about the name: not a function's.
   }
   return undefined;
+}
+
+/**
+ * The name's own verb, when the intent read from the name would say it with another one: "createWindow" is
+ * "Creates the window", not "Adds window". Only for a plain verb and object ("fetchUserById", "addToCart" keep the
+ * intent's wording, which reads their prepositions better).
+ */
+function ownVerb(name: string | undefined, intent: { phrase: string; evidence: string[] }): string | undefined {
+  if (!name || !intent.evidence.some((e) => e.startsWith('named '))) return undefined;
+  const said = verbPhrase(name);
+  const [verb] = said.split(' ');
+  if (!verb || intent.phrase.startsWith(`${verb} `) || /\b(to|from|by|in|into|on|of|for|with|at)\b/.test(said.split(' ').slice(1).join(' ')) || /^(does|works|handles|uses|checks) /.test(said)) return undefined;
+  return said.charAt(0).toUpperCase() + said.slice(1);
 }
 
 function innermostFunction(source: ts.SourceFile, start: number, end: number): ts.FunctionLikeDeclaration | undefined {

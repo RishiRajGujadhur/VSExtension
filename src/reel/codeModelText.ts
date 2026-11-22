@@ -35,6 +35,9 @@ export const CODE_MODEL = {
   megabytes: 23.2,
 };
 
+/** What runs the models, as the Explain page names it (a test keeps it equal to package.json). */
+export const MODEL_RUNTIME = 'ONNX Runtime Web 1.24.3';
+
 /** Whether the bytes are the file pinned above. */
 export function fileMatches(file: ModelFile, bytes: Buffer): boolean {
   if (bytes.length !== file.size) return false;

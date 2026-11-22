@@ -60,6 +60,11 @@ const VERBS = new Set(
   'redo audit approve archive assign authenticate authorize backup bump calibrate capture cleanup clone compile compress confirm crop debounce decrypt deploy deselect disconnect dismiss drop edit encrypt escape estimate evaluate fix flush fold freeze grant hydrate increment decrement indent index inject inspect interpolate invalidate layout lint migrate minify monitor optimize order paste persist plan poll populate predict preload probe profile prune queue rank rate reconcile redirect redraw reduce refetch reindex relaunch remind repair repeat reorder replay rerun respond restart resume revert review rewind roll score serve settle share shuffle sign simulate snooze solve suspend tally throttle tokenize truncate tune undo unfold unload unsubscribe upgrade get set load save read write create make build add remove delete update validate check parse format render handle fetch send open close start stop init initialize reset compute calculate find search sort filter map convert apply register track log emit notify show hide toggle select pick copy move rename merge split clear run execute process normalize resolve ensure wait schedule watch listen subscribe export import record play pause draw paint measure compare diff describe explain wrap unwrap encode decode serialize deserialize download upload refresh sync retry cache collect count group list mark merge print publish push pull query request reply report restore scan scroll seek setup store submit summarize test throw transform trim try verify view visit walk warn accept allow attach bind block build call cancel charge choose clean click commit configure connect delete detect disable dispose enable enter exit expand extract fail fill fit focus generate guard hash highlight hook ignore insert install invoke join keep launch lock match merge mount mutate navigate observe offer pack pad patch pin place post prepare preview prompt read rebuild receive refactor reject release reload replace resize retry return reveal rotate route sample sanitize scale schedule shift skip slice snap sort spawn speak stage stream strip style swap tag tick trace translate trigger unlock unpin unwatch use wake zoom'.split(' '),
 );
 
+/** Words that complete a verb: "lock down", "set up", "clean up", "log in". */
+const PARTICLES = new Set(['down', 'up', 'out', 'off', 'over', 'back', 'away', 'in']);
+/** A verb: one of the known verbs, or a word made into one ("maximize", "notify", "normalise"). */
+export const isVerb = (w: string): boolean => VERBS.has(w) || (w.length > 5 && /(ize|ise|ify)$/.test(w));
+
 /**
  * What a function named so does, as a verb phrase: "validateSettingsExport" → "validates the settings export",
  * "isEmpty" → "checks whether it is empty", "onClick" → "handles the click", "toJSON" → "converts it to JSON".
@@ -75,7 +80,9 @@ export function verbPhrase(name: string, asCall = false): string {
   if (first === 'to' && rest.length) return `converts it to ${object}`;
   if (first === 'use' && rest.length) return `uses the ${object}`;
   if (first === 'with' && rest.length) return `adds the ${object}`;
-  if (VERBS.has(first)) return `${third(first)}${object ? ` the ${object}` : ''}`;
+  // A verb with its particle: "lockDown" → "locks down", "setUpServer" → "sets up the server".
+  if (isVerb(first) && rest.length && PARTICLES.has(rest[0].toLowerCase())) return `${third(first)} ${rest[0].toLowerCase()}${rest.length > 1 ? ` the ${rest.slice(1).join(' ')}` : ''}`;
+  if (isVerb(first)) return `${third(first)}${object ? ` the ${object}` : ''}`;
   const thing = w.join(' ').replace(/ (of|for|from|by|to|in)$/, '');
   if (asCall) return `uses the ${thing}`;
   return `works out the ${thing}`;
@@ -180,13 +187,13 @@ function conditionOf(e: ts.Expression): string | undefined {
     if (ts.isPropertyAccessExpression(inner) && inner.name.text === 'length') return emptiness(inner.expression, true);
     if (ts.isCallExpression(inner)) return negate(callCondition(inner));
     const flag = flagWords(inner);
-    if (flag) return `it is not ${flag}`;
+    if (flag) return flagged(inner, flag, true);
     return `${exprWords(inner)} is not set`;
   }
   if (ts.isPropertyAccessExpression(e) && e.name.text === 'length') return emptiness(e.expression, false);
   if (ts.isIdentifier(e) || ts.isPropertyAccessExpression(e)) {
     const flag = flagWords(e);
-    return flag ? `it is ${flag}` : `${exprWords(e)} is set`;
+    return flag ? flagged(e, flag, false) : `${exprWords(e)} is set`;
   }
   if (ts.isCallExpression(e)) return callCondition(e);
   if (ts.isBinaryExpression(e)) {
@@ -246,8 +253,16 @@ function conditionOf(e: ts.Expression): string | undefined {
   return undefined;
 }
 
-const STATES = new Set(['visible', 'hidden', 'empty', 'open', 'closed', 'active', 'enabled', 'disabled', 'ready', 'valid', 'dirty', 'busy', 'done', 'fitted', 'pinned', 'primary', 'selected', 'focused', 'expanded', 'collapsed', 'loading', 'playing', 'recording', 'paused', 'running', 'cancelled', 'dragging', 'editing', 'checked', 'online', 'offline', 'mounted', 'connected', 'available', 'required', 'optional', 'readonly', 'locked', 'muted', 'new', 'tall', 'wide', 'compact', 'full', 'touched', 'same', 'changed', 'leaving', 'moving']);
+const STATES = new Set(['visible', 'hidden', 'empty', 'open', 'closed', 'active', 'enabled', 'disabled', 'ready', 'valid', 'dirty', 'busy', 'done', 'fitted', 'pinned', 'primary', 'selected', 'focused', 'expanded', 'collapsed', 'loading', 'maximized', 'minimized', 'fullscreen', 'playing', 'recording', 'paused', 'running', 'cancelled', 'dragging', 'editing', 'checked', 'online', 'offline', 'mounted', 'connected', 'available', 'required', 'optional', 'readonly', 'locked', 'muted', 'new', 'tall', 'wide', 'compact', 'full', 'touched', 'same', 'changed', 'leaving', 'moving']);
 /** A flag's state in words: "isOpen" → "open", "playing" → "playing", "this.ready" → "ready"; else undefined. */
+/** A flag said of what it belongs to: "bounds.maximized" → "the bounds are maximized"; a bare one of "it". */
+function flagged(e: ts.Expression, flag: string, not: boolean): string {
+  if (!ts.isPropertyAccessExpression(e) || e.expression.kind === ts.SyntaxKind.ThisKeyword) return `it is ${not ? 'not ' : ''}${flag}`;
+  const owner = exprWords(e.expression);
+  if (flag.startsWith('has ')) return `${owner} ${not ? "doesn't have" : 'has'} ${flag.slice(4)}`;
+  return `${owner} ${be(owner)} ${not ? 'not ' : ''}${flag}`;
+}
+
 function flagWords(e: ts.Expression): string | undefined {
   const name = ts.isIdentifier(e) ? e.text : ts.isPropertyAccessExpression(e) ? e.name.text : '';
   const w = words(name);
@@ -351,8 +366,14 @@ export function calleeName(call: ts.CallExpression | ts.NewExpression): string |
 // ---------------------------------------------------------------------------------------------------------------
 // Calls: what they do
 
+/** An event's name in words: "ready-to-show" → "the ready to show event". */
+const eventName = (arg: string | undefined): string => {
+  const name = arg?.replace(/["'`]/g, '').replace(/[-_:]+/g, ' ').trim();
+  return arg && /^["'`]/.test(arg) && name && /^[\w ]+$/.test(name) ? `the ${name} event` : 'an event';
+};
+
 /** Well-known calls, by how they end, and what they do. */
-const KNOWN: [RegExp, string | ((args: string[]) => string)][] = [
+const KNOWN: [RegExp, string | ((args: string[], raw: string[]) => string)][] = [
   [/^(fs\.)?(promises\.)?(readFile|readFileSync)$/, 'reads a file'],
   [/^(fs\.)?(promises\.)?(writeFile|writeFileSync|appendFile|appendFileSync)$/, 'writes a file'],
   [/^(fs\.)?(promises\.)?(mkdir|mkdirSync)$/, 'creates a folder'],
@@ -366,6 +387,8 @@ const KNOWN: [RegExp, string | ((args: string[]) => string)][] = [
   [/setTimeout$/, 'waits a moment'],
   [/setInterval$/, 'repeats on a timer'],
   [/addEventListener$/, (a) => `listens for ${a[0] ? `${a[0].replace(/"/g, '')} events` : 'events'}`],
+  [/(?:^|.)once$/, (_a, raw) => `acts once on ${eventName(raw[0])}`],
+  [/(?:^|.)(on|addListener)$/, (_a, raw) => `listens for ${eventName(raw[0])}`],
   [/removeEventListener$/, (a) => `stops listening for ${a[0] ? `${a[0].replace(/"/g, '')} events` : 'events'}`],
   [/postMessage$/, 'sends a message'],
   [/localStorage\.setItem$|sessionStorage\.setItem$/, 'saves it in the browser'],
@@ -426,7 +449,8 @@ export function callPhrase(code: string): string | undefined {
   const name = calleeName(call);
   if (!name) return undefined;
   const args = call.arguments.map((a) => exprWords(a));
-  for (const [pattern, phrase] of KNOWN) if (pattern.test(name)) return typeof phrase === 'string' ? phrase : phrase(args);
+  const raw = call.arguments.map((a) => a.getText());
+  for (const [pattern, phrase] of KNOWN) if (pattern.test(name)) return typeof phrase === 'string' ? phrase : phrase(args, raw);
   const method = name.split('.').pop()!;
   // React state setters, by what the state becomes: "setFeature(undefined)" → "clears the feature".
   const setter = /^set([A-Z]\w*)$/.exec(method);
@@ -434,7 +458,7 @@ export function callPhrase(code: string): string | undefined {
   // "queue.flush()" → "flushes the queue": a verb on its own, done to the object it is called on.
   const receiver = ts.isPropertyAccessExpression(call.expression) ? call.expression.expression : undefined;
   const verb = words(method);
-  if (receiver && verb.length === 1 && VERBS.has(verb[0].toLowerCase()) && !call.arguments.length && receiver.kind !== ts.SyntaxKind.ThisKeyword) return `${third(verb[0].toLowerCase())} ${exprWords(receiver)}`;
+  if (receiver && verb.length === 1 && isVerb(verb[0].toLowerCase()) && !call.arguments.length && receiver.kind !== ts.SyntaxKind.ThisKeyword) return `${third(verb[0].toLowerCase())} ${exprWords(receiver)}`;
   const phrase = verbPhrase(method, true);
   // "saves the user": the first argument as the object, when the name has none.
   if (words(method).length === 1 && args[0] && !phrase.includes(' the ')) return `${phrase} ${args[0]}`;
