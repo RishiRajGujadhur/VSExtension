@@ -1,6 +1,6 @@
 # Contributing to Code X-Ray
 
-Thanks for helping. This guide is for developers. It covers how to set up the repository, how the code is organised, which technologies it uses, how to test your change, and how to send it in. The user guide is [docs/GUIDE.md](docs/GUIDE.md); the product overview is the [README](README.md).
+Thanks for helping. This guide is for developers. It covers how to set up the repository, how the code is organised, which technologies it uses, how to test your change, and how to send it in. The user guide is [docs/GUIDE.md](docs/GUIDE.md); the product overview is the [README](README.md). How code is put into words (the rules, the thresholds, and where the optional models help) is in [docs/HOW_EXPLAINING_WORKS.md](docs/HOW_EXPLAINING_WORKS.md).
 
 ## Contents
 

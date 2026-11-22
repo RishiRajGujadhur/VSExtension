@@ -37,6 +37,8 @@ Code X-Ray is a VS Code extension (package `ts-test-impact`, publisher `RishiGuj
 | `docs/` | `GUIDE.md` (every feature in full), `images/` (README and guide GIFs), `demo/` (the bookshop project the screenshots use). |
 | `test-fixtures/` | Projects for unit tests; `voice-model.cjs` finds the test copy of a voice model; `block-network.cjs` blocks the network for the offline tests. |
 
+For how explanations, captions, purpose tags and Find by meaning are worked out (every rule and threshold), read `docs/HOW_EXPLAINING_WORKS.md` before changing them.
+
 ## How the pieces connect
 
 - **An analysis** is a function that takes `(program, fileName, offset)` and returns a `Report`. To add one, wire all of these:
