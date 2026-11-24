@@ -2,6 +2,7 @@ import ts = require('typescript');
 import { csharpArguments, csharpDataFlow, csharpErrorPaths, csharpOverrideReach, csharpTaskErrors, csharpVariableChanges, csharpWhoImports } from '../csharp/charts';
 import { onWorkspace } from '../csharp/workspace';
 import { csharpSideEffects } from '../csharp/effects';
+import { csharpNullChecks } from '../csharp/nullability';
 import { NoLanguageServer, csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
 import { tsqlCallGraphReport, tsqlUsagesReport } from '../tsql/workspace';
 import { bundleWeightReport } from '../navigate/bundleWeight';
@@ -587,7 +588,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
       const { files, note } = filesIn(program, scope);
       return withNote(mutationReport(program, t.fileName, t.offset, files), note);
     }),
-    editorCommand('tsStructure.nullability', 'Nullability', (t) => nullabilityReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.nullability', 'Nullability', (t) => nullabilityReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpNullChecks) }),
     editorCommand('tsStructure.promiseRejections', 'Promise rejections', (t) => rejectionReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpTaskErrors) }),
     // The whole project still decides what is used; the scope only limits which exports are reported.
     scopedCommand('tsStructure.deadExports', 'Dead Export Analysis', { id: 'deadExports', kinds: fineScopes }, (t, scope) => deadExports(t, scope.kind === 'project' ? undefined : scopeFilter(scope.spec))),

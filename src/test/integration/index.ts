@@ -818,8 +818,10 @@ async function csharpExplainAndDataFlow(): Promise<void> {
     const select = async (needle: string, length = needle.length, from = 0) => {
       const editor = await vscode.window.showTextDocument(document);
       const at = code.indexOf(needle, from);
-      editor.selection = new vscode.Selection(document.positionAt(at), document.positionAt(at + length));
-      return editor;
+      const selection = new vscode.Selection(document.positionAt(at), document.positionAt(at + length));
+      // Every editor of the file: one beside a chart or the results can be the active one.
+      for (const e of [editor, ...vscode.window.visibleTextEditors.filter((v) => v.document === document)]) e.selection = selection;
+      return vscode.window.activeTextEditor?.document === document ? vscode.window.activeTextEditor : editor;
     };
     type Explained = { subject: string; summary?: string; steps: string[]; facts?: { inputs: { name: string; type?: string }[]; output: { type?: string; later: boolean }; effects: string[] }; purpose?: { text: string } };
 
@@ -867,6 +869,18 @@ async function csharpExplainAndDataFlow(): Promise<void> {
     assert.equal(effects!.title, 'Side effects of OrderService.PlaceOrderAsync');
     assert.deepEqual(effects!.roots.map((r) => r.label).slice(1), ['Mutates the instance', 'Input/output', 'Waits', 'By call']);
     console.log('csharp side effects ok');
+
+    // Null checks: coupon is string?, checked before it is used.
+    // After the results have settled, which can move the cursor to the report's subject.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const couponEditor = await select('coupon.StartsWith', 'coupon'.length);
+    assert.equal(vscode.window.activeTextEditor?.document.offsetAt(vscode.window.activeTextEditor.selection.active), code.indexOf('coupon.StartsWith') + 6, `the cursor is after coupon (editor in column ${couponEditor.viewColumn}, active in ${vscode.window.activeTextEditor?.viewColumn}, visible: ${vscode.window.visibleTextEditors.map((e) => e.viewColumn).join(",")})`);
+    const nulls = await vscode.commands.executeCommand<Report>('tsStructure.nullability');
+    assert.equal(nulls?.kind, 'nullability', 'C# null checks report');
+    assert.equal(nulls!.roots[0].label, 'coupon: string?');
+    assert.match(nulls!.roots[0].description ?? '', /^never null here/);
+    assert.equal(nulls!.roots.find((r) => r.label === 'Ruled out by')?.children?.[0].label, 'coupon != null');
+    console.log('csharp null checks ok');
   } finally {
     await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

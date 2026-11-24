@@ -424,6 +424,7 @@ The charts work in C# files as well, from the bundled parser (names matched as t
 - **Override reach**: what the member overrides or implements, its overrides (and `new` members hiding it) in subtypes, and its call sites.
 - **Who imports this**: the files using the file's namespace (a `using` or the same namespace) and naming its types.
 - **Side effects**: what the method changes outside itself (fields and `this`, an argument's members, other types' static state, collections it does not own through `Add`, `Remove`, `Clear`…) and what it reaches beyond the program (the console, files, the network, the database, the log, waiting, the time, random values, the environment), in its own code and through the methods it calls in the workspace (followed by name, a few levels deep), each marked *after await* or *in a loop* where it is, with a **By call** group of the methods that bring effects in. Calls made for what they do that lead to no method in the workspace are listed as not followed. The rules are the ones Explain this code uses for *Changes outside itself*.
+- **Null checks**: whether the variable, parameter, field or property at the cursor can be null there, and why: its nullable annotation (`string?`, `int?`), where null comes from (`null`, `default`, `a?.b`, `x as T`, `FirstOrDefault()` and other *…OrDefault* calls, a method of the workspace declared to return `T?`, a default of `null`, and each caller that passes null for a parameter), the check that rules it out at the cursor (`!= null`, `is not null`, `is { }`, `is T t`, `!string.IsNullOrEmpty(x)`, `?? throw`, `ArgumentNullException.ThrowIfNull`, or an `if` that returns or throws when it is null), every `!` that asserts it is not null, and each use: a check, safe, or *may be null* where it is dereferenced unchecked. On a method's name, what it returns and which of its returns give null. Types without `?` are read as never null, as with nullable reference types turned on; the parser does not run the compiler's flow analysis.
 
 ![The data flow chart of a C# variable: where its values come from and where they go](images/csharp-chart-dataflow.gif)
 
@@ -431,7 +432,7 @@ The charts work in C# files as well, from the bundled parser (names matched as t
 
 Why this import… (a chain of imports between two files) and React state are TypeScript and JavaScript only.
 
-In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (Data flow, Null checks…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.
+In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (React state, Bundle weight…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.
 
 Two more work with nothing else installed, from a C# parser (tree-sitter's C# grammar, as WebAssembly) that ships with Code X-Ray:
 
