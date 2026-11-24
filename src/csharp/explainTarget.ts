@@ -106,7 +106,7 @@ function declarationNamed(root: SyntaxNode, name: string, near?: SyntaxNode): Sy
   return all.find((m) => classOf(m) === home) ?? all[0];
 }
 
-function bodyOf(fn: SyntaxNode): SyntaxNode | undefined {
+export function bodyOf(fn: SyntaxNode): SyntaxNode | undefined {
   return fn.childForFieldName('body') ?? fn.namedChildren.find((c) => c?.type === 'block' || c?.type === 'arrow_expression_clause') ?? undefined;
 }
 
@@ -176,37 +176,68 @@ function outputOf(fn: SyntaxNode, body: SyntaxNode | undefined): FunctionFacts['
   return { ...(type && type !== 'void' ? { type } : {}), later, values: nothing ? [] : [...new Set(values)].slice(0, 4), nothing };
 }
 
+/** What a side effect is, as the Side effects report groups them. */
+export type CSharpEffectKind = 'mutates-parameter' | 'mutates-this' | 'mutates-other' | 'io' | 'timer' | 'nondeterministic' | 'global';
+
 /** What .NET's own types reach, by the start of a call: "Console.WriteLine" → "writes to the console". */
-const BUILT_INS: [RegExp, string][] = [
-  [/^Console\./, 'writes to the console'],
-  [/^(File|Directory|Path|FileInfo|DirectoryInfo|StreamWriter|StreamReader)\b/, 'uses the file system'],
-  [/(HttpClient|\b_?http\w*\.)|\.(GetAsync|PostAsync|PutAsync|DeleteAsync|SendAsync|GetStringAsync|GetFromJsonAsync|PostAsJsonAsync)$/i, 'makes a network request'],
-  [/\.SaveChanges(Async)?$/, 'saves to the database'],
-  [/^(Task\.Delay|Thread\.Sleep)$/, 'waits'],
-  [/^(DateTime\.(Now|UtcNow|Today)|DateTimeOffset\.(Now|UtcNow)|Stopwatch\.)/, 'reads the current time'],
-  [/^(Random|Guid\.NewGuid)/, 'produces random values'],
-  [/^Environment\./, 'reads the environment'],
-  [/^Process\.Start$/, 'runs another program'],
-  [/^(Debug|Trace)\.|\.(LogInformation|LogWarning|LogError|LogDebug|LogTrace|LogCritical|Log)$/, 'writes to the log'],
+const BUILT_INS: [RegExp, string, CSharpEffectKind][] = [
+  [/^Console\./, 'writes to the console', 'io'],
+  [/^(File|Directory|Path|FileInfo|DirectoryInfo|StreamWriter|StreamReader)\b/, 'uses the file system', 'io'],
+  [/(HttpClient|\b_?http\w*\.)|\.(GetAsync|PostAsync|PutAsync|DeleteAsync|SendAsync|GetStringAsync|GetFromJsonAsync|PostAsJsonAsync)$/i, 'makes a network request', 'io'],
+  [/\.SaveChanges(Async)?$/, 'saves to the database', 'io'],
+  [/^(Task\.Delay|Thread\.Sleep)$/, 'waits', 'timer'],
+  [/^(DateTime\.(Now|UtcNow|Today)|DateTimeOffset\.(Now|UtcNow)|Stopwatch\.)/, 'reads the current time', 'nondeterministic'],
+  [/^(Random|Guid\.NewGuid)/, 'produces random values', 'nondeterministic'],
+  [/^Environment\./, 'reads the environment', 'global'],
+  [/^Process\.Start$/, 'runs another program', 'io'],
+  [/^(Debug|Trace)\.|\.(LogInformation|LogWarning|LogError|LogDebug|LogTrace|LogCritical|Log)$/, 'writes to the log', 'io'],
 ];
 
 /** Methods that change the collection they are called on. */
 const CHANGING = new Set(['Add', 'AddRange', 'Insert', 'InsertRange', 'Remove', 'RemoveAt', 'RemoveAll', 'RemoveRange', 'Clear', 'Push', 'Pop', 'Enqueue', 'Dequeue', 'Sort', 'Reverse', 'TryAdd', 'TryRemove', 'Append']);
 
-function effectsOf(fn: SyntaxNode, body: SyntaxNode | undefined): string[] {
-  if (!body) return [];
+/** One side effect a method has in its own code, where it happens. */
+export interface CSharpEffect {
+  kind: CSharpEffectKind;
+  /** "changes attempts (++)", "writes to the console". */
+  text: string;
+  /** What is changed or used: "attempts", "items", "Console.WriteLine". */
+  target: string;
+  node: SyntaxNode;
+}
+
+/** A call the method makes: to follow into the method it names, or to list as "called for what it does". */
+export interface CSharpCall {
+  /** The callee as written, without spaces: "SaveAsync", "cart.Price". */
+  text: string;
+  /** The method's own name: "SaveAsync", "Price". */
+  method: string;
+  /** What it is called on, when written: "cart", "this". */
+  receiver?: SyntaxNode;
+  node: SyntaxNode;
+  /** Its result is not used: it is called for what it does. */
+  forEffect: boolean;
+}
+
+/**
+ * The side effects in a method's own code: assignments and ++/-- to what it does not own (fields, `this`, an
+ * argument's members), changing calls on collections it does not own, and .NET calls that reach outside the program;
+ * plus every other call it makes, for following them.
+ */
+export function csharpEffects(fn: SyntaxNode): { effects: CSharpEffect[]; calls: CSharpCall[]; parameters: string[]; locals: Set<string> } {
+  const body = bodyOf(fn);
+  if (!body) return { effects: [], calls: [], parameters: [], locals: new Set() };
   // What the function owns: its parameters and the variables it declares.
   const locals = new Set<string>();
-  const parameters = new Set(inputsOf(fn).map((i) => i.name));
+  const parameterList = inputsOf(fn).map((i) => i.name);
+  const parameters = new Set(parameterList);
   for (const d of body.descendantsOfType(['variable_declarator', 'foreach_statement', 'catch_declaration', 'declaration_expression'])) {
     const id = d?.childForFieldName('name') ?? d?.namedChildren.find((c) => c?.type === 'identifier');
     if (id) locals.add(id.text);
   }
-  const out: string[] = [];
-  const say = (what: string) => {
-    if (!out.includes(what)) out.push(what);
-  };
-  /** The root of `a.b.c` (or `this`), and whether the function does not own it. */
+  const effects: CSharpEffect[] = [];
+  const calls: CSharpCall[] = [];
+  /** Whether the function does not own the root of `a.b.c` (or `this`). */
   const outside = (target: SyntaxNode): boolean => {
     let root: SyntaxNode = target;
     while (root.type === 'member_access_expression' || root.type === 'element_access_expression') root = root.childForFieldName('expression') ?? root.namedChildren[0]!;
@@ -215,7 +246,13 @@ function effectsOf(fn: SyntaxNode, body: SyntaxNode | undefined): string[] {
     if (parameters.has(root.text)) return target.id !== root.id; // a parameter's member: the caller's object
     return !locals.has(root.text);
   };
-  const calls: string[] = [];
+  /** An argument's member, the instance's own state, or another type's (`Settings.Current`, by its capital). */
+  const whose = (target: SyntaxNode): CSharpEffectKind => {
+    const root = rootName(target);
+    if (parameters.has(root)) return 'mutates-parameter';
+    if (root === 'this' || target.type === 'identifier' || !/^[A-Z]/.test(root)) return 'mutates-this';
+    return 'mutates-other';
+  };
   const visit = (n: SyntaxNode) => {
     if (n.id !== fn.id && (n.type === 'lambda_expression' || n.type === 'local_function_statement')) {
       for (const c of n.namedChildren) if (c) visit(c);
@@ -223,48 +260,54 @@ function effectsOf(fn: SyntaxNode, body: SyntaxNode | undefined): string[] {
     }
     if (n.type === 'assignment_expression') {
       const left = n.childForFieldName('left') ?? n.namedChildren[0];
-      if (left && outside(left)) say(`changes ${oneLine(left.text, 40)}${parameters.has(rootName(left)) ? ' (an argument)' : ''}`);
+      if (left && outside(left)) effects.push({ kind: whose(left), text: `changes ${oneLine(left.text, 40)}${parameters.has(rootName(left)) ? ' (an argument)' : ''}`, target: oneLine(left.text, 40), node: n });
     }
     if ((n.type === 'postfix_unary_expression' || n.type === 'prefix_unary_expression') && /\+\+|--/.test(n.text)) {
       const operand = n.namedChildren[0];
-      if (operand && outside(operand)) say(`changes ${oneLine(operand.text, 40)} (${/\+\+/.test(n.text) ? '++' : '--'})`);
+      if (operand && outside(operand)) effects.push({ kind: whose(operand), text: `changes ${oneLine(operand.text, 40)} (${/\+\+/.test(n.text) ? '++' : '--'})`, target: oneLine(operand.text, 40), node: n });
     }
     if (n.type === 'invocation_expression') {
       const callee = n.childForFieldName('function') ?? n.namedChildren[0];
       const text = callee ? callee.text.replace(/\s+/g, '') : '';
       const builtIn = BUILT_INS.find(([pattern]) => pattern.test(text));
-      if (builtIn) say(builtIn[1]);
-      else if (callee?.type === 'member_access_expression') {
-        const method = callee.childForFieldName('name')?.text ?? '';
-        const receiver = callee.childForFieldName('expression');
-        if (CHANGING.has(method) && receiver && outside(receiver)) say(`changes ${oneLine(receiver.text, 40)} (${method})`);
-      }
+      const named = callee?.type === 'member_access_expression' ? callee.childForFieldName('name') : callee;
+      const method = (named?.type === 'generic_name' ? named.namedChildren[0]?.text : named?.text) ?? '';
+      const receiver = callee?.type === 'member_access_expression' ? (callee.childForFieldName('expression') ?? undefined) : undefined;
+      const changing = !!receiver && CHANGING.has(method);
+      if (builtIn) effects.push({ kind: builtIn[2], text: builtIn[1], target: text, node: n });
+      else if (changing && outside(receiver!)) effects.push({ kind: whose(receiver!), text: `changes ${oneLine(receiver!.text, 40)} (${method})`, target: oneLine(receiver!.text, 40), node: n });
       // Called for what it does: its result unused.
       const statement = n.parent?.type === 'await_expression' ? n.parent.parent : n.parent;
-      if (!builtIn && statement?.type === 'expression_statement' && !(callee?.type === 'member_access_expression' && CHANGING.has(callee.childForFieldName('name')?.text ?? '')) && text.length <= 40) {
-        if (!calls.includes(`${text}()`)) calls.push(`${text}()`);
-      }
+      if (!builtIn && !changing && callee) calls.push({ text, method: method.replace(/^@/, ''), ...(receiver ? { receiver } : {}), node: n, forEffect: statement?.type === 'expression_statement' });
     }
     for (const c of n.namedChildren) if (c) visit(c);
   };
   visit(body);
-  const listed = out.slice(0, calls.length ? 7 : 8);
-  if (calls.length) {
-    const shown = calls.length > 3 ? [...calls.slice(0, 3), `${calls.length - 3} more`] : calls;
+  return { effects, calls, parameters: parameterList, locals };
+}
+
+/** The effects for Explain this code: each once, in plain words, then the calls made for what they do. */
+function effectsOf(fn: SyntaxNode): string[] {
+  const { effects, calls } = csharpEffects(fn);
+  const out = [...new Set(effects.map((e) => e.text))];
+  const named = [...new Set(calls.filter((c) => c.forEffect && c.text.length <= 40).map((c) => `${c.text}()`))];
+  const listed = out.slice(0, named.length ? 7 : 8);
+  if (named.length) {
+    const shown = named.length > 3 ? [...named.slice(0, 3), `${named.length - 3} more`] : named;
     const list = shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}` : shown[0];
-    listed.push(`calls ${list} for what ${calls.length > 1 ? 'they do' : 'it does'}, which may change things`);
+    listed.push(`calls ${list} for what ${named.length > 1 ? 'they do' : 'it does'}, which may change things`);
   }
   return listed;
 }
 
-function rootName(target: SyntaxNode): string {
+export function rootName(target: SyntaxNode): string {
   let root: SyntaxNode = target;
   while (root.type === 'member_access_expression' || root.type === 'element_access_expression') root = root.childForFieldName('expression') ?? root.namedChildren[0]!;
   return root.text;
 }
 
 function factsOf(fn: SyntaxNode, body: SyntaxNode | undefined): FunctionFacts {
-  return { inputs: inputsOf(fn), output: outputOf(fn, body), effects: effectsOf(fn, body) };
+  return { inputs: inputsOf(fn), output: outputOf(fn, body), effects: effectsOf(fn) };
 }
 
 const listWords = (items: string[]) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);

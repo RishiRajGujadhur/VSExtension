@@ -42,6 +42,7 @@ export const otherLanguages: Record<string, OtherLanguage> = {
       'tsStructure.typeHierarchy',
       'tsStructure.overrideImpact',
       'tsStructure.whoImports',
+      'tsStructure.sideEffects',
       'tsStructure.gitReel',
     ],
     exactWithServer: ['tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.typeHierarchy'],

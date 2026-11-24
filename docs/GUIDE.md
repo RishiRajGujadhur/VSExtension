@@ -423,6 +423,7 @@ The charts work in C# files as well, from the bundled parser (names matched as t
 - **Family tree** and **Callers and calls**: from the C# extension when it answers, otherwise by name: base types and interfaces, subtypes, members; callers and callees a few levels each way, library calls marked.
 - **Override reach**: what the member overrides or implements, its overrides (and `new` members hiding it) in subtypes, and its call sites.
 - **Who imports this**: the files using the file's namespace (a `using` or the same namespace) and naming its types.
+- **Side effects**: what the method changes outside itself (fields and `this`, an argument's members, other types' static state, collections it does not own through `Add`, `Remove`, `Clear`…) and what it reaches beyond the program (the console, files, the network, the database, the log, waiting, the time, random values, the environment), in its own code and through the methods it calls in the workspace (followed by name, a few levels deep), each marked *after await* or *in a loop* where it is, with a **By call** group of the methods that bring effects in. Calls made for what they do that lead to no method in the workspace are listed as not followed. The rules are the ones Explain this code uses for *Changes outside itself*.
 
 ![The data flow chart of a C# variable: where its values come from and where they go](images/csharp-chart-dataflow.gif)
 

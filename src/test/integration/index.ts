@@ -859,6 +859,14 @@ async function csharpExplainAndDataFlow(): Promise<void> {
     assert.equal(charted?.kind, 'dataFlow');
     assert.ok(await tabLabelled((label) => label.startsWith('Data flow')), 'the C# data flow chart opens');
     console.log('csharp data flow ok');
+
+    // Side effects, from the same rules as Explain, followed into the methods it calls.
+    await select('var amount');
+    const effects = await vscode.commands.executeCommand<Report>('tsStructure.sideEffects');
+    assert.equal(effects?.kind, 'sideEffects', 'C# side effects report');
+    assert.equal(effects!.title, 'Side effects of OrderService.PlaceOrderAsync');
+    assert.deepEqual(effects!.roots.map((r) => r.label).slice(1), ['Mutates the instance', 'Input/output', 'Waits', 'By call']);
+    console.log('csharp side effects ok');
   } finally {
     await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

@@ -1,6 +1,7 @@
 import ts = require('typescript');
 import { csharpArguments, csharpDataFlow, csharpErrorPaths, csharpOverrideReach, csharpTaskErrors, csharpVariableChanges, csharpWhoImports } from '../csharp/charts';
 import { onWorkspace } from '../csharp/workspace';
+import { csharpSideEffects } from '../csharp/effects';
 import { NoLanguageServer, csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
 import { tsqlCallGraphReport, tsqlUsagesReport } from '../tsql/workspace';
 import { bundleWeightReport } from '../navigate/bundleWeight';
@@ -799,7 +800,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
         await view.rerun();
       }
     }),
-    editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset)),
+    editorCommand('tsStructure.sideEffects', 'Side effects', (t) => sideEffectReport(t.project().program(), t.fileName, t.offset), { csharp: onWorkspace(csharpSideEffects) }),
     // Graphs: drawn as a chart as soon as they are ready (see extension.ts).
     editorCommand(
       'tsStructure.callGraph',
