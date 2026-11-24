@@ -24,20 +24,20 @@ interface PurposeKind {
 }
 
 export const FLOW_PURPOSES: PurposeKind[] = [
-  { label: 'Checks disk', icon: 'file', code: /\b(existsSync|exists|access|accessSync|stat|statSync|lstat)\(/, meaning: 'check whether a file or folder exists on disk' },
-  { label: 'File', icon: 'file', code: /\b(readFile|writeFile|appendFile|createReadStream|createWriteStream|unlink|mkdir|rmSync|copyFile)\w*\(/, meaning: 'read, write or save a file on disk' },
-  { label: 'Network', icon: 'cloud', code: /\b(fetch|axios|apiCall|request|http\w*\.|\.(get|post|put|patch|delete)\(\s*['"`/])/i, meaning: 'send a request over the network to a server or an api' },
-  { label: 'JSON', icon: 'json', code: /\bJSON\.(stringify|parse)\(/, meaning: 'turn it into JSON text, or read it back from JSON' },
-  { label: 'Module', icon: 'package', code: /\b(require|createRequire|import)\s*\(/, meaning: 'load a module, a package or a library' },
-  { label: 'Config', icon: 'settings-gear', code: /\b(process\.env|getConfiguration|config\.|settings\.|options\.)/, meaning: 'read configuration, settings or environment variables' },
-  { label: 'Stored', icon: 'database', code: /\b(localStorage|sessionStorage|indexedDB|\.save\(|db\.|repository\.|INSERT\b|UPDATE\b)/i, meaning: 'save it in a database or in storage' },
-  { label: 'Logged', icon: 'output', code: /\b(console\.\w+|logger\.\w+|log)\(/, meaning: 'log a message for debugging' },
+  { label: 'Checks disk', icon: 'file', code: /\b(existsSync|exists|access|accessSync|stat|statSync|lstat)\(|\b(File|Directory)\.Exists\(/, meaning: 'check whether a file or folder exists on disk' },
+  { label: 'File', icon: 'file', code: /\b(readFile|writeFile|appendFile|createReadStream|createWriteStream|unlink|mkdir|rmSync|copyFile)\w*\(|\b(File|Directory)\.\w+\(|\bnew (StreamWriter|StreamReader|FileStream)\b/, meaning: 'read, write or save a file on disk' },
+  { label: 'Network', icon: 'cloud', code: /\b(fetch|axios|apiCall|request|http\w*\.|HttpClient\b|\.(get|post|put|patch|delete)\(\s*['"`/]|\.(GetAsync|PostAsync|PutAsync|DeleteAsync|SendAsync|GetStringAsync|GetFromJsonAsync|PostAsJsonAsync)\()/i, meaning: 'send a request over the network to a server or an api' },
+  { label: 'JSON', icon: 'json', code: /\bJSON\.(stringify|parse)\(|\bJsonSerializer\.(Serialize|Deserialize)\w*\(|\bJsonConvert\.\w+\(/, meaning: 'turn it into JSON text, or read it back from JSON' },
+  { label: 'Module', icon: 'package', code: /\b(require|createRequire|import)\s*\(|\bAssembly\.Load\w*\(/, meaning: 'load a module, a package or a library' },
+  { label: 'Config', icon: 'settings-gear', code: /\b(process\.env|getConfiguration|config\.|settings\.|options\.|Environment\.GetEnvironmentVariable|IConfiguration|_?configuration\[|ConfigurationManager\.)/, meaning: 'read configuration, settings or environment variables' },
+  { label: 'Stored', icon: 'database', code: /\b(localStorage|sessionStorage|indexedDB|\.save\(|db\.|repository\.|INSERT\b|UPDATE\b|SaveChanges(Async)?\(|_?context\.\w+\.(Add|Update|Remove)\()/i, meaning: 'save it in a database or in storage' },
+  { label: 'Logged', icon: 'output', code: /\b(console\.\w+|logger\.\w+|log)\(|\b(Console\.Write\w*|Debug\.Write\w*|Trace\.\w+|_?logger\.Log\w*)\(/, meaning: 'log a message for debugging' },
   { label: 'Shown', icon: 'eye', code: /\b(innerHTML|textContent|render|setState|show\w*Message|notify|alert)\b/, meaning: 'show it on the screen or in the user interface' },
-  { label: 'Error', icon: 'warning', code: /\b(throw|reject|new \w*Error)\b/, meaning: 'throw an error or reject when something fails' },
+  { label: 'Error', icon: 'warning', code: /\b(throw|reject|new \w*Error|new \w*Exception)\b/, meaning: 'throw an error or reject when something fails' },
   { label: 'Sent', icon: 'broadcast', code: /\b(emit|dispatch|postMessage|send|publish)\(/, meaning: 'send a message or an event to another part of the program' },
-  { label: 'Process', icon: 'terminal', code: /\b(spawn|exec|execFile|fork|child_process)\w*\(/, meaning: 'run another program or a shell command' },
-  { label: 'Time', icon: 'watch', code: /\b(setTimeout|setInterval|Date\.now|performance\.now)\b/, meaning: 'wait, schedule a timer or measure time' },
-  { label: 'Input', icon: 'person', code: /\b(req\.(body|query|params)|argv|prompt\(|showInputBox|event\.target\.value)\b/, meaning: 'input from the user, a form, a request or the command line' },
+  { label: 'Process', icon: 'terminal', code: /\b(spawn|exec|execFile|fork|child_process)\w*\(|\bProcess\.Start\(/, meaning: 'run another program or a shell command' },
+  { label: 'Time', icon: 'watch', code: /\b(setTimeout|setInterval|Date\.now|performance\.now|Task\.Delay|Thread\.Sleep|DateTime\.(Now|UtcNow|Today)|Stopwatch\.)\b/, meaning: 'wait, schedule a timer or measure time' },
+  { label: 'Input', icon: 'person', code: /\b(req\.(body|query|params)|argv|prompt\(|showInputBox|event\.target\.value|Console\.Read\w*|Request\.(Form|Query|Body))\b/, meaning: 'input from the user, a form, a request or the command line' },
 ];
 
 /** How close a box must be to a purpose, and ahead of the next, for the model to tag it. */

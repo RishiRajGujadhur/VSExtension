@@ -16,6 +16,8 @@ export function words(name: string): string[] {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .split(/[\s_\-.$]+/)
     .filter(Boolean)
+    // C#'s "Async" suffix says how it runs, not what it does: "SaveAsync" reads "save".
+    .filter((w, i, all) => !(w === 'Async' && i === all.length - 1 && all.length > 1))
     .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase().replace(/^IDS$/, 'IDs') : /^[A-Z]{2,}$/.test(w) ? w : w.toLowerCase()))
     .map((w) => SHORT_FORMS[w] ?? w);
 }
@@ -91,8 +93,21 @@ export function verbPhrase(name: string, asCall = false): string {
 // ---------------------------------------------------------------------------------------------------------------
 // Expressions
 
+/**
+ * C# written the way TypeScript reads it, for putting it into words: number suffixes (0.9m, 10L), "is null",
+ * "is not null", nameof(x), and "var" declarations. Code that is already TypeScript is left as it is.
+ */
+export function asTypeScript(code: string): string {
+  return code
+    .replace(/\b(\d+(?:\.\d+)?)(?:m|M|f|F|d|D|L|UL|ul|u|U)\b/g, '$1')
+    .replace(/\bis\s+not\s+null\b/g, '!== null')
+    .replace(/\bis\s+null\b/g, '=== null')
+    .replace(/\bnameof\(([\w.]+)\)/g, '"$1"')
+    .replace(/^(\s*)var\s+/, '$1const ');
+}
+
 function parseExpression(code: string): ts.Expression | undefined {
-  const source = ts.createSourceFile('x.ts', `(${code.trim().replace(/;$/, '')});`, ts.ScriptTarget.Latest, true);
+  const source = ts.createSourceFile('x.ts', `(${asTypeScript(code).trim().replace(/;$/, '')});`, ts.ScriptTarget.Latest, true);
   const statement = source.statements[0];
   if (!statement || !ts.isExpressionStatement(statement)) return undefined;
   // A parse error means this is not an expression TypeScript can read (SQL, say).
@@ -323,7 +338,16 @@ function callCondition(call: ts.CallExpression): string {
   const method = name.split('.').pop() ?? '';
   const owner = ts.isPropertyAccessExpression(call.expression) ? exprWords(call.expression.expression) : 'it';
   const arg = call.arguments[0] ? exprWords(call.arguments[0]) : '';
-  switch (method) {
+  // C#'s string tests: string.IsNullOrEmpty(name), string.IsNullOrWhiteSpace(name).
+  if (/^string\.IsNullOr(Empty|WhiteSpace)$/i.test(name) && arg) return `${arg} ${be(arg)} empty${/WhiteSpace/.test(name) ? ' or blank' : ''}`;
+  switch (method.charAt(0).toLowerCase() + method.slice(1)) {
+    case 'contains':
+    case 'containsKey':
+      return `${owner} contains ${arg}`;
+    case 'any':
+      return arg ? `some of ${owner} match` : `there are ${owner.replace(/^the /, '')}`;
+    case 'all':
+      return `all of ${owner} match`;
     case 'isNaN':
       return `${arg} is not a number`;
     case 'includes':
@@ -375,6 +399,25 @@ const eventName = (arg: string | undefined): string => {
 /** Well-known calls, by how they end, and what they do. */
 const KNOWN: [RegExp, string | ((args: string[], raw: string[]) => string)][] = [
   [/^(fs\.)?(promises\.)?(readFile|readFileSync)$/, 'reads a file'],
+  // C# and .NET.
+  [/^Console\.(Write|WriteLine)$/, 'prints a message'],
+  [/^Console\.(ReadLine|ReadKey|Read)$/, 'reads what the user types'],
+  [/^File\.(ReadAll\w*|Open\w*|ReadLines)(Async)?$/, 'reads a file'],
+  [/^File\.(WriteAll\w*|AppendAll\w*|Create|Copy|Move)(Async)?$/, 'writes a file'],
+  [/^File\.Delete$/, 'deletes a file'],
+  [/^(File|Directory)\.Exists$/, 'checks the file'],
+  [/^Directory\.CreateDirectory$/, 'creates a folder'],
+  [/(?:^|\.)SaveChanges(Async)?$/, 'saves the changes to the database'],
+  [/(?:^|\.)(GetAsync|PostAsync|PutAsync|DeleteAsync|SendAsync|GetStringAsync|GetFromJsonAsync|PostAsJsonAsync)$/, 'makes a request'],
+  [/^(Task\.Delay|Thread\.Sleep)$/, 'waits a moment'],
+  [/^Task\.WhenAll$/, 'runs them together'],
+  [/^(JsonSerializer\.Serialize|JsonConvert\.SerializeObject)$/, 'turns it into JSON'],
+  [/^(JsonSerializer\.Deserialize|JsonConvert\.DeserializeObject)$/, 'reads the JSON'],
+  [/(?:^|\.)(LogInformation|LogWarning|LogError|LogDebug|LogTrace|LogCritical)$|^Debug\.(WriteLine|Write)$|^Trace\.\w+$/, 'logs a message'],
+  [/^Process\.Start$/, 'runs another program'],
+  [/(?:^|\.)(AddRange|Insert)$/, 'adds to the list'],
+  [/(?:^|\.)(RemoveAt|RemoveAll|Clear)$/, 'removes from the list'],
+  [/(?:^|\.)(Dispose|DisposeAsync)$/, 'cleans up'],
   [/^(fs\.)?(promises\.)?(writeFile|writeFileSync|appendFile|appendFileSync)$/, 'writes a file'],
   [/^(fs\.)?(promises\.)?(mkdir|mkdirSync)$/, 'creates a folder'],
   [/^(fs\.)?(promises\.)?(rm|rmSync|unlink|unlinkSync)$/, 'deletes a file'],
@@ -451,7 +494,7 @@ export function callPhrase(code: string): string | undefined {
   const args = call.arguments.map((a) => exprWords(a));
   const raw = call.arguments.map((a) => a.getText());
   for (const [pattern, phrase] of KNOWN) if (pattern.test(name)) return typeof phrase === 'string' ? phrase : phrase(args, raw);
-  const method = name.split('.').pop()!;
+  const method = name.split('.').pop()!.replace(/(.)Async$/, '$1');
   // React state setters, by what the state becomes: "setFeature(undefined)" → "clears the feature".
   const setter = /^set([A-Z]\w*)$/.exec(method);
   if (setter && call.arguments.length === 1) return settingPhrase(setter[1], call.arguments[0].getText());
@@ -459,6 +502,8 @@ export function callPhrase(code: string): string | undefined {
   const receiver = ts.isPropertyAccessExpression(call.expression) ? call.expression.expression : undefined;
   const verb = words(method);
   if (receiver && verb.length === 1 && isVerb(verb[0].toLowerCase()) && !call.arguments.length && receiver.kind !== ts.SyntaxKind.ThisKeyword) return `${third(verb[0].toLowerCase())} ${exprWords(receiver)}`;
+  // "cart.Price()" → "gets the price of the cart": a noun called on an object, with nothing passed.
+  if (receiver && verb.length && !isVerb(verb[0].toLowerCase()) && !call.arguments.length && receiver.kind !== ts.SyntaxKind.ThisKeyword && /^[A-Za-z]/.test(method)) return `gets the ${verb.join(' ').toLowerCase()} of ${exprWords(receiver)}`;
   const phrase = verbPhrase(method, true);
   // "saves the user": the first argument as the object, when the name has none.
   if (words(method).length === 1 && args[0] && !phrase.includes(' the ')) return `${phrase} ${args[0]}`;
@@ -513,7 +558,7 @@ export function exitPhrase(code: string, kind: string): string {
  * depending on whether …"; "const data = await load()" → "loads the data". Undefined when it is not a declaration.
  */
 export function declarationPhrase(line: string): string | undefined {
-  const source = ts.createSourceFile('x.tsx', line.trim(), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const source = ts.createSourceFile('x.tsx', asTypeScript(line.trim()), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const statement = source.statements[0];
   if (!statement || !ts.isVariableStatement(statement)) return undefined;
   const d = statement.declarationList.declarations[0];

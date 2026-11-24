@@ -25,6 +25,8 @@ export const otherLanguages: Record<string, OtherLanguage> = {
   csharp: {
     name: 'C#',
     commands: [
+      'tsStructure.explainCode',
+      'tsStructure.explainCode.video',
       'tsStructure.controlFlow',
       'tsStructure.controlFlowCompare',
       'tsStructure.dependenceGraph',
@@ -40,12 +42,13 @@ export const otherLanguages: Record<string, OtherLanguage> = {
       'tsStructure.typeHierarchy',
       'tsStructure.overrideImpact',
       'tsStructure.whoImports',
+      'tsStructure.gitReel',
     ],
     exactWithServer: ['tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.typeHierarchy'],
   },
   sql: {
     name: 'T-SQL',
-    commands: ['tsStructure.controlFlow', 'tsStructure.controlFlowCompare', 'tsStructure.dependenceGraph', 'tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph'],
+    commands: ['tsStructure.explainCode', 'tsStructure.explainCode.video', 'tsStructure.controlFlow', 'tsStructure.controlFlowCompare', 'tsStructure.dependenceGraph', 'tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.gitReel'],
   },
 };
 

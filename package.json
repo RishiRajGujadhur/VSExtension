@@ -2,7 +2,7 @@
   "name": "ts-test-impact",
   "displayName": "Code X-Ray",
   "description": "Explain code in plain words, see data flow and flowcharts, find usages and affected tests, and turn Git changes into narrated videos. For TypeScript, JavaScript, React, C# and T-SQL. Runs on your computer: exact analyses from the compiler, nothing uploaded. Optional local models (a Kitten TTS voice, all-MiniLM-L6-v2) download only if you agree.",
-  "version": "0.102.0",
+  "version": "0.103.0",
   "publisher": "RishiGujadhur",
   "license": "MIT",
   "repository": {

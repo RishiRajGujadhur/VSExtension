@@ -260,7 +260,7 @@ function fitForSelection(editor: vscode.TextEditor): SelectionFit | undefined {
   const explain = 'tsStructure.explainCode';
   if (other) {
     const fit = otherLanguageSelectionFit(document.getText(), start, end, other.commands);
-    return fit && { ...fit, commands: [explain, ...fit.commands].filter(enabled) };
+    return fit && { ...fit, commands: [...new Set([explain, ...fit.commands])].filter(enabled) };
   }
   if (vscode.languages.match(languageSelector, document) === 0) return undefined;
   const fit = selectionFit(parse(document), start, end, fittingSymbol);

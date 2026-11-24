@@ -564,7 +564,8 @@ function conditionIn(line: string): string | undefined {
   }
   return undefined;
 }
-const stripIf = (code: string) => conditionIn(code.trim()) ?? (code.replace(/^(?:}\s*else\s+)?(?:if|while)\s*\(?/, '').replace(/\)\s*\{?\s*$/, '').trim() || code);
+/** A condition without its if or while: only a line that starts with one loses its keyword and closing bracket. */
+const stripIf = (code: string) => conditionIn(code.trim()) ?? (/^(?:}\s*else\s+)?(?:if|while)\b/.test(code.trim()) ? code.replace(/^\s*(?:}\s*else\s+)?(?:if|while)\s*\(?/, '').replace(/\)\s*\{?\s*$/, '').trim() || code : code.trim());
 /** A line that is only a comment: a line comment, a block comment line, or -- in SQL. */
 const isComment = (line: string) => /^\s*(\/\/|\/\*|\*|--)/.test(line);
 const firstAction = (code: string) => actionsIn(code)[0];

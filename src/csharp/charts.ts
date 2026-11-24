@@ -118,6 +118,7 @@ export async function csharpDataFlow(sources: CSharpSource[], file: string, offs
     const scopes: { f: Parsed; root: SyntaxNode }[] = local ? [{ f, root: fn! }] : files.map((x) => ({ f: x, root: x.tree.rootNode }));
     const flowsIn: ReportNode[] = [];
     const flowsOut: ReportNode[] = [];
+    const seenOut = new Set<string>();
     for (const { f: file, root } of scopes) {
       for (const n of all(root, 'identifier')) {
         if (n.text !== name) continue;
@@ -200,6 +201,10 @@ export async function csharpDataFlow(sources: CSharpSource[], file: string, offs
           }
           if (p.type.endsWith('_statement')) break;
         }
+        // The name twice in one place (attempts == attempts) is one place the value goes.
+        const key = `${label}|${what}|${place(file, n)}`;
+        if (seenOut.has(key)) continue;
+        seenOut.add(key);
         flowsOut.push(row(label, what, 'read', icon));
       }
     }

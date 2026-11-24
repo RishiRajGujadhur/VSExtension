@@ -3,6 +3,7 @@ import ts = require('typescript');
 import { standaloneCharts, standaloneProgram } from '../inspect/controlFlowChart';
 import { FunctionFacts, functionFacts } from './functionFacts';
 import { csharpFlowChart } from '../csharp/flow';
+import { csharpHighlight } from '../csharp/explainTarget';
 import { tsqlFlowChart } from '../tsql/flow';
 import { isFunctionWithBody } from '../structure/util';
 import { explainFunctionWalk, explainLines } from '../reel/describe';
@@ -28,6 +29,8 @@ export interface CodeExplanation {
   steps: string[];
   /** For a whole function: what it takes, what it gives back and what it changes outside itself. */
   facts?: FunctionFacts;
+  /** A name highlighted where it is called, declared outside this file: the caller looks for its declaration. */
+  lookup?: string;
   /** For a whole function: its flowchart and the boxes each step is about, for the explanation video. */
   walk?: { name: string; chart: ControlFlowChart; nodes: number[][]; /** Its first line, up to the body: "async function poll(currentGeneration: number)". */ signature?: string };
 }
@@ -45,10 +48,17 @@ export async function explainCode(file: string, text: string, start: number, end
   const ext = path.extname(file).toLowerCase();
   const selected = text.slice(start, end);
   const lines = selected.split('\n');
-  if (ext === '.cs' || ext === '.sql') {
+  if (ext === '.cs') {
+    try {
+      return await explainCSharp(file, text, start, end, lines, understand);
+    } catch {
+      return withPurpose({ subject: 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
+    }
+  }
+  if (ext === '.sql') {
     try {
       const at = start + (selected.length - selected.trimStart().length);
-      const chart = ext === '.cs' ? await csharpFlowChart(text, file, at) : tsqlFlowChart(text, file, at);
+      const chart = tsqlFlowChart(text, file, at);
       const name = chart.name.replace(/\(\)$/, '');
       return withPurpose(fromChart(`${name}()`, name, chart, undefined, oneLine(lines.find((l) => l.trim()) ?? '')), name, file, lines, understand);
     } catch {
@@ -73,6 +83,23 @@ export async function explainCode(file: string, text: string, start: number, end
     return withPurpose({ ...explained, facts: functionFacts(fn, source, parsed.checker) }, name, file, body, understand);
   }
   return withPurpose({ subject: name ? `the highlighted lines in ${name}()` : 'the highlighted lines', steps: explainLines(lines) }, undefined, file, lines, understand);
+}
+
+/**
+ * C#, from the bundled parser: a method's name (declared or called), its header or most of it is the whole method,
+ * with its signature, what it takes, gives back and changes, and its steps on its flowchart; other highlights are
+ * those lines. A name called here but declared in no function of this file is looked up elsewhere by the caller.
+ */
+async function explainCSharp(file: string, text: string, start: number, end: number, lines: string[], understand?: Understand): Promise<CodeExplanation> {
+  const hit = await csharpHighlight(text, start, end);
+  if ('whole' in hit) {
+    const t = hit.whole;
+    const chart = await csharpFlowChart(text, file, t.offset);
+    const explained = fromChart(`the ${t.kind} ${t.name}()`, t.name, chart, t.summary, t.head);
+    return withPurpose({ ...explained, facts: t.facts }, t.name, file, t.lines, understand);
+  }
+  const subject = 'within' in hit && hit.within ? `the highlighted lines in ${hit.within.replace(/^.*\./, '')}()` : 'the highlighted lines';
+  return withPurpose({ subject, steps: explainLines(lines), ...('elsewhere' in hit ? { lookup: hit.elsewhere } : {}) }, undefined, file, lines, understand);
 }
 
 /** What it is for: the rules first; the code model when they cannot tell and it is there. */

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { csharpDeclarationOf } from '../csharp/explainTarget';
 import { CodeExplanation, explainCode } from '../explain/explainCode';
 import type { ReelPanel } from '../reel/reelPanel';
 import { CODE_MODEL, MODEL_RUNTIME, downloadDisclosure } from '../reel/codeModelText';
@@ -49,6 +50,11 @@ export class ExplainCodeView {
       const elsewhere = await this.definitionOf(document, range.start.translate(0, document.getText(range).length - document.getText(range).trimStart().length), understand);
       if (elsewhere) ({ explanation, file } = elsewhere);
     }
+    // C# without a language server to ask: the method of that name in the workspace's .cs files, from the parser.
+    if (!explanation.walk && explanation.lookup && path.extname(document.fileName).toLowerCase() === '.cs') {
+      const found = await this.csharpDeclaration(explanation.lookup, document.fileName, understand);
+      if (found) ({ explanation, file } = found);
+    }
     this.last = explanation;
     this.lastFile = file;
     this.show(explanation, !!understand);
@@ -70,6 +76,25 @@ export class ExplainCodeView {
       }
     } catch {
       // No definition to go to: the highlight is explained as it is.
+    }
+    return undefined;
+  }
+
+  /** The C# method named so in another of the workspace's .cs files (build output left out), explained. */
+  private async csharpDeclaration(name: string, from: string, understand: ((texts: string[]) => Promise<Float32Array[]>) | undefined): Promise<{ explanation: CodeExplanation; file: string } | undefined> {
+    const files = await vscode.workspace.findFiles('**/*.cs', '{**/bin/**,**/obj/**,**/node_modules/**}', 3000);
+    for (const uri of files) {
+      if (uri.fsPath === from) continue;
+      let text: string;
+      try {
+        text = fs.readFileSync(uri.fsPath, 'utf8');
+      } catch {
+        continue;
+      }
+      const at = await csharpDeclarationOf(text, name);
+      if (at === undefined) continue;
+      const explanation = await explainCode(uri.fsPath, text, at, at + name.length, understand);
+      if (explanation.walk) return { explanation, file: uri.fsPath };
     }
     return undefined;
   }
@@ -142,7 +167,7 @@ export class ExplainCodeView {
   }
 
   private show(explanation: CodeExplanation, withModel: boolean): void {
-    const title = `Explain: ${explanation.subject.replace(/^the (function|highlighted lines in) /, '')}`;
+    const title = `Explain: ${explanation.subject.replace(/^the (function|method|constructor|local function|property|lambda|highlighted lines in) /, '')}`;
     if (!this.panel) {
       this.panel = vscode.window.createWebviewPanel('tsStructure.explainCode', title, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: false, enableCommandUris: ['tsStructure.explainCode.video'], localResourceRoots: webviewRoots(this.extensionUri) });
       this.panel.onDidDispose(() => (this.panel = undefined));

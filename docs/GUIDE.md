@@ -426,6 +426,8 @@ The charts work in C# files as well, from the bundled parser (names matched as t
 
 ![The data flow chart of a C# variable: where its values come from and where they go](images/csharp-chart-dataflow.gif)
 
+**Explain this code** works in C# from the same parser: a method's name where it is declared or called (a call to a method in another file is found in the workspace's `.cs` files, or by the C# extension's Go to Definition), its header or most of it explains the whole method: its signature (*PlaceOrderAsync is an async method that takes the customer and the coupon and returns a decimal, once it finishes*), what it is for, what it takes (types, defaults, `params`, `ref` and `out`), what it gives back (`Task<T>` read as T, later) and what it changes outside itself (fields, collections it owns, the console, files, the network, the database, the time), then its steps (`string.IsNullOrWhiteSpace(customer)` reads *the customer is empty or blank*). **Generate video** works for C# methods too, and so does the Git reel. The code model's purpose pills in charts know .NET's APIs (`File.*`, `HttpClient`, `SaveChanges`, `Console.WriteLine`, `Task.Delay`…).
+
 Why this import… (a chain of imports between two files) and React state are TypeScript and JavaScript only.
 
 In a C# or T-SQL file, **Analyze or Refactor This…** lists the actions that work there, and an action that is TypeScript and JavaScript only (Data flow, Null checks…) says so and offers those instead of looking for a TypeScript file. All Code X-Ray shortcuts work in C# and T-SQL editors for that reason. The demo project has a C# sample to try them on: `docs/demo/csharp/OrderService.cs`.

@@ -43,7 +43,7 @@ Code: `src/explain/explainCode.ts`, `src/explain/functionFacts.ts`, `src/reel/de
 | Nothing highlighted | The line at the cursor, which explains a function if that line starts one |
 | Anything else | Those lines only (`explainLines`) |
 
-C# and T-SQL go through their own parsers (`csharpFlowChart`, `tsqlFlowChart`). If the parser cannot chart the code, the lines are explained instead.
+**C#** goes through the bundled parser (`src/csharp/explainTarget.ts`): the same rules choose a whole method (its name declared or called, its header, most of it), a name declared in no method of the file is looked up in the workspace's `.cs` files (`csharpDeclarationOf`) or through Go to Definition, and its summary, Takes / Gives back / Changes come from the syntax tree (fields and `this` members written, collections it owns changed by `Add`, `Remove`…, .NET APIs such as `Console`, `File`, `HttpClient`, `SaveChanges`, `Task.Delay`, `DateTime.Now`, and calls made for what they do). C# code is read for words through `asTypeScript` (`src/reel/words.ts`), which turns `0.9m`, `is null`, `nameof(x)` and `var` into what TypeScript's parser reads, and the call and condition rules know .NET's names (`string.IsNullOrWhiteSpace`, `StartsWith`, `Any`, `Contains`, the `Async` suffix). **T-SQL** goes through `tsqlFlowChart`. If a parser cannot chart the code, the lines are explained instead.
 
 TypeScript and JavaScript files are parsed on their own with `standaloneProgram`: no project, no library. So explaining is instant and never waits for the project to load. The one exception is the Go to Definition lookup above.
 

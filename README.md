@@ -91,7 +91,7 @@ Inspections underline missing `await`s, unused exports, copied code and more (`C
 
 ![The flowchart of a C# method, with its paths](docs/images/csharp-flowchart.gif)
 
-- **C#**: Flowchart, What depends on what, Data flow and its chart, Error paths, Promise rejections, Changes to a variable, Family tree and inspections (empty `catch`, `throw ex`, `async void`…), with a bundled parser. Find usages, Callers and calls and Family tree use the C# extension when it is installed.
+- **C#**: Explain this code (a method's name where it is declared or called, with what it takes, gives back and changes) and its video, Git reel, Flowchart, What depends on what, Data flow and its chart (with the code model's purpose pills), Error paths, Promise rejections, Changes to a variable, Family tree and inspections (empty `catch`, `throw ex`, `async void`…), with a bundled parser. Find usages, Callers and calls and Family tree use the C# extension when it is installed.
 - **T-SQL**: Flowcharts of procedures, functions and triggers (`IF`, `WHILE`, `TRY`/`CATCH`, `GOTO`), Find usages of tables, columns and `@variables`, Callers and calls, and inspections (`UPDATE` without `WHERE`, `= NULL`, `SELECT *`…). No database connection needed.
 
 ## Settings

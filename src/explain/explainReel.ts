@@ -121,13 +121,13 @@ export function stepKind(text: string, kinds: (string | undefined)[]): { label: 
 
 /** Icons by what the code in a box does, the first that matches: a codicon name. */
 const ICONS: [RegExp, string][] = [
-  [/\b(fetch|axios|apiCall|api\.\w+|request\(|http\w*\.|\.(get|post|put|patch|delete)\(\s*['"`/])/i, 'cloud'],
+  [/\b(fetch|axios|apiCall|api\.\w+|request\(|http\w*\.|HttpClient\b|\.(get|post|put|patch|delete)\(\s*['"`/]|\.(GetAsync|PostAsync|PutAsync|DeleteAsync|SendAsync|GetStringAsync|GetFromJsonAsync|PostAsJsonAsync)\()/i, 'cloud'],
   [/\b(localStorage|sessionStorage|indexedDB|\.save\(|\.persist|db\.|repository\.|SaveChanges|INSERT\b|UPDATE\b|DELETE\s+FROM)/i, 'database'],
-  [/\b(readFile|writeFile|appendFile|existsSync|mkdir|unlink|fs\.|createReadStream|createWriteStream)/, 'file'],
+  [/\b(readFile|writeFile|appendFile|existsSync|mkdir|unlink|fs\.|createReadStream|createWriteStream)|\b(File|Directory)\.\w+\(/, 'file'],
   [/\bJSON\.(parse|stringify)/, 'json'],
   [/\b(notify|showMessageBox|showInformationMessage|showWarningMessage|showErrorMessage|alert|toast|Notification)\b/, 'bell'],
-  [/\b(console\.\w+|logger\.\w+|log\()/, 'output'],
-  [/\b(setTimeout|setInterval|clearTimeout|clearInterval|delay\(|sleep\(|wait\(|Date\.now|performance\.now)/, 'watch'],
+  [/\b(console\.\w+|logger\.\w+|log\(|Log\(|Console\.Write\w*|Debug\.Write\w*|_?logger\.Log\w*)/, 'output'],
+  [/\b(setTimeout|setInterval|clearTimeout|clearInterval|delay\(|sleep\(|wait\(|Date\.now|performance\.now|Task\.Delay|Thread\.Sleep|DateTime\.(Now|UtcNow))/, 'watch'],
   [/\.(abort|cancel)\(/, 'circle-slash'],
   [/\b(navigate|router\.(push|replace)|location\.href|redirect|openExternal)\b/, 'arrow-right'],
   [/\b(emit|dispatch|postMessage|send|publish)\(/, 'broadcast'],

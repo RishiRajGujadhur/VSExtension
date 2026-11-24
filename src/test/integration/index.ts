@@ -802,6 +802,70 @@ async function gitReelFlow(): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
+/**
+ * C# without a language server: Explain this code (a method's name where declared and where called), its video,
+ * and Data flow with its chart, all from the bundled parser, run as a person runs them (the command, no arguments).
+ */
+async function csharpExplainAndDataFlow(): Promise<void> {
+  const code = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'docs', 'demo', 'csharp', 'OrderService.cs'), 'utf8');
+  const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'src', 'OrderService.cs');
+  await vscode.workspace.fs.writeFile(uri, Buffer.from(code));
+  const reelSettings = vscode.workspace.getConfiguration('tsStructure.reel');
+  await reelSettings.update('narrationVoice', 'Off', vscode.ConfigurationTarget.Global);
+  try {
+    let document = await vscode.workspace.openTextDocument(uri);
+    if (document.languageId !== 'csharp') document = await vscode.languages.setTextDocumentLanguage(document, 'csharp');
+    const select = async (needle: string, length = needle.length, from = 0) => {
+      const editor = await vscode.window.showTextDocument(document);
+      const at = code.indexOf(needle, from);
+      editor.selection = new vscode.Selection(document.positionAt(at), document.positionAt(at + length));
+      return editor;
+    };
+    type Explained = { subject: string; summary?: string; steps: string[]; facts?: { inputs: { name: string; type?: string }[]; output: { type?: string; later: boolean }; effects: string[] }; purpose?: { text: string } };
+
+    // The method's name where it is declared: the whole method, with what it takes, gives back and changes.
+    await select('PlaceOrderAsync');
+    const placed = await vscode.commands.executeCommand<Explained>('tsStructure.explainCode');
+    assert.equal(placed?.subject, 'the method PlaceOrderAsync()', JSON.stringify(placed));
+    assert.equal(placed!.summary, 'PlaceOrderAsync is an async method that takes the customer and the coupon and returns a decimal, once it finishes.');
+    assert.deepEqual(placed!.facts!.inputs.map((i) => `${i.name}: ${i.type}`), ['customer: string', 'coupon: string?']);
+    assert.deepEqual(placed!.facts!.output, { type: 'decimal', later: true, values: ['amount'], nothing: false });
+    assert.ok(placed!.facts!.effects.includes('changes attempts (++)'), placed!.facts!.effects.join(' | '));
+    assert.equal(placed!.steps[0], 'If the customer is empty or blank, it fails with "A customer is needed".');
+    assert.ok((await tabLabelled((label) => label === 'Explain: PlaceOrderAsync()')), 'the C# explanation opens beside the editor');
+    console.log(`csharp explain ok: ${placed!.purpose?.text}; ${placed!.steps.slice(0, 3).join(' ')}`);
+
+    // As a video, in the reel's player.
+    const video = await vscode.commands.executeCommand<{ meta: { title: string; signature?: string }; scenes: { kind: string }[] }>('tsStructure.explainCode.video');
+    assert.equal(video?.meta.title, 'What PlaceOrderAsync() does');
+    assert.equal(video!.meta.signature, 'public async Task<decimal> PlaceOrderAsync(string customer, string? coupon)');
+    assert.ok(video!.scenes.filter((s) => s.kind === 'flow').length >= 3, JSON.stringify(video!.scenes.map((s) => s.kind)));
+    assert.ok(await tabLabelled((label) => label === 'Video: What PlaceOrderAsync() does'), 'the C# video opens in the player');
+    console.log(`csharp explain video ok: ${video!.scenes.length} scenes`);
+
+    // A method's name where it is called: that method.
+    await select('SaveAsync(customer', 'SaveAsync'.length);
+    const saved = await vscode.commands.executeCommand<Explained>('tsStructure.explainCode');
+    assert.equal(saved?.subject, 'the method SaveAsync()', JSON.stringify(saved));
+    console.log('csharp explain by name ok');
+
+    // Data flow and its chart, from the parser.
+    await select('amount = cart', 'amount'.length);
+    const flow = await vscode.commands.executeCommand<Report>('tsStructure.dataFlow');
+    assert.equal(flow?.kind, 'dataFlow', 'C# data flow report');
+    assert.deepEqual(flow!.roots.map((r) => r.children!.map((c) => c.label)), [['= cart.Price()', '*= 0.9m'], ['SaveAsync(… amount …)', 'return amount']]);
+    await select('amount = cart', 'amount'.length);
+    const charted = await vscode.commands.executeCommand<Report>('tsStructure.dataFlowDiagram');
+    assert.equal(charted?.kind, 'dataFlow');
+    assert.ok(await tabLabelled((label) => label.startsWith('Data flow')), 'the C# data flow chart opens');
+    console.log('csharp data flow ok');
+  } finally {
+    await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await vscode.workspace.fs.delete(uri);
+  }
+}
+
 async function csharpThroughLanguageServer(): Promise<void> {
   const code = [
     'namespace Shop {',
@@ -888,6 +952,8 @@ async function csharpThroughLanguageServer(): Promise<void> {
     assert.equal(chart?.name, 'Cart.Price', 'C# flowchart from the bundled parser');
     assert.deepEqual(chart!.nodes.map((n) => `${n.kind}: ${n.lines.join(' | ')}`), ['start: Cart.Price', 'end: end', 'statement: total = 0 | Add(1)', 'return: return total']);
     console.log('csharp flowchart ok');
+
+    await csharpExplainAndDataFlow();
 
     // Live C# inspections, from the same parser.
     const bad = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'src', 'Bad.cs');
