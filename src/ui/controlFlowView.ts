@@ -7,6 +7,7 @@ import { AnalysisError } from '../analysis/types';
 import { ProjectService } from '../analysis/project';
 import { ControlFlowChart, chartMermaid, controlFlowChart, nodeAtOffset, nodeAtPosition } from '../inspect/controlFlowChart';
 import { csharpFlowChart } from '../csharp/flow';
+import { csharpSlice } from '../csharp/values';
 import { tsqlFlowChart } from '../tsql/flow';
 import { normalizePath } from '../analysis/paths';
 import { besideChartColumn, iconButton, saveImage, webviewPage, webviewRoots } from './webviewPage';
@@ -118,6 +119,10 @@ export class ControlFlowPanel {
   /** Opens the view on the function around the cursor with the slice of the variable there lit up. */
   showSlice(editor: vscode.TextEditor, direction: 'backward' | 'forward'): void {
     const uri = editor.document.uri;
+    if (uri.fsPath.toLowerCase().endsWith('.cs')) {
+      void this.showCSharpSlice(editor, direction);
+      return;
+    }
     const folder = vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
     const offset = editor.document.offsetAt(editor.selection.active);
     try {
@@ -138,6 +143,24 @@ export class ControlFlowPanel {
       if (error instanceof AnalysisError) void offerSymbols(direction === 'backward' ? 'tsStructure.sliceBackward' : 'tsStructure.sliceForward', error, editor);
       else void showProblem(`Slice failed: ${String(error)}`, unexpectedRemedies('Slice', error));
     }
+  }
+
+  /** C#: the slice from the bundled parser's boxes; the chart is drawn in the background and sends the slice with it. */
+  private async showCSharpSlice(editor: vscode.TextEditor, direction: 'backward' | 'forward'): Promise<void> {
+    try {
+      const slice = await csharpSlice(editor.document.getText(), normalizePath(editor.document.uri.fsPath), editor.document.offsetAt(editor.selection.active), direction);
+      this.show(editor, slice.anchor);
+      this.slice = { nodes: slice.nodes, at: slice.at, direction, name: slice.name, line: slice.line };
+      this.post();
+    } catch (error) {
+      if (error instanceof AnalysisError) void showProblem(error.message, [], 'info');
+      else void showProblem(`Slice failed: ${String(error)}`, unexpectedRemedies('Slice', error));
+    }
+  }
+
+  /** For tests: the slice lit up on the chart. */
+  get currentSlice(): { nodes: number[]; at: number; direction: string; name: string; line: number } | undefined {
+    return this.slice;
   }
 
   /** The dependence layer is turned on once the page is ready. */

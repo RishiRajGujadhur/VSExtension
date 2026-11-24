@@ -99,7 +99,7 @@ export function controlDependents(cfg: FlowGraph): Map<number, Set<number>> {
   return dependents;
 }
 
-function reach(cfg: Cfg, from: number, forward: boolean): Set<number> {
+function reach(cfg: FlowGraph, from: number, forward: boolean): Set<number> {
   const next = new Map<number, number[]>();
   for (const e of cfg.edges) {
     const [a, b] = forward ? [e.from, e.to] : [e.to, e.from];
@@ -118,7 +118,7 @@ function reach(cfg: Cfg, from: number, forward: boolean): Set<number> {
   return seen;
 }
 
-export function sliceOf(cfg: Cfg, at: number, name: string, direction: 'backward' | 'forward'): number[] {
+export function sliceOf(cfg: FlowGraph, at: number, name: string, direction: 'backward' | 'forward'): number[] {
   const dependents = controlDependents(cfg);
   const controllers = new Map<number, number[]>();
   for (const [decision, set] of dependents) for (const y of set) controllers.set(y, [...(controllers.get(y) ?? []), decision]);

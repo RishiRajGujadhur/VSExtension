@@ -1,6 +1,7 @@
 import ts = require('typescript');
 import { csharpArguments, csharpDataFlow, csharpErrorPaths, csharpOverrideReach, csharpTaskErrors, csharpVariableChanges, csharpWhoImports } from '../csharp/charts';
-import { onWorkspace } from '../csharp/workspace';
+import { onFile, onWorkspace } from '../csharp/workspace';
+import { csharpExplainValue, csharpValueTimeline } from '../csharp/values';
 import { csharpSideEffects } from '../csharp/effects';
 import { csharpNullChecks } from '../csharp/nullability';
 import { NoLanguageServer, csharpCallGraphReport, csharpHierarchyReport, csharpUsagesReport } from '../csharp/languageServer';
@@ -580,8 +581,8 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     editorCommand('tsStructure.mutationTracking', 'Mutation Tracking', (t) => mutationReport(t.project().program(), t.fileName, t.offset)),
     editorCommand('tsStructure.mutationTrackingVariable', 'Mutation Tracking', (t) => variableMutationReport(t.project(), t.fileName, t.offset), { csharp: onWorkspace(csharpVariableChanges) }),
     editorCommand('tsStructure.raceConditions', 'Race Conditions', (t) => raceReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.explainValue', 'Explain Value Path', (t) => explainValueReport(t.project(), t.fileName, t.offset)),
-    editorCommand('tsStructure.valueTimeline', 'Value timeline', (t) => valueTimelineReport(t.project(), t.fileName, t.offset)),
+    editorCommand('tsStructure.explainValue', 'Explain Value Path', (t) => explainValueReport(t.project(), t.fileName, t.offset), { csharp: onFile(csharpExplainValue) }),
+    editorCommand('tsStructure.valueTimeline', 'Value timeline', (t) => valueTimelineReport(t.project(), t.fileName, t.offset), { csharp: onFile(csharpValueTimeline) }),
     editorCommand('tsStructure.asyncTimeline', 'Async timeline', (t) => asyncTimelineReport(t.project(), t.fileName, t.offset)),
     scopedCommand('tsStructure.mutationTrackingProject', 'Mutation Tracking', { id: 'mutations', kinds: projectScopes.filter((k) => k !== 'file') }, (t, scope) => {
       const program = t.project().program();

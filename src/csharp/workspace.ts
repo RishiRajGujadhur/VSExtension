@@ -26,3 +26,9 @@ export const onWorkspace =
   (analysis: (sources: CSharpSource[], file: string, offset: number) => Promise<Report>) =>
   async (document: vscode.TextDocument, position: vscode.Position): Promise<Report> =>
     analysis(await csharpSources(document), normalizePath(document.uri.fsPath), document.offsetAt(position));
+
+/** An analysis of the editor's file alone (one method's flow), at its cursor. */
+export const onFile =
+  (analysis: (code: string, file: string, offset: number) => Promise<Report>) =>
+  async (document: vscode.TextDocument, position: vscode.Position): Promise<Report> =>
+    analysis(document.getText(), normalizePath(document.uri.fsPath), document.offsetAt(position));

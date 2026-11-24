@@ -881,6 +881,30 @@ async function csharpExplainAndDataFlow(): Promise<void> {
     assert.match(nulls!.roots[0].description ?? '', /^never null here/);
     assert.equal(nulls!.roots.find((r) => r.label === 'Ruled out by')?.children?.[0].label, 'coupon != null');
     console.log('csharp null checks ok');
+
+    // Why this value, Value timeline, and the slices lit up on the C# flowchart.
+    await select('return amount', 'return amount'.length);
+    const why = await vscode.commands.executeCommand<Report>('tsStructure.explainValue');
+    assert.equal(why?.kind, 'explainValue', 'C# why this value report');
+    assert.deepEqual(why!.roots.map((r) => r.label).filter((l) => l.startsWith('= ')), ['= (cart.Price()) * 0.9m', '= cart.Price()']);
+    await select('var amount');
+    const timeline = await vscode.commands.executeCommand<Report>('tsStructure.valueTimeline');
+    assert.equal(timeline?.kind, 'valueTimeline', 'C# value timeline report');
+    assert.deepEqual(timeline!.roots.map((r) => r.label).filter((l) => /^(At the start|Every pass|After the loop)/.test(l)), ['At the start', 'Every pass of while (attempts < 3)', 'After the loop']);
+    for (const [command, needle] of [['tsStructure.sliceBackward', 'return amount'], ['tsStructure.sliceForward', 'var amount']] as const) {
+      await select(needle);
+      await vscode.commands.executeCommand(command);
+      type Shown = { current?: { name: string; nodes: { id: number; lines: string[] }[] }; slice?: { nodes: number[]; direction: string; name: string } };
+      let shown: Shown | undefined;
+      for (let i = 0; i < 50 && !(shown?.slice?.direction === (command.endsWith('Backward') ? 'backward' : 'forward') && shown.current?.name.endsWith('PlaceOrderAsync')); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        shown = await vscode.commands.executeCommand<Shown>('tsStructure.controlFlow.current');
+      }
+      assert.equal(shown?.slice?.name, 'amount', `${command} in C#`);
+      const lines = shown!.slice!.nodes.map((id) => shown!.current!.nodes.find((n) => n.id === id)?.lines[0]);
+      assert.ok(lines.includes(command.endsWith('Backward') ? 'amount *= 0.9m' : 'return amount'), lines.join(' | '));
+    }
+    console.log('csharp values ok');
   } finally {
     await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

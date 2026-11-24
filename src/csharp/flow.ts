@@ -222,8 +222,8 @@ function sourceOf(nodes: SyntaxNode[]): string[] {
   });
 }
 
-/** The control flow of a C# function-like node. */
-export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
+/** The control flow of a C# function-like node; `syntaxOut` gets the syntax each box stands for, by box id. */
+export function buildCSharpFlow(fn: SyntaxNode, file: string, syntaxOut?: Map<number, SyntaxNode[]>): FlowGraph {
   const nodes: CfgNode[] = [];
   const edges: CfgEdge[] = [];
   const jumps: Jump[] = [];
@@ -232,6 +232,7 @@ export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
     const node: CfgNode = { id: nodes.length, kind, lines, nodes: [] };
     if (syntax.length && kind !== 'start' && kind !== 'end') {
       node.facts = { location: locationOf(file, syntax[0], syntax[syntax.length - 1]), source: sourceOf(syntax), ...factsOf(syntax) };
+      syntaxOut?.set(node.id, syntax);
     }
     nodes.push(node);
     return node.id;
@@ -354,6 +355,8 @@ export function buildCSharpFlow(fn: SyntaxNode, file: string): FlowGraph {
         const headerNode = s.type === 'while_statement' ? s.childForFieldName('condition')! : s;
         const test = add('loop', [header], []);
         nodes[test].facts = { location: locationOf(file, s, headerNode), source: [header], ...factsOf(s.type === 'foreach_statement' ? [s.childForFieldName('right')!].filter(Boolean) : s.type === 'for_statement' ? [s.childForFieldName('condition'), s.childForFieldName('update')].filter((x): x is SyntaxNode => !!x) : [headerNode]) };
+        // A foreach box assigns its variable (its header); a for box runs its update.
+        syntaxOut?.set(test, s.type === 'foreach_statement' ? [s] : s.type === 'for_statement' ? [s.childForFieldName('update')].filter((x): x is SyntaxNode => !!x) : [headerNode]);
         if (s.type === 'foreach_statement') {
           const left = s.childForFieldName('left');
           if (left?.type === 'identifier') {

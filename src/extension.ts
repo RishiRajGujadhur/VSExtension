@@ -167,17 +167,17 @@ export function activate(context: vscode.ExtensionContext, early: EarlyViews = n
   context.subscriptions.push(
     // The function at the cursor as a flowchart with its paths; returns the chart for tests.
     registerCommand('tsStructure.sliceBackward', () => {
-      const editor = sourceEditor();
+      const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.showSlice(editor, 'backward');
       return controlFlow.current;
     }),
     registerCommand('tsStructure.sliceForward', () => {
-      const editor = sourceEditor();
+      const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.showSlice(editor, 'forward');
       return controlFlow.current;
     }),
     // The chart on show, without drawing it again: for tests, and for a chart drawn in the background (C#).
-    vscode.commands.registerCommand('tsStructure.controlFlow.current', () => ({ current: controlFlow.current, changes: controlFlow.comparison })),
+    vscode.commands.registerCommand('tsStructure.controlFlow.current', () => ({ current: controlFlow.current, changes: controlFlow.comparison, slice: controlFlow.currentSlice })),
     registerCommand('tsStructure.controlFlow', () => {
       const editor = otherLanguageEditor() ?? sourceEditor();
       if (editor) controlFlow.show(editor);
