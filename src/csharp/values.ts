@@ -96,7 +96,7 @@ interface Value {
 
 /** Whether an assigned expression is the variable: `total` or `this.total`. */
 const isName = (n: SyntaxNode | null | undefined, name: string) =>
-  !!n && ((n.type === 'identifier' && n.text.replace(/^@/, '') === name) || (n.type === 'member_access_expression' && n.childForFieldName('expression')?.type === 'this_expression' && n.childForFieldName('name')?.text === name));
+  !!n && ((n.type === 'identifier' && n.text.replace(/^@/, '') === name) || (n.type === 'member_access_expression' && n.childForFieldName('expression')?.text === 'this' && n.childForFieldName('name')?.text === name));
 
 /** The value a box's code leaves in the variable, given the value before; compound updates build on it. */
 function lastDefinition(statement: SyntaxNode, name: string, before: Value | undefined, until?: number): Value | undefined {
@@ -324,7 +324,7 @@ export async function csharpValueTimeline(code: string, file: string, offset: nu
         const parent = n.parent!;
         const subject = parent.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id ? parent : n;
         const declared = (parent.childForFieldName('name')?.id === n.id || parent.childForFieldName('left')?.id === n.id) && /declarator|parameter|foreach/.test(parent.type);
-        const ownName = subject === n ? !(parent.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id) : parent.childForFieldName('expression')?.type === 'this_expression';
+        const ownName = subject === n ? !(parent.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id) : parent.childForFieldName('expression')?.text === 'this';
         const around = subject.parent;
         if (declared || !ownName || parent.type === 'member_binding_expression') {
           // not this variable

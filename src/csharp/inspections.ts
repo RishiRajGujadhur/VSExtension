@@ -1,6 +1,8 @@
 import type { Node as SyntaxNode, Tree } from 'web-tree-sitter';
 import type { Severity } from '../inspect/inspection';
 import { parseCSharp } from './parser';
+import { hashText } from '../analysis/paths';
+import { Report, ReportNode, plural } from '../structure/report';
 
 /**
  * Inspections for C#, from the bundled parser's syntax tree: slips the code itself shows, without types, so each one
@@ -103,4 +105,77 @@ export async function inspectCSharpText(text: string): Promise<CSharpFinding[]> 
   } finally {
     tree.delete();
   }
+}
+
+/** A C# file with its findings, for Inspect Code. */
+export interface InspectedCSharpFile {
+  file: string;
+  text: string;
+  findings: CSharpFinding[];
+}
+
+const severityOrder: Record<Severity, number> = { error: 0, warning: 1, info: 2, hint: 3 };
+
+/**
+ * Inspect Code in C#: every C# inspection over the files, as the TypeScript results are shown (by inspection, then
+ * file, then each finding), with the severities chosen in Inspections: Severity (`off` leaves one out).
+ */
+export async function csharpInspectionReport(files: { file: string; text: string }[], overrides: Record<string, string> = {}, root?: string): Promise<Report> {
+  const inspected: InspectedCSharpFile[] = [];
+  for (const f of files) {
+    const findings = (await inspectCSharpText(f.text))
+      .filter((x) => overrides[x.inspection] !== 'off')
+      .map((x) => {
+        const chosen = overrides[x.inspection];
+        return chosen && chosen !== 'default' && chosen !== 'off' ? { ...x, severity: chosen as Severity } : x;
+      });
+    inspected.push({ ...f, findings });
+  }
+  const relative = (file: string) => (root && file.toLowerCase().startsWith(root.toLowerCase()) ? file.slice(root.length).replace(/^[\\/]/, '').replace(/\\/g, '/') : (file.split(/[\\/]/).pop() ?? file));
+  const base = (file: string) => file.split(/[\\/]/).pop() ?? file;
+  const lineAt = (text: string, offset: number) => text.slice(0, offset).split('\n').length - 1;
+  const columnAt = (text: string, offset: number) => offset - (text.lastIndexOf('\n', offset - 1) + 1);
+  const hashes: Record<string, string> = {};
+  const roots: ReportNode[] = [];
+  for (const inspection of csharpInspections) {
+    const entries = inspected.filter((f) => f.findings.some((x) => x.inspection === inspection.id));
+    if (!entries.length) continue;
+    const all = entries.flatMap((e) => e.findings.filter((x) => x.inspection === inspection.id));
+    const worst = all.map((x) => x.severity).sort((a, b) => severityOrder[a] - severityOrder[b])[0];
+    roots.push({
+      label: inspection.title,
+      description: `${inspection.id} · ${plural(all.length, 'problem')}`,
+      tooltip: `Configure Inspections changes its severity or turns it off (Inspections: Severity, ${inspection.id}).`,
+      icon: 'checklist',
+      tone: worst === 'error' ? 'error' : worst === 'warning' ? 'warning' : 'info',
+      expanded: true,
+      children: entries.map((entry) => {
+        hashes[entry.file] = hashText(entry.text);
+        const mine = entry.findings.filter((x) => x.inspection === inspection.id);
+        return {
+          label: base(entry.file),
+          description: `${relative(entry.file)} · ${mine.length}`,
+          icon: 'file-code',
+          expanded: entries.length <= 5,
+          children: mine.map((finding) => ({
+            label: finding.message,
+            description: `line ${lineAt(entry.text, finding.start) + 1}`,
+            icon: finding.severity === 'error' ? 'error' : finding.severity === 'warning' ? 'warning' : 'info',
+            tone: finding.severity === 'error' ? ('error' as const) : finding.severity === 'warning' ? ('warning' as const) : ('info' as const),
+            location: { file: entry.file, line: lineAt(entry.text, finding.start), character: columnAt(entry.text, finding.start), endLine: lineAt(entry.text, finding.end), endCharacter: columnAt(entry.text, finding.end) },
+          })),
+        };
+      }),
+    });
+  }
+  roots.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'error' ? -1 : b.tone === 'error' ? 1 : a.tone === 'warning' ? -1 : 1));
+  const total = inspected.reduce((n, f) => n + f.findings.length, 0);
+  return {
+    kind: 'inspectCode',
+    title: 'Inspection results',
+    description: `${plural(total, 'problem')} in ${plural(inspected.filter((f) => f.findings.length).length, 'file')} (${plural(inspected.length, 'C# file')} inspected)`,
+    roots,
+    warnings: [],
+    fileHashes: hashes,
+  };
 }

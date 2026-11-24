@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { csharpShapeReport } from '../csharp/search';
+import { runCSharpOverFiles } from './analysisCommands';
 import { finished, flowTitle, showHelp } from './editFlow';
 import { attachEditPanel, editPanelCss, editPanelHead, editPanelKeys, editPanelScript } from './editPanelKit';
 import { ProjectService } from '../analysis/project';
@@ -545,6 +547,8 @@ export function registerStructuralSearch(context: vscode.ExtensionContext, proje
     }),
     registerCommand('tsStructure.structuralSearch', (preset?: SearchPreset & { run?: boolean; preview?: boolean }) => {
       const editor = vscode.window.activeTextEditor;
+      // In a C# file: by syntax, from the bundled parser, over the file or every C# file (no replace).
+      if (editor?.document.languageId === "csharp") return searchCSharp(view, editor, preset?.pattern);
       // The search needs a project: with no TypeScript or JavaScript file in front, pick one, and it opens there.
       if (!editor || vscode.languages.match(languageSelector, editor.document) === 0) {
         return openFileThenRun('tsStructure.structuralSearch', 'Search by shape: search the project of which file?');
@@ -1061,4 +1065,18 @@ ${editPanelScript}
 </script>
 </body>
 </html>`;
+}
+
+/** Search by shape in a C# file: the pattern (the selection to start from), then the matches in the results. */
+async function searchCSharp(view: StructureView, editor: vscode.TextEditor, given?: string): Promise<unknown> {
+  const pattern =
+    given ??
+    (await vscode.window.showInputBox({
+      title: "Search by shape (C#)",
+      prompt: "C# code to find, with $name$ for any part: $list$.Count == 0, Log($message$), if ($x$ == null) return;",
+      value: editor.selection.isEmpty ? "" : editor.document.getText(editor.selection),
+      ignoreFocusOut: true,
+    }));
+  if (!pattern?.trim()) return undefined;
+  return runCSharpOverFiles(view, "Search by shape", given ? "project" : undefined, (sources, root) => csharpShapeReport(sources, pattern, root));
 }

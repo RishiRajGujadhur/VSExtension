@@ -19,7 +19,8 @@ import { isExcluded, scopedFiles, withNote } from './exclude';
 import { ScopeKind, chooseScope } from './analysisScope';
 import { ScopeSpec, scopeFilter } from '../structure/scope';
 import { registerCommand } from './features';
-import { withRunning } from './analysisCommands';
+import { runCSharpOverFiles, withRunning } from './analysisCommands';
+import { csharpInspectionReport } from '../csharp/inspections';
 import { isFeatureEnabled } from './features';
 
 const severities: Record<Severity, vscode.DiagnosticSeverity> = {
@@ -520,6 +521,11 @@ export class InspectionDiagnostics implements vscode.CodeActionProvider {
   private async inspectCode(view: StructureView, scopeArg?: ScopeKind | vscode.Uri[]): Promise<Report | undefined> {
     if (Array.isArray(scopeArg)) {
       return this.inspectPaths(view, scopeArg);
+    }
+    // In a C# file: the C# inspections over the file or every C# file, with the severities chosen.
+    if (vscode.window.activeTextEditor?.document.languageId === "csharp") {
+      const overrides = vscode.workspace.getConfiguration("tsStructure", vscode.window.activeTextEditor.document.uri).get<Record<string, string>>("inspections.severity", {});
+      return runCSharpOverFiles(view, "Inspect Code", scopeArg, (sources, root) => csharpInspectionReport(sources, overrides, root));
     }
     const isSource = (e: vscode.TextEditor | undefined) => !!e && vscode.languages.match(languageSelector, e.document) > 0;
     const editor = isSource(vscode.window.activeTextEditor) ? vscode.window.activeTextEditor : vscode.window.visibleTextEditors.find(isSource);

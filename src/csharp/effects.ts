@@ -134,7 +134,7 @@ export async function csharpSideEffects(sources: CSharpSource[], file: string, o
           if (kind === 'mutates-parameter') {
             const index = calleeParameters.findIndex((p) => new RegExp(`^changes ${p}\\b`).test(e.text));
             const arg = index >= 0 ? args[index]?.namedChildren.at(-1) : undefined;
-            if (!arg || arg.type !== 'identifier' && arg.type !== 'member_access_expression' && arg.type !== 'this_expression') continue;
+            if (!arg || arg.type !== 'identifier' && arg.type !== 'member_access_expression' && arg.text !== 'this') continue;
             const owner = rootName(arg);
             if (locals.has(owner)) continue;
             kind = parameters.includes(owner) ? 'mutates-parameter' : /^[A-Z]/.test(owner) ? 'mutates-other' : 'mutates-this';

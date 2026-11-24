@@ -905,6 +905,21 @@ async function csharpExplainAndDataFlow(): Promise<void> {
       assert.ok(lines.includes(command.endsWith('Backward') ? 'amount *= 0.9m' : 'return amount'), lines.join(' | '));
     }
     console.log('csharp values ok');
+
+    // Inspect code, Search by shape and Pattern spotting over C# files.
+    await select('var amount');
+    const inspected = await vscode.commands.executeCommand<Report>('tsStructure.inspectCode', 'file');
+    assert.equal(inspected?.kind, 'inspectCode', 'C# inspect code report');
+    assert.ok(inspected!.roots.some((r) => r.description?.startsWith('csharpThrowEx')), inspected!.roots.map((r) => r.description).join(' | '));
+    await select('var amount');
+    const shapes = await vscode.commands.executeCommand<Report>('tsStructure.structuralSearch', { pattern: 'Log($message$)' });
+    assert.equal(shapes?.kind, 'structuralSearch', 'C# search by shape report');
+    assert.equal(shapes!.roots.find((r) => r.label === 'OrderService.cs')?.children?.length, 5);
+    await select('var amount');
+    const patterns = await vscode.commands.executeCommand<Report>('tsStructure.detectPatterns', 'file');
+    assert.equal(patterns?.kind, 'patterns', 'C# pattern spotting report');
+    assert.ok(patterns!.roots.some((r) => r.label === 'Dependency injection'), patterns!.roots.map((r) => r.label).join(' | '));
+    console.log('csharp inspect, search and patterns ok');
   } finally {
     await reelSettings.update('narrationVoice', undefined, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

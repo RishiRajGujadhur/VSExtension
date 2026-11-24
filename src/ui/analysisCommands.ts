@@ -1,6 +1,8 @@
 import ts = require('typescript');
 import { csharpArguments, csharpDataFlow, csharpErrorPaths, csharpOverrideReach, csharpTaskErrors, csharpVariableChanges, csharpWhoImports } from '../csharp/charts';
-import { onFile, onWorkspace } from '../csharp/workspace';
+import { csharpSources, onFile, onWorkspace } from '../csharp/workspace';
+import type { CSharpSource } from '../csharp/charts';
+import { csharpPatternsReport } from '../inspect/patterns';
 import { csharpExplainValue, csharpValueTimeline } from '../csharp/values';
 import { csharpSideEffects } from '../csharp/effects';
 import { csharpNullChecks } from '../csharp/nullability';
@@ -102,6 +104,33 @@ export async function withRunning<T>(view: StructureView, title: string, work: (
     }
     source.dispose();
   }
+}
+
+/**
+ * A C# analysis over many files (Inspect code, Search by shape, Pattern spotting): the editor's file or every C# file
+ * in the workspace, asked unless the scope argument says ('file' or 'project'). Returns the report for tests.
+ */
+export async function runCSharpOverFiles(view: StructureView, title: string, scope: unknown, analysis: (sources: CSharpSource[], root: string | undefined) => Promise<Report>): Promise<Report | undefined> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.languageId !== 'csharp') return undefined;
+  let chosen = scope === 'file' || scope === 'project' ? scope : undefined;
+  if (!chosen) {
+    const picked = await vscode.window.showQuickPick(
+      [
+        { label: '$(file-code) This file', description: vscode.workspace.asRelativePath(editor.document.uri), scope: 'file' as const },
+        { label: '$(project) Every C# file in the workspace', scope: 'project' as const },
+      ],
+      { title, placeHolder: 'Where to look' },
+    );
+    chosen = picked?.scope;
+  }
+  if (!chosen) return undefined;
+  const document = editor.document;
+  const root = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
+  return runAnalysis(view, title, async () => {
+    const sources = chosen === 'file' ? [{ file: normalizePath(document.uri.fsPath), text: document.getText() }] : await csharpSources(document);
+    return analysis(sources, root && normalizePath(root));
+  });
 }
 
 /** Runs an analysis with progress and shows its report, keeping a closure to re-run it. */
@@ -324,8 +353,10 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     });
 
   /** An analysis over many files that first asks where to look; re-running it keeps that scope. */
-  const scopedCommand = (id: string, title: string, request: Omit<ScopeRequest, 'editor' | 'title'>, compute: (t: AnalysisTarget, scope: ChosenScope) => Report | Promise<Report | undefined> | undefined) =>
+  const scopedCommand = (id: string, title: string, request: Omit<ScopeRequest, 'editor' | 'title'>, compute: (t: AnalysisTarget, scope: ChosenScope) => Report | Promise<Report | undefined> | undefined, csharp?: (sources: CSharpSource[], root: string | undefined) => Promise<Report>) =>
     registerCommand(id, async (arg?: unknown, selected?: vscode.Uri[]) => {
+      // In a C# file: its C# version, over the file or every C# file.
+      if (csharp && !(arg instanceof vscode.Uri) && vscode.window.activeTextEditor?.document.languageId === 'csharp') return runCSharpOverFiles(view, title, arg, csharp);
       // From the Explorer: the folders and files picked there, without asking.
       if (arg instanceof vscode.Uri) {
         const uris = selected?.length ? selected : [arg];
@@ -611,7 +642,7 @@ export function registerAnalyses(context: vscode.ExtensionContext, projects: Pro
     scopedCommand('tsStructure.detectPatterns', 'Detecting design patterns', { id: 'patterns', kinds: ['file', 'folder', 'pickFolder', 'open', 'changed', 'project'] }, (t, scope) => {
       const { files, note } = filesIn(t.project().program(), scope);
       return withNote(patternsReport(files, t.folder), note);
-    }),
+    }, (sources, root) => csharpPatternsReport(sources, root)),
     registerCommand('tsStructure.whoImports', (uri?: vscode.Uri) => {
       const inOther = uri ? undefined : runInOtherLanguage(view, 'Finding importers', { csharp: onWorkspace((sources, file) => csharpWhoImports(sources, file)) });
       if (inOther) return inOther;

@@ -236,7 +236,7 @@ export async function csharpNullChecks(sources: CSharpSource[], file: string, of
     const isOwnName = (n: SyntaxNode) => {
       // `obj.Name` is this name only when obj is `this`.
       const parent = n.parent;
-      if (parent?.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id) return parent.childForFieldName('expression')?.type === 'this_expression';
+      if (parent?.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id) return parent.childForFieldName('expression')?.text === 'this';
       if (parent?.type === 'member_binding_expression') return false;
       return true;
     };

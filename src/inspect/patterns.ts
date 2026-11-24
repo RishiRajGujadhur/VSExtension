@@ -3,6 +3,9 @@ import ts = require('typescript');
 import { Report, ReportBuilder, ReportNode, plural } from '../structure/report';
 import { catalog } from './patternCatalog';
 import { learnMore } from './patternLinks';
+import type { Node as CSharpNode, Tree as CSharpTree } from 'web-tree-sitter';
+import { parseCSharp } from '../csharp/parser';
+import { hashText } from '../analysis/paths';
 
 /** A design pattern or architectural style recognized from the shape of the code, never guessed from names alone. */
 export interface DetectedPattern {
@@ -314,4 +317,187 @@ export function patternsReport(files: readonly ts.SourceFile[], root?: string): 
   // "mostly" only when one pattern clearly leads.
   const [top, second] = [...byName].sort((a, b) => b[1].length - a[1].length);
   return builder.finish(roots, `${plural(roots.length, 'pattern')} in ${plural(files.length, 'file')}${top && second && top[1].length > second[1].length ? `, mostly ${top[0]}` : ''}`);
+}
+
+// ---------------------------------------------------------------- C#
+
+/** A pattern in C# code, found by the bundled parser: where it is, by file and position. */
+interface CSharpPattern {
+  name: string;
+  evidence: string;
+  file: string;
+  node: CSharpNode;
+}
+
+const csKids = (n: CSharpNode): CSharpNode[] => n.namedChildren.filter((c): c is CSharpNode => !!c);
+const csAll = (n: CSharpNode, types: string | string[]): CSharpNode[] => n.descendantsOfType(types).filter((c): c is CSharpNode => !!c);
+const csModifiers = (n: CSharpNode) => csKids(n).filter((c) => c.type === 'modifier').map((c) => c.text);
+const csName = (n: CSharpNode) => n.childForFieldName('name')?.text ?? '';
+/** What a method returns: its return statements' values, or its expression body. */
+function csReturns(method: CSharpNode): CSharpNode[] {
+  const body = method.childForFieldName('body') ?? csKids(method).find((c) => c.type === 'block' || c.type === 'arrow_expression_clause');
+  if (!body) return [];
+  if (body.type === 'arrow_expression_clause') return csKids(body).slice(0, 1);
+  // `return this;` has no named child: this is a keyword token in the grammar.
+  return csAll(body, 'return_statement').map((r) => r.children.find((c) => !!c && c.type !== 'return' && c.type !== ';')).filter((e): e is CSharpNode => !!e);
+}
+
+/** Patterns in one C# class, from its shape: members, constructors, what methods return and change. */
+function csharpClassPatterns(cls: CSharpNode, file: string, implementers: Map<string, string[]>): CSharpPattern[] {
+  const name = csName(cls);
+  const found: CSharpPattern[] = [];
+  const say = (pattern: string, evidence: string, node: CSharpNode = cls) => found.push({ name: pattern, evidence, file, node });
+  const list = cls.childForFieldName('body') ?? csKids(cls).find((c) => c.type === 'declaration_list');
+  const members = list ? csKids(list) : [];
+  const methods = members.filter((m) => m.type === 'method_declaration');
+  const fields = members.filter((m) => m.type === 'field_declaration' || m.type === 'property_declaration');
+  const typeOf = (m: CSharpNode) => (m.type === 'field_declaration' ? csKids(m).find((c) => c.type === 'variable_declaration')?.childForFieldName('type')?.text : m.childForFieldName('type')?.text) ?? '';
+  const fieldName = (m: CSharpNode) => (m.type === 'field_declaration' ? csAll(m, 'variable_declarator')[0]?.childForFieldName('name')?.text ?? csAll(m, 'variable_declarator')[0]?.namedChildren[0]?.text : csName(m)) ?? '';
+
+  // Singleton: one shared instance in a static member of its own type, with no public way to make another.
+  const constructors = members.filter((m) => m.type === 'constructor_declaration' && !csModifiers(m).includes('static'));
+  const hidden = constructors.length > 0 && constructors.every((c) => csModifiers(c).some((m) => m === 'private' || m === 'protected'));
+  const ownStatic = fields.find((m) => csModifiers(m).includes('static') && new RegExp(`^(${name}|Lazy<${name}>)\\??$`).test(typeOf(m)));
+  if (ownStatic && hidden) say('Singleton', `${name} keeps its one instance in static ${fieldName(ownStatic)} and hides its constructor`, ownStatic);
+
+  // Builder: methods that return this, then Build().
+  const fluent = methods.filter((m) => csReturns(m).some((e) => e.type === 'this_expression' || e.text === 'this'));
+  const build = methods.find((m) => csName(m) === 'Build');
+  if (fluent.length >= 2 && build) say('Builder', `${name}: ${fluent.length} methods return this, then Build()`);
+
+  // Observer: an event, or a list of callbacks or observers that one method adds to and another calls.
+  const events = members.filter((m) => m.type === 'event_field_declaration' || m.type === 'event_declaration');
+  const raised = events.length && methods.find((m) => events.some((e) => new RegExp(`\\b${csAll(e, 'variable_declarator')[0]?.childForFieldName('name')?.text ?? csName(e)}\\s*\\?\\.\\s*Invoke\\b|\\b${csAll(e, 'variable_declarator')[0]?.childForFieldName('name')?.text ?? csName(e)}\\s*\\(`).test(m.text)));
+  if (events.length && raised) {
+    say('Observer', `${name} raises its event ${csAll(events[0], 'variable_declarator')[0]?.childForFieldName('name')?.text ?? csName(events[0])} in ${csName(raised)}()`, events[0]);
+  } else {
+    for (const field of fields.filter((m) => /^(List|HashSet|ICollection|IList|Collection)<(Action|Func|I\w+|EventHandler)\b/.test(typeOf(m)))) {
+      const f = fieldName(field);
+      const adds = methods.find((m) => new RegExp(`\\b${f}\\s*\\.\\s*Add\\s*\\(`).test(m.text));
+      const notifies = methods.find((m) => new RegExp(`foreach\\s*\\([^)]*\\bin\\s+(this\\.)?${f}\\b|\\b${f}\\s*\\.\\s*ForEach\\s*\\(`).test(m.text));
+      if (adds && notifies) {
+        say('Observer', `${name} registers callbacks in ${f} in ${csName(adds)}() and calls them in ${csName(notifies)}()`, field);
+        break;
+      }
+    }
+  }
+
+  // Repository: data access behind find, save and delete methods.
+  const verbs = ['Find|Get', 'Add|Save|Insert|Create', 'Delete|Remove'].filter((v) => methods.some((m) => new RegExp(`^(${v})`).test(csName(m))));
+  if (verbs.length >= 2 && (/(Repository|Repo|Store|Dao)$/.test(name) || fields.some((m) => /^(DbSet|DbContext|IDbConnection|SqlConnection|Dictionary|List|ConcurrentDictionary)\b|Context$/.test(typeOf(m))))) {
+    say('Repository', `${name} wraps data access (${methods.filter((m) => /^(Find|Get|Add|Save|Insert|Create|Delete|Remove|Update)/.test(csName(m))).map((m) => `${csName(m)}()`).slice(0, 3).join(', ')})`);
+  }
+
+  // Dependency injection: collaborators passed to the constructor and kept in fields.
+  for (const ctor of constructors) {
+    const parameters = csAll(ctor, 'parameter').filter((p) => p.parent?.parent?.id === ctor.id);
+    const kept = parameters.filter((p) => {
+      const type = p.childForFieldName('type')?.text ?? '';
+      const pname = p.childForFieldName('name')?.text ?? '';
+      return /^[A-Z]/.test(type) && !/^(String|Int32|Decimal|Boolean|DateTime|Guid)$/.test(type) && new RegExp(`(this\\.)?\\w+\\s*=\\s*${pname}\\b`).test(ctor.text);
+    });
+    if (kept.length) {
+      say('Dependency injection', `${name} receives ${kept.map((p) => p.childForFieldName('type')!.text).join(', ')} in its constructor`, ctor);
+      break;
+    }
+  }
+
+  // Strategy: a member typed as an interface that several classes implement.
+  for (const m of [...fields, ...constructors.flatMap((c) => csAll(c, 'parameter'))]) {
+    const type = (m.type === 'parameter' ? m.childForFieldName('type')?.text : typeOf(m)) ?? '';
+    const impl = implementers.get(type);
+    if (/^I[A-Z]/.test(type) && impl && impl.length >= 2) {
+      say('Strategy', `${name} uses ${/^[AEIOU]/.test(type) ? 'an' : 'a'} ${type}: ${impl.slice(0, 3).join(', ')}${impl.length > 3 ? '…' : ''} are interchangeable`, m);
+      break;
+    }
+  }
+
+  // Memoization: a dictionary consulted before computing, and filled after.
+  for (const field of fields.filter((m) => /^(Dictionary|ConcurrentDictionary|IDictionary)</.test(typeOf(m)))) {
+    const f = fieldName(field);
+    const method = methods.find((m) => new RegExp(`\\b${f}\\s*\\.\\s*(TryGetValue|ContainsKey)\\s*\\(`).test(m.text) && new RegExp(`\\b${f}\\s*(\\[[^\\]]+\\]\\s*=(?!=)|\\.\\s*(Add|TryAdd)\\s*\\()`).test(m.text));
+    const getOrAdd = methods.find((m) => new RegExp(`\\b${f}\\s*\\.\\s*GetOrAdd\\s*\\(`).test(m.text));
+    if (method || getOrAdd) {
+      say('Memoization', `${name}.${csName((method ?? getOrAdd)!)}() caches results in ${f}`, (method ?? getOrAdd)!);
+      break;
+    }
+  }
+
+  // Factory: a Create/Make/Build/New method that returns a new object (not this).
+  for (const m of methods) {
+    const returned = csReturns(m);
+    const made = returned.find((e) => e.type === 'object_creation_expression' || e.type === 'implicit_object_creation_expression');
+    if (/^(Create|Make|New|Build)[A-Z]?/.test(csName(m)) && made && !returned.some((e) => e.text === 'this') && csName(m) !== 'Build') {
+      say('Factory', `${csName(m)}() returns new ${made.childForFieldName('type')?.text ?? 'object'}(…)`, m);
+    }
+  }
+
+  // Command: Execute() on a class that implements a one-method interface.
+  const execute = methods.find((m) => /^(Execute|ExecuteAsync|Undo)$/.test(csName(m)));
+  const bases = csKids(cls).find((c) => c.type === 'base_list');
+  if (execute && bases && /\bI\w*Command\b/.test(bases.text)) say('Command', `${name} is a command: ${bases.text.replace(/^:\s*/, '')} with ${csName(execute)}()`, execute);
+
+  // Pipeline: three or more LINQ steps chained.
+  for (const m of methods) {
+    const chain = csAll(m, 'invocation_expression').find((call) => (call.text.match(/\.\s*(Where|Select|SelectMany|OrderBy|OrderByDescending|ThenBy|GroupBy|Distinct|Take|Skip|Aggregate|Join|Zip)\s*\(/g) ?? []).length >= 3 && call.parent?.type !== 'member_access_expression');
+    if (chain) {
+      say('Pipeline', `${csName(m)}() chains ${(chain.text.match(/\.\s*(Where|Select|SelectMany|OrderBy|OrderByDescending|ThenBy|GroupBy|Distinct|Take|Skip|Aggregate|Join|Zip)\s*\(/g) ?? []).length} LINQ steps`, chain);
+      break;
+    }
+  }
+  return found;
+}
+
+/** Pattern spotting in C#: every pattern in the files' classes, grouped by pattern, as for TypeScript. */
+export async function csharpPatternsReport(sources: readonly { file: string; text: string }[], root?: string): Promise<Report> {
+  const trees: { file: string; text: string; tree: CSharpTree }[] = [];
+  try {
+    for (const s of sources) trees.push({ ...s, tree: await parseCSharp(s.text) });
+    // Which classes implement each interface, across the files: for Strategy.
+    const implementers = new Map<string, string[]>();
+    const classTypes = ['class_declaration', 'record_declaration', 'struct_declaration'];
+    for (const t of trees) {
+      for (const cls of csAll(t.tree.rootNode, classTypes)) {
+        const bases = csKids(cls).find((c) => c.type === 'base_list');
+        for (const base of bases ? csKids(bases) : []) {
+          const type = base.text.replace(/<.*$/, '');
+          implementers.set(type, [...(implementers.get(type) ?? []), csName(cls)]);
+        }
+      }
+    }
+    const found = trees.flatMap((t) => csAll(t.tree.rootNode, classTypes).flatMap((cls) => csharpClassPatterns(cls, t.file, implementers)));
+    const byName = new Map<string, CSharpPattern[]>();
+    for (const p of found) byName.set(p.name, [...(byName.get(p.name) ?? []), p]);
+    const relative = (f: string) => (root ? path.relative(root, f) : path.basename(f)).replace(/\\/g, '/');
+    const roots: ReportNode[] = [...byName]
+      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+      .map(([name, list]) => ({
+        label: name,
+        description: `${plural(list.length, 'place')}${new Set(list.map((p) => p.file)).size > 1 ? ` in ${plural(new Set(list.map((p) => p.file)).size, 'file')}` : ''}`,
+        tooltip: `**${name}**: ${patternMeaning(name)}${learnMore(name)}`,
+        icon: 'symbol-namespace',
+        action: { kind: 'explainPattern', name },
+        expanded: byName.size <= 4,
+        children: list.map((p) => ({
+          label: p.evidence,
+          description: `${relative(p.file)}:${p.node.startPosition.row + 1}`,
+          location: { file: p.file, line: p.node.startPosition.row, character: p.node.startPosition.column, endLine: p.node.endPosition.row, endCharacter: p.node.endPosition.column },
+        })),
+      }));
+    const layered = detectLayers(sources.map((s) => s.file), root);
+    if (layered.length >= 2) roots.push({ label: 'Layered architecture', description: layered.join(' → '), tooltip: `**Layered architecture**: ${meanings['Layered architecture']}${learnMore('Layered architecture')}`, icon: 'layers', action: { kind: 'explainPattern', name: 'Layered architecture' } });
+    const [top, second] = [...byName].sort((a, b) => b[1].length - a[1].length);
+    const fileHashes: Record<string, string> = {};
+    for (const t of trees) if (found.some((p) => p.file === t.file)) fileHashes[t.file] = hashText(t.text);
+    return {
+      kind: 'patterns',
+      title: 'Design patterns',
+      description: `${plural(roots.length, 'pattern')} in ${plural(sources.length, 'file')}${top && second && top[1].length > second[1].length ? `, mostly ${top[0]}` : ''}`,
+      roots,
+      warnings: roots.length ? [] : [`No design patterns recognized in ${plural(sources.length, 'file')}.`],
+      fileHashes,
+    };
+  } finally {
+    for (const t of trees) t.tree.delete();
+  }
 }
