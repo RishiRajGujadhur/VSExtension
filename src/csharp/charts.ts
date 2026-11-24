@@ -146,9 +146,9 @@ export async function csharpDataFlow(sources: CSharpSource[], file: string, offs
           continue;
         }
         if (declared) continue;
-        // Not the name of something else: obj.name is name only when obj is this.
+        // Not the name of something else: for a local, obj.name and this.name (a field it may hide) are other things.
         const member = parent.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id;
-        if (member && parent.childForFieldName('expression')?.type !== 'this_expression' && local) continue;
+        if (member && local) continue;
         const subject = member ? parent : n;
         const assignment = subject.parent?.type === 'assignment_expression' && subject.parent.childForFieldName('left')?.id === subject.id ? subject.parent : undefined;
         if (assignment) {

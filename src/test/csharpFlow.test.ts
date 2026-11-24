@@ -159,3 +159,23 @@ test('C# flowchart: yield break ends the method, yield return is a step', async 
   assert.deepEqual(chart.nodes.filter((n) => n.kind === 'return').map((n) => n.lines[0]), ['yield break']);
   assert.ok(chart.nodes.some((n) => n.kind === 'statement' && n.lines[0] === 'yield return x'));
 });
+
+test('C# flowchart facts: this.x = … and this.items.Add(…) set x and items (this is a keyword token in the grammar)', async () => {
+  const { parseCSharp } = await import('../csharp/parser');
+  const { buildCSharpFlow, csharpFunctionAt } = await import('../csharp/flow');
+  const code = 'class Order { int total; List<int> items; void Reset(int start) { this.total = start; this.items.Add(start); if (this.total > 0) Log(other.total); } }';
+  const tree = await parseCSharp(code);
+  try {
+    const graph = buildCSharpFlow(csharpFunctionAt(tree.rootNode, code.indexOf('this.total'))!, file);
+    const facts = graph.nodes.find((n) => n.facts?.source.some((l) => l.startsWith('this.total = start')))!.facts!;
+    assert.ok(facts.defines.has('total') && facts.replaces.has('total'), [...facts.defines].join(','));
+    assert.ok(facts.defines.has('items') && !facts.replaces.has('items'), 'Add changes items without replacing it');
+    assert.ok(!facts.reads.has('total'), 'this.total on the left of = is not a read');
+    const decision = graph.nodes.find((n) => n.facts?.source[0]?.startsWith('this.total > 0'))!.facts!;
+    assert.ok(decision.reads.has('total'), 'this.total in a condition reads total');
+    const call = graph.nodes.find((n) => n.facts?.source[0]?.startsWith('Log('))!.facts!;
+    assert.ok(!call.reads.has('total'), 'other.total is not this variable');
+  } finally {
+    tree.delete();
+  }
+});

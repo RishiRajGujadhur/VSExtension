@@ -1,6 +1,6 @@
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import type { FunctionFacts, FunctionInput } from '../explain/functionFacts';
-import { csharpFunctionAt, functionName, functionTypes } from './flow';
+import { csharpFunctionAt, functionName, functionTypes, isThis } from './flow';
 import { parseCSharp } from './parser';
 
 /**
@@ -241,7 +241,7 @@ export function csharpEffects(fn: SyntaxNode): { effects: CSharpEffect[]; calls:
   const outside = (target: SyntaxNode): boolean => {
     let root: SyntaxNode = target;
     while (root.type === 'member_access_expression' || root.type === 'element_access_expression') root = root.childForFieldName('expression') ?? root.namedChildren[0]!;
-    if (root.type === 'this_expression' || root.type === 'this') return true;
+    if (isThis(root)) return true;
     if (root.type !== 'identifier') return false;
     if (parameters.has(root.text)) return target.id !== root.id; // a parameter's member: the caller's object
     return !locals.has(root.text);

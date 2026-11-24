@@ -361,7 +361,7 @@ function csharpClassPatterns(cls: CSharpNode, file: string, implementers: Map<st
   if (ownStatic && hidden) say('Singleton', `${name} keeps its one instance in static ${fieldName(ownStatic)} and hides its constructor`, ownStatic);
 
   // Builder: methods that return this, then Build().
-  const fluent = methods.filter((m) => csReturns(m).some((e) => e.type === 'this_expression' || e.text === 'this'));
+  const fluent = methods.filter((m) => csReturns(m).some((e) => e.text === 'this'));
   const build = methods.find((m) => csName(m) === 'Build');
   if (fluent.length >= 2 && build) say('Builder', `${name}: ${fluent.length} methods return this, then Build()`);
 

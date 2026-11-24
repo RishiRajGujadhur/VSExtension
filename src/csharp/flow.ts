@@ -101,11 +101,17 @@ function parameterNames(fn: SyntaxNode): string[] {
   return names;
 }
 
+/**
+ * `this`, as the bundled grammar gives it: an unnamed keyword token of type `this` (older grammars named it
+ * `this_expression`).
+ */
+export const isThis = (n: SyntaxNode | null | undefined): boolean => !!n && (n.type === 'this' || n.type === 'this_expression');
+
 /** The root name of an assigned expression: `total` in `total`, `this.total`, `items[0]`, `cart.Total`. */
 function rootName(n: SyntaxNode | null | undefined): string | undefined {
   while (n && (n.type === 'member_access_expression' || n.type === 'element_access_expression' || n.type === 'parenthesized_expression')) {
     const inner: SyntaxNode | null = n.type === 'member_access_expression' ? n.childForFieldName('expression') : n.namedChild(0);
-    if (n.type === 'member_access_expression' && inner?.type === 'this_expression') return n.childForFieldName('name')?.text;
+    if (n.type === 'member_access_expression' && isThis(inner)) return n.childForFieldName('name')?.text;
     n = inner;
   }
   return n?.type === 'identifier' ? n.text : undefined;
@@ -139,9 +145,10 @@ function factsOf(syntax: SyntaxNode[]): Pick<CodeFacts, 'defines' | 'replaces' |
         if (name) {
           defines.add(name);
           // `x = …` and `x += …` give x a new value; `x.a = …` only changes it.
-          if (left?.type === 'identifier' || (left?.type === 'member_access_expression' && left.childForFieldName('expression')?.type === 'this_expression')) {
+          if (left?.type === 'identifier' || (left?.type === 'member_access_expression' && isThis(left.childForFieldName('expression')))) {
             replaces.add(name);
-            if (n.text.slice(left.endIndex - n.startIndex).trimStart().startsWith('=')) written.add(left.id);
+            // A plain `=` writes the name without reading it: `total` itself, or the name in `this.total`.
+            if (n.text.slice(left.endIndex - n.startIndex).trimStart().startsWith('=')) written.add(left.type === 'identifier' ? left.id : (left.childForFieldName('name') ?? left).id);
           }
         }
         break;
@@ -194,7 +201,8 @@ function factsOf(syntax: SyntaxNode[]): Pick<CodeFacts, 'defines' | 'replaces' |
       }
       case 'identifier': {
         const parent = n.parent;
-        const isMemberName = parent?.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id;
+        // `obj.name` does not read a variable called name; `this.name` reads the field.
+        const isMemberName = parent?.type === 'member_access_expression' && parent.childForFieldName('name')?.id === n.id && !isThis(parent.childForFieldName('expression'));
         const isTypeName = !!parent && /type|^generic_name$|^qualified_name$|object_creation_expression|^attribute$/.test(parent.type) && parent.childForFieldName('type')?.id !== undefined && parent.childForFieldName('type')?.id === n.id;
         if (!declared.has(n.id) && !written.has(n.id) && !isMemberName && !isTypeName) reads.add(n.text);
         return;

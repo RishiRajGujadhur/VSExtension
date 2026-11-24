@@ -4,7 +4,7 @@ import { hashText } from '../analysis/paths';
 import { Report, ReportLocation, ReportNode, plural } from '../structure/report';
 import type { CSharpSource } from './charts';
 import { CSharpEffect, CSharpEffectKind, bodyOf, csharpEffects, rootName } from './explainTarget';
-import { csharpFunctionAt, functionName, functionTypes } from './flow';
+import { csharpFunctionAt, functionName, functionTypes, isThis } from './flow';
 import { parseCSharp } from './parser';
 
 /**
@@ -108,7 +108,7 @@ export async function csharpSideEffects(sources: CSharpSource[], file: string, o
       if (via.length >= DEPTH) return out;
       for (const call of calls) {
         const receiver = call.receiver;
-        const unqualified = !receiver || receiver.type === 'this_expression' || receiver.text === 'this' || receiver.text === 'base';
+        const unqualified = !receiver || isThis(receiver) || receiver.text === 'base';
         const target = await declarationOf(call.method, call.node, !unqualified);
         const key = target ? `${target.file.file}:${target.node.startIndex}` : '';
         if (!target || seen.has(key)) {
