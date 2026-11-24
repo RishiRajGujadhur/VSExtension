@@ -951,7 +951,17 @@ async function csharpThroughLanguageServer(): Promise<void> {
   const typeItem = (name: string, text: string, kind: vscode.SymbolKind) => new vscode.TypeHierarchyItem(kind, name, '', uri, range(text), range(text));
   const cart = typeItem('Cart', 'Cart :', vscode.SymbolKind.Class), priced = typeItem('IPriced', 'IPriced {', vscode.SymbolKind.Interface);
   const selector = { language: 'csharp' };
+  // The language server's refactorings, as code actions: Change signature edits the method; two kinds of Move.
+  const refactorings = (title: string, text: string) => {
+    const action = new vscode.CodeAction(title, vscode.CodeActionKind.Refactor);
+    action.edit = new vscode.WorkspaceEdit();
+    action.edit.insert(uri, new vscode.Position(0, 0), text);
+    return action;
+  };
   const providers = [
+    vscode.languages.registerCodeActionsProvider(selector, {
+      provideCodeActions: () => [refactorings('Change signature...', '// signature changed\n'), refactorings('Move type to Cart.cs', '// moved to file\n'), refactorings('Move to namespace...', '// moved to namespace\n')],
+    }),
     vscode.languages.registerReferenceProvider(selector, { provideReferences: (d, p) => every(d.getText(d.getWordRangeAtPosition(p))) }),
     vscode.languages.registerDefinitionProvider(selector, { provideDefinition: () => new vscode.Location(uri, range('total;')) }),
     vscode.languages.registerCallHierarchyProvider(selector, {
@@ -982,6 +992,18 @@ async function csharpThroughLanguageServer(): Promise<void> {
     assert.deepEqual(usages.roots.map((r) => `${r.label} ${r.description?.split(' · ')[0]}`), ['Definitions 1', 'Writes 2', 'Reads 1']);
     const writes = usages.roots[1].children![0].children!.map((r) => `${r.label} | ${r.description}`);
     assert.deepEqual(writes, ['public decimal Price() { total = 0; Add(1); return total; } | Cart.Price · line 5 · at cursor', 'public void Add(decimal amount) { total += amount; } | Cart.Add · line 6']);
+
+    // Change parameters, Move and Delete safely, through the language server.
+    editor.selection = new vscode.Selection(at('Add(decimal'), at('Add(decimal'));
+    assert.equal(await vscode.commands.executeCommand('tsStructure.changeSignature'), 'Change signature...');
+    assert.ok(document.getText().startsWith('// signature changed'), 'the language server\'s Change signature ran');
+    assert.equal(await vscode.commands.executeCommand('tsStructure.moveMembers', 'Move to namespace...'), 'Move to namespace...');
+    assert.ok(document.getText().startsWith('// moved to namespace'), 'the Move picked ran');
+    await vscode.commands.executeCommand('workbench.action.files.revert');
+    editor.selection = new vscode.Selection(at('Add(decimal'), at('Add(decimal'));
+    const kept = await vscode.commands.executeCommand<{ name: string; usages: unknown[]; deleted: boolean }>('tsStructure.safeDelete', false);
+    assert.deepEqual({ name: kept?.name, usages: kept?.usages.length, deleted: kept?.deleted }, { name: 'Add', usages: 1, deleted: false });
+    console.log('csharp refactorings ok');
 
     editor.selection = new vscode.Selection(at('Price() {'), at('Price() {'));
     const calls = await vscode.commands.executeCommand<Report>('tsStructure.callGraph');

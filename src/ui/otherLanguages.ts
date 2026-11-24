@@ -19,6 +19,8 @@ export interface OtherLanguage {
   commands: string[];
   /** Commands whose answers are exact with the language's own extension (a language server), marked so in the list. */
   exactWithServer?: string[];
+  /** Commands that only work with the language's own extension (a language server), marked so in the list. */
+  needServer?: string[];
 }
 
 export const otherLanguages: Record<string, OtherLanguage> = {
@@ -51,9 +53,13 @@ export const otherLanguages: Record<string, OtherLanguage> = {
       'tsStructure.inspectCode',
       'tsStructure.structuralSearch',
       'tsStructure.detectPatterns',
+      'tsStructure.changeSignature',
+      'tsStructure.safeDelete',
+      'tsStructure.moveMembers',
       'tsStructure.gitReel',
     ],
     exactWithServer: ['tsStructure.semanticUsages', 'tsStructure.semanticUsagesInFile', 'tsStructure.callGraph', 'tsStructure.typeHierarchy'],
+    needServer: ['tsStructure.changeSignature', 'tsStructure.safeDelete', 'tsStructure.moveMembers'],
   },
   sql: {
     name: 'T-SQL',
@@ -94,7 +100,7 @@ export async function otherLanguageActions(language: OtherLanguage): Promise<voi
   picker.placeholder = `What Code X-Ray can do here (inspections show in the Problems panel as you type)`;
   picker.items = usable(language).map((command) => ({
     label: `$(${commandIcons[command] ?? 'symbol-misc'}) ${nameOf(command)}`,
-    description: language.exactWithServer?.includes(command) ? `more exact with the ${language.name} extension` : undefined,
+    description: language.needServer?.includes(command) ? `needs the ${language.name} extension` : language.exactWithServer?.includes(command) ? `more exact with the ${language.name} extension` : undefined,
     command,
   }));
   const picked = await awaitPick(picker, (p) => p.selectedItems[0] ?? p.activeItems[0]);

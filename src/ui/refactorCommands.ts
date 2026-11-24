@@ -10,6 +10,9 @@ import { runIntroduceParameter } from './introduceParameterUi';
 import { runMoveMembers } from './moveMembersUi';
 import { safeDeleteFile, safeDeleteSymbol } from './safeDeleteUi';
 import { registerCommand } from './features';
+import { AnalysisError } from '../analysis/types';
+import { NoLanguageServer } from '../csharp/languageServer';
+import { CSharpRefactoring, csharpRefactoring, csharpSafeDelete } from '../csharp/refactorings';
 import { AnalysisActionProvider } from './analysisActions';
 
 export const languageSelector: vscode.DocumentSelector = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].map((language) => ({
@@ -76,15 +79,55 @@ export class PreviewToggle {
   }
 }
 
+/** The active editor when it holds C#: refactored through the C# extension's language server. */
+const csharpEditor = (): vscode.TextEditor | undefined => {
+  const editor = vscode.window.activeTextEditor;
+  return editor?.document.languageId === 'csharp' ? editor : undefined;
+};
+
+/** Says plainly what stopped a C# refactoring; without the C# extension, offers to install it. */
+async function inCSharp<T>(work: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await work();
+  } catch (error) {
+    if (!(error instanceof AnalysisError)) throw error;
+    const install = error instanceof NoLanguageServer ? [{ title: 'Install the C# extension', run: () => vscode.commands.executeCommand('workbench.extensions.search', 'ms-dotnettools.csharp') }] : [];
+    void showProblem(error.message, install, 'info');
+    return undefined;
+  }
+}
+
+/** Change signature or Move in C#: the language server's own refactoring. `pick` names one by title, for tests. */
+function runCSharpRefactoring(editor: vscode.TextEditor, which: CSharpRefactoring, pick: unknown): Promise<string | undefined> {
+  return inCSharp(() => csharpRefactoring(editor, which, typeof pick === 'string' ? (titles) => titles.find((t) => t === pick) : undefined));
+}
+
+/** Delete safely in C#: deleted only when the language server finds no usage; otherwise the usages, to look at. */
+function runCSharpSafeDelete(editor: vscode.TextEditor, confirm: boolean) {
+  return inCSharp(async () => {
+    const result = await csharpSafeDelete(editor, confirm);
+    if (result.usages.length) {
+      void showProblem(`${result.name} is still used in ${result.usages.length === 1 ? '1 place' : `${result.usages.length} places`}, so it was not deleted.`, [{ title: 'Show Usages', run: () => vscode.commands.executeCommand('tsStructure.semanticUsages') }], 'warning');
+    } else if (result.deleted) {
+      void vscode.window.setStatusBarMessage(`Deleted ${result.name}: nothing used it.`, 5000);
+    }
+    return result;
+  });
+}
+
 export function registerRefactorings(context: vscode.ExtensionContext, projects: ProjectService): void {
   context.subscriptions.push(
-    registerCommand('tsStructure.changeSignature', () => {
+    registerCommand('tsStructure.changeSignature', (pick?: unknown) => {
+      const cs = csharpEditor();
+      if (cs) return runCSharpRefactoring(cs, 'changeSignature', pick);
       const editor = sourceEditor();
       if (editor) {
         return openChangeSignature(context, projects, editor);
       }
     }),
-    registerCommand('tsStructure.safeDelete', () => {
+    registerCommand('tsStructure.safeDelete', (confirm?: unknown) => {
+      const cs = csharpEditor();
+      if (cs) return runCSharpSafeDelete(cs, confirm !== false);
       const editor = sourceEditor();
       if (editor) {
         return safeDeleteSymbol(projects, editor);
@@ -98,7 +141,9 @@ export function registerRefactorings(context: vscode.ExtensionContext, projects:
         await safeDeleteFile(projects, file);
       }
     }),
-    registerCommand('tsStructure.moveMembers', () => {
+    registerCommand('tsStructure.moveMembers', (pick?: unknown) => {
+      const cs = csharpEditor();
+      if (cs) return runCSharpRefactoring(cs, 'move', pick);
       const editor = sourceEditor();
       if (editor) {
         return runMoveMembers(projects, editor, context.workspaceState);
